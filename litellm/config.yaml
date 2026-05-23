@@ -1,0 +1,33 @@
+model_list:
+  - model_name: food-extractor
+    litellm_params:
+      model: ollama/llama3.1:8b-instruct
+      api_base: http://ollama:11434
+
+  - model_name: meal-planner
+    litellm_params:
+      model: anthropic/claude-sonnet-4-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: coach
+    litellm_params:
+      model: anthropic/claude-sonnet-4-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: insight-narrator
+    litellm_params:
+      model: anthropic/claude-sonnet-4-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: vision-classifier
+    litellm_params:
+      model: ollama/moondream2
+      api_base: http://ollama:11434
+
+litellm_settings:
+  request_timeout: 120
+  num_retries: 2
+  drop_params: true
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
