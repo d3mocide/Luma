@@ -47,7 +47,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: ["arq", "sovereign_health.worker.settings.WorkerSettings"]
+    command: ["arq", "lumo.worker.settings.WorkerSettings"]
     environment: *api-env
     depends_on:
       postgres:
@@ -61,11 +61,11 @@ services:
     volumes:
       - pgdata:/home/postgres/pgdata/data
     environment:
-      POSTGRES_DB: sovereign_health
+      POSTGRES_DB: lumo
       POSTGRES_USER: sh
       POSTGRES_PASSWORD: ${PG_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sh -d sovereign_health"]
+      test: ["CMD-SHELL", "pg_isready -U sh -d lumo"]
       interval: 5s
       timeout: 5s
       retries: 10

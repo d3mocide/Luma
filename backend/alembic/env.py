@@ -12,7 +12,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-from sovereign_health.db.models import Base
+from lumo.db.models import Base
 target_metadata = Base.metadata
 
 # Allow DATABASE_URL env var to override alembic.ini

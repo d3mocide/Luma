@@ -4,8 +4,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from sovereign_health.config import settings
-from sovereign_health.api import auth, ingest, today, trends, log, plan, coach, foods, recipes, goals
+from lumo.config import settings
+from lumo.api import auth, ingest, today, trends, log, plan, coach, foods, recipes, goals
 
 logging.basicConfig(
     level=logging.INFO if settings.is_production else logging.DEBUG,
@@ -16,13 +16,13 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Sovereign Health API starting (env=%s)", settings.environment)
+    logger.info("Lumo API starting (env=%s)", settings.environment)
     yield
-    logger.info("Sovereign Health API shutting down")
+    logger.info("Lumo API shutting down")
 
 
 app = FastAPI(
-    title="Sovereign Health API",
+    title="Lumo API",
     version="0.1.0",
     docs_url=None if settings.is_production else "/docs",
     redoc_url=None,

@@ -6,9 +6,9 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel
 
-from sovereign_health.config import settings
-from sovereign_health.deps import DbDep
-from sovereign_health.services.hae_normalizer import normalize_hae_payload
+from lumo.config import settings
+from lumo.deps import DbDep
+from lumo.services.hae_normalizer import normalize_hae_payload
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
