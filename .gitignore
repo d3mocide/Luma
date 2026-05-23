@@ -1,0 +1,37 @@
+# Secrets
+.env
+*.pem
+certs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+web/dist/
+web/.vite/
+*.local
+
+# Docker volumes (local bind mounts)
+pgdata/
+redisdata/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
