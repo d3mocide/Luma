@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter
 from sqlalchemy import select, text
 
-from sovereign_health.deps import CurrentUser, DbDep
+from lumo.deps import CurrentUser, DbDep
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

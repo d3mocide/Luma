@@ -6,9 +6,9 @@ import jwt
 from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sovereign_health.config import settings
-from sovereign_health.db.session import AsyncSessionLocal
-from sovereign_health.db.models import User
+from lumo.config import settings
+from lumo.db.session import AsyncSessionLocal
+from lumo.db.models import User
 
 logger = logging.getLogger(__name__)
 

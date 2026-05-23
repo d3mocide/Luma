@@ -1,7 +1,7 @@
 """Seed the initial operator user.
 
 Run with:
-    docker compose run --rm api python -m sovereign_health.scripts.seed_admin
+    docker compose run --rm api python -m lumo.scripts.seed_admin
 """
 import asyncio
 import os
@@ -10,8 +10,8 @@ import sys
 from argon2 import PasswordHasher
 from sqlalchemy import select
 
-from sovereign_health.db.session import AsyncSessionLocal
-from sovereign_health.db.models import User
+from lumo.db.session import AsyncSessionLocal
+from lumo.db.models import User
 
 
 async def main() -> None:
