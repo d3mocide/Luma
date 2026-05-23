@@ -7,8 +7,8 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 
-from lumo.db.models import Goal, Preference
-from lumo.deps import CurrentUser, DbDep
+from luma.db.models import Goal, Preference
+from luma.deps import CurrentUser, DbDep
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

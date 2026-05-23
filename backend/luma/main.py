@@ -4,8 +4,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from lumo.config import settings
-from lumo.api import auth, ingest, today, trends, log, plan, coach, foods, recipes, goals
+from luma.config import settings
+from luma.api import auth, ingest, today, trends, log, plan, coach, foods, recipes, goals
 
 logging.basicConfig(
     level=logging.INFO if settings.is_production else logging.DEBUG,
@@ -16,13 +16,13 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Lumo API starting (env=%s)", settings.environment)
+    logger.info("Luma API starting (env=%s)", settings.environment)
     yield
-    logger.info("Lumo API shutting down")
+    logger.info("Luma API shutting down")
 
 
 app = FastAPI(
-    title="Lumo API",
+    title="Luma API",
     version="0.1.0",
     docs_url=None if settings.is_production else "/docs",
     redoc_url=None,

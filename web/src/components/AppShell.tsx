@@ -15,7 +15,7 @@ export default function AppShell() {
       {/* Sidebar — desktop */}
       <aside className="hidden md:flex flex-col w-56 shrink-0 bg-slate-900 border-r border-slate-800 py-6 px-3 gap-1">
         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 mb-4">
-          Lumo
+          Luma
         </span>
         {NAV_ITEMS.map((item) => (
           <SideLink key={item.to} {...item} />
