@@ -1,10 +1,10 @@
-# CLAUDE.md — Lumo
+# CLAUDE.md — Luma
 
 Working agreements for Claude Code. Read the full design document before writing any code.
 
 ## Architecture Reference
 
-Design document: see the Lumo design doc in the initial issue/prompt that spawned this repo.
+Design document: see the Luma design doc in the initial issue/prompt that spawned this repo.
 All architecture decisions are made there. Do not invent new patterns without explicit instruction.
 
 ## Phase Gate — READ THIS FIRST
