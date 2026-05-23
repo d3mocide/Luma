@@ -9,9 +9,9 @@ from fastapi import APIRouter, Cookie, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import select, update
 
-from lumo.config import settings
-from lumo.db.models import User
-from lumo.deps import DbDep, CurrentUser
+from luma.config import settings
+from luma.db.models import User
+from luma.deps import DbDep, CurrentUser
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

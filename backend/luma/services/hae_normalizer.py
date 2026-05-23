@@ -42,7 +42,7 @@ def _parse_hae_ts(date_str: str) -> datetime:
 
 async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession) -> int:
     """Ingest an HAE webhook payload. Returns number of rows inserted."""
-    from lumo.db.models import User
+    from luma.db.models import User
     from sqlalchemy import select, text
 
     # HAE doesn't send user_id — the shared secret identifies the operator.
