@@ -1,7 +1,7 @@
 """One-time USDA FoodData Central ingest — Phase 1.
 
 Run with:
-    docker compose run --rm worker python -m lumo.scripts.ingest_usda
+    docker compose run --rm worker python -m luma.scripts.ingest_usda
 """
 import asyncio
 

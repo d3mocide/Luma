@@ -6,8 +6,8 @@ logger = logging.getLogger(__name__)
 
 async def ingest_hae_task(ctx: dict, payload: dict[str, Any], user_id: str | None = None) -> dict:
     """Background task version of HAE ingest (deferred from webhook)."""
-    from lumo.db.session import AsyncSessionLocal
-    from lumo.services.hae_normalizer import normalize_hae_payload
+    from luma.db.session import AsyncSessionLocal
+    from luma.services.hae_normalizer import normalize_hae_payload
 
     async with AsyncSessionLocal() as db:
         rows = await normalize_hae_payload(payload, db)

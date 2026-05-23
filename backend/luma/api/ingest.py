@@ -6,9 +6,9 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel
 
-from lumo.config import settings
-from lumo.deps import DbDep
-from lumo.services.hae_normalizer import normalize_hae_payload
+from luma.config import settings
+from luma.deps import DbDep
+from luma.services.hae_normalizer import normalize_hae_payload
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

@@ -6,9 +6,9 @@ import jwt
 from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lumo.config import settings
-from lumo.db.session import AsyncSessionLocal
-from lumo.db.models import User
+from luma.config import settings
+from luma.db.session import AsyncSessionLocal
+from luma.db.models import User
 
 logger = logging.getLogger(__name__)
 

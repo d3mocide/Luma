@@ -1,12 +1,12 @@
-# AGENTS.md — Lumo
+# AGENTS.md — Luma
 
 Working agreements for Jules, Antigravity, and other autonomous agents. Read CLAUDE.md first — this file supplements it.
 
 ## What You Are Building
 
-Lumo is a self-hosted, data-sovereign health tracking and meal-planning PWA. Single-operator use case. The operator's primary health goal is lowering LDL cholesterol via tracked nutrition and weight management.
+Luma is a self-hosted, data-sovereign health tracking and meal-planning PWA. Single-operator use case. The operator's primary health goal is lowering LDL cholesterol via tracked nutrition and weight management.
 
-Full design: see the Lumo design document in the issue/prompt that spawned this repo.
+Full design: see the Luma design document in the issue/prompt that spawned this repo.
 
 ## Phase Gate
 
@@ -26,7 +26,7 @@ Same as CLAUDE.md. Phase 0 must be complete before any agent touches Phase 1+ co
 ## Repository Layout
 
 ```
-/backend/lumo/   Python FastAPI app
+/backend/luma/   Python FastAPI app
 /backend/alembic/            Migrations
 /web/src/                    React TypeScript PWA
 /nginx/                      Nginx config
@@ -124,7 +124,7 @@ These files must be **fully implemented** for Phase 0:
 ## Environment Variables (all required)
 
 ```
-DATABASE_URL          postgresql+asyncpg://sh:<PG_PASSWORD>@postgres:5432/lumo
+DATABASE_URL          postgresql+asyncpg://sh:<PG_PASSWORD>@postgres:5432/luma
 REDIS_URL             redis://redis:6379/0
 JWT_SECRET            <min 32 bytes random>
 JWT_ALGORITHM         HS256
