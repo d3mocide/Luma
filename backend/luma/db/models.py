@@ -141,11 +141,14 @@ class MealPlanSlot(Base):
     slot_date = Column(Date, nullable=False)
     slot = Column(Text, nullable=False)
     recipe_id = Column(UUID(as_uuid=True), ForeignKey("recipes.id"))
+    food_id = Column(UUID(as_uuid=True), ForeignKey("foods.id", ondelete="SET NULL"))
     custom_name = Column(Text)
     notes = Column(Text)
+    nutrition = Column(JSONB)
 
     plan = relationship("MealPlan", back_populates="slots")
     recipe = relationship("Recipe")
+    food = relationship("Food")
 
 
 class ShoppingListItem(Base):
