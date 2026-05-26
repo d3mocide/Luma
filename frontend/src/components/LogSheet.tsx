@@ -92,13 +92,10 @@ export default function LogSheet() {
       const formData = new FormData()
       formData.append('file', blobToUpload, 'recording.wav')
 
-      const res = await fetch('/api/v1/log/meal/voice', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!res.ok) throw new Error('Voice extraction failed')
-      const data = await res.json()
+      const data = await api.upload<{ raw_input: string; items: any[]; nutrition: any; confidence: number }>(
+        '/log/meal/voice',
+        formData,
+      )
       setTranscription(data.raw_input)
       
       // Load parsed foods into the draft plate

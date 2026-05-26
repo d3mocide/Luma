@@ -2,9 +2,8 @@ import json
 import logging
 import re
 from typing import List, Dict, Any
-import litellm
 from luma.config import settings
-from luma.services.llm_client import build_litellm_target
+from luma.services.llm_client import call_llm
 
 logger = logging.getLogger("food_extractor")
 
@@ -49,9 +48,9 @@ async def extract_foods_from_text(text: str) -> List[Dict[str, Any]]:
     ]
     
     try:
-        target = build_litellm_target(settings.food_extractor_model)
-        resp = await litellm.acompletion(
-            **target,
+        resp = await call_llm(
+            primary_model=settings.food_extractor_model,
+            fallback_model=settings.food_extractor_fallback_model,
             messages=messages,
             temperature=0.1,
             timeout=180.0,

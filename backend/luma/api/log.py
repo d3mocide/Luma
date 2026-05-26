@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from luma.deps import DbDep, CurrentUser
 from luma.db.models import Food, MealEvent
 from luma.services import off_client, whisper_client
+from luma.services.nutrition import aggregate_items
 from luma.agents import food_extractor
 
 router = APIRouter()
@@ -126,29 +127,13 @@ async def log_meal_voice(
             detail="Failed to transcribe audio or no voice detected",
         )
         
-    # 2. Extract foods and nutrients using Llama 3
+    # 2. Extract foods and nutrients using the food extractor agent
     extracted_items = await food_extractor.extract_foods_from_text(transcription)
-    
-    # 3. Aggregate all calories and macros
-    aggregate_nutrition = {
-        "calories": 0.0,
-        "saturated_fat_g": 0.0,
-        "soluble_fiber_g": 0.0,
-        "protein_g": 0.0,
-        "carbohydrates_g": 0.0,
-        "fat_g": 0.0,
-        "fiber_g": 0.0,
-        "sodium_mg": 0.0,
-    }
-    for item in extracted_items:
-        nutr = item.get("nutrients", {})
-        for key in aggregate_nutrition:
-            aggregate_nutrition[key] += float(nutr.get(key) or 0.0)
-            
+
     return {
         "raw_input": transcription,
         "items": extracted_items,
-        "nutrition": aggregate_nutrition,
+        "nutrition": aggregate_items(extracted_items),
         "confidence": 0.90,
     }
 
