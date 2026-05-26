@@ -8,35 +8,46 @@ export default function SettingsRoute() {
   })
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
-      <h1 className="text-lg font-semibold text-slate-300">Settings</h1>
+    <div className="thin-scroll" style={{ height: '100%', overflowY: 'auto', padding: '32px 40px 40px' }}>
+      <div className="eyebrow" style={{ marginBottom: 8 }}>Settings</div>
+      <h1 style={{ margin: '0 0 28px', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
+        Your account
+      </h1>
 
-      <div className="bg-slate-900 rounded-2xl p-4 border border-slate-800 space-y-3">
-        <p className="text-xs text-slate-400 uppercase tracking-wide font-medium">Account</p>
-        {user ? (
-          <>
-            <Row label="Name" value={user.display_name} />
-            <Row label="Email" value={user.email} />
-            <Row label="Role" value={user.role} />
-          </>
-        ) : (
-          <p className="text-sm text-slate-500">Not signed in</p>
-        )}
-      </div>
+      <div style={{ maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="glass" style={{ padding: 24 }}>
+          <div className="eyebrow" style={{ marginBottom: 16 }}>Account</div>
+          {user ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <Row label="Name" value={user.display_name}/>
+              <Row label="Email" value={user.email}/>
+              <Row label="Role" value={user.role} last/>
+            </div>
+          ) : (
+            <p style={{ color: 'var(--fg-quiet)', fontSize: 14, margin: 0 }}>Not signed in</p>
+          )}
+        </div>
 
-      <div className="bg-slate-900 rounded-2xl p-4 border border-slate-800">
-        <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-3">Goals</p>
-        <p className="text-sm text-slate-500">Goal configuration coming in Phase 0 final polish.</p>
+        <div className="glass" style={{ padding: 24 }}>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Goals</div>
+          <p style={{ color: 'var(--fg-tertiary)', fontSize: 14, margin: 0 }}>
+            Goal configuration coming in Phase 0 final polish.
+          </p>
+        </div>
       </div>
     </div>
   )
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, last }: { label: string; value: string; last?: boolean }) {
   return (
-    <div className="flex justify-between text-sm">
-      <span className="text-slate-500">{label}</span>
-      <span className="text-slate-200">{value}</span>
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '12px 0',
+      borderBottom: last ? 'none' : '1px solid var(--glass-edge)',
+    }}>
+      <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{value}</span>
     </div>
   )
 }

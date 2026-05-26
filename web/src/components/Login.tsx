@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, Heart, ShieldCheck } from 'lucide-react'
 import { api } from '../lib/api'
+import { LumaLogo, LumaWordmark } from './ui/LumaLogo'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const queryClient = useQueryClient()
 
-  // 1. Fetch setup status to determine if we show "First-Run Setup" or "Sign In"
   const { data: setupStatus, isLoading: checkingSetup } = useQuery<{ setup_required: boolean }>({
     queryKey: ['setupStatus'],
     queryFn: () => api.get('/auth/setup-status'),
@@ -21,23 +23,13 @@ export default function Login() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-
     const isSetup = setupStatus?.setup_required
-
     try {
       if (isSetup) {
-        // First-run setup: Create user
-        await api.post('/auth/setup', {
-          email,
-          password,
-          display_name: displayName || 'Operator',
-        })
+        await api.post('/auth/setup', { email, password, display_name: displayName || 'Operator' })
       } else {
-        // Standard login
         await api.post('/auth/login', { email, password })
       }
-
-      // Invalidate queries to refresh auth context and telemetry metrics
       await queryClient.invalidateQueries({ queryKey: ['me'] })
       await queryClient.invalidateQueries({ queryKey: ['today'] })
       await queryClient.invalidateQueries({ queryKey: ['setupStatus'] })
@@ -50,107 +42,294 @@ export default function Login() {
 
   if (checkingSetup) {
     return (
-      <div className="fixed inset-0 bg-slate-950 flex items-center justify-center z-50">
-        <span className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+      <div className="luma-bg" style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: '50%',
+          border: '2px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8',
+          animation: 'spin 0.8s linear infinite',
+        }}/>
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     )
   }
 
-  const isSetupRequired = setupStatus?.setup_required
+  const isSetup = setupStatus?.setup_required
 
   return (
-    <div className="fixed inset-0 bg-slate-950 flex flex-col justify-center items-center p-4 z-50 overflow-y-auto">
-      {/* Background glow effects */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+    <div className="luma-bg luma-bg-dawn" style={{ position: 'fixed', inset: 0, display: 'flex', overflow: 'hidden' }}>
 
-      <div className="w-full max-w-md backdrop-blur-md bg-slate-900/40 border border-slate-800/80 rounded-3xl p-8 shadow-2xl relative">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 bg-gradient-to-tr from-indigo-600 to-indigo-400 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-3">
-            <span className="text-2xl text-white font-semibold">◎</span>
+      {/* Left — brand story (desktop only) */}
+      <div className="hidden md:flex" style={{
+        flex: 1.05,
+        padding: '60px 60px 40px',
+        flexDirection: 'column',
+        position: 'relative',
+      }}>
+        <LumaWordmark size={32}/>
+
+        <div style={{ marginTop: 'auto', maxWidth: 540 }}>
+          <div className="eyebrow" style={{ marginBottom: 20, color: 'var(--sky-300)' }}>
+            ◇ Your light, daily
           </div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-100 to-slate-300 bg-clip-text text-transparent">
-            {isSetupRequired ? 'Create Operator Account' : 'Welcome to Luma'}
-          </h2>
-          <p className="text-xs text-slate-500 mt-1.5 text-center">
-            {isSetupRequired
-              ? 'Luma detected first run. Set up your operator account to start health telemetry.'
-              : 'Your self-hosted health and nutrition command center'}
+          <h1 style={{
+            fontFamily: 'var(--font-sans)',
+            fontWeight: 400,
+            fontSize: 64, lineHeight: 1.02,
+            letterSpacing: '-0.035em',
+            margin: 0,
+            color: 'var(--fg-primary)',
+          }}>
+            {isSetup ? (
+              <>Create your<br/><span className="serif-italic" style={{
+                background: 'linear-gradient(120deg, #fde68a, #38bdf8 70%)',
+                WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+                fontSize: 72,
+              }}>private</span><br/>space.</>
+            ) : (
+              <>Track your body<br/>with{' '}
+                <span className="serif-italic" style={{
+                  background: 'linear-gradient(120deg, #fde68a, #38bdf8 70%)',
+                  WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+                  fontSize: 72,
+                }}>luminous</span><br/>clarity.</>
+            )}
+          </h1>
+          <p style={{
+            color: 'var(--fg-tertiary)',
+            fontSize: 17, lineHeight: 1.6,
+            marginTop: 28, maxWidth: 460,
+          }}>
+            A calm, self-hosted health companion. Your data stays on your hardware —
+            insight, not surveillance.
           </p>
+
+          <div style={{
+            marginTop: 56,
+            display: 'flex', gap: 28,
+            paddingTop: 28,
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+          }}>
+            {[
+              { Icon: ShieldCheck, l: 'Self-hosted', s: 'on your hardware' },
+              { Icon: Heart, l: 'LDL-aware', s: 'tuned for cardio health' },
+              { Icon: Sparkles, l: 'Claude-powered', s: 'gentle, not preachy' },
+            ].map((f, i) => (
+              <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 10,
+                  background: 'rgba(56,189,248,0.12)',
+                  border: '1px solid rgba(56,189,248,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--sky-300)', flexShrink: 0,
+                }}>
+                  <f.Icon size={15}/>
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{f.l}</div>
+                  <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{f.s}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {error && (
-            <div className="bg-rose-950/40 border border-rose-900/60 text-rose-300 px-4 py-3 rounded-2xl text-xs flex items-center gap-2 animate-shake">
-              <span>⚠</span>
-              <span>{error}</span>
-            </div>
-          )}
+      {/* Right — sign-in card */}
+      <div style={{
+        flex: 1,
+        padding: '60px 60px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        position: 'relative',
+      }}
+      className="flex-1 flex items-center justify-center px-6 py-10 md:p-[60px]"
+      >
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(ellipse 60% 60% at 70% 30%, rgba(251,191,36,0.16), transparent 60%), radial-gradient(ellipse 60% 60% at 30% 80%, rgba(56,189,248,0.20), transparent 60%)',
+          pointerEvents: 'none',
+        }}/>
 
-          {isSetupRequired && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Display Name
-              </label>
-              <input
-                type="text"
+        <div className="glass" style={{
+          width: '100%', maxWidth: 420,
+          padding: 36,
+          borderRadius: 28,
+          position: 'relative',
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ display: 'inline-flex' }}><LumaLogo size={44}/></div>
+            <h2 style={{
+              margin: '18px 0 6px',
+              fontSize: 24, fontWeight: 500,
+              letterSpacing: '-0.02em',
+              color: 'var(--fg-primary)',
+            }}>
+              {isSetup ? 'Create your account' : 'Welcome back'}
+            </h2>
+            <p style={{ margin: 0, fontSize: 13.5, color: 'var(--fg-tertiary)' }}>
+              {isSetup ? 'Set up your operator account' : 'Sign in to your private space'}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {error && (
+              <div style={{
+                padding: '12px 14px',
+                background: 'rgba(251,113,133,0.10)',
+                border: '1px solid rgba(251,113,133,0.25)',
+                borderRadius: 12,
+                fontSize: 13,
+                color: 'var(--bad)',
+                display: 'flex', gap: 8, alignItems: 'center',
+              }}>
+                ⚠ {error}
+              </div>
+            )}
+
+            {isSetup && (
+              <Field
+                label="Display Name"
+                icon={<Sparkles size={16} color="var(--fg-quiet)"/>}
                 value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                onChange={setDisplayName}
                 placeholder="e.g. Jules"
-                required={isSetupRequired}
-                className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 transition-colors focus:ring-1 focus:ring-indigo-500"
               />
-            </div>
-          )}
+            )}
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Email Address
-            </label>
-            <input
+            <Field
+              label="Email"
+              icon={<Mail size={16} color="var(--fg-quiet)"/>}
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={isSetupRequired ? "e.g. operator@domain.com" : "e.g. admin@luma.health"}
+              onChange={setEmail}
+              placeholder="operator@luma.local"
               required
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 transition-colors focus:ring-1 focus:ring-indigo-500"
             />
+
+            <div>
+              <div className="eyebrow" style={{ marginBottom: 8 }}>Password</div>
+              <div className="field-input" style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 14px',
+                border: '1px solid var(--glass-edge)',
+                borderRadius: 14,
+              }}>
+                <Lock size={16} color="var(--fg-quiet)"/>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  style={{
+                    flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                    color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)', fontSize: 14,
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                >
+                  {showPassword
+                    ? <EyeOff size={16} color="var(--fg-quiet)"/>
+                    : <Eye size={16} color="var(--fg-quiet)"/>
+                  }
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn btn-primary"
+              style={{ marginTop: 8, padding: '14px 20px', fontSize: 14, width: '100%', opacity: loading ? 0.7 : 1 }}
+            >
+              {loading ? (
+                <span style={{
+                  width: 18, height: 18, borderRadius: '50%',
+                  border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff',
+                  display: 'inline-block',
+                  animation: 'spin 0.8s linear infinite',
+                }}/>
+              ) : (
+                <>
+                  {isSetup ? 'Create Account' : 'Sign in'}
+                  <ArrowRight size={15}/>
+                </>
+              )}
+            </button>
+          </form>
+
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0 18px',
+          }}>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }}/>
+            <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>or</span>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }}/>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 transition-colors focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-medium text-sm py-3 px-4 rounded-2xl transition-all duration-150 transform active:scale-[0.98] shadow-lg shadow-indigo-500/20 mt-2 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : isSetupRequired ? (
-              'Create Account'
-            ) : (
-              'Sign In'
-            )}
+          <button className="btn" style={{ width: '100%', padding: '12px', justifyContent: 'center' }}>
+            <Sparkles size={16} color="var(--sky-300)"/>
+            Continue with passkey
           </button>
-        </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-800/60 text-center">
-          <p className="text-[11px] text-slate-600">
-            Self-hosted &middot; Luma &middot; Secure
+          <p style={{
+            textAlign: 'center', fontSize: 11.5,
+            color: 'var(--fg-quiet)', marginTop: 22,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: 'var(--good)', boxShadow: '0 0 8px var(--good-glow)',
+              }}/>
+              Self-hosted
+            </span>
+            <span style={{ color: 'var(--fg-faint)' }}>·</span>
+            <span>v0.4.2</span>
+            <span style={{ color: 'var(--fg-faint)' }}>·</span>
+            <span>End-to-end secure</span>
           </p>
         </div>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
+}
+
+function Field({
+  label, icon, type = 'text', value, onChange, placeholder, required,
+}: {
+  label: string
+  icon: React.ReactNode
+  type?: string
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  required?: boolean
+}) {
+  return (
+    <div>
+      <div className="eyebrow" style={{ marginBottom: 8 }}>{label}</div>
+      <div className="field-input" style={{
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '12px 14px',
+        border: '1px solid var(--glass-edge)',
+        borderRadius: 14,
+      }}>
+        {icon}
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          style={{
+            flex: 1, background: 'transparent', border: 'none', outline: 'none',
+            color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)', fontSize: 14,
+          }}
+        />
       </div>
     </div>
   )
