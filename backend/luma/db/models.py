@@ -213,4 +213,4 @@ class Biometric(Base):
     metric = Column(Text, primary_key=True)
     value = Column(Double, nullable=False)
     source = Column(Text, nullable=False)
-    source_id = Column(Text)
+    source_meta = Column(JSONB)

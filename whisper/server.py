@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Whisper STT")
 
-# Load model once at startup — "base.en" is fast; bump to "small.en" for accuracy
+# Load model once at startup — "base.en" is fast; swap for "small.en" for higher accuracy.
 _model: WhisperModel | None = None
 
 
@@ -19,6 +19,13 @@ def get_model() -> WhisperModel:
     if _model is None:
         _model = WhisperModel("base.en", device="cpu", compute_type="int8")
     return _model
+
+
+@app.on_event("startup")
+async def _warmup() -> None:
+    # Force model load at startup rather than on first request.
+    get_model()
+    logger.info("Whisper model loaded and ready")
 
 
 @app.get("/health")
