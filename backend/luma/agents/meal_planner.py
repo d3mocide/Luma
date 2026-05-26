@@ -1,8 +1,8 @@
-import httpx
 import json
 import logging
 import re
 from typing import Dict, Any, Optional
+import litellm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from luma.config import settings
@@ -103,37 +103,30 @@ async def generate_meal_plan(
     
     user_prompt = f"Generate 7-day meal plan starting from week: {week_start}"
     
-    url = f"{settings.litellm_base_url}/v1/chat/completions"
-    payload = {
-        "model": settings.meal_planner_model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "temperature": 0.2,
-    }
-    
-    headers = {}
-    if settings.local_ai_api_key:
-        headers["Authorization"] = f"Bearer {settings.local_ai_api_key}"
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
     
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(url, json=payload, headers=headers)
-            if resp.status_code != 200:
-                logger.error(f"LiteLLM meal-planner returned status {resp.status_code}: {resp.text}")
-                raise RuntimeError("Failed to generate plan from LiteLLM")
-                
-            completion = resp.json()
-            content = completion["choices"][0]["message"]["content"].strip()
+        resp = await litellm.acompletion(
+            model=settings.meal_planner_model,
+            messages=messages,
+            api_base=settings.local_ai_api_base or None,
+            api_key=settings.local_ai_api_key or None,
+            temperature=0.2,
+            timeout=120.0,
+        )
+        
+        content = resp["choices"][0]["message"]["content"].strip()
+        
+        # Clean potential markdown wrappers
+        if content.startswith("```"):
+            content = re.sub(r"^```(?:json)?\n", "", content)
+            content = re.sub(r"\n```$", "", content)
+            content = content.strip()
             
-            # Clean potential markdown wrappers
-            if content.startswith("```"):
-                content = re.sub(r"^```(?:json)?\n", "", content)
-                content = re.sub(r"\n```$", "", content)
-                content = content.strip()
-                
-            return json.loads(content)
+        return json.loads(content)
             
     except Exception as e:
         logger.exception(f"Error calling local Claude Sonnet meal-planner: {e}")

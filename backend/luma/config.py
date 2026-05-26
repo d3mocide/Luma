@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     hae_shared_secret: str
 
-    litellm_base_url: str = "http://litellm:4000"
+    local_ai_api_base: str = ""
     whisper_url: str = "http://whisper:9000"
     anthropic_api_key: str = ""
     
