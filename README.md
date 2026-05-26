@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="Luma — health tracking · meal planning · private by design" width="480"/>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="frontend/public/assets/luma-wordmark-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="frontend/public/assets/luma-wordmark-light.svg">
+    <img src="frontend/public/assets/luma-wordmark-dark.svg" alt="Luma" width="420"/>
+  </picture>
 </p>
 
 <br/>
