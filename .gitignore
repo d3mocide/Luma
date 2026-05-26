@@ -1,0 +1,41 @@
+# Secrets
+.env
+*.pem
+certs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+*.local
+.pnpm-debug.log
+.pnpm-store/
+
+# Docker volumes (local bind mounts)
+pgdata/
+redisdata/
+
+# OS
+.DS_Store
+Thumbs.db
+.thumbnail
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
