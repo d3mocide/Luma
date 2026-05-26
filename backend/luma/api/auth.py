@@ -7,7 +7,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from fastapi import APIRouter, Cookie, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 
 from luma.config import settings
 from luma.db.models import User
@@ -21,6 +21,16 @@ ph = PasswordHasher()
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class SetupStatusResponse(BaseModel):
+    setup_required: bool
+
+
+class SetupRequest(BaseModel):
+    email: EmailStr
+    password: str
+    display_name: str
 
 
 class UserOut(BaseModel):
@@ -115,6 +125,38 @@ async def refresh(
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    _set_auth_cookies(response, user.id)
+    return UserOut.model_validate(user)
+
+
+@router.get("/setup-status")
+async def setup_status(db: DbDep) -> SetupStatusResponse:
+    # Check if any users exist in the database
+    result = await db.execute(select(func.count(User.id)))
+    count = result.scalar() or 0
+    return SetupStatusResponse(setup_required=(count == 0))
+
+
+@router.post("/setup")
+async def setup(body: SetupRequest, response: Response, db: DbDep) -> UserOut:
+    # Ensure setup is only allowed on empty database
+    result = await db.execute(select(func.count(User.id)))
+    count = result.scalar() or 0
+    if count > 0:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Setup has already been completed.")
+
+    # Create new operator user
+    password_hash = ph.hash(body.password)
+    user = User(
+        email=body.email,
+        password_hash=password_hash,
+        display_name=body.display_name,
+        role="operator",
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
 
     _set_auth_cookies(response, user.id)
     return UserOut.model_validate(user)
