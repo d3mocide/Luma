@@ -74,7 +74,7 @@ export default function Login() {
           </h2>
           <p className="text-xs text-slate-500 mt-1.5 text-center">
             {isSetupRequired
-              ? 'Luma detected first run. Set up your sovereign account to start health telemetry.'
+              ? 'Luma detected first run. Set up your operator account to start health telemetry.'
               : 'Your self-hosted health and nutrition command center'}
           </p>
         </div>
@@ -111,7 +111,7 @@ export default function Login() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder={isSetupRequired ? "e.g. operator@domain.com" : "e.g. admin@sovereign.health"}
+              placeholder={isSetupRequired ? "e.g. operator@domain.com" : "e.g. admin@luma.health"}
               required
               className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 transition-colors focus:ring-1 focus:ring-indigo-500"
             />
@@ -148,7 +148,7 @@ export default function Login() {
 
         <div className="mt-8 pt-6 border-t border-slate-800/60 text-center">
           <p className="text-[11px] text-slate-600">
-            Self-hosted &middot; Sovereign &middot; Secure
+            Self-hosted &middot; Luma &middot; Secure
           </p>
         </div>
       </div>

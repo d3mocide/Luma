@@ -4,6 +4,7 @@ import re
 from typing import List, Dict, Any
 import litellm
 from luma.config import settings
+from luma.services.llm_client import build_litellm_target
 
 logger = logging.getLogger("food_extractor")
 
@@ -48,13 +49,12 @@ async def extract_foods_from_text(text: str) -> List[Dict[str, Any]]:
     ]
     
     try:
+        target = build_litellm_target(settings.food_extractor_model)
         resp = await litellm.acompletion(
-            model=settings.food_extractor_model,
+            **target,
             messages=messages,
-            api_base=settings.local_ai_api_base or None,
-            api_key=settings.local_ai_api_key or None,
             temperature=0.1,
-            timeout=30.0,
+            timeout=180.0,
         )
         
         content = resp["choices"][0]["message"]["content"].strip()
