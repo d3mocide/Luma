@@ -1,28 +1,30 @@
 model_list:
   - model_name: food-extractor
     litellm_params:
-      model: ollama/llama3.1:8b-instruct
-      api_base: http://ollama:11434
+      model: os.environ/FOOD_EXTRACTOR_MODEL
+      api_base: os.environ/LOCAL_AI_API_BASE
+      api_key: os.environ/LOCAL_AI_API_KEY
 
   - model_name: meal-planner
     litellm_params:
-      model: anthropic/claude-sonnet-4-5
+      model: os.environ/MEAL_PLANNER_MODEL
       api_key: os.environ/ANTHROPIC_API_KEY
 
   - model_name: coach
     litellm_params:
-      model: anthropic/claude-sonnet-4-5
+      model: os.environ/COACH_MODEL
       api_key: os.environ/ANTHROPIC_API_KEY
 
   - model_name: insight-narrator
     litellm_params:
-      model: anthropic/claude-sonnet-4-5
+      model: os.environ/INSIGHT_NARRATOR_MODEL
       api_key: os.environ/ANTHROPIC_API_KEY
 
   - model_name: vision-classifier
     litellm_params:
-      model: ollama/moondream2
-      api_base: http://ollama:11434
+      model: os.environ/VISION_CLASSIFIER_MODEL
+      api_base: os.environ/LOCAL_AI_API_BASE
+      api_key: os.environ/LOCAL_AI_API_KEY
 
 litellm_settings:
   request_timeout: 120

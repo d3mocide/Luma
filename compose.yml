@@ -89,21 +89,16 @@ services:
       - ./litellm/config.yaml:/app/config.yaml:ro
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      LOCAL_AI_API_BASE: ${LOCAL_AI_API_BASE}
+      LOCAL_AI_API_KEY: ${LOCAL_AI_API_KEY}
+      FOOD_EXTRACTOR_MODEL: ${FOOD_EXTRACTOR_MODEL}
+      VISION_CLASSIFIER_MODEL: ${VISION_CLASSIFIER_MODEL}
+      MEAL_PLANNER_MODEL: ${MEAL_PLANNER_MODEL}
+      COACH_MODEL: ${COACH_MODEL}
+      INSIGHT_NARRATOR_MODEL: ${INSIGHT_NARRATOR_MODEL}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
     command: ["--config", "/app/config.yaml", "--port", "4000"]
     restart: unless-stopped
-
-  ollama:
-    image: ollama/ollama:latest
-    volumes:
-      - ollama:/root/.ollama
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
 
   whisper:
     build:
@@ -114,4 +109,3 @@ services:
 volumes:
   pgdata:
   redisdata:
-  ollama:
