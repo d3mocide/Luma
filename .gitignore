@@ -18,9 +18,11 @@ build/
 
 # Node
 node_modules/
-web/dist/
-web/.vite/
+frontend/dist/
+frontend/.vite/
 *.local
+.pnpm-debug.log
+.pnpm-store/
 
 # Docker volumes (local bind mounts)
 pgdata/

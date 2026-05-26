@@ -2,14 +2,15 @@
 # Stage 1: build the React/Vite app
 FROM node:22-alpine AS builder
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN npm install -g pnpm
 
 WORKDIR /app
 
-COPY web/package.json web/pnpm-lock.yaml ./
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+COPY frontend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
-COPY web/ .
+COPY frontend/ .
 RUN pnpm build
 
 # Stage 2: serve with nginx

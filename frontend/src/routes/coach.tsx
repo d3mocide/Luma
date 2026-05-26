@@ -15,8 +15,9 @@ export default function CoachRoute() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    if (messages.length === 0) return
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [messages.length])
 
   const send = (text: string) => {
     if (!text.trim()) return
@@ -29,7 +30,7 @@ export default function CoachRoute() {
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div style={{ height: '100%', minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       {/* Atmospheric glow */}
       <div style={{
         position: 'absolute', inset: 0,
@@ -75,7 +76,7 @@ export default function CoachRoute() {
       </header>
 
       {/* Messages */}
-      <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', padding: '32px 40px', position: 'relative', zIndex: 1 }}>
+      <div className="thin-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '32px 40px', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
           {messages.length === 0 && <CoachIntro onSuggest={send}/>}
@@ -172,7 +173,7 @@ function CoachIntro({ onSuggest: _onSuggest }: { onSuggest: (s: string) => void 
         <LumaLogo size={48}/>
       </div>
       <h2 style={{ margin: 0, fontSize: 24, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
-        <span className="serif-italic" style={{
+        <span className="serif-italic gradient-accent-text" style={{
           background: 'linear-gradient(120deg, #c4b5fd, #fde68a)',
           WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
         }}>Ask me anything</span> about your trends.

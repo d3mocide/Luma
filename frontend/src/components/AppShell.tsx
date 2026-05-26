@@ -1,5 +1,5 @@
-import { Outlet, NavLink } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { useIsFetching, useQuery } from '@tanstack/react-query'
 import {
   CircleDot, Utensils, Activity, Sparkles, Settings, Plus, Moon, Sun,
 } from 'lucide-react'
@@ -17,6 +17,10 @@ const NAV_ITEMS = [
 ]
 
 export default function AppShell() {
+  const location = useLocation()
+  const todayFetchCount = useIsFetching({ queryKey: ['today'] })
+  const isTodayLoading = location.pathname === '/today' && todayFetchCount > 0
+
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['me'],
     queryFn: () => api.get('/auth/me'),
@@ -47,7 +51,7 @@ export default function AppShell() {
       <LogSheet />
 
       {/* Desktop Sidebar */}
-      <DesktopSidebar user={user} />
+      <DesktopSidebar user={user} isTodayLoading={isTodayLoading} />
 
       {/* Main content */}
       <main
@@ -69,7 +73,7 @@ export default function AppShell() {
   )
 }
 
-function DesktopSidebar({ user }: { user: User }) {
+function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: boolean }) {
   const { theme, toggleTheme } = useUIStore()
 
   const initials = (user.display_name || 'OP')
@@ -94,7 +98,7 @@ function DesktopSidebar({ user }: { user: User }) {
     className="hidden md:flex"
     >
       <div style={{ padding: '0 8px 28px' }}>
-        <LumaWordmark size={26}/>
+        <LumaWordmark size={32}/>
       </div>
 
       <div style={{ padding: '0 8px', marginBottom: 14 }}>
@@ -103,7 +107,7 @@ function DesktopSidebar({ user }: { user: User }) {
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {NAV_ITEMS.map((item) => (
-          <SideLink key={item.to} {...item} />
+          <SideLink key={item.to} {...item} showLoading={isTodayLoading && item.to === '/today'} />
         ))}
       </nav>
 
@@ -141,7 +145,17 @@ function DesktopSidebar({ user }: { user: User }) {
   )
 }
 
-function SideLink({ to, label, Icon }: { to: string; label: string; Icon: React.ElementType }) {
+function SideLink({
+  to,
+  label,
+  Icon,
+  showLoading,
+}: {
+  to: string
+  label: string
+  Icon: React.ElementType
+  showLoading?: boolean
+}) {
   return (
     <NavLink
       to={to}
@@ -161,9 +175,10 @@ function SideLink({ to, label, Icon }: { to: string; label: string; Icon: React.
     >
       {({ isActive }) => (
         <>
-          {isActive && <span className="sidebar-active-indicator"/>}
+          {isActive && <span className={`sidebar-active-indicator ${showLoading ? 'loading' : ''}`}/>} 
           <Icon size={17}/>
           <span>{label}</span>
+          {isActive && showLoading && <span className="nav-loading-label">loading</span>}
         </>
       )}
     </NavLink>

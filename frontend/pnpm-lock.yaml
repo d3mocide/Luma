@@ -8,12 +8,21 @@ importers:
 
   .:
     dependencies:
+      '@fontsource/geist':
+        specifier: ^5.2.9
+        version: 5.2.9
+      '@fontsource/geist-mono':
+        specifier: ^5.2.8
+        version: 5.2.8
       '@tanstack/react-query':
         specifier: ^5.56.2
         version: 5.100.14(react@18.3.1)
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      lucide-react:
+        specifier: ^1.16.0
+        version: 1.16.0(react@18.3.1)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -777,6 +786,12 @@ packages:
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
+  '@fontsource/geist-mono@5.2.8':
+    resolution: {integrity: sha512-YqZUb3X42GjRaHkibUNyE8K4Rk9A6I9Ez81YpJYiuJN4ggmTW2ixoQpa9EWCPfXZtIsCQJTyrDoV9OJOZO/UcA==}
+
+  '@fontsource/geist@5.2.9':
+    resolution: {integrity: sha512-6QMur8g+3/9Uvfv/5chLJGBc9bYVzWijFrWEl0uZnitxp6wEPqKCJd9/GBlOk4dg/QSe96a3TUKEgmscFpE+4g==}
+
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
     engines: {node: '>=18.18.0'}
@@ -1262,8 +1277,8 @@ packages:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
 
-  brace-expansion@1.1.15:
-    resolution: {integrity: sha512-EwOCDEex4quD37XhqM3omwtMoJjr//isUZz1JopUNWms+4Z2ViyM/k1YIRePpoVNnQhENnxtFjLaxNHrT7xIUg==}
+  brace-expansion@1.1.14:
+    resolution: {integrity: sha512-MWPGfDxnyzKU7rNOW9SP/c50vi3xrmrua/+6hfPbCS2ABNWfx24vPidzvC7krjU/RTo235sV776ymlsMtGKj8g==}
 
   brace-expansion@2.1.1:
     resolution: {integrity: sha512-WR1cURNjuvBLMZBMbqM0UoE+WAfdUcEV1ccD8PVBVOI+Z3ND4+SZbN8RsfT2bMuG1qwz5RFvPukSZm5fF2D5eA==}
@@ -1978,6 +1993,11 @@ packages:
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
+
+  lucide-react@1.16.0:
+    resolution: {integrity: sha512-dYwyPzb4MEKpGUmNYk3WKWPnMrHs3FKM+q94kAnJrcDIqqn1hq2xY8scaS2ovsOCM5D51ey2gaRG3PBb1vgoYQ==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -3500,6 +3520,10 @@ snapshots:
       '@eslint/core': 0.17.0
       levn: 0.4.1
 
+  '@fontsource/geist-mono@5.2.8': {}
+
+  '@fontsource/geist@5.2.9': {}
+
   '@humanfs/core@0.19.2':
     dependencies:
       '@humanfs/types': 0.15.0
@@ -3961,7 +3985,7 @@ snapshots:
 
   binary-extensions@2.3.0: {}
 
-  brace-expansion@1.1.15:
+  brace-expansion@1.1.14:
     dependencies:
       balanced-match: 1.0.2
       concat-map: 0.0.1
@@ -4737,6 +4761,10 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
+  lucide-react@1.16.0(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+
   magic-string@0.30.21:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
@@ -4756,7 +4784,7 @@ snapshots:
 
   minimatch@3.1.5:
     dependencies:
-      brace-expansion: 1.1.15
+      brace-expansion: 1.1.14
 
   minimatch@5.1.9:
     dependencies:
