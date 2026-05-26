@@ -74,7 +74,7 @@ async def login(body: LoginRequest, response: Response, db: DbDep) -> UserOut:
     user = result.scalar_one_or_none()
 
     # Use constant-time comparison; always verify even if user not found (mitigate timing oracle)
-    dummy_hash = "$argon2id$v=19$m=65536,t=3,p=4$dummydummydummy$dummydummydummydummydummydummydummydummydummy"
+    dummy_hash = "$argon2id$v=19$m=65536,t=3,p=4$SGjslnqhTZtq5oGVdGyUMw$xS8p1ZFkUZfxWOINsNc8FQUOnSXfgVZK0D4GIpn5luI"
     hash_to_check = user.password_hash if user else dummy_hash
     try:
         ph.verify(hash_to_check, body.password)

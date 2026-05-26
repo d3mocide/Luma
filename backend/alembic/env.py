@@ -27,7 +27,7 @@ def include_object(object, name, type_, reflected, compare_to):
     if name in {"biometrics", "meal_events", "alerts", "biometrics_daily"}:
         return False
     if type_ == "index" and (
-        name in {"foods_name_trgm", "foods_source_id_idx", "meal_plan_slots_lookup", "meal_plans_active_idx"}
+        name in {"foods_name_trgm", "foods_source_id_idx", "meal_plan_slots_lookup", "meal_plans_active_idx", "ix_foods_name_trgm", "ix_foods_brand_trgm"}
         or name.startswith(("biometrics_", "meal_events_", "alerts_"))
         or (getattr(object, "table", None) is not None and object.table.name in {"biometrics", "meal_events", "alerts", "biometrics_daily"})
     ):

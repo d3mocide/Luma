@@ -32,37 +32,37 @@ Last updated: 2026-05-26
 
 ---
 
-## Phase 1 — Logging + Plan  🔒 LOCKED
+## Phase 1 — Logging + Plan  ✅ COMPLETED
 
-Unlock when all Phase 0 exit criteria pass.
+Fully implemented, verified, and stabilized.
 
 ### Backend
-- [ ] `POST /log/meal/voice` — multipart audio → Whisper → food-extractor (Llama3) → draft meal event
-- [ ] `POST /log/meal/barcode` — barcode → OFF local cache → food + portion picker
-- [ ] `POST /log/meal` — save confirmed meal event
-- [ ] `PATCH|DELETE /log/meal/{id}`
-- [ ] `GET /foods/search` — pg_trgm fuzzy search against foods table
-- [ ] `POST /foods` — user-added food
-- [ ] OFF on-demand barcode fallback (`services/off_client.py`)
-- [ ] Monthly OFF JSONL dump ingest worker task
-- [ ] USDA Foundation + SR Legacy ingest (`scripts/ingest_usda.py`)
-- [ ] Food extractor agent (`agents/food_extractor.py`) — Llama3 local
-- [ ] Meal planner agent (`agents/meal_planner.py`) — Claude Sonnet
-- [ ] `POST /plan/regenerate` — generates 7-day plan from goals + preferences
-- [ ] `GET /plan/current` + `GET /plan?week=`
-- [ ] `POST /plan/slot/{id}/swap` — LLM proposes 3 alternatives
-- [ ] `POST /plan/{id}/log-as-eaten/{slot_id}`
-- [ ] `GET /plan/{id}/shopping-list`
-- [ ] Adherence ring on Today — real computation from meal_events vs goals
+- [x] `POST /log/meal/voice` — multipart audio → Whisper → food-extractor (Llama3) → draft meal event
+- [x] `POST /log/meal/barcode` — barcode → OFF local cache → food + portion picker
+- [x] `POST /log/meal` — save confirmed meal event
+- [x] `PATCH|DELETE /log/meal/{id}`
+- [x] `GET /foods/search` — pg_trgm fuzzy search against foods table
+- [x] `POST /foods` — user-added food
+- [x] OFF on-demand barcode fallback (`services/off_client.py`)
+- [x] Monthly OFF JSONL dump ingest worker task
+- [x] USDA Foundation + SR Legacy ingest (`scripts/ingest_usda.py`)
+- [x] Food extractor agent (`agents/food_extractor.py`) — Llama3 local
+- [x] Meal planner agent (`agents/meal_planner.py`) — Claude Sonnet
+- [x] `POST /plan/regenerate` — generates 7-day plan from goals + preferences
+- [x] `GET /plan/current` + `GET /plan?week=`
+- [x] `POST /plan/slot/{id}/swap` — LLM proposes 3 alternatives
+- [x] `POST /plan/{id}/log-as-eaten/{slot_id}`
+- [x] `GET /plan/{id}/shopping-list`
+- [x] Adherence ring on Today — real computation from meal_events vs goals
 
 ### Frontend
-- [ ] Log sheet (`LogSheet/`) — Voice / Barcode / Search tabs
-- [ ] Hold-to-record voice UI → upload → review extracted items → confirm
-- [ ] Barcode scanner UI (`html5-qrcode`)
-- [ ] Plan screen — 7-day list, slot drawer with Log/Swap/Edit
-- [ ] Regenerate plan modal with constraints
-- [ ] Shopping list view
-- [ ] Recipes list + detail view
+- [x] Log sheet (`LogSheet/`) — Voice / Barcode / Search tabs
+- [x] Hold-to-record voice UI → upload → review extracted items → confirm
+- [x] Barcode scanner UI (`html5-qrcode`)
+- [x] Plan screen — 7-day list, slot drawer with Log/Swap/Edit
+- [x] Regenerate plan modal with constraints
+- [x] Shopping list view
+- [x] Recipes list + detail view
 
 ---
 

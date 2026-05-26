@@ -2,6 +2,7 @@ import { Outlet, NavLink } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api, User } from '../lib/api'
 import LogFAB from './LogFAB'
+import LogSheet from './LogSheet'
 import Login from './Login'
 import { clsx } from 'clsx'
 
@@ -32,7 +33,8 @@ export default function AppShell() {
   }
 
   return (
-    <div className="flex flex-col h-dvh md:flex-row">
+    <div className="flex flex-col h-dvh md:flex-row relative">
+      <LogSheet />
       {/* Sidebar — desktop */}
       <aside className="hidden md:flex flex-col w-56 shrink-0 bg-slate-900 border-r border-slate-800 py-6 px-3 gap-1">
         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 mb-4">
