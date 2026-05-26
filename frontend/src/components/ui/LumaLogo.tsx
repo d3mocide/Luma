@@ -1,36 +1,54 @@
-import { useId } from 'react'
+import { useUIStore } from '../../stores'
 
-interface LumaLogoProps { size?: number }
+type LogoVariant = 'auto' | 'dark' | 'light' | 'mono-dark' | 'mono-light'
 
-export function LumaLogo({ size = 32 }: LumaLogoProps) {
-  const baseId = useId()
-  const splashHillMaskId = `${baseId}-splash-hill`
+interface LumaLogoProps {
+  size?: number
+  variant?: LogoVariant
+  title?: string
+}
+
+function resolveGlyphVariant(theme: 'dark' | 'light', variant: LogoVariant) {
+  if (variant !== 'auto') return variant
+  return theme === 'light' ? 'light' : 'dark'
+}
+
+function resolveWordmarkVariant(theme: 'dark' | 'light', variant: LogoVariant) {
+  if (variant === 'dark' || variant === 'light') return variant
+  if (variant === 'mono-dark') return 'dark'
+  if (variant === 'mono-light') return 'light'
+  return theme === 'light' ? 'light' : 'dark'
+}
+
+export function LumaLogo({ size = 32, variant = 'auto', title = 'Luma logo' }: LumaLogoProps) {
+  const theme = useUIStore((s) => s.theme)
+  const glyphVariant = resolveGlyphVariant(theme, variant)
+  const src = `/assets/luma-glyph-${glyphVariant}.svg`
 
   return (
-    <svg width={size} height={size} viewBox="445 272 390 270" fill="none" aria-hidden="true" role="img">
-      <defs>
-        <mask id={splashHillMaskId} maskUnits="userSpaceOnUse">
-          <rect x="0" y="0" width="1200" height="800" fill="white" />
-          <path d="M450 530 Q550 530 590 405 Q640 280 690 405 Q740 530 830 530 V820 H440 Z" fill="black" />
-        </mask>
-      </defs>
-      <circle cx="665" cy="365" r="66" fill="#fbbf24" mask={`url(#${splashHillMaskId})`} />
-      <path
-        d="M450 530 Q550 530 590 405 Q640 280 690 405 Q740 530 830 530"
-        stroke="#0ea5e9"
-        strokeWidth="22"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <img
+      src={src}
+      width={size}
+      height={size}
+      alt={title}
+      style={{ display: 'block' }}
+      draggable={false}
+    />
   )
 }
 
-export function LumaWordmark({ size = 32 }: LumaLogoProps) {
+export function LumaWordmark({ size = 32, variant = 'auto', title = 'Luma wordmark' }: LumaLogoProps) {
+  const theme = useUIStore((s) => s.theme)
+  const wordmarkVariant = resolveWordmarkVariant(theme, variant)
+  const src = `/assets/luma-wordmark-${wordmarkVariant}.svg`
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <LumaLogo size={size} />
-      <span className="luma-wordmark" style={{ fontSize: size * 0.6 }}>luma</span>
-    </div>
+    <img
+      src={src}
+      height={size}
+      alt={title}
+      style={{ display: 'block', width: 'auto' }}
+      draggable={false}
+    />
   )
 }

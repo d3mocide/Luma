@@ -5,46 +5,48 @@ import {
 } from 'recharts'
 import { Heart, Activity, Moon, Flame, TrendingUp, TrendingDown } from 'lucide-react'
 import { api, TrendSeries } from '../lib/api'
+import { convertWeight, measurementWeightUnit, type MeasurementSystem, useMeasurementSystem } from '../lib/measurements'
 import Spark from '../components/ui/Spark'
 
 const RANGES = ['7d', '30d', '90d', '1y'] as const
 type Range = typeof RANGES[number]
 
 const METRICS = [
-  { id: 'weight_kg',          label: 'Weight',        unit: 'kg',  color: '#38bdf8', Icon: Activity,
+  { id: 'weight_kg',          label: 'Weight',        unit: 'kg',  color: 'var(--sky-400)', Icon: Activity,
     insight: 'Keep tracking daily — the trend line is what matters, not single readings.' },
-  { id: 'hrv_ms',             label: 'HRV',           unit: 'ms',  color: '#fb7185', Icon: Heart,
+  { id: 'hrv_ms',             label: 'HRV',           unit: 'ms',  color: 'var(--bad)', Icon: Heart,
     insight: 'HRV responds to sleep and recovery. Trending up means adaptation.' },
-  { id: 'rhr_bpm',            label: 'Resting HR',    unit: 'bpm', color: '#38bdf8', Icon: Activity, invert: true,
+  { id: 'rhr_bpm',            label: 'Resting HR',    unit: 'bpm', color: 'var(--sky-400)', Icon: Activity, invert: true,
     insight: 'Lower resting HR over time signals improving aerobic fitness.' },
-  { id: 'sleep_duration_min', label: 'Sleep',         unit: 'h',   color: '#a78bfa', Icon: Moon,
+  { id: 'sleep_duration_min', label: 'Sleep',         unit: 'h',   color: 'var(--aurora-violet)', Icon: Moon,
     insight: 'More 7+ hour nights than not. Hold steady.' },
-  { id: 'active_kcal',        label: 'Active Calories', unit: 'kcal', color: '#fbbf24', Icon: Flame,
+  { id: 'active_kcal',        label: 'Active Calories', unit: 'kcal', color: 'var(--sun-400)', Icon: Flame,
     insight: 'Consistency over intensity builds lasting metabolic health.' },
 ]
 
 export default function TrendsRoute() {
   const [range, setRange] = useState<Range>('90d')
+  const measurementSystem = useMeasurementSystem()
 
   return (
-    <div className="thin-scroll" style={{ height: '100%', overflowY: 'auto', padding: '32px 40px 40px' }}>
-      <header style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
+    <div className="thin-scroll trends-page">
+      <header className="mobile-hero mobile-hero-with-controls trends-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div className="mobile-hero-content">
           <div className="eyebrow">Trends</div>
-          <h1 style={{ margin: '6px 0 6px', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
+          <h1 className="mobile-hero-title" style={{ margin: '6px 0 6px', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
             Ninety days of{' '}
             <span className="serif-italic gradient-accent-text" style={{
-              background: 'linear-gradient(120deg, #fde68a, #38bdf8)',
+              background: 'linear-gradient(120deg, var(--sun-200), var(--sky-300) 48%, var(--sky-500))',
               WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
             }}>quiet progress</span>.
           </h1>
-          <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-tertiary)' }}>
+          <p className="mobile-hero-subcopy" style={{ margin: 0, fontSize: 14, color: 'var(--fg-tertiary)' }}>
             You're trending the right way. The body keeps score; you keep showing up.
           </p>
         </div>
 
         {/* Range toggle */}
-        <div style={{
+        <div className="mobile-hero-control trends-range-toggle" style={{
           display: 'flex',
           padding: 4,
           background: 'var(--glass-1)',
@@ -57,10 +59,10 @@ export default function TrendsRoute() {
               <button key={r} onClick={() => setRange(r)} style={{
                 padding: '8px 16px',
                 borderRadius: 999,
-                background: active ? 'linear-gradient(180deg, #38bdf8, #0ea5e9)' : 'transparent',
+                background: active ? 'linear-gradient(180deg, var(--sky-300), var(--sky-500))' : 'transparent',
                 border: 'none', cursor: 'pointer',
                 fontSize: 13, fontWeight: active ? 600 : 500,
-                color: active ? '#06121d' : 'var(--fg-tertiary)',
+                color: active ? 'var(--bg-1)' : 'var(--fg-tertiary)',
                 fontFamily: 'var(--font-mono)',
                 boxShadow: active ? '0 4px 14px -4px rgba(14,165,233,0.6)' : 'none',
                 transition: 'all 150ms ease-out',
@@ -74,15 +76,16 @@ export default function TrendsRoute() {
       <MetricChart
         metricId="weight_kg"
         label="Weight"
-        unit="kg"
-        color="#38bdf8"
+        unit={measurementWeightUnit(measurementSystem)}
+        color="var(--sky-400)"
         range={range}
+        measurementSystem={measurementSystem}
         large
         insight="Track the trend line, not the noise. Daily fluctuations are normal."
       />
 
       {/* 4-metric grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginTop: 20 }}>
+      <div className="trends-metric-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginTop: 20 }}>
         {METRICS.slice(1).map((m) => (
           <MetricChart
             key={m.id}
@@ -91,6 +94,7 @@ export default function TrendsRoute() {
             unit={m.unit}
             color={m.color}
             range={range}
+            measurementSystem={measurementSystem}
             insight={m.insight}
             invert={m.invert}
           />
@@ -101,17 +105,28 @@ export default function TrendsRoute() {
 }
 
 function MetricChart({
-  metricId, label, unit, color, range, large, insight, invert,
+  metricId, label, unit, color, range, large, insight, invert, measurementSystem,
 }: {
   metricId: string; label: string; unit: string; color: string
-  range: Range; large?: boolean; insight?: string; invert?: boolean
+  range: Range; large?: boolean; insight?: string; invert?: boolean; measurementSystem: MeasurementSystem
 }) {
   const { data, isLoading } = useQuery<TrendSeries>({
     queryKey: ['trend', metricId, range],
     queryFn: () => api.get(`/trends/${metricId}?range=${range}`),
   })
 
-  const series = data?.series ?? []
+  const series = (data?.series ?? []).map((entry) => {
+    if (metricId !== 'weight_kg') return entry
+
+    return {
+      ...entry,
+      avg: convertWeight(entry.avg, measurementSystem),
+      min: convertWeight(entry.min, measurementSystem),
+      max: convertWeight(entry.max, measurementSystem),
+      last: convertWeight(entry.last, measurementSystem),
+    }
+  })
+  const displayUnit = metricId === 'weight_kg' ? measurementWeightUnit(measurementSystem) : unit
   const hasData = series.some((s) => s.last != null)
 
   const lastVal = hasData ? series[series.length - 1].last : null
@@ -140,7 +155,7 @@ function MetricChart({
                   <span className="num" style={{ fontSize: 56, fontWeight: 300, letterSpacing: '-0.04em', lineHeight: 1, color: 'var(--fg-primary)' }}>
                     {metricId === 'sleep_duration_min' ? (lastVal / 60).toFixed(1) : lastVal.toFixed(1)}
                   </span>
-                  <span style={{ fontSize: 18, color: 'var(--fg-tertiary)' }}>{unit}</span>
+                  <span style={{ fontSize: 18, color: 'var(--fg-tertiary)' }}>{displayUnit}</span>
                   {delta != null && (
                     <span style={{
                       fontSize: 13, color: good ? 'var(--good)' : 'var(--bad)',
@@ -193,7 +208,7 @@ function MetricChart({
           <span className="num" style={{ fontSize: 32, fontWeight: 300, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
             {metricId === 'sleep_duration_min' ? (lastVal / 60).toFixed(1) : lastVal.toFixed(1)}
           </span>
-          <span style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>{unit}</span>
+          <span style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>{displayUnit}</span>
         </div>
       )}
 

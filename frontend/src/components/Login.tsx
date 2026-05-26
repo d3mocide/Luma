@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, Heart, ShieldCheck } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, Heart, ShieldCheck, AlertCircle } from 'lucide-react'
 import { api } from '../lib/api'
 import { LumaLogo, LumaWordmark } from './ui/LumaLogo'
 
@@ -45,7 +45,7 @@ export default function Login() {
       <div className="luma-bg" style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{
           width: 36, height: 36, borderRadius: '50%',
-          border: '2px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8',
+          border: '2px solid rgba(56,189,248,0.2)', borderTopColor: 'var(--sky-400)',
           animation: 'spin 0.8s linear infinite',
         }}/>
         <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
@@ -69,7 +69,7 @@ export default function Login() {
 
         <div style={{ marginTop: 'auto', maxWidth: 540 }}>
           <div className="eyebrow" style={{ marginBottom: 20, color: 'var(--sky-300)' }}>
-            ◇ Your light, daily
+            Your light, daily
           </div>
           <h1 style={{
             fontFamily: 'var(--font-sans)',
@@ -81,14 +81,14 @@ export default function Login() {
           }}>
             {isSetup ? (
               <>Create your<br/><span className="serif-italic gradient-accent-text" style={{
-                background: 'linear-gradient(120deg, #fde68a, #38bdf8 70%)',
+                background: 'linear-gradient(120deg, var(--sun-200), var(--sky-300) 48%, var(--sky-500))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
                 fontSize: 72,
                 }}>private</span><br/>space.</>
             ) : (
               <>Track your body<br/>with{' '}
                 <span className="serif-italic gradient-accent-text" style={{
-                  background: 'linear-gradient(120deg, #fde68a, #38bdf8 70%)',
+                  background: 'linear-gradient(120deg, var(--sun-200), var(--sky-300) 48%, var(--sky-500))',
                   WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
                   fontSize: 72,
                 }}>luminous</span><br/>clarity.</>
@@ -184,7 +184,7 @@ export default function Login() {
                 color: 'var(--bad)',
                 display: 'flex', gap: 8, alignItems: 'center',
               }}>
-                ⚠ {error}
+                <AlertCircle size={14} strokeWidth={1.5}/> {error}
               </div>
             )}
 
@@ -250,7 +250,7 @@ export default function Login() {
               {loading ? (
                 <span style={{
                   width: 18, height: 18, borderRadius: '50%',
-                  border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff',
+                  border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'var(--fg-primary)',
                   display: 'inline-block',
                   animation: 'spin 0.8s linear infinite',
                 }}/>

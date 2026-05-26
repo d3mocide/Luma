@@ -57,11 +57,15 @@ export default function SettingsRoute() {
   }
 
   return (
-    <div className="thin-scroll" style={{ height: '100%', overflowY: 'auto', padding: '32px 40px 40px' }}>
-      <div className="eyebrow" style={{ marginBottom: 8 }}>Settings</div>
-      <h1 style={{ margin: '0 0 28px', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
-        Your account
-      </h1>
+    <div className="thin-scroll settings-page" style={{ height: '100%', overflowY: 'auto', padding: '32px 40px 40px' }}>
+      <header className="mobile-hero" style={{ marginBottom: 28 }}>
+        <div className="mobile-hero-content">
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Settings</div>
+          <h1 className="mobile-hero-title" style={{ margin: 0, fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
+            Your account
+          </h1>
+        </div>
+      </header>
 
       <div style={{ maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div className="glass" style={{ padding: 24 }}>

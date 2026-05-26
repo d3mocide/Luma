@@ -7,6 +7,8 @@ Working agreements for Claude Code. Read the full design document before writing
 Design document: see the Luma design doc in the initial issue/prompt that spawned this repo.
 All architecture decisions are made there. Do not invent new patterns without explicit instruction.
 
+Brand/UI reference: `refrence/BRAND-GUIDE.md` is the canonical source for visual language, voice, tokens, iconography, and asset paths for frontend work.
+
 ## Phase Gate — READ THIS FIRST
 
 | Phase | Status | Exit Criteria |
@@ -43,6 +45,7 @@ All architecture decisions are made there. Do not invent new patterns without ex
 - React Router v6 for routing
 - vite-plugin-pwa for service worker/manifest
 - Never import from `react-dom` directly — use React 18 patterns
+- For visual/copy decisions, follow `refrence/BRAND-GUIDE.md` before introducing new UI treatments
 
 ### File Layout
 

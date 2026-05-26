@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { Sparkles, Flame, Heart, Activity, Moon, Check, Plus } from 'lucide-react'
+import { Sparkles, Flame, Heart, Activity, Moon, Check, Plus, Sunrise, Fish, Apple, Leaf } from 'lucide-react'
 import { api, TodayData, User } from '../lib/api'
 import { createMockTodayData, createMockWeightSeries, isTodaySparseData } from '../lib/mock-data'
 import { fmtMinutes, fmt } from '../lib/format'
+import { convertWeight, convertWeightSlope, measurementSlopeUnit, measurementWeightUnit, useMeasurementSystem } from '../lib/measurements'
 import ActivityRings from '../components/ui/ActivityRings'
 import WeightChart from '../components/ui/WeightChart'
 import SlopeChip from '../components/ui/SlopeChip'
@@ -10,6 +11,7 @@ import StreakStrip from '../components/ui/StreakStrip'
 
 export default function TodayRoute() {
   const forceMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === '1'
+  const measurementSystem = useMeasurementSystem()
 
   const { data: user } = useQuery<User>({
     queryKey: ['me'],
@@ -40,26 +42,26 @@ export default function TodayRoute() {
     (adherence?.sat_fat_g?.pct ?? 0) / 100,
     (adherence?.soluble_fiber_g?.pct ?? 0) / 100,
   ]
-  const weightSeries = useMockData ? createMockWeightSeries(data.weight.latest_kg) : []
+  const weightUnit = measurementWeightUnit(measurementSystem)
+  const slopeUnit = measurementSlopeUnit(measurementSystem)
+  const latestWeight = convertWeight(data.weight.latest_kg, measurementSystem)
+  const targetWeight = convertWeight(data.weight.target_kg, measurementSystem)
+  const trend7d = convertWeightSlope(data.weight.trend_7d, measurementSystem)
+  const trend28d = convertWeightSlope(data.weight.trend_28d, measurementSystem)
+  const weightSeries = (useMockData ? createMockWeightSeries(data.weight.latest_kg) : []).map((point) => ({
+    ...point,
+    last: convertWeight(point.last, measurementSystem) ?? point.last,
+  }))
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const userDisplayName = (user?.display_name ?? '').trim()
   const greetingName = userDisplayName || 'there'
-  const greetingInitials = userDisplayName
-    ? userDisplayName
-      .split(' ')
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-    : 'OP'
-
   return (
     <TodayShell>
 
       {/* Desktop layout */}
-      <div className="hidden md:block" style={{ padding: '32px 40px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="hidden md:flex md:flex-col" style={{ padding: '32px 40px 40px', gap: 20 }}>
 
         {/* Top bar */}
         <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -73,7 +75,7 @@ export default function TodayRoute() {
             }}>
               {greeting},{' '}
               <span className="serif-italic gradient-accent-text" style={{
-                background: 'linear-gradient(120deg, #fde68a, #38bdf8)',
+                background: 'linear-gradient(120deg, var(--sun-200), var(--sky-300) 48%, var(--sky-500))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>{greetingName}</span>.
             </h1>
@@ -98,17 +100,17 @@ export default function TodayRoute() {
                   <span className="num" style={{
                     fontSize: 64, fontWeight: 300, letterSpacing: '-0.04em', lineHeight: 1,
                     color: 'var(--fg-primary)',
-                  }}>{data.weight.latest_kg?.toFixed(1) ?? '—'}</span>
-                  <span style={{ fontSize: 18, color: 'var(--fg-tertiary)' }}>kg</span>
-                  {data.weight.target_kg && (
+                  }}>{latestWeight?.toFixed(1) ?? '—'}</span>
+                  <span style={{ fontSize: 18, color: 'var(--fg-tertiary)' }}>{weightUnit}</span>
+                  {targetWeight != null && (
                     <span style={{ fontSize: 13, color: 'var(--fg-quiet)', marginLeft: 8 }}>
-                      target <span className="num" style={{ color: 'var(--fg-tertiary)' }}>{data.weight.target_kg.toFixed(1)} kg</span>
+                      target <span className="num" style={{ color: 'var(--fg-tertiary)' }}>{targetWeight.toFixed(1)} {weightUnit}</span>
                     </span>
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-                  <SlopeChip label="7d" value={data.weight.trend_7d}/>
-                  <SlopeChip label="28d" value={data.weight.trend_28d}/>
+                  <SlopeChip label="7d" value={trend7d} unit={slopeUnit}/>
+                  <SlopeChip label="28d" value={trend28d} unit={slopeUnit}/>
                 </div>
               </div>
             </div>
@@ -137,13 +139,13 @@ export default function TodayRoute() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="eyebrow">Yesterday</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-                  <RingLegend color="#38bdf8" label="Calories"
+                  <RingLegend color="var(--sky-400)" label="Calories"
                     value={`${adherence?.calories?.logged ?? '—'} / ${adherence?.calories?.target ?? '—'}`}
                     pct={adherence?.calories?.pct ?? 0}/>
-                  <RingLegend color="#fbbf24" label="Sat fat"
+                  <RingLegend color="var(--sun-400)" label="Sat fat"
                     value={`${adherence?.sat_fat_g?.logged ?? '—'}g / ${adherence?.sat_fat_g?.target ?? '—'}g`}
                     pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
-                  <RingLegend color="#34d399" label="Fiber"
+                  <RingLegend color="var(--good)" label="Fiber"
                     value={`${adherence?.soluble_fiber_g?.logged ?? '—'}g / ${adherence?.soluble_fiber_g?.target ?? '—'}g`}
                     pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
                 </div>
@@ -183,7 +185,7 @@ export default function TodayRoute() {
             <div className="glass" style={{
               padding: 24, position: 'relative', overflow: 'hidden',
               background: 'var(--insight-card-bg)',
-              borderColor: 'var(--insight-card-border)',
+              borderLeft: '2px solid var(--sun-400)',
             }}>
               <div style={{
                 position: 'absolute', top: -80, right: -70, width: 300, height: 240,
@@ -220,7 +222,7 @@ export default function TodayRoute() {
                   borderColor: 'var(--insight-cta-border)',
                   color: 'var(--insight-cta-fg)',
                 }}>
-                  <Sparkles size={13}/> Ask Coach
+                  <Sparkles size={13}/> Ask Luma
                 </button>
               </div>
             </div>
@@ -261,37 +263,30 @@ export default function TodayRoute() {
             <div className="eyebrow">Biometrics · last night</div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-            <BioTile icon={<Heart size={13}/>} label="HRV" value={fmt(bio?.hrv_ms, 0)} unit="ms" color="#fb7185"/>
-            <BioTile icon={<Activity size={13}/>} label="Resting HR" value={fmt(bio?.rhr_bpm, 0)} unit="bpm" color="#38bdf8"/>
-            <BioTile icon={<Moon size={13}/>} label="Sleep" value={fmtMinutes(bio?.sleep_duration_min)} color="#a78bfa"/>
-            <BioTile icon={<Sparkles size={13}/>} label="Sleep score" value={fmt(bio?.sleep_score, 0)} color="#fbbf24"/>
+            <BioTile icon={<Heart size={13} strokeWidth={1.5}/>} label="HRV" value={fmt(bio?.hrv_ms, 0)} unit="ms" color="var(--bad)"/>
+            <BioTile icon={<Activity size={13} strokeWidth={1.5}/>} label="Resting HR" value={fmt(bio?.rhr_bpm, 0)} unit="bpm" color="var(--sky-400)"/>
+            <BioTile icon={<Moon size={13} strokeWidth={1.5}/>} label="Sleep" value={fmtMinutes(bio?.sleep_duration_min)} color="var(--aurora-violet)"/>
+            <BioTile icon={<Sparkles size={13} strokeWidth={1.5}/>} label="Sleep score" value={fmt(bio?.sleep_score, 0)} color="var(--sun-400)"/>
           </div>
         </div>
       </div>
 
       {/* Mobile layout */}
       <div
-        className="md:hidden thin-scroll"
-        style={{ padding: '4px 18px 110px', height: '100%', overflowY: 'auto' }}
+        className="md:hidden thin-scroll today-mobile-scroll"
       >
         {/* Greeting */}
-        <div style={{ marginBottom: 18, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <div>
+        <div className="mobile-hero">
+          <div className="mobile-hero-content">
             <div className="eyebrow">{dateLabel}</div>
-            <h1 style={{ margin: '6px 0 0', fontSize: 26, fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1.15, color: 'var(--fg-primary)' }}>
-              {greeting},<br/>
+            <h1 className="mobile-hero-title">
+              {greeting},{' '}
               <span className="serif-italic gradient-accent-text" style={{
-                background: 'linear-gradient(120deg, #fde68a, #38bdf8)',
+                background: 'linear-gradient(120deg, var(--sun-200), var(--sky-300) 48%, var(--sky-500))',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>{greetingName}</span>.
             </h1>
           </div>
-          <div style={{
-            width: 38, height: 38, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #38bdf8, #fbbf24)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 600, fontSize: 13, color: '#06121d',
-          }}>{greetingInitials}</div>
         </div>
 
         {/* Rings */}
@@ -314,7 +309,7 @@ export default function TodayRoute() {
                   position: 'absolute', inset: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <div className="num" style={{ fontSize: 26, lineHeight: 1, fontWeight: 500, color: 'var(--fg-primary)' }}>
+                  <div className="num" style={{ fontSize: 18, lineHeight: 1, fontWeight: 500, color: 'var(--fg-primary)' }}>
                     {rings.filter(r => r >= 0.9).length} / 3
                   </div>
                 </div>
@@ -322,9 +317,9 @@ export default function TodayRoute() {
               <div style={{ marginTop: 7, fontSize: 9, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
             </div>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <RingLegend color="#38bdf8" label="Calories" value={`${adherence?.calories?.logged ?? '—'}`} pct={adherence?.calories?.pct ?? 0}/>
-              <RingLegend color="#fbbf24" label="Sat fat" value={`${adherence?.sat_fat_g?.logged ?? '—'}g`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
-              <RingLegend color="#34d399" label="Fiber" value={`${adherence?.soluble_fiber_g?.logged ?? '—'}g`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
+              <RingLegend color="var(--sky-400)" label="Calories" value={`${adherence?.calories?.logged ?? '—'}`} pct={adherence?.calories?.pct ?? 0}/>
+              <RingLegend color="var(--sun-400)" label="Sat fat" value={`${adherence?.sat_fat_g?.logged ?? '—'}g`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
+              <RingLegend color="var(--good)" label="Fiber" value={`${adherence?.soluble_fiber_g?.logged ?? '—'}g`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
             </div>
           </div>
         </div>
@@ -336,14 +331,14 @@ export default function TodayRoute() {
               <div className="eyebrow">Weight</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 6 }}>
                 <span className="num" style={{ fontSize: 38, fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--fg-primary)' }}>
-                  {data.weight.latest_kg?.toFixed(1) ?? '—'}
+                  {latestWeight?.toFixed(1) ?? '—'}
                 </span>
-                <span style={{ fontSize: 14, color: 'var(--fg-tertiary)' }}>kg</span>
+                <span style={{ fontSize: 14, color: 'var(--fg-tertiary)' }}>{weightUnit}</span>
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-              <SlopeChip label="7d" value={data.weight.trend_7d}/>
-              <SlopeChip label="28d" value={data.weight.trend_28d}/>
+              <SlopeChip label="7d" value={trend7d} unit={slopeUnit}/>
+              <SlopeChip label="28d" value={trend28d} unit={slopeUnit}/>
             </div>
           </div>
         </div>
@@ -353,7 +348,7 @@ export default function TodayRoute() {
           <div className="glass" style={{
             padding: 18, marginBottom: 14, position: 'relative', overflow: 'hidden',
             background: 'var(--insight-card-bg)',
-            borderColor: 'var(--insight-card-border)',
+            borderLeft: '2px solid var(--sun-400)',
           }}>
             <div style={{
                 position: 'absolute', top: -80, right: -85, width: 220, height: 190,
@@ -382,7 +377,7 @@ export default function TodayRoute() {
                   borderColor: 'var(--insight-cta-border)',
                   color: 'var(--insight-cta-fg)',
                 }}>
-                  <Sparkles size={11}/> Ask Coach
+                  <Sparkles size={11}/> Ask Luma
                 </button>
               </div>
             </div>
@@ -416,10 +411,10 @@ export default function TodayRoute() {
         <div className="glass" style={{ padding: 18 }}>
           <div className="eyebrow" style={{ marginBottom: 12 }}>Biometrics</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
-            <BioTile icon={<Heart size={13}/>} label="HRV" value={fmt(bio?.hrv_ms, 0)} unit="ms" color="#fb7185"/>
-            <BioTile icon={<Activity size={13}/>} label="RHR" value={fmt(bio?.rhr_bpm, 0)} unit="bpm" color="#38bdf8"/>
-            <BioTile icon={<Moon size={13}/>} label="Sleep" value={fmtMinutes(bio?.sleep_duration_min)} color="#a78bfa"/>
-            <BioTile icon={<Sparkles size={13}/>} label="Score" value={fmt(bio?.sleep_score, 0)} color="#fbbf24"/>
+            <BioTile icon={<Heart size={13} strokeWidth={1.5}/>} label="HRV" value={fmt(bio?.hrv_ms, 0)} unit="ms" color="var(--bad)"/>
+            <BioTile icon={<Activity size={13} strokeWidth={1.5}/>} label="RHR" value={fmt(bio?.rhr_bpm, 0)} unit="bpm" color="var(--sky-400)"/>
+            <BioTile icon={<Moon size={13} strokeWidth={1.5}/>} label="Sleep" value={fmtMinutes(bio?.sleep_duration_min)} color="var(--aurora-violet)"/>
+            <BioTile icon={<Sparkles size={13} strokeWidth={1.5}/>} label="Score" value={fmt(bio?.sleep_score, 0)} color="var(--sun-400)"/>
           </div>
         </div>
       </div>
@@ -444,7 +439,7 @@ function RingLegend({ color, label, value, pct, invert }: {
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <span style={{
         width: 8, height: 8, borderRadius: '50%',
-        background: color, boxShadow: `0 0 8px ${color}80`, flexShrink: 0,
+        background: color, boxShadow: '0 0 8px rgba(255,255,255,0.14)', flexShrink: 0,
       }}/>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{label}</div>
@@ -459,24 +454,31 @@ function RingLegend({ color, label, value, pct, invert }: {
 }
 
 const SLOT_COLORS: Record<string, string> = {
-  breakfast: '#fbbf24',
-  lunch: '#38bdf8',
-  snack: '#34d399',
-  dinner: '#a78bfa',
+  breakfast: 'var(--sun-400)',
+  lunch: 'var(--sky-400)',
+  snack: 'var(--good)',
+  dinner: 'var(--aurora-violet)',
+}
+
+function SlotIcon({ slot }: { slot: string }) {
+  if (slot === 'breakfast') return <Sunrise size={16} strokeWidth={1.5} />
+  if (slot === 'lunch') return <Fish size={16} strokeWidth={1.5} />
+  if (slot === 'snack') return <Apple size={16} strokeWidth={1.5} />
+  return <Leaf size={16} strokeWidth={1.5} />
 }
 
 function PlanRow({ meal }: { meal: any }) {
-  const color = SLOT_COLORS[meal.slot] || '#94a3b8'
+  const color = SLOT_COLORS[meal.slot] || 'var(--fg-quiet)'
   return (
     <div className="glass-inset" style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 14 }}>
       <div style={{
         width: 36, height: 36, borderRadius: 11,
-        background: `linear-gradient(135deg, ${color}22, ${color}10)`,
-        border: `1px solid ${color}33`,
+        background: 'var(--glass-1)',
+        border: `1px solid ${color}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: color, flexShrink: 0, fontSize: 16,
+        color: color, flexShrink: 0,
       }}>
-        {meal.slot === 'breakfast' ? '☀' : meal.slot === 'lunch' ? '🐟' : meal.slot === 'snack' ? '🍎' : '🌿'}
+        <SlotIcon slot={meal.slot} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{

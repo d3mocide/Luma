@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useUIStore } from '../stores'
 import { api } from '../lib/api'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Mic, Search, Utensils, X } from 'lucide-react'
 
 export default function LogSheet() {
   const isOpen = useUIStore((s) => s.logSheetOpen)
@@ -345,10 +346,9 @@ export default function LogSheet() {
               background: 'var(--glass-2)', border: '1px solid var(--glass-edge)',
               color: 'var(--fg-quiet)', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 14,
             }}
           >
-            ✕
+            <X size={14} strokeWidth={1.5} />
           </button>
         </header>
 
@@ -359,7 +359,12 @@ export default function LogSheet() {
           display: 'flex', gap: 8, overflowX: 'auto',
         }}>
           {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((s) => {
-            const colors: Record<string, string> = { breakfast: '#fbbf24', lunch: '#38bdf8', dinner: '#a78bfa', snack: '#34d399' }
+            const colors: Record<string, string> = {
+              breakfast: 'var(--sun-400)',
+              lunch: 'var(--sky-400)',
+              dinner: 'var(--aurora-violet)',
+              snack: 'var(--good)',
+            }
             const c = colors[s]
             return (
               <button
@@ -430,7 +435,10 @@ export default function LogSheet() {
                     isRecording ? 'bg-red-500 text-white' : 'bg-brand-500 text-white hover:bg-brand-600'
                   }`}
                 >
-                  <span className="text-3xl font-bold">{isRecording ? '■' : '🎤'}</span>
+                  {isRecording
+                    ? <span className="text-sm font-semibold uppercase tracking-wide">Stop</span>
+                    : <Mic size={28} strokeWidth={1.5} />
+                  }
                 </button>
               </div>
 
@@ -459,13 +467,13 @@ export default function LogSheet() {
                     onClick={() => handleMockVoice('One cup of cooked steel cut oatmeal with blueberries and ground flaxseeds')}
                     className="p-3 bg-slate-800 hover:bg-slate-750 text-left rounded-lg border border-slate-700/60 text-xs text-slate-300 transition-colors"
                   >
-                    ✦ "1 cup steel cut oatmeal with blueberries & flax"
+                    "1 cup steel cut oatmeal with blueberries & flax"
                   </button>
                   <button
                     onClick={() => handleMockVoice('Grilled salmon fillet with two tablespoons of olive oil and steamed broccoli')}
                     className="p-3 bg-slate-800 hover:bg-slate-750 text-left rounded-lg border border-slate-700/60 text-xs text-slate-300 transition-colors"
                   >
-                    ✦ "Grilled salmon with olive oil & broccoli"
+                    "Grilled salmon with olive oil & broccoli"
                   </button>
                 </div>
               </div>
@@ -532,7 +540,7 @@ export default function LogSheet() {
                   placeholder="Search oats, salmon, fruits, vegetables..."
                   className="w-full bg-slate-950 border border-slate-800 focus:border-brand-500 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-200 focus:outline-none"
                 />
-                <span className="absolute left-3 top-2.5 text-slate-500 text-sm">🔍</span>
+                <span className="absolute left-3 top-2.5 text-slate-500 text-sm"><Search size={14} strokeWidth={1.5} /></span>
                 {isSearching && (
                   <span className="absolute right-3 top-2.5 w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
                 )}
@@ -567,7 +575,7 @@ export default function LogSheet() {
                 
                 {draftItems.length === 0 ? (
                   <div className="p-8 text-center bg-slate-950/35 border border-dashed border-slate-850 rounded-xl">
-                    <span className="text-2xl block mb-2 opacity-50">🍽️</span>
+                    <span className="text-2xl block mb-2 opacity-50"><Utensils size={20} strokeWidth={1.5} /></span>
                     <p className="text-xs text-slate-500">Your plate is currently empty</p>
                   </div>
                 ) : (
@@ -627,7 +635,7 @@ export default function LogSheet() {
                 { l: 'Calories', v: Math.round(totals.calories), c: 'var(--fg-primary)' },
                 { l: 'Sat Fat', v: `${totals.saturated_fat_g.toFixed(1)}g`, c: 'var(--bad)' },
                 { l: 'Sol Fiber', v: `${totals.soluble_fiber_g.toFixed(1)}g`, c: 'var(--good)' },
-                { l: 'Protein', v: `${totals.protein_g.toFixed(1)}g`, c: '#a78bfa' },
+                { l: 'Protein', v: `${totals.protein_g.toFixed(1)}g`, c: 'var(--aurora-violet)' },
               ].map((n) => (
                 <div key={n.l} className="glass-inset" style={{ padding: '8px 10px', textAlign: 'center' }}>
                   <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginBottom: 2 }}>{n.l}</div>

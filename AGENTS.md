@@ -8,6 +8,8 @@ Luma is a self-hosted, data-sovereign health tracking and meal-planning PWA. Sin
 
 Full design: see the Luma design document in the issue/prompt that spawned this repo.
 
+Frontend brand reference: `refrence/BRAND-GUIDE.md` is the canonical visual and voice guide for UI work.
+
 ## Phase Gate
 
 Same as CLAUDE.md. Phase 0 must be complete before any agent touches Phase 1+ code.
@@ -43,6 +45,8 @@ Before writing code for any non-trivial task:
 1. State which section(s) of the design doc you are implementing
 2. List the files you will create or modify
 3. Identify any ambiguities and resolve them against the design doc before writing code
+
+For frontend/UI changes, explicitly cite the relevant sections from `refrence/BRAND-GUIDE.md` in your plan.
 
 ### Commit & Changelog Discipline
 

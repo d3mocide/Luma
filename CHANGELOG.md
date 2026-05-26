@@ -28,6 +28,7 @@ All notable changes to the Luma health tracking and meal-planning PWA will be do
 - **TypeScript Optimization**: Rectified all strict compiler checks, resolved unused imports, and enabled clean build generation for production.
 
 ### Changed
+- **Brand Guide Compliance Sweep (Frontend UI)**: Removed emoji and symbol glyph usage from interactive surfaces, replaced meal-slot pictograms with Lucide icons, normalized icon stroke usage, applied safe-area handling to the mobile bottom nav, shifted non-logo/non-FAB sky+sun accents to sky-only gradients, converted route-level hardcoded UI colors to design tokens, and aligned Today insight cards with the specified left-accent border treatment.
 - **Container-Free LLM SDK Integration**: Migrated the AI pipeline from the standalone LiteLLM proxy container to the in-process `litellm` Python SDK for direct connection to local/remote LLM nodes, reducing memory footprint and network routing complexity.
 - **Dynamic Model Agnosticism**: Decoupled AI model configuration into environment variables (`FOOD_EXTRACTOR_MODEL`, `MEAL_PLANNER_MODEL`, `LOCAL_AI_API_BASE`), allowing the application to utilize any local or remote OpenAI-compatible completion node directly using `LOCAL_AI_API_BASE`.
 - **Argon2 Constant-Time Verification**: Fixed the timing oracle mitigation by generating a syntactically correct, pre-compiled dummy hash to avoid verification decoding exceptions.

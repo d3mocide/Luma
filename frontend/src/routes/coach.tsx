@@ -30,7 +30,7 @@ export default function CoachRoute() {
   }
 
   return (
-    <div style={{ height: '100%', minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div className="coach-page" style={{ height: '100%', minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       {/* Atmospheric glow */}
       <div style={{
         position: 'absolute', inset: 0,
@@ -39,13 +39,13 @@ export default function CoachRoute() {
       }}/>
 
       {/* Header */}
-      <header style={{
+      <header className="coach-header" style={{
         padding: '28px 40px 20px',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         borderBottom: '1px solid rgba(255,255,255,0.04)',
         position: 'relative', zIndex: 1,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="coach-header-main" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 12,
             background: 'linear-gradient(135deg, rgba(167,139,250,0.3), rgba(56,189,248,0.2))',
@@ -55,19 +55,19 @@ export default function CoachRoute() {
           }}>
             <Sparkles size={18} color="#c4b5fd"/>
           </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--fg-primary)' }}>Coach</h1>
-            <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+          <div className="coach-header-copy">
+            <h1 className="coach-header-title" style={{ margin: 0, fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--fg-primary)' }}>Luma</h1>
+            <div className="coach-header-subtitle" style={{ fontSize: 12, color: 'var(--fg-tertiary)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
               <span style={{
                 width: 6, height: 6, borderRadius: '50%',
                 background: 'var(--good)', boxShadow: '0 0 6px var(--good-glow)',
               }}/>
-              Claude · grounded in your last 90 days
+              Grounded in your last 90 days
             </div>
           </div>
         </div>
         <button
-          className="btn btn-ghost"
+          className="btn btn-ghost coach-new-thread-btn"
           style={{ padding: '8px 12px', fontSize: 12 }}
           onClick={() => setMessages([])}
         >
@@ -76,7 +76,7 @@ export default function CoachRoute() {
       </header>
 
       {/* Messages */}
-      <div className="thin-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '32px 40px', position: 'relative', zIndex: 1 }}>
+      <div className="thin-scroll coach-messages" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '32px 40px', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
           {messages.length === 0 && <CoachIntro onSuggest={send}/>}
@@ -123,7 +123,7 @@ export default function CoachRoute() {
       </div>
 
       {/* Composer */}
-      <div style={{ padding: '20px 40px 28px', position: 'relative', zIndex: 1 }}>
+      <div className="coach-composer" style={{ padding: '20px 40px 28px', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: 760, margin: '0 auto' }}>
           {/* Suggestion chips */}
           {messages.length === 0 && (
@@ -144,7 +144,7 @@ export default function CoachRoute() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
-              placeholder="Ask Coach…"
+              placeholder="Ask Luma…"
               style={{
                 flex: 1, background: 'transparent', border: 'none', outline: 'none',
                 color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)', fontSize: 15,
