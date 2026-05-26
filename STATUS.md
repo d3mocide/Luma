@@ -7,7 +7,7 @@ Last updated: 2026-05-26
 **Status: code-complete, not yet verified against running infrastructure**
 
 ### Done
-- [x] `compose.yml` — all services with health checks (postgres/TimescaleDB, redis, api, worker, nginx, litellm, ollama, whisper)
+- [x] `compose.yml` — all services with health checks (postgres/TimescaleDB, redis, api, worker, nginx, litellm [remote AI], whisper)
 - [x] Alembic migration `0001_initial` — all 13 relational tables + 3 hypertables (biometrics, meal_events, alerts) + `biometrics_daily` continuous aggregate
 - [x] `POST /api/v1/auth/login|logout|refresh` + `GET /auth/me` — Argon2id + JWT, HTTP-only cookies
 - [x] `POST /api/v1/ingest/hae` — HMAC-SHA256 verified, normalizes all 9 HAE metric types into biometrics
@@ -102,5 +102,5 @@ Unlock when all Phase 0 exit criteria pass.
 - [ ] CI — `alembic upgrade head` + `pytest` on every push
 - [ ] Log rotation config for nginx
 - [ ] Backup cron for postgres volume
-- [ ] Ollama model pulls documented (`llama3.1:8b-instruct`, `moondream2`)
+- [ ] Remote Local AI setup & model dependencies documented (e.g. `llama3.1:8b-instruct`, `moondream2`)
 - [ ] `.env` secret generation documented (openssl rand -hex 32)
