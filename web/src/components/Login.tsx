@@ -1,30 +1,62 @@
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 
 export default function Login() {
   const [email, setEmail] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const queryClient = useQueryClient()
+
+  // 1. Fetch setup status to determine if we show "First-Run Setup" or "Sign In"
+  const { data: setupStatus, isLoading: checkingSetup } = useQuery<{ setup_required: boolean }>({
+    queryKey: ['setupStatus'],
+    queryFn: () => api.get('/auth/setup-status'),
+    retry: false,
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
+    const isSetup = setupStatus?.setup_required
+
     try {
-      await api.post('/auth/login', { email, password })
-      // On successful login, invalidate the me query and other dashboard metrics to trigger refetching
+      if (isSetup) {
+        // First-run setup: Create user
+        await api.post('/auth/setup', {
+          email,
+          password,
+          display_name: displayName || 'Operator',
+        })
+      } else {
+        // Standard login
+        await api.post('/auth/login', { email, password })
+      }
+
+      // Invalidate queries to refresh auth context and telemetry metrics
       await queryClient.invalidateQueries({ queryKey: ['me'] })
       await queryClient.invalidateQueries({ queryKey: ['today'] })
+      await queryClient.invalidateQueries({ queryKey: ['setupStatus'] })
     } catch (err: any) {
-      setError(err?.message ?? 'Invalid email or password.')
+      setError(err?.message ?? (isSetup ? 'Failed to complete setup.' : 'Invalid email or password.'))
     } finally {
       setLoading(false)
     }
   }
+
+  if (checkingSetup) {
+    return (
+      <div className="fixed inset-0 bg-slate-950 flex items-center justify-center z-50">
+        <span className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  const isSetupRequired = setupStatus?.setup_required
 
   return (
     <div className="fixed inset-0 bg-slate-950 flex flex-col justify-center items-center p-4 z-50 overflow-y-auto">
@@ -38,10 +70,12 @@ export default function Login() {
             <span className="text-2xl text-white font-semibold">◎</span>
           </div>
           <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-100 to-slate-300 bg-clip-text text-transparent">
-            Welcome to Luma
+            {isSetupRequired ? 'Create Operator Account' : 'Welcome to Luma'}
           </h2>
           <p className="text-xs text-slate-500 mt-1.5 text-center">
-            Your self-hosted health and nutrition command center
+            {isSetupRequired
+              ? 'Luma detected first run. Set up your sovereign account to start health telemetry.'
+              : 'Your self-hosted health and nutrition command center'}
           </p>
         </div>
 
@@ -53,6 +87,22 @@ export default function Login() {
             </div>
           )}
 
+          {isSetupRequired && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Display Name
+              </label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="e.g. Jules"
+                required={isSetupRequired}
+                className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 transition-colors focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Email Address
@@ -61,7 +111,7 @@ export default function Login() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. admin@sovereign.health"
+              placeholder={isSetupRequired ? "e.g. operator@domain.com" : "e.g. admin@sovereign.health"}
               required
               className="w-full bg-slate-950/80 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 transition-colors focus:ring-1 focus:ring-indigo-500"
             />
@@ -88,6 +138,8 @@ export default function Login() {
           >
             {loading ? (
               <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : isSetupRequired ? (
+              'Create Account'
             ) : (
               'Sign In'
             )}
