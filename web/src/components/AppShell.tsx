@@ -1,5 +1,8 @@
 import { Outlet, NavLink } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { api, User } from '../lib/api'
 import LogFAB from './LogFAB'
+import Login from './Login'
 import { clsx } from 'clsx'
 
 const NAV_ITEMS = [
@@ -10,6 +13,24 @@ const NAV_ITEMS = [
 ]
 
 export default function AppShell() {
+  const { data: user, isLoading, error } = useQuery<User>({
+    queryKey: ['me'],
+    queryFn: () => api.get('/auth/me'),
+    retry: false,
+  })
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-slate-950 flex items-center justify-center">
+        <span className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (error || !user) {
+    return <Login />
+  }
+
   return (
     <div className="flex flex-col h-dvh md:flex-row">
       {/* Sidebar — desktop */}
