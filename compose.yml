@@ -115,6 +115,12 @@ services:
     build:
       context: ./whisper
       dockerfile: Dockerfile
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-base.en}
+    volumes:
+      # Persist downloaded model weights across container restarts.
+      # base.en is baked into the image; any other model downloads here on first start.
+      - whisper_model_cache:/root/.cache/huggingface
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/health')"]
       interval: 15s
@@ -127,3 +133,4 @@ volumes:
   pgdata:
   redisdata:
   frontend_node_modules:
+  whisper_model_cache:
