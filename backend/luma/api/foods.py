@@ -9,8 +9,12 @@ from pydantic import BaseModel
 
 from luma.db.models import Food
 from luma.deps import DbDep, CurrentUser
+from luma.services import usda_client
 
 router = APIRouter()
+
+# Minimum local hits before we skip the live USDA fallback.
+_LOCAL_THRESHOLD = 5
 
 
 class FoodCreate(BaseModel):
@@ -44,24 +48,43 @@ async def search_foods(
 ) -> List[Food]:
     if not q or not q.strip():
         stmt = select(Food).order_by(Food.name).limit(30)
-    else:
-        q_clean = q.strip()
-        # Combine pg_trgm similarity and standard substring ILIKE for ultimate fuzzy robust matching
-        stmt = (
-            select(Food)
-            .where(
-                or_(
-                    func.similarity(Food.name, q_clean) > 0.15,
-                    func.similarity(func.coalesce(Food.brand, ""), q_clean) > 0.15,
-                    Food.name.ilike(f"%{q_clean}%"),
-                )
-            )
-            .order_by(func.similarity(Food.name, q_clean).desc())
-            .limit(30)
-        )
+        res = await db.execute(stmt)
+        return list(res.scalars().all())
 
+    q_clean = q.strip()
+    stmt = (
+        select(Food)
+        .where(
+            or_(
+                func.similarity(Food.name, q_clean) > 0.15,
+                func.similarity(func.coalesce(Food.brand, ""), q_clean) > 0.15,
+                Food.name.ilike(f"%{q_clean}%"),
+            )
+        )
+        .order_by(func.similarity(Food.name, q_clean).desc())
+        .limit(30)
+    )
     res = await db.execute(stmt)
-    return list(res.scalars().all())
+    local: list[Food] = list(res.scalars().all())
+
+    if len(local) >= _LOCAL_THRESHOLD:
+        return local
+
+    # Sparse local results — hit USDA FoodData Central and cache any new foods.
+    remote = await usda_client.search_foods(q_clean, limit=20)
+    for item in remote:
+        if not item.get("source_id"):
+            continue
+        exists = await db.execute(select(Food).where(Food.source_id == item["source_id"]))
+        if exists.scalar_one_or_none():
+            continue
+        db.add(Food(id=uuid.uuid4(), **item))
+    if remote:
+        await db.commit()
+
+    # Re-query so the caller gets a consistent, ranked result set from the DB.
+    res2 = await db.execute(stmt)
+    return list(res2.scalars().all())
 
 
 @router.get("/{food_id}", response_model=FoodResponse)

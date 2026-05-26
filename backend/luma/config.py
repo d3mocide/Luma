@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     whisper_url: str = "http://whisper:9000"
     anthropic_api_key: str = ""
     gemini_api_key: str = ""
+    usda_api_key: str = ""
 
     # Primary model routes — prefix determines provider:
     #   local/<id>     → LOCAL_AI_API_BASE (Ollama / LocalAI)
