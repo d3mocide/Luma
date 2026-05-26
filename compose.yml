@@ -26,7 +26,13 @@ services:
       REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
       HAE_SHARED_SECRET: ${HAE_SHARED_SECRET}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      LITELLM_BASE_URL: ${LITELLM_BASE_URL:-http://litellm:4000}
+      LOCAL_AI_API_BASE: ${LOCAL_AI_API_BASE}
+      LOCAL_AI_API_KEY: ${LOCAL_AI_API_KEY}
+      FOOD_EXTRACTOR_MODEL: ${FOOD_EXTRACTOR_MODEL}
+      VISION_CLASSIFIER_MODEL: ${VISION_CLASSIFIER_MODEL}
+      MEAL_PLANNER_MODEL: ${MEAL_PLANNER_MODEL}
+      COACH_MODEL: ${COACH_MODEL}
+      INSIGHT_NARRATOR_MODEL: ${INSIGHT_NARRATOR_MODEL}
       WHISPER_URL: ${WHISPER_URL:-http://whisper:9000}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
@@ -81,23 +87,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-    restart: unless-stopped
-
-  litellm:
-    image: ghcr.io/berriai/litellm:main-stable
-    volumes:
-      - ./litellm/config.yaml:/app/config.yaml:ro
-    environment:
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      LOCAL_AI_API_BASE: ${LOCAL_AI_API_BASE}
-      LOCAL_AI_API_KEY: ${LOCAL_AI_API_KEY}
-      FOOD_EXTRACTOR_MODEL: ${FOOD_EXTRACTOR_MODEL}
-      VISION_CLASSIFIER_MODEL: ${VISION_CLASSIFIER_MODEL}
-      MEAL_PLANNER_MODEL: ${MEAL_PLANNER_MODEL}
-      COACH_MODEL: ${COACH_MODEL}
-      INSIGHT_NARRATOR_MODEL: ${INSIGHT_NARRATOR_MODEL}
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
-    command: ["--config", "/app/config.yaml", "--port", "4000"]
     restart: unless-stopped
 
   whisper:

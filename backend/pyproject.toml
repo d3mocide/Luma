@@ -36,6 +36,7 @@ dependencies = [
     "python-multipart>=0.0.12",
     "python-dateutil>=2.9.0",
     "orjson>=3.10.0",
+    "litellm>=1.40.0",
 ]
 
 [project.optional-dependencies]

@@ -1,8 +1,8 @@
-import httpx
 import json
 import logging
 import re
 from typing import List, Dict, Any
+import litellm
 from luma.config import settings
 
 logger = logging.getLogger("food_extractor")
@@ -13,8 +13,6 @@ async def extract_foods_from_text(text: str) -> List[Dict[str, Any]]:
     if not text.strip():
         return []
         
-    url = f"{settings.litellm_base_url}/v1/chat/completions"
-    
     system_prompt = (
         "You are Luma's high-fidelity clinical nutrition parser. "
         "Your task is to parse a natural language description of food consumed and extract "
@@ -44,48 +42,42 @@ async def extract_foods_from_text(text: str) -> List[Dict[str, Any]]:
     
     user_prompt = f"Extract and parse this consumed meal log:\n\"{text}\""
     
-    payload = {
-        "model": settings.food_extractor_model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "temperature": 0.1,
-    }
-    
-    headers = {}
-    if settings.local_ai_api_key:
-        headers["Authorization"] = f"Bearer {settings.local_ai_api_key}"
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
     
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(url, json=payload, headers=headers)
-            if resp.status_code != 200:
-                logger.error(f"LiteLLM food-extractor returned status {resp.status_code}: {resp.text}")
-                return []
-                
-            completion = resp.json()
-            content = completion["choices"][0]["message"]["content"].strip()
+        resp = await litellm.acompletion(
+            model=settings.food_extractor_model,
+            messages=messages,
+            api_base=settings.local_ai_api_base or None,
+            api_key=settings.local_ai_api_key or None,
+            temperature=0.1,
+            timeout=30.0,
+        )
+        
+        content = resp["choices"][0]["message"]["content"].strip()
+        
+        # Clean potential markdown JSON wrappers
+        if content.startswith("```"):
+            # strip out opening and closing blocks
+            content = re.sub(r"^```(?:json)?\n", "", content)
+            content = re.sub(r"\n```$", "", content)
+            content = content.strip()
             
-            # Clean potential markdown JSON wrappers
-            if content.startswith("```"):
-                # strip out opening and closing blocks
-                content = re.sub(r"^```(?:json)?\n", "", content)
-                content = re.sub(r"\n```$", "", content)
-                content = content.strip()
-                
-            try:
-                parsed = json.loads(content)
-                if isinstance(parsed, list):
-                    return parsed
-                elif isinstance(parsed, dict) and "items" in parsed:
-                    return parsed["items"]
-                else:
-                    logger.error(f"Unexpected JSON format returned by extractor: {content}")
-                    return []
-            except json.JSONDecodeError:
-                logger.error(f"Failed to parse LLM response as JSON: {content}")
+        try:
+            parsed = json.loads(content)
+            if isinstance(parsed, list):
+                return parsed
+            elif isinstance(parsed, dict) and "items" in parsed:
+                return parsed["items"]
+            else:
+                logger.error(f"Unexpected JSON format returned by extractor: {content}")
                 return []
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse LLM response as JSON: {content}")
+            return []
                 
     except Exception as e:
         logger.exception(f"Error calling local AI food-extractor: {e}")
