@@ -188,3 +188,29 @@ class CoachMessage(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     thread = relationship("CoachThread", back_populates="messages")
+
+
+class MealEvent(Base):
+    __tablename__ = "meal_events"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    ts = Column(DateTime(timezone=True), primary_key=True, server_default=func.now())
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    slot = Column(Text, nullable=False)
+    source = Column(Text, nullable=False)
+    items = Column(JSONB, nullable=False, default=list)
+    nutrition = Column(JSONB, nullable=False, default=dict)
+    plan_slot_id = Column(UUID(as_uuid=True), ForeignKey("meal_plan_slots.id"))
+    raw_input = Column(Text)
+    confidence = Column(Numeric(3, 2))
+
+
+class Biometric(Base):
+    __tablename__ = "biometrics"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    ts = Column(DateTime(timezone=True), primary_key=True, server_default=func.now())
+    metric = Column(Text, primary_key=True)
+    value = Column(Double, nullable=False)
+    source = Column(Text, nullable=False)
+    source_id = Column(Text)

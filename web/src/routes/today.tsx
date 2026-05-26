@@ -45,11 +45,11 @@ export default function TodayRoute() {
           <p className="text-sm text-slate-500 mt-1">No plan yet — generate one in the Plan tab.</p>
         ) : (
           <ul className="mt-2 space-y-2">
-            {data.plan_today.map((m) => (
-              <li key={m.slot} className="flex items-center justify-between">
+            {data.plan_today.map((m: any, idx) => (
+              <li key={m.slot || idx} className="flex items-center justify-between">
                 <div>
                   <span className="text-xs text-slate-500 capitalize">{m.slot}</span>
-                  <p className="text-sm">{m.name}</p>
+                  <p className="text-sm">{m.custom_name || m.name}</p>
                 </div>
                 {m.logged && <span className="text-xs text-emerald-400">Logged</span>}
               </li>
