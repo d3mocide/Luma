@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     local_ai_api_base: str = ""
     whisper_url: str = "http://whisper:9000"
     anthropic_api_key: str = ""
+    gemini_api_key: str = ""
     
     # Custom model names and API keys for full model/endpoint agnosticism
     food_extractor_model: str = "food-extractor"

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from luma.config import settings
 from luma.db.models import Food, Goal, Preference
+from luma.services.llm_client import build_litellm_target
 from fastapi import HTTPException
 
 logger = logging.getLogger("meal_planner")
@@ -109,13 +110,12 @@ async def generate_meal_plan(
     ]
     
     try:
+        target = build_litellm_target(settings.meal_planner_model)
         resp = await litellm.acompletion(
-            model=settings.meal_planner_model,
+            **target,
             messages=messages,
-            api_base=settings.local_ai_api_base or None,
-            api_key=settings.local_ai_api_key or None,
             temperature=0.2,
-            timeout=120.0,
+            timeout=600.0,
         )
         
         content = resp["choices"][0]["message"]["content"].strip()
