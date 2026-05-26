@@ -20,6 +20,7 @@ build/
 node_modules/
 frontend/dist/
 frontend/.vite/
+*.tsbuildinfo
 *.local
 .pnpm-debug.log
 .pnpm-store/
@@ -31,6 +32,7 @@ redisdata/
 # OS
 .DS_Store
 Thumbs.db
+.thumbnail
 
 # Editor
 .vscode/
