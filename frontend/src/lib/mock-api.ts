@@ -265,5 +265,37 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     return { message: 'Reminders exported to your mock inbox.' }
   }
 
+  if (method === 'POST' && pathname === '/log/meal/voice') {
+    requireAuth()
+    return {
+      raw_input: 'a bowl of steel cut oats with blueberries and a black coffee',
+      confidence: 0.92,
+      items: [
+        {
+          name: 'Steel cut oats',
+          quantity: 1,
+          unit: 'cup cooked',
+          estimated_weight_g: 234,
+          nutrients: { calories: 166, protein_g: 5.9, carbohydrates_g: 28, fat_g: 3.6, fiber_g: 4, saturated_fat_g: 0.7, soluble_fiber_g: 2, sodium_mg: 9 },
+        },
+        {
+          name: 'Blueberries',
+          quantity: 0.5,
+          unit: 'cup',
+          estimated_weight_g: 74,
+          nutrients: { calories: 42, protein_g: 0.5, carbohydrates_g: 11, fat_g: 0.2, fiber_g: 1.8, saturated_fat_g: 0, soluble_fiber_g: 0.8, sodium_mg: 1 },
+        },
+        {
+          name: 'Black coffee',
+          quantity: 1,
+          unit: 'cup',
+          estimated_weight_g: 240,
+          nutrients: { calories: 2, protein_g: 0.3, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, saturated_fat_g: 0, soluble_fiber_g: 0, sodium_mg: 5 },
+        },
+      ],
+      nutrition: { calories: 210, protein_g: 6.7, carbohydrates_g: 39, fat_g: 3.8, fiber_g: 5.8, saturated_fat_g: 0.7, soluble_fiber_g: 2.8, sodium_mg: 15 },
+    }
+  }
+
   throw new MockApiError(404, `Mock route not implemented: ${method} ${path}`)
 }
