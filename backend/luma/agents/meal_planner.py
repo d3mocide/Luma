@@ -105,7 +105,7 @@ async def generate_meal_plan(
     
     url = f"{settings.litellm_base_url}/v1/chat/completions"
     payload = {
-        "model": "meal-planner",
+        "model": settings.meal_planner_model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -113,9 +113,13 @@ async def generate_meal_plan(
         "temperature": 0.2,
     }
     
+    headers = {}
+    if settings.local_ai_api_key:
+        headers["Authorization"] = f"Bearer {settings.local_ai_api_key}"
+    
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(url, json=payload)
+            resp = await client.post(url, json=payload, headers=headers)
             if resp.status_code != 200:
                 logger.error(f"LiteLLM meal-planner returned status {resp.status_code}: {resp.text}")
                 raise RuntimeError("Failed to generate plan from LiteLLM")

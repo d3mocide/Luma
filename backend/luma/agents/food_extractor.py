@@ -45,7 +45,7 @@ async def extract_foods_from_text(text: str) -> List[Dict[str, Any]]:
     user_prompt = f"Extract and parse this consumed meal log:\n\"{text}\""
     
     payload = {
-        "model": "food-extractor",
+        "model": settings.food_extractor_model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -53,9 +53,13 @@ async def extract_foods_from_text(text: str) -> List[Dict[str, Any]]:
         "temperature": 0.1,
     }
     
+    headers = {}
+    if settings.local_ai_api_key:
+        headers["Authorization"] = f"Bearer {settings.local_ai_api_key}"
+    
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(url, json=payload)
+            resp = await client.post(url, json=payload, headers=headers)
             if resp.status_code != 200:
                 logger.error(f"LiteLLM food-extractor returned status {resp.status_code}: {resp.text}")
                 return []

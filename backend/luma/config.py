@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     litellm_base_url: str = "http://litellm:4000"
     whisper_url: str = "http://whisper:9000"
     anthropic_api_key: str = ""
+    
+    # Custom model names and API keys for full model/endpoint agnosticism
+    food_extractor_model: str = "food-extractor"
+    meal_planner_model: str = "meal-planner"
+    local_ai_api_key: str = ""
 
     environment: Literal["development", "production"] = "development"
     cors_origins: Any = ["http://localhost:5173"]
