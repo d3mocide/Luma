@@ -3,11 +3,14 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+    environment:
+      LUMA_PROXY_MODE: ${LUMA_PROXY_MODE:-false}
+      LUMA_DOMAIN:     ${LUMA_DOMAIN:-localhost}
     ports:
-      - "${LUMA_HTTPS_PORT:-443}:443"
       - "${LUMA_HTTP_PORT:-80}:80"
+      - "${LUMA_HTTPS_PORT:-443}:443"
     volumes:
-      - ./certs:/etc/nginx/certs:ro
+      - nginx_certs:/etc/nginx/certs
     depends_on:
       api:
         condition: service_healthy
@@ -18,11 +21,11 @@ services:
     working_dir: /app
     command: ["sh", "-c", "corepack enable && pnpm install --frozen-lockfile && pnpm dev"]
     environment:
-      VITE_API_TARGET: http://api:8000
-      VITE_PORT: 5173
+      VITE_API_TARGET:    http://api:8000
+      VITE_PORT:          5173
       VITE_USE_MOCK_DATA: ${VITE_USE_MOCK_DATA:-1}
       CHOKIDAR_USEPOLLING: ${CHOKIDAR_USEPOLLING:-0}
-      CHOKIDAR_INTERVAL: ${CHOKIDAR_INTERVAL:-200}
+      CHOKIDAR_INTERVAL:  ${CHOKIDAR_INTERVAL:-200}
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
@@ -38,26 +41,42 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    # --proxy-headers lets FastAPI trust X-Forwarded-For / X-Forwarded-Proto
+    # from the internal nginx in both standalone and proxied deployments.
+    command:
+      - uvicorn
+      - luma.main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --proxy-headers
+      - --forwarded-allow-ips=*
     environment: &api-env
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
-      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      DATABASE_URL:      ${DATABASE_URL}
+      REDIS_URL:         ${REDIS_URL}
+      JWT_SECRET:        ${JWT_SECRET}
+      JWT_ALGORITHM:     ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES:  ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      REFRESH_TOKEN_EXPIRE_DAYS:    ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
       HAE_SHARED_SECRET: ${HAE_SHARED_SECRET}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_API_KEY:    ${GEMINI_API_KEY}
       LOCAL_AI_API_BASE: ${LOCAL_AI_API_BASE}
-      LOCAL_AI_API_KEY: ${LOCAL_AI_API_KEY}
-      FOOD_EXTRACTOR_MODEL: ${FOOD_EXTRACTOR_MODEL}
-      VISION_CLASSIFIER_MODEL: ${VISION_CLASSIFIER_MODEL}
-      MEAL_PLANNER_MODEL: ${MEAL_PLANNER_MODEL}
-      COACH_MODEL: ${COACH_MODEL}
-      INSIGHT_NARRATOR_MODEL: ${INSIGHT_NARRATOR_MODEL}
-      WHISPER_URL: ${WHISPER_URL:-http://whisper:9000}
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      LOCAL_AI_API_KEY:  ${LOCAL_AI_API_KEY}
+      FOOD_EXTRACTOR_MODEL:          ${FOOD_EXTRACTOR_MODEL}
+      FOOD_EXTRACTOR_FALLBACK_MODEL: ${FOOD_EXTRACTOR_FALLBACK_MODEL}
+      VISION_CLASSIFIER_MODEL:       ${VISION_CLASSIFIER_MODEL}
+      VISION_CLASSIFIER_FALLBACK_MODEL: ${VISION_CLASSIFIER_FALLBACK_MODEL}
+      MEAL_PLANNER_MODEL:            ${MEAL_PLANNER_MODEL}
+      MEAL_PLANNER_FALLBACK_MODEL:   ${MEAL_PLANNER_FALLBACK_MODEL}
+      COACH_MODEL:                   ${COACH_MODEL}
+      COACH_FALLBACK_MODEL:          ${COACH_FALLBACK_MODEL}
+      INSIGHT_NARRATOR_MODEL:        ${INSIGHT_NARRATOR_MODEL}
+      INSIGHT_NARRATOR_FALLBACK_MODEL: ${INSIGHT_NARRATOR_FALLBACK_MODEL}
+      WHISPER_URL:       ${WHISPER_URL:-http://whisper:9000}
+      ENVIRONMENT:       ${ENVIRONMENT:-development}
+      CORS_ORIGINS:      ${CORS_ORIGINS:-http://localhost:5173}
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,8 +108,8 @@ services:
     volumes:
       - pgdata:/home/postgres/pgdata/data
     environment:
-      POSTGRES_DB: luma
-      POSTGRES_USER: sh
+      POSTGRES_DB:       luma
+      POSTGRES_USER:     sh
       POSTGRES_PASSWORD: ${PG_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sh -d luma"]
@@ -118,8 +137,6 @@ services:
     environment:
       WHISPER_MODEL: ${WHISPER_MODEL:-base.en}
     volumes:
-      # Persist downloaded model weights across container restarts.
-      # base.en is baked into the image; any other model downloads here on first start.
       - whisper_model_cache:/root/.cache/huggingface
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/health')"]
@@ -132,5 +149,6 @@ services:
 volumes:
   pgdata:
   redisdata:
+  nginx_certs:
   frontend_node_modules:
   whisper_model_cache:
