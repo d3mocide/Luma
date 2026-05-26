@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Shuffle, X, Check } from 'lucide-react'
 import { api } from '../lib/api'
 
 interface MealSlot {
@@ -18,345 +19,380 @@ interface PlanData {
   slots: MealSlot[]
 }
 
+const SLOT_META: Record<string, { color: string; emoji: string; label: string }> = {
+  breakfast: { color: '#fbbf24', emoji: '☀', label: 'Breakfast' },
+  lunch:     { color: '#38bdf8', emoji: '🐟', label: 'Lunch' },
+  snack:     { color: '#34d399', emoji: '🍎', label: 'Snack' },
+  dinner:    { color: '#a78bfa', emoji: '🌿', label: 'Dinner' },
+}
+
 export default function PlanRoute() {
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState<'calendar' | 'shopping'>('calendar')
-  
-  // Custom constraints input for Claude Sonnet meal generation
   const [customConstraints, setCustomConstraints] = useState('')
-  
-  // Selected slot drawer state
   const [selectedSlot, setSelectedSlot] = useState<MealSlot | null>(null)
-  
-  // 1. Fetch current weekly plan
+  const [purchasedItems, setPurchasedItems] = useState<Record<string, boolean>>({})
+  const [activeTab, setActiveTab] = useState<'calendar' | 'shopping'>('calendar')
+
   const { data: plan, isLoading } = useQuery<PlanData>({
     queryKey: ['plan'],
     queryFn: () => api.get('/plan/current'),
     retry: false,
   })
 
-  // 2. Fetch shopping list
   const { data: shoppingData } = useQuery<{ shopping_list: any[] }>({
     queryKey: ['shopping', plan?.id],
     queryFn: () => api.get(`/plan/${plan?.id}/shopping-list`),
     enabled: !!plan?.id,
   })
 
-  // 3. Generate new plan mutation
   const generateMutation = useMutation({
     mutationFn: (constraintsText: string) =>
       api.post('/plan/generate', {
         constraints: constraintsText ? { custom_request: constraintsText } : undefined,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plan'] })
-      setCustomConstraints('')
-    },
-    onError: () => {
-      alert('Failed to generate meal plan. Make sure Anthropic API key is configured!')
-    }
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['plan'] }); setCustomConstraints('') },
+    onError: () => alert('Failed to generate meal plan. Make sure Anthropic API key is configured!'),
   })
 
-  // 4. Swap Slot mutation
   const swapMutation = useMutation({
     mutationFn: (slotId: string) => api.post(`/plan/slot/${slotId}/swap`),
-    onSuccess: (updatedSlot: any) => {
-      queryClient.invalidateQueries({ queryKey: ['plan'] })
-      if (selectedSlot && selectedSlot.id === updatedSlot.id) {
-        setSelectedSlot({ ...selectedSlot, ...updatedSlot })
-      }
-    }
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan'] }),
   })
 
-  // 5. Log as Eaten mutation
   const logEatenMutation = useMutation({
     mutationFn: (slotId: string) => api.post(`/plan/${plan?.id}/log-as-eaten/${slotId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['today'] })
-      alert('Meal successfully logged as eaten!')
       setSelectedSlot(null)
-    }
+    },
   })
 
-  // Group slots by date
-  const groupSlotsByDate = () => {
-    if (!plan || !plan.slots) return {}
-    const grouped: Record<string, MealSlot[]> = {}
-    plan.slots.forEach((s) => {
-      if (!grouped[s.slot_date]) grouped[s.slot_date] = []
-      grouped[s.slot_date].push(s)
-    })
-    return grouped
-  }
-
-  const grouped = groupSlotsByDate()
+  const grouped = groupByDate(plan?.slots ?? [])
   const dates = Object.keys(grouped).sort()
 
-  const formatDayName = (dateStr: string) => {
-    const d = new Date(dateStr)
-    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
-  }
-
-  // Shopping purchased state toggle mock
-  const [purchasedItems, setPurchasedItems] = useState<Record<string, boolean>>({})
-  const togglePurchased = (foodId: string) => {
-    setPurchasedItems((prev) => ({ ...prev, [foodId]: !prev[foodId] }))
-  }
-
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6 pb-24">
-      {/* Route Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-100 uppercase tracking-wide">
-            Heart-Healthy Meal Planner
-          </h1>
-          <p className="text-sm text-slate-400">Claude Sonnet-driven cardiovascular dietary orchestrator</p>
-        </div>
+    <div className="thin-scroll" style={{ height: '100%', overflowY: 'auto', padding: '32px 40px 40px' }}>
 
+      {/* Header */}
+      <header style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 28 }}>
+        <div>
+          <div className="eyebrow">
+            {plan ? `Week of ${formatWeek(plan.week_start)}` : 'Meal Plan'}
+          </div>
+          <h1 style={{ margin: '8px 0 6px', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
+            Your{' '}
+            <span className="serif-italic" style={{
+              background: 'linear-gradient(120deg, #fde68a, #38bdf8)',
+              WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+            }}>heart-healthy</span> week.
+          </h1>
+          <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-tertiary)' }}>
+            Tuned for LDL reduction · <span className="num">18g</span> soluble fiber / day · <span className="num">&lt;12g</span> saturated fat
+          </p>
+        </div>
         {plan && (
-          <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 self-start">
-            <button
-              onClick={() => setActiveTab('calendar')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'calendar' ? 'bg-brand-500 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Calendar Schedule
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn" style={{ padding: '10px 14px' }}
+              onClick={() => generateMutation.mutate(customConstraints)}>
+              <Shuffle size={15}/> Regenerate
             </button>
-            <button
-              onClick={() => setActiveTab('shopping')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'shopping' ? 'bg-brand-500 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Shopping List
-            </button>
+            <div style={{
+              display: 'flex',
+              padding: 4,
+              background: 'var(--glass-1)',
+              border: '1px solid var(--glass-edge)',
+              borderRadius: 999,
+            }}>
+              {(['calendar', 'shopping'] as const).map((tab) => (
+                <button key={tab} onClick={() => setActiveTab(tab)} style={{
+                  padding: '6px 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                  background: activeTab === tab ? 'linear-gradient(180deg, #38bdf8, #0ea5e9)' : 'transparent',
+                  color: activeTab === tab ? '#06121d' : 'var(--fg-tertiary)',
+                  fontSize: 12, fontWeight: activeTab === tab ? 600 : 400,
+                  fontFamily: 'var(--font-sans)',
+                  transition: 'all 150ms ease-out',
+                }}>
+                  {tab === 'calendar' ? 'Calendar' : 'Shopping'}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-      </div>
+      </header>
 
-      {/* NO ACTIVE PLAN STATE */}
+      {/* No plan */}
       {!plan && !isLoading && (
-        <div className="bg-slate-900 rounded-2xl p-8 border border-slate-800 max-w-xl mx-auto space-y-6">
-          <div className="text-center space-y-2">
-            <span className="text-4xl block">🥗</span>
-            <h2 className="text-lg font-bold text-slate-200">No Weekly Plan Active</h2>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Generate a personalized 7-day meal plan calculated specifically for LDL reduction, dietary pattern targets, and soluble fiber intake.
-            </p>
-          </div>
+        <div style={{ maxWidth: 480, margin: '0 auto' }}>
+          <div className="glass" style={{ padding: 40 }}>
+            <div style={{ textAlign: 'center', marginBottom: 28 }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>🥗</div>
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--fg-primary)' }}>
+                No Weekly Plan Active
+              </h2>
+              <p style={{ margin: '10px 0 0', fontSize: 14, color: 'var(--fg-tertiary)', lineHeight: 1.6 }}>
+                Generate a personalized 7-day plan calculated for LDL reduction, dietary pattern targets, and soluble fiber intake.
+              </p>
+            </div>
 
-          <div className="space-y-3">
-            <label className="text-xs font-semibold text-slate-350 uppercase tracking-wider block">
-              Additional Prompt Constraints (Optional)
-            </label>
-            <textarea
-              value={customConstraints}
-              onChange={(e) => setCustomConstraints(e.target.value)}
-              placeholder="e.g. Include salmon twice, vegetarian lunches, no dairy..."
-              className="w-full h-24 bg-slate-950 border border-slate-800 focus:border-brand-500 rounded-xl p-3 text-sm text-slate-300 focus:outline-none resize-none"
-            />
-            <button
-              onClick={() => generateMutation.mutate(customConstraints)}
-              disabled={generateMutation.isPending}
-              className="w-full py-3 bg-brand-500 hover:bg-brand-600 disabled:bg-slate-800 text-white font-extrabold text-sm rounded-xl transition-all shadow shadow-brand-500/20 active:scale-95"
-            >
-              {generateMutation.isPending ? 'Claude is Orchestrating Plan...' : 'Generate Personalized 7-Day Plan'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* LOADING STATE */}
-      {isLoading && (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <span className="w-10 h-10 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin" />
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Loading meal planner...</p>
-        </div>
-      )}
-
-      {/* CALENDAR TAB VIEW */}
-      {plan && activeTab === 'calendar' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {dates.map((dateStr) => (
-            <div
-              key={dateStr}
-              className="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 flex flex-col gap-4 shadow-xl"
-            >
-              <h3 className="text-sm font-black text-slate-200 border-b border-slate-800/80 pb-2 flex items-center justify-between">
-                <span>{formatDayName(dateStr)}</span>
-                <span className="text-xxs uppercase bg-brand-500/10 text-brand-400 px-2 py-0.5 rounded-full font-bold">
-                  Day Plan
-                </span>
-              </h3>
-
-              <div className="space-y-3 flex-1">
-                {grouped[dateStr].map((slot) => (
-                  <button
-                    key={slot.id}
-                    onClick={() => setSelectedSlot(slot)}
-                    className="w-full text-left bg-slate-950/45 hover:bg-slate-950/90 border border-slate-850 hover:border-brand-500/40 rounded-xl p-3 flex flex-col gap-1 transition-all group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xxs uppercase font-black tracking-wider text-slate-500 group-hover:text-brand-400 transition-colors">
-                        {slot.slot}
-                      </span>
-                      <span className="text-xs opacity-0 group-hover:opacity-105 transition-opacity text-slate-400">
-                        ➔
-                      </span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-200 block truncate">
-                      {slot.custom_name}
-                    </span>
-                    {slot.notes && (
-                      <span className="text-xs text-slate-450 line-clamp-1">
-                        {slot.notes}
-                      </span>
-                    )}
-                  </button>
-                ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <div className="eyebrow" style={{ marginBottom: 8 }}>Additional constraints (optional)</div>
+                <textarea
+                  value={customConstraints}
+                  onChange={(e) => setCustomConstraints(e.target.value)}
+                  placeholder="e.g. Include salmon twice, vegetarian lunches, no dairy…"
+                  rows={3}
+                  style={{
+                    width: '100%', resize: 'none',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid var(--glass-edge)',
+                    borderRadius: 14, padding: '12px 14px',
+                    color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)', fontSize: 14,
+                    outline: 'none',
+                  }}
+                />
               </div>
+              <button
+                className="btn btn-primary"
+                style={{ padding: '14px 20px', fontSize: 14, opacity: generateMutation.isPending ? 0.7 : 1 }}
+                onClick={() => generateMutation.mutate(customConstraints)}
+                disabled={generateMutation.isPending}
+              >
+                {generateMutation.isPending ? 'Claude is orchestrating…' : 'Generate Personalized 7-Day Plan'}
+              </button>
             </div>
-          ))}
+          </div>
         </div>
       )}
 
-      {/* SHOPPING LIST TAB VIEW */}
-      {plan && activeTab === 'shopping' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-2xl mx-auto shadow-xl space-y-6">
-          <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-            <div>
-              <h2 className="text-lg font-bold text-slate-200">Ingredients Shopping List</h2>
-              <p className="text-xs text-slate-500">Auto-compiled from this week's planned slots</p>
-            </div>
-            
-            {/* Native Reminders Export trigger */}
-            <button
-              onClick={async () => {
-                const res: any = await api.post(`/plan/${plan.id}/shopping-list/export-reminders`)
-                alert(res.message || 'Exported successfully!')
-              }}
-              className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-slate-100 rounded-lg text-xs font-bold border border-slate-700 transition-colors"
-            >
-              🍏 Export to Reminders
-            </button>
-          </div>
+      {/* Loading */}
+      {isLoading && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: 16 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%',
+            border: '2px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8',
+            animation: 'spin 0.8s linear infinite',
+          }}/>
+          <p style={{ fontSize: 12, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Loading meal planner…
+          </p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        </div>
+      )}
 
-          <div className="divide-y divide-slate-800">
-            {shoppingData?.shopping_list && shoppingData.shopping_list.length > 0 ? (
-              shoppingData.shopping_list.map((item) => (
-                <div
-                  key={item.food_id}
-                  onClick={() => togglePurchased(item.food_id)}
-                  className="py-3 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-850/30 px-2 rounded-lg transition-colors group"
-                >
-                  <div className="flex items-center gap-3">
-                    {/* Checkbox circle */}
-                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                      purchasedItems[item.food_id]
-                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                        : 'border-slate-700 group-hover:border-slate-500'
-                    }`}>
-                      {purchasedItems[item.food_id] && <span className="text-[10px] font-bold">✓</span>}
+      {/* Calendar view */}
+      {plan && activeTab === 'calendar' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12 }}>
+          {dates.map((dateStr) => {
+            const today = dateStr === new Date().toISOString().slice(0, 10)
+            return (
+              <div key={dateStr} className="glass" style={{
+                padding: 16, display: 'flex', flexDirection: 'column', gap: 10,
+                borderColor: today ? 'rgba(56,189,248,0.35)' : undefined,
+                background: today ? 'linear-gradient(165deg, rgba(56,189,248,0.10), rgba(56,189,248,0.02))' : undefined,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <div>
+                    <div className="eyebrow" style={{ color: today ? 'var(--sky-300)' : undefined }}>
+                      {new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short' })}
                     </div>
-
-                    <div className="flex flex-col">
-                      <span className={`text-sm font-bold transition-all ${
-                        purchasedItems[item.food_id] ? 'text-slate-500 line-through' : 'text-slate-200'
-                      }`}>
-                        {item.name}
-                      </span>
-                      <span className="text-xs text-slate-500 font-semibold">{item.aisle || 'Grocery'}</span>
+                    <div className="num" style={{ fontSize: 22, fontWeight: 400, letterSpacing: '-0.02em', marginTop: 2, color: 'var(--fg-primary)' }}>
+                      {new Date(dateStr).getDate()}
                     </div>
                   </div>
-
-                  <span className={`text-xs font-mono font-bold transition-all ${
-                    purchasedItems[item.food_id] ? 'text-slate-600' : 'text-slate-400'
-                  }`}>
-                    {item.quantity} {item.unit}
-                  </span>
+                  {today && (
+                    <span style={{
+                      width: 7, height: 7, borderRadius: '50%',
+                      background: 'var(--sky-400)', boxShadow: '0 0 8px var(--sky-400)',
+                    }}/>
+                  )}
                 </div>
-              ))
-            ) : (
-              <div className="p-8 text-center text-slate-500 text-xs">
-                No items in your shopping list yet.
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {grouped[dateStr].map((slot, j) => {
+                    const meta = SLOT_META[slot.slot] || { color: '#94a3b8', emoji: '🍽', label: slot.slot }
+                    return (
+                      <button
+                        key={j}
+                        onClick={() => setSelectedSlot(slot)}
+                        className="glass-inset"
+                        style={{
+                          padding: '8px 10px', borderRadius: 10,
+                          display: 'flex', flexDirection: 'column', gap: 4,
+                          cursor: 'pointer', border: 'none', textAlign: 'left', width: '100%',
+                          background: 'rgba(0,0,0,0.25)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ fontSize: 9, color: meta.color }}>{meta.emoji}</span>
+                          <span style={{ fontSize: 9, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
+                            {slot.slot}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 11.5, color: 'var(--fg-secondary)', lineHeight: 1.3 }}>
+                          {slot.custom_name}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-            )}
+            )
+          })}
+        </div>
+      )}
+
+      {/* Shopping view */}
+      {plan && activeTab === 'shopping' && (
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
+          <div className="glass" style={{ padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--glass-edge)' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 400, color: 'var(--fg-primary)' }}>Shopping List</h2>
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--fg-quiet)' }}>Auto-compiled from this week's plan</p>
+              </div>
+              <button className="btn" style={{ padding: '8px 14px', fontSize: 12 }}
+                onClick={async () => {
+                  const res: any = await api.post(`/plan/${plan.id}/shopping-list/export-reminders`)
+                  alert(res.message || 'Exported!')
+                }}>
+                🍏 Export
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {shoppingData?.shopping_list?.length ? (
+                shoppingData.shopping_list.map((item) => (
+                  <div
+                    key={item.food_id}
+                    onClick={() => setPurchasedItems((p) => ({ ...p, [item.food_id]: !p[item.food_id] }))}
+                    style={{
+                      padding: '12px 0',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14,
+                      cursor: 'pointer',
+                      borderBottom: '1px solid var(--glass-edge)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{
+                        width: 20, height: 20, borderRadius: '50%',
+                        border: `1px solid ${purchasedItems[item.food_id] ? 'var(--good)' : 'var(--glass-edge-strong)'}`,
+                        background: purchasedItems[item.food_id] ? 'var(--good)' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0, transition: 'all 150ms',
+                      }}>
+                        {purchasedItems[item.food_id] && <Check size={11} color="#050811" strokeWidth={3}/>}
+                      </div>
+                      <div>
+                        <div style={{
+                          fontSize: 14, fontWeight: 500,
+                          color: purchasedItems[item.food_id] ? 'var(--fg-quiet)' : 'var(--fg-primary)',
+                          textDecoration: purchasedItems[item.food_id] ? 'line-through' : 'none',
+                          transition: 'all 150ms',
+                        }}>{item.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{item.aisle || 'Grocery'}</div>
+                      </div>
+                    </div>
+                    <span className="num" style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>
+                      {item.quantity} {item.unit}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: 40, textAlign: 'center', color: 'var(--fg-quiet)', fontSize: 13 }}>
+                  No items in your shopping list yet.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* SLOT DETAIL MODAL / DRAWER */}
+      {/* Slot modal */}
       {selectedSlot && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-850 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-6 relative animate-in fade-in zoom-in-95 duration-200">
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(5,8,17,0.7)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 50,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 24,
+        }} onClick={(e) => { if (e.target === e.currentTarget) setSelectedSlot(null) }}>
+          <div className="glass" style={{ maxWidth: 480, width: '100%', padding: 28, borderRadius: 24, position: 'relative' }}>
             <button
               onClick={() => setSelectedSlot(null)}
-              className="absolute right-4 top-4 text-slate-500 hover:text-slate-300 font-bold"
+              style={{
+                position: 'absolute', right: 16, top: 16,
+                width: 28, height: 28, borderRadius: '50%',
+                background: 'var(--glass-2)', border: '1px solid var(--glass-edge)',
+                color: 'var(--fg-quiet)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
             >
-              ✕
+              <X size={14}/>
             </button>
 
-            <div className="space-y-1">
-              <span className="text-xxs uppercase bg-brand-500/15 text-brand-450 px-2 py-0.5 rounded-full font-bold tracking-wider">
+            <div style={{ marginBottom: 20 }}>
+              <span style={{
+                display: 'inline-block',
+                padding: '3px 10px',
+                background: `${(SLOT_META[selectedSlot.slot] || { color: '#94a3b8' }).color}18`,
+                border: `1px solid ${(SLOT_META[selectedSlot.slot] || { color: '#94a3b8' }).color}33`,
+                borderRadius: 999, fontSize: 11, fontFamily: 'var(--font-mono)',
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+                color: (SLOT_META[selectedSlot.slot] || { color: '#94a3b8' }).color,
+                marginBottom: 10,
+              }}>
                 {selectedSlot.slot}
               </span>
-              <h3 className="text-lg font-black text-slate-100">{selectedSlot.custom_name}</h3>
-              <span className="text-xs text-slate-500 font-mono">
-                Planned for: {formatDayName(selectedSlot.slot_date)}
-              </span>
+              <h3 style={{ margin: 0, fontSize: 20, fontWeight: 400, color: 'var(--fg-primary)', letterSpacing: '-0.01em' }}>
+                {selectedSlot.custom_name}
+              </h3>
+              <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>
+                {new Date(selectedSlot.slot_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </p>
             </div>
 
             {selectedSlot.notes && (
-              <div className="p-3 bg-slate-950/45 border border-slate-850 rounded-xl">
-                <span className="text-xxs text-slate-500 font-bold uppercase tracking-wider block mb-1">
-                  Orchestrator Notes
-                </span>
-                <p className="text-xs text-slate-350 leading-relaxed">{selectedSlot.notes}</p>
+              <div className="glass-inset" style={{ padding: 14, marginBottom: 20 }}>
+                <div className="eyebrow" style={{ marginBottom: 6 }}>Notes</div>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-secondary)', lineHeight: 1.5 }}>
+                  {selectedSlot.notes}
+                </p>
               </div>
             )}
 
-            {/* Estimated Nutrition Profile */}
-            <div className="space-y-2">
-              <span className="text-xxs text-slate-500 font-bold uppercase tracking-wider block">
-                Estimated Nutrition
-              </span>
-              <div className="grid grid-cols-4 gap-2">
-                <div className="bg-slate-950/40 p-2 rounded text-center border border-slate-850">
-                  <span className="text-xxs text-slate-500 block">Calories</span>
-                  <span className="text-xs font-bold text-slate-300">350</span>
-                </div>
-                <div className="bg-slate-950/40 p-2 rounded text-center border border-slate-850">
-                  <span className="text-xxs text-slate-500 block">Sat Fat</span>
-                  <span className="text-xs font-bold text-red-400">1.0g</span>
-                </div>
-                <div className="bg-slate-950/40 p-2 rounded text-center border border-slate-850">
-                  <span className="text-xxs text-slate-500 block">Sol Fiber</span>
-                  <span className="text-xs font-bold text-emerald-400">4.5g</span>
-                </div>
-                <div className="bg-slate-950/40 p-2 rounded text-center border border-slate-850">
-                  <span className="text-xxs text-slate-500 block">Protein</span>
-                  <span className="text-xs font-bold text-indigo-400">15.0g</span>
-                </div>
+            {/* Nutrition estimates */}
+            <div style={{ marginBottom: 20 }}>
+              <div className="eyebrow" style={{ marginBottom: 10 }}>Estimated Nutrition</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                {[
+                  { l: 'Calories', v: '350', c: 'var(--fg-primary)' },
+                  { l: 'Sat Fat', v: '1.0g', c: 'var(--bad)' },
+                  { l: 'Sol Fiber', v: '4.5g', c: 'var(--good)' },
+                  { l: 'Protein', v: '15g', c: '#a78bfa' },
+                ].map((n) => (
+                  <div key={n.l} className="glass-inset" style={{ padding: '10px 12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginBottom: 4 }}>{n.l}</div>
+                    <div className="num" style={{ fontSize: 15, fontWeight: 500, color: n.c }}>{n.v}</div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <button
+                className="btn"
                 onClick={() => swapMutation.mutate(selectedSlot.id)}
                 disabled={swapMutation.isPending}
-                className="py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-xs rounded-xl transition-colors border border-slate-700/80"
               >
-                {swapMutation.isPending ? 'Swapping...' : '🔄 Swap Alternative'}
+                <Shuffle size={13}/> {swapMutation.isPending ? 'Swapping…' : 'Swap'}
               </button>
-
               <button
+                className="btn btn-primary"
                 onClick={() => logEatenMutation.mutate(selectedSlot.id)}
                 disabled={logEatenMutation.isPending}
-                className="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-colors shadow-lg shadow-emerald-600/10"
               >
-                {logEatenMutation.isPending ? 'Logging...' : '✓ Log as Eaten'}
+                <Check size={13}/> {logEatenMutation.isPending ? 'Logging…' : 'Log as eaten'}
               </button>
             </div>
           </div>
@@ -364,4 +400,20 @@ export default function PlanRoute() {
       )}
     </div>
   )
+}
+
+function groupByDate(slots: MealSlot[]) {
+  const out: Record<string, MealSlot[]> = {}
+  slots.forEach((s) => {
+    if (!out[s.slot_date]) out[s.slot_date] = []
+    out[s.slot_date].push(s)
+  })
+  return out
+}
+
+function formatWeek(dateStr: string) {
+  const d = new Date(dateStr)
+  const end = new Date(d)
+  end.setDate(end.getDate() + 6)
+  return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
 }
