@@ -44,13 +44,14 @@ Before writing code for any non-trivial task:
 2. List the files you will create or modify
 3. Identify any ambiguities and resolve them against the design doc before writing code
 
-### Commit Discipline
+### Commit & Changelog Discipline
 
 - One logical change per commit
 - Commit messages: imperative mood, present tense, ≤72 chars subject
 - Always include the phase in the commit subject: `[phase-0] add HAE ingest endpoint`
 - Never commit `.env` or any file containing real secrets
 - Run `alembic check` (if migrations exist) before committing backend changes
+- Maintain a `/CHANGELOG.md` file at the root of the project, logging all feature completions, enhancements, bug fixes, and infrastructure stabilizations before signing off on any phase or significant task.
 
 ### Parallelism Guidance
 
