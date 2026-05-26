@@ -2,18 +2,16 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="frontend/public/assets/luma-wordmark-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="frontend/public/assets/luma-wordmark-light.svg">
-    <img src="frontend/public/assets/luma-wordmark-dark.svg" alt="Luma" width="420"/>
+    <img src="frontend/public/assets/luma-wordmark-dark.svg" alt="Luma" width="280"/>
   </picture>
 </p>
-
-<br/>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python_3.12-0ea5e9?style=flat-square&logo=python&logoColor=white" alt="Python 3.12"/>
   <img src="https://img.shields.io/badge/FastAPI-0ea5e9?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI"/>
   <img src="https://img.shields.io/badge/React_18-38bdf8?style=flat-square&logo=react&logoColor=white" alt="React 18"/>
   <img src="https://img.shields.io/badge/TypeScript-38bdf8?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"/>
-  <img src="https://img.shields.io/badge/TimescaleDB-0d1425?style=flat-square&logo=postgresql&logoColor=0ea5e9" alt="TimescaleDB"/>
+  <img src="https://img.shields.io/badge/TimescaleDB-0ea5e9?style=flat-square&logo=timescale&logoColor=white" alt="TimescaleDB"/>
   <img src="https://img.shields.io/badge/Docker_Compose-0ea5e9?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose"/>
   <img src="https://img.shields.io/badge/PWA-fbbf24?style=flat-square&logo=pwa&logoColor=black" alt="PWA"/>
 </p>

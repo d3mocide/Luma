@@ -151,7 +151,7 @@ To switch variant: change the `circle fill` and the `path stroke` only — geome
 
 | Asset | Layout | File |
 |---|---|---|
-| **Horizontal wordmark** | glyph · `luma` set in Inter 600 -0.02em, 22px on a 160×40 viewBox | `frontend/public/assets/luma-wordmark-dark.svg` / `-light.svg` |
+| **Horizontal wordmark** | glyph · `luma` set in Inter 600 -0.02em, 22px on a 100×40 viewBox | `frontend/public/assets/luma-wordmark-dark.svg` / `-light.svg` |
 | **Stacked wordmark** | glyph above, `luma` centered, 100×120 viewBox | `frontend/public/assets/luma-wordmark-stacked-dark.svg` / `-light.svg` |
 | **Glyph only** | the mark, 32×32 viewBox | `frontend/public/assets/luma-glyph-{dark|light|mono-light|mono-dark}.svg` |
 
