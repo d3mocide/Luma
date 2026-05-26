@@ -15,7 +15,7 @@ from luma.db.models import User
 
 
 async def main() -> None:
-    email = os.environ.get("ADMIN_EMAIL", "admin@sovereign.local")
+    email = os.environ.get("ADMIN_EMAIL", "admin@sovereign.health")
     password = os.environ.get("ADMIN_PASSWORD", "changeme")
     display_name = os.environ.get("ADMIN_DISPLAY_NAME", "Operator")
 

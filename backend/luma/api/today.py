@@ -67,7 +67,7 @@ async def _weight_slope(db, user_id: str, days: int) -> float | None:
             FROM biometrics_daily
             WHERE user_id = :user_id
               AND metric = 'weight_kg'
-              AND day >= now() - (:days || ' days')::interval
+              AND day >= now() - (:days * INTERVAL '1 day')
             ORDER BY day
         """),
         {"user_id": user_id, "days": days},
