@@ -4,8 +4,8 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
     ports:
-      - "443:443"
-      - "80:80"
+      - "${LUMA_HTTPS_PORT:-443}:443"
+      - "${LUMA_HTTP_PORT:-80}:80"
     volumes:
       - ./certs:/etc/nginx/certs:ro
     depends_on:
