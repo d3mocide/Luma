@@ -28,7 +28,7 @@ Same as CLAUDE.md. Phase 0 must be complete before any agent touches Phase 1+ co
 ```
 /backend/luma/   Python FastAPI app
 /backend/alembic/            Migrations
-/web/src/                    React TypeScript PWA
+/frontend/src/               React TypeScript PWA
 /nginx/                      Nginx config
 /whisper/                    Whisper STT wrapper
 /litellm/                    LiteLLM config

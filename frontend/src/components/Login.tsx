@@ -80,14 +80,14 @@ export default function Login() {
             color: 'var(--fg-primary)',
           }}>
             {isSetup ? (
-              <>Create your<br/><span className="serif-italic" style={{
+              <>Create your<br/><span className="serif-italic gradient-accent-text" style={{
                 background: 'linear-gradient(120deg, #fde68a, #38bdf8 70%)',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
                 fontSize: 72,
-              }}>private</span><br/>space.</>
+                }}>private</span><br/>space.</>
             ) : (
               <>Track your body<br/>with{' '}
-                <span className="serif-italic" style={{
+                <span className="serif-italic gradient-accent-text" style={{
                   background: 'linear-gradient(120deg, #fde68a, #38bdf8 70%)',
                   WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
                   fontSize: 72,
@@ -112,7 +112,7 @@ export default function Login() {
             {[
               { Icon: ShieldCheck, l: 'Self-hosted', s: 'on your hardware' },
               { Icon: Heart, l: 'LDL-aware', s: 'tuned for cardio health' },
-              { Icon: Sparkles, l: 'Claude-powered', s: 'gentle, not preachy' },
+              { Icon: Sparkles, l: 'AI-powered', s: 'gentle, not preachy' },
             ].map((f, i) => (
               <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                 <div style={{
@@ -143,13 +143,16 @@ export default function Login() {
       }}
       className="flex-1 flex items-center justify-center px-6 py-10 md:p-[60px]"
       >
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'radial-gradient(ellipse 60% 60% at 70% 30%, rgba(251,191,36,0.16), transparent 60%), radial-gradient(ellipse 60% 60% at 30% 80%, rgba(56,189,248,0.20), transparent 60%)',
-          pointerEvents: 'none',
-        }}/>
+        <div
+          className="login-side-atmo"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+          }}
+        />
 
-        <div className="glass" style={{
+        <div className="glass login-glass" style={{
           width: '100%', maxWidth: 420,
           padding: 36,
           borderRadius: 28,
@@ -285,8 +288,6 @@ export default function Login() {
               }}/>
               Self-hosted
             </span>
-            <span style={{ color: 'var(--fg-faint)' }}>·</span>
-            <span>v0.4.2</span>
             <span style={{ color: 'var(--fg-faint)' }}>·</span>
             <span>End-to-end secure</span>
           </p>

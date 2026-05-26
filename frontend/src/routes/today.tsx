@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Sparkles, Flame, Heart, Activity, Moon, Check, Plus } from 'lucide-react'
-import { api, TodayData } from '../lib/api'
+import { api, TodayData, User } from '../lib/api'
+import { createMockTodayData, createMockWeightSeries, isTodaySparseData } from '../lib/mock-data'
 import { fmtMinutes, fmt } from '../lib/format'
 import ActivityRings from '../components/ui/ActivityRings'
 import WeightChart from '../components/ui/WeightChart'
@@ -8,17 +9,29 @@ import SlopeChip from '../components/ui/SlopeChip'
 import StreakStrip from '../components/ui/StreakStrip'
 
 export default function TodayRoute() {
-  const { data, isLoading, error } = useQuery<TodayData>({
+  const forceMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === '1'
+
+  const { data: user } = useQuery<User>({
+    queryKey: ['me'],
+    queryFn: () => api.get('/auth/me'),
+    retry: false,
+  })
+
+  const { data: todayApiData, isLoading, error } = useQuery<TodayData>({
     queryKey: ['today'],
     queryFn: () => api.get('/today'),
+    enabled: !forceMockData,
   })
 
   const dateLabel = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric',
   })
 
-  if (isLoading) return <TodayShell><LoadingSkeleton/></TodayShell>
-  if (error || !data) return <TodayShell><ErrorCard/></TodayShell>
+  if (isLoading && !forceMockData) return <TodayShell><LoadingSkeleton/></TodayShell>
+  if ((error || !todayApiData) && !forceMockData) return <TodayShell><ErrorCard/></TodayShell>
+
+  const useMockData = forceMockData || isTodaySparseData(todayApiData as TodayData)
+  const data = useMockData ? createMockTodayData() : (todayApiData as TodayData)
 
   const adherence = data.adherence_yesterday
   const bio = data.biometrics_latest
@@ -27,9 +40,20 @@ export default function TodayRoute() {
     (adherence?.sat_fat_g?.pct ?? 0) / 100,
     (adherence?.soluble_fiber_g?.pct ?? 0) / 100,
   ]
+  const weightSeries = useMockData ? createMockWeightSeries(data.weight.latest_kg) : []
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const userDisplayName = (user?.display_name ?? '').trim()
+  const greetingName = userDisplayName || 'there'
+  const greetingInitials = userDisplayName
+    ? userDisplayName
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+    : 'OP'
 
   return (
     <TodayShell>
@@ -48,10 +72,10 @@ export default function TodayRoute() {
               color: 'var(--fg-primary)',
             }}>
               {greeting},{' '}
-              <span className="serif-italic" style={{
+              <span className="serif-italic gradient-accent-text" style={{
                 background: 'linear-gradient(120deg, #fde68a, #38bdf8)',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-              }}>Operator</span>.
+              }}>{greetingName}</span>.
             </h1>
           </div>
         </header>
@@ -61,8 +85,10 @@ export default function TodayRoute() {
           {/* Weight card */}
           <div className="glass" style={{ padding: 28, position: 'relative', overflow: 'hidden' }}>
             <div style={{
-              position: 'absolute', top: -40, right: -60, width: 280, height: 280,
-              background: 'radial-gradient(circle, rgba(56,189,248,0.25), transparent 65%)',
+              position: 'absolute', top: -150, right: -180, width: 560, height: 460,
+              background: 'radial-gradient(ellipse 60% 56% at 68% 34%, rgba(56,189,248,0.28), transparent 70%), radial-gradient(ellipse 56% 60% at 86% 78%, rgba(56,189,248,0.12), transparent 72%)',
+              filter: 'blur(18px)',
+              opacity: 0.92,
               pointerEvents: 'none',
             }}/>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
@@ -87,24 +113,26 @@ export default function TodayRoute() {
               </div>
             </div>
             <div style={{ marginTop: 18, marginLeft: -8, marginRight: -8 }}>
-              <WeightChart data={[]} width={620} height={180}/>
+              <WeightChart data={weightSeries} width={620} height={180}/>
             </div>
           </div>
 
           {/* Rings + streak */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div className="glass" style={{ padding: 24, display: 'flex', gap: 22, alignItems: 'center' }}>
-              <div style={{ flexShrink: 0, position: 'relative' }}>
-                <ActivityRings size={150} values={rings} thickness={11} gap={5}/>
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
-                }}>
-                  <div className="num" style={{ fontSize: 22, fontWeight: 500, color: 'var(--fg-primary)' }}>
-                    {rings.filter(r => r >= 0.9).length} / 3
+              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ width: 150, height: 150, position: 'relative' }}>
+                  <ActivityRings size={150} values={rings} thickness={11} gap={5}/>
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <div className="num" style={{ fontSize: 20, lineHeight: 1, fontWeight: 500, color: 'var(--fg-primary)' }}>
+                      {rings.filter(r => r >= 0.9).length} / 3
+                    </div>
                   </div>
-                  <div style={{ fontSize: 9, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
                 </div>
+                <div style={{ marginTop: 8, fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="eyebrow">Yesterday</div>
@@ -125,8 +153,10 @@ export default function TodayRoute() {
             {/* Streak */}
             <div className="glass" style={{ padding: 22, position: 'relative', overflow: 'hidden' }}>
               <div style={{
-                position: 'absolute', top: -20, right: -20, width: 200, height: 200,
-                background: 'radial-gradient(circle, rgba(251,191,36,0.15), transparent 65%)',
+                position: 'absolute', top: -125, right: -110, width: 320, height: 280,
+                background: 'radial-gradient(ellipse 58% 56% at 62% 38%, rgba(251,191,36,0.17), transparent 70%), radial-gradient(ellipse 52% 52% at 88% 82%, rgba(251,191,36,0.08), transparent 74%)',
+                filter: 'blur(14px)',
+                opacity: 0.88,
                 pointerEvents: 'none',
               }}/>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
@@ -152,25 +182,27 @@ export default function TodayRoute() {
           {data.active_insight ? (
             <div className="glass" style={{
               padding: 24, position: 'relative', overflow: 'hidden',
-              background: 'linear-gradient(165deg, rgba(251,191,36,0.10), rgba(251,113,133,0.05))',
-              borderColor: 'rgba(251,191,36,0.25)',
+              background: 'var(--insight-card-bg)',
+              borderColor: 'var(--insight-card-border)',
             }}>
               <div style={{
-                position: 'absolute', top: 0, right: 0, width: 160, height: 160,
-                background: 'radial-gradient(circle at top right, rgba(251,191,36,0.35), transparent 60%)',
+                position: 'absolute', top: -80, right: -70, width: 300, height: 240,
+                background: 'radial-gradient(ellipse 56% 52% at 76% 30%, rgba(251,191,36,0.30), transparent 68%), radial-gradient(ellipse 48% 52% at 90% 80%, rgba(251,191,36,0.10), transparent 72%)',
+                filter: 'blur(14px)',
+                opacity: 0.9,
                 pointerEvents: 'none',
               }}/>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <div style={{
                   width: 30, height: 30, borderRadius: 10,
-                  background: 'linear-gradient(180deg, rgba(251,191,36,0.3), rgba(251,191,36,0.15))',
-                  border: '1px solid rgba(251,191,36,0.4)',
+                  background: 'var(--insight-icon-bg)',
+                  border: '1px solid var(--insight-icon-border)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--sun-300)',
+                  color: 'var(--insight-icon-fg)',
                 }}>
                   <Sparkles size={15}/>
                 </div>
-                <span className="eyebrow" style={{ color: 'var(--sun-300)' }}>
+                <span className="eyebrow" style={{ color: 'var(--insight-icon-fg)' }}>
                   {data.active_insight.severity}
                 </span>
               </div>
@@ -182,11 +214,11 @@ export default function TodayRoute() {
                 {data.active_insight.headline}
               </p>
               <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-                <button className="btn" style={{
+                <button className="btn today-insight-cta" style={{
                   padding: '8px 14px', fontSize: 13,
-                  background: 'rgba(251,191,36,0.18)',
-                  borderColor: 'rgba(251,191,36,0.4)',
-                  color: 'var(--sun-200)',
+                  background: 'var(--insight-cta-bg)',
+                  borderColor: 'var(--insight-cta-border)',
+                  color: 'var(--insight-cta-fg)',
                 }}>
                   <Sparkles size={13}/> Ask Coach
                 </button>
@@ -248,10 +280,10 @@ export default function TodayRoute() {
             <div className="eyebrow">{dateLabel}</div>
             <h1 style={{ margin: '6px 0 0', fontSize: 26, fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1.15, color: 'var(--fg-primary)' }}>
               {greeting},<br/>
-              <span className="serif-italic" style={{
+              <span className="serif-italic gradient-accent-text" style={{
                 background: 'linear-gradient(120deg, #fde68a, #38bdf8)',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-              }}>Operator</span>.
+              }}>{greetingName}</span>.
             </h1>
           </div>
           <div style={{
@@ -259,31 +291,35 @@ export default function TodayRoute() {
             background: 'linear-gradient(135deg, #38bdf8, #fbbf24)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontWeight: 600, fontSize: 13, color: '#06121d',
-          }}>OP</div>
+          }}>{greetingInitials}</div>
         </div>
 
         {/* Rings */}
         <div className="glass" style={{ padding: 20, marginBottom: 14, position: 'relative', overflow: 'hidden' }}>
           <div style={{
-            position: 'absolute', top: -40, right: -40, width: 200, height: 200,
-            background: 'radial-gradient(circle, rgba(56,189,248,0.25), transparent 65%)',
+            position: 'absolute', top: -115, right: -130, width: 320, height: 280,
+            background: 'radial-gradient(ellipse 60% 56% at 68% 34%, rgba(56,189,248,0.24), transparent 70%), radial-gradient(ellipse 54% 56% at 88% 78%, rgba(56,189,248,0.10), transparent 72%)',
+            filter: 'blur(14px)',
+            opacity: 0.88,
             pointerEvents: 'none',
           }}/>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div className="eyebrow">Yesterday</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-            <div style={{ flexShrink: 0, position: 'relative' }}>
-              <ActivityRings size={130} values={rings} thickness={10} gap={4}/>
-              <div style={{
-                position: 'absolute', inset: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
-              }}>
-                <div className="num" style={{ fontSize: 18, fontWeight: 500, color: 'var(--fg-primary)' }}>
-                  {rings.filter(r => r >= 0.9).length} / 3
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ width: 130, height: 130, position: 'relative' }}>
+                <ActivityRings size={130} values={rings} thickness={10} gap={4}/>
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div className="num" style={{ fontSize: 26, lineHeight: 1, fontWeight: 500, color: 'var(--fg-primary)' }}>
+                    {rings.filter(r => r >= 0.9).length} / 3
+                  </div>
                 </div>
-                <div style={{ fontSize: 8, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
               </div>
+              <div style={{ marginTop: 7, fontSize: 9, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
             </div>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <RingLegend color="#38bdf8" label="Calories" value={`${adherence?.calories?.logged ?? '—'}`} pct={adherence?.calories?.pct ?? 0}/>
@@ -316,21 +352,23 @@ export default function TodayRoute() {
         {data.active_insight && (
           <div className="glass" style={{
             padding: 18, marginBottom: 14, position: 'relative', overflow: 'hidden',
-            background: 'linear-gradient(165deg, rgba(251,191,36,0.10), rgba(251,113,133,0.05))',
-            borderColor: 'rgba(251,191,36,0.25)',
+            background: 'var(--insight-card-bg)',
+            borderColor: 'var(--insight-card-border)',
           }}>
             <div style={{
-              position: 'absolute', top: 0, right: 0, width: 120, height: 120,
-              background: 'radial-gradient(circle at top right, rgba(251,191,36,0.3), transparent 60%)',
+                position: 'absolute', top: -80, right: -85, width: 220, height: 190,
+                background: 'radial-gradient(ellipse 56% 52% at 74% 30%, rgba(251,191,36,0.24), transparent 68%), radial-gradient(ellipse 48% 52% at 90% 80%, rgba(251,191,36,0.08), transparent 72%)',
+                filter: 'blur(12px)',
+                opacity: 0.88,
               pointerEvents: 'none',
             }}/>
             <div style={{ display: 'flex', gap: 12 }}>
               <div style={{
                 width: 28, height: 28, borderRadius: 9,
-                background: 'rgba(251,191,36,0.18)',
-                border: '1px solid rgba(251,191,36,0.4)',
+                background: 'var(--insight-icon-bg)',
+                border: '1px solid var(--insight-icon-border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'var(--sun-300)', flexShrink: 0,
+                color: 'var(--insight-icon-fg)', flexShrink: 0,
               }}>
                 <Sparkles size={13}/>
               </div>
@@ -338,11 +376,11 @@ export default function TodayRoute() {
                 <p style={{ margin: 0, fontSize: 14, lineHeight: 1.45, color: 'var(--fg-primary)' }}>
                   {data.active_insight.headline}
                 </p>
-                <button className="btn" style={{
+                <button className="btn today-insight-cta" style={{
                   marginTop: 12, padding: '6px 12px', fontSize: 12,
-                  background: 'rgba(251,191,36,0.15)',
-                  borderColor: 'rgba(251,191,36,0.35)',
-                  color: 'var(--sun-200)',
+                  background: 'var(--insight-cta-bg)',
+                  borderColor: 'var(--insight-cta-border)',
+                  color: 'var(--insight-cta-fg)',
                 }}>
                   <Sparkles size={11}/> Ask Coach
                 </button>

@@ -1,10 +1,9 @@
 import logging
-from datetime import timezone
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 
 from luma.db.models import Goal, Preference
@@ -81,7 +80,6 @@ async def add_preference(body: PrefIn, user: CurrentUser, db: DbDep) -> dict:
 
 @router.delete("/preferences/{kind}/{value}")
 async def delete_preference(kind: str, value: str, user: CurrentUser, db: DbDep) -> dict:
-    from sqlalchemy import delete
     await db.execute(
         delete(Preference).where(
             Preference.user_id == user.id,
@@ -91,3 +89,45 @@ async def delete_preference(kind: str, value: str, user: CurrentUser, db: DbDep)
     )
     await db.commit()
     return {"detail": "deleted"}
+
+
+MEASUREMENT_PREF_KIND = "measurement_system"
+MEASUREMENT_SYSTEMS = ("metric", "imperial")
+
+
+class MeasurementSettingsOut(BaseModel):
+    system: Literal["metric", "imperial"]
+
+
+class MeasurementSettingsIn(BaseModel):
+    system: Literal["metric", "imperial"]
+
+
+@router.get("/settings/measurements", response_model=MeasurementSettingsOut)
+async def get_measurement_settings(user: CurrentUser, db: DbDep) -> MeasurementSettingsOut:
+    result = await db.execute(
+        select(Preference.value).where(
+            Preference.user_id == user.id,
+            Preference.kind == MEASUREMENT_PREF_KIND,
+            Preference.value.in_(MEASUREMENT_SYSTEMS),
+        )
+    )
+    system = result.scalar_one_or_none() or "metric"
+    return MeasurementSettingsOut(system=system)
+
+
+@router.put("/settings/measurements", response_model=MeasurementSettingsOut)
+async def put_measurement_settings(
+    body: MeasurementSettingsIn,
+    user: CurrentUser,
+    db: DbDep,
+) -> MeasurementSettingsOut:
+    await db.execute(
+        delete(Preference).where(
+            Preference.user_id == user.id,
+            Preference.kind == MEASUREMENT_PREF_KIND,
+        )
+    )
+    db.add(Preference(user_id=user.id, kind=MEASUREMENT_PREF_KIND, value=body.system))
+    await db.commit()
+    return MeasurementSettingsOut(system=body.system)

@@ -33,7 +33,7 @@ export default function TrendsRoute() {
           <div className="eyebrow">Trends</div>
           <h1 style={{ margin: '6px 0 6px', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
             Ninety days of{' '}
-            <span className="serif-italic" style={{
+            <span className="serif-italic gradient-accent-text" style={{
               background: 'linear-gradient(120deg, #fde68a, #38bdf8)',
               WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
             }}>quiet progress</span>.

@@ -81,7 +81,7 @@ export default function PlanRoute() {
           </div>
           <h1 style={{ margin: '8px 0 6px', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
             Your{' '}
-            <span className="serif-italic" style={{
+            <span className="serif-italic gradient-accent-text" style={{
               background: 'linear-gradient(120deg, #fde68a, #38bdf8)',
               WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
             }}>heart-healthy</span> week.
@@ -96,22 +96,13 @@ export default function PlanRoute() {
               onClick={() => generateMutation.mutate(customConstraints)}>
               <Shuffle size={15}/> Regenerate
             </button>
-            <div style={{
-              display: 'flex',
-              padding: 4,
-              background: 'var(--glass-1)',
-              border: '1px solid var(--glass-edge)',
-              borderRadius: 999,
-            }}>
+            <div className="plan-view-toggle">
               {(['calendar', 'shopping'] as const).map((tab) => (
-                <button key={tab} onClick={() => setActiveTab(tab)} style={{
-                  padding: '6px 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                  background: activeTab === tab ? 'linear-gradient(180deg, #38bdf8, #0ea5e9)' : 'transparent',
-                  color: activeTab === tab ? '#06121d' : 'var(--fg-tertiary)',
-                  fontSize: 12, fontWeight: activeTab === tab ? 600 : 400,
-                  fontFamily: 'var(--font-sans)',
-                  transition: 'all 150ms ease-out',
-                }}>
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`plan-view-toggle-btn ${activeTab === tab ? 'active' : ''}`}
+                >
                   {tab === 'calendar' ? 'Calendar' : 'Shopping'}
                 </button>
               ))}
@@ -186,14 +177,14 @@ export default function PlanRoute() {
           {dates.map((dateStr) => {
             const today = dateStr === new Date().toISOString().slice(0, 10)
             return (
-              <div key={dateStr} className="glass" style={{
-                padding: 16, display: 'flex', flexDirection: 'column', gap: 10,
-                borderColor: today ? 'rgba(56,189,248,0.35)' : undefined,
-                background: today ? 'linear-gradient(165deg, rgba(56,189,248,0.10), rgba(56,189,248,0.02))' : undefined,
-              }}>
+              <div
+                key={dateStr}
+                className={`glass plan-day-card ${today ? 'is-today' : ''}`}
+                style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <div>
-                    <div className="eyebrow" style={{ color: today ? 'var(--sky-300)' : undefined }}>
+                    <div className={`eyebrow plan-day-label ${today ? 'is-today' : ''}`}>
                       {new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short' })}
                     </div>
                     <div className="num" style={{ fontSize: 22, fontWeight: 400, letterSpacing: '-0.02em', marginTop: 2, color: 'var(--fg-primary)' }}>
@@ -214,21 +205,20 @@ export default function PlanRoute() {
                       <button
                         key={j}
                         onClick={() => setSelectedSlot(slot)}
-                        className="glass-inset"
+                        className="glass-inset plan-slot-btn"
                         style={{
                           padding: '8px 10px', borderRadius: 10,
                           display: 'flex', flexDirection: 'column', gap: 4,
                           cursor: 'pointer', border: 'none', textAlign: 'left', width: '100%',
-                          background: 'rgba(0,0,0,0.25)',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                           <span style={{ fontSize: 9, color: meta.color }}>{meta.emoji}</span>
-                          <span style={{ fontSize: 9, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
+                          <span className="plan-slot-type" style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
                             {slot.slot}
                           </span>
                         </div>
-                        <div style={{ fontSize: 11.5, color: 'var(--fg-secondary)', lineHeight: 1.3 }}>
+                        <div className="plan-slot-name" style={{ fontSize: 11.5, lineHeight: 1.3 }}>
                           {slot.custom_name}
                         </div>
                       </button>
