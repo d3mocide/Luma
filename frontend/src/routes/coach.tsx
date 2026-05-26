@@ -174,7 +174,7 @@ function CoachIntro({ onSuggest: _onSuggest }: { onSuggest: (s: string) => void 
       </div>
       <h2 style={{ margin: 0, fontSize: 24, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
         <span className="serif-italic gradient-accent-text" style={{
-          background: 'linear-gradient(120deg, #c4b5fd, #fde68a)',
+          background: 'var(--accent-gradient-hero)',
           WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
         }}>Ask me anything</span> about your trends.
       </h2>

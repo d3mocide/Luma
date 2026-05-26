@@ -36,7 +36,7 @@ export default function TrendsRoute() {
           <h1 className="mobile-hero-title" style={{ margin: '6px 0 6px', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
             Ninety days of{' '}
             <span className="serif-italic gradient-accent-text" style={{
-              background: 'linear-gradient(120deg, var(--sun-200), var(--sky-300) 48%, var(--sky-500))',
+              background: 'var(--accent-gradient-hero)',
               WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
             }}>quiet progress</span>.
           </h1>

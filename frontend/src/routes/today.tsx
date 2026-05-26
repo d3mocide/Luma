@@ -75,7 +75,7 @@ export default function TodayRoute() {
             }}>
               {greeting},{' '}
               <span className="serif-italic gradient-accent-text" style={{
-                background: 'linear-gradient(120deg, var(--sun-200), var(--sky-300) 48%, var(--sky-500))',
+                background: 'var(--accent-gradient-hero)',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>{greetingName}</span>.
             </h1>
@@ -282,7 +282,7 @@ export default function TodayRoute() {
             <h1 className="mobile-hero-title">
               {greeting},{' '}
               <span className="serif-italic gradient-accent-text" style={{
-                background: 'linear-gradient(120deg, var(--sun-200), var(--sky-300) 48%, var(--sky-500))',
+                background: 'var(--accent-gradient-hero)',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}>{greetingName}</span>.
             </h1>

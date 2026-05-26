@@ -93,6 +93,7 @@
   --insight-cta-bg: rgba(251,191,36,0.18);
   --insight-cta-border: rgba(251,191,36,0.4);
   --insight-cta-fg: var(--sun-200);
+  --accent-gradient-hero: linear-gradient(120deg, var(--sun-200), var(--sky-300) 48%, var(--sky-500));
 }
 
 /* ── LIGHT MODE ────────────────────────────────────────────────────────── */
@@ -129,6 +130,7 @@
   --insight-cta-bg: rgba(245, 158, 11, 0.22);
   --insight-cta-border: rgba(217, 119, 6, 0.44);
   --insight-cta-fg: #7c2d12;
+  --accent-gradient-hero: linear-gradient(120deg, #8c86c9 0%, #5aaee6 52%, #0284c7 100%);
 
   color: var(--fg-primary);
 }
@@ -614,8 +616,37 @@
   background: rgba(0, 0, 0, 0.3);
 }
 
+.field-input::placeholder {
+  color: var(--fg-quiet);
+}
+
+.plan-constraints-input {
+  min-height: 90px;
+  transition: background 150ms ease-out, border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.plan-constraints-input:focus {
+  border-color: rgba(56, 189, 248, 0.36) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+}
+
+.plan-page .glass > div[style*='inline-flex'][style*='var(--sky-300)'] {
+  color: var(--sky-500) !important;
+}
+
 [data-theme="light"] .field-input {
-  background: rgba(15, 23, 42, 0.04);
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(15, 23, 42, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
+}
+
+[data-theme="light"] .field-input::placeholder {
+  color: rgba(12, 20, 38, 0.32);
+}
+
+[data-theme="light"] .plan-constraints-input:focus {
+  border-color: rgba(2, 132, 199, 0.28) !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.10);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

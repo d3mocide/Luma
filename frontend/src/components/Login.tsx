@@ -81,14 +81,14 @@ export default function Login() {
           }}>
             {isSetup ? (
               <>Create your<br/><span className="serif-italic gradient-accent-text" style={{
-                background: 'linear-gradient(120deg, var(--sun-200), var(--sky-300) 48%, var(--sky-500))',
+                background: 'var(--accent-gradient-hero)',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
                 fontSize: 72,
                 }}>private</span><br/>space.</>
             ) : (
               <>Track your body<br/>with{' '}
                 <span className="serif-italic gradient-accent-text" style={{
-                  background: 'linear-gradient(120deg, var(--sun-200), var(--sky-300) 48%, var(--sky-500))',
+                  background: 'var(--accent-gradient-hero)',
                   WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
                   fontSize: 72,
                 }}>luminous</span><br/>clarity.</>
