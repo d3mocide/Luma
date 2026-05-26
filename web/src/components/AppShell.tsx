@@ -1,16 +1,19 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import {
+  CircleDot, Utensils, Activity, Sparkles, Settings, Plus, Moon, Sun,
+} from 'lucide-react'
 import { api, User } from '../lib/api'
-import LogFAB from './LogFAB'
+import { useUIStore } from '../stores'
+import { LumaWordmark } from './ui/LumaLogo'
 import LogSheet from './LogSheet'
 import Login from './Login'
-import { clsx } from 'clsx'
 
 const NAV_ITEMS = [
-  { to: '/today',    label: 'Today',  icon: '◎' },
-  { to: '/plan',     label: 'Plan',   icon: '◫' },
-  { to: '/trends',   label: 'Trends', icon: '∿' },
-  { to: '/coach',    label: 'Coach',  icon: '✦' },
+  { to: '/today',  label: 'Today',  Icon: CircleDot },
+  { to: '/plan',   label: 'Plan',   Icon: Utensils  },
+  { to: '/trends', label: 'Trends', Icon: Activity  },
+  { to: '/coach',  label: 'Coach',  Icon: Sparkles  },
 ]
 
 export default function AppShell() {
@@ -22,8 +25,15 @@ export default function AppShell() {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-slate-950 flex items-center justify-center">
-        <span className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+      <div className="luma-bg" style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{
+          width: 36, height: 36,
+          borderRadius: '50%',
+          border: '2px solid rgba(56,189,248,0.2)',
+          borderTopColor: '#38bdf8',
+          animation: 'spin 0.8s linear infinite',
+        }}/>
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     )
   }
@@ -33,72 +43,198 @@ export default function AppShell() {
   }
 
   return (
-    <div className="flex flex-col h-dvh md:flex-row relative">
+    <div className="luma-bg" style={{ height: '100dvh', display: 'flex', flexDirection: 'row' }}>
       <LogSheet />
-      {/* Sidebar — desktop */}
-      <aside className="hidden md:flex flex-col w-56 shrink-0 bg-slate-900 border-r border-slate-800 py-6 px-3 gap-1">
-        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 mb-4">
-          Luma
-        </span>
-        {NAV_ITEMS.map((item) => (
-          <SideLink key={item.to} {...item} />
-        ))}
-        <div className="mt-auto">
-          <SideLink to="/settings" label="Settings" icon="⚙" />
-        </div>
-      </aside>
+
+      {/* Desktop Sidebar */}
+      <DesktopSidebar user={user} />
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+      <main
+        className="thin-scroll"
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          paddingBottom: 0,
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
         <Outlet />
       </main>
 
-      {/* Bottom nav — mobile */}
-      <nav className="fixed bottom-0 inset-x-0 md:hidden bg-slate-900/95 backdrop-blur border-t border-slate-800 safe-bottom z-40">
-        <div className="flex items-center justify-around h-14">
-          {NAV_ITEMS.slice(0, 2).map((item) => (
-            <BottomLink key={item.to} {...item} />
-          ))}
-          <LogFAB />
-          {NAV_ITEMS.slice(2).map((item) => (
-            <BottomLink key={item.to} {...item} />
-          ))}
-        </div>
-      </nav>
+      {/* Mobile Bottom Nav */}
+      <MobileNav />
     </div>
   )
 }
 
-function SideLink({ to, label, icon }: { to: string; label: string; icon: string }) {
+function DesktopSidebar({ user }: { user: User }) {
+  const { theme, toggleTheme } = useUIStore()
+
+  const initials = (user.display_name || 'OP')
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
+  return (
+    <aside style={{
+      width: 240,
+      flexShrink: 0,
+      padding: '28px 18px 24px',
+      borderRight: '1px solid rgba(255,255,255,0.05)',
+      display: 'flex',
+      flexDirection: 'column',
+      background: 'linear-gradient(180deg, rgba(255,255,255,0.02), transparent)',
+      position: 'relative',
+      zIndex: 2,
+    }}
+    className="hidden md:flex"
+    >
+      <div style={{ padding: '0 8px 28px' }}>
+        <LumaWordmark size={26}/>
+      </div>
+
+      <div style={{ padding: '0 8px', marginBottom: 14 }}>
+        <span className="eyebrow" style={{ fontSize: 9 }}>Menu</span>
+      </div>
+
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {NAV_ITEMS.map((item) => (
+          <SideLink key={item.to} {...item} />
+        ))}
+      </nav>
+
+      <div style={{ flex: 1 }}/>
+
+      {/* Theme toggle */}
+      <div style={{ marginBottom: 14 }}>
+        <div className={`theme-toggle ${theme === 'light' ? 'light-mode' : ''}`} style={{ width: '100%' }}>
+          <button data-active={theme === 'dark' ? 'true' : 'false'} onClick={() => theme !== 'dark' && toggleTheme()}>
+            <Moon size={12}/> Dark
+          </button>
+          <button data-active={theme === 'light' ? 'true' : 'false'} onClick={() => theme !== 'light' && toggleTheme()}>
+            <Sun size={12}/> Light
+          </button>
+        </div>
+      </div>
+
+      {/* User chip */}
+      <div className="glass" style={{ padding: 12, display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14 }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%',
+          background: 'linear-gradient(135deg, #38bdf8, #fbbf24)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 600, fontSize: 13, color: '#06121d', flexShrink: 0,
+        }}>{initials}</div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{user.display_name || 'Operator'}</div>
+          <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>self-hosted</div>
+        </div>
+        <NavLink to="/settings">
+          <Settings size={15} color="var(--fg-quiet)"/>
+        </NavLink>
+      </div>
+    </aside>
+  )
+}
+
+function SideLink({ to, label, Icon }: { to: string; label: string; Icon: React.ElementType }) {
   return (
     <NavLink
       to={to}
-      className={({ isActive }) =>
-        clsx(
-          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
-          isActive ? 'bg-brand-500/20 text-brand-500' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800',
-        )
-      }
+      style={({ isActive }) => ({
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '10px 12px',
+        borderRadius: 12,
+        color: isActive ? 'var(--fg-primary)' : 'var(--fg-tertiary)',
+        background: isActive ? 'linear-gradient(90deg, rgba(56,189,248,0.18), rgba(56,189,248,0.04))' : 'transparent',
+        border: isActive ? '1px solid rgba(56,189,248,0.2)' : '1px solid transparent',
+        fontSize: 14, fontWeight: isActive ? 500 : 400,
+        cursor: 'pointer',
+        position: 'relative',
+        textDecoration: 'none',
+        transition: 'all 150ms ease-out',
+      })}
     >
-      <span className="text-base leading-none">{icon}</span>
-      {label}
+      {({ isActive }) => (
+        <>
+          {isActive && <span className="sidebar-active-indicator"/>}
+          <Icon size={17}/>
+          <span>{label}</span>
+        </>
+      )}
     </NavLink>
   )
 }
 
-function BottomLink({ to, label, icon }: { to: string; label: string; icon: string }) {
+function MobileNav() {
+  const openLog = useUIStore((s) => s.openLogSheet)
+
+  return (
+    <div
+      className="mobile-nav-wrap md:hidden"
+      style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        padding: '10px 18px 28px',
+        zIndex: 20,
+      }}
+    >
+      <div className="glass-bright" style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+        padding: '8px 8px',
+        borderRadius: 28,
+        position: 'relative',
+      }}>
+        {/* Today + Plan */}
+        {NAV_ITEMS.slice(0, 2).map((item) => (
+          <MobileNavItem key={item.to} {...item} />
+        ))}
+
+        {/* FAB */}
+        <button
+          onClick={openLog}
+          className="mobile-fab"
+          style={{
+            width: 52, height: 52,
+            borderRadius: '50%',
+            background: 'linear-gradient(180deg, #fde68a, #fbbf24)',
+            border: '1px solid rgba(251,191,36,0.6)',
+            color: '#1a0e02',
+            marginTop: -22,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+          aria-label="Log meal"
+        >
+          <Plus size={22} strokeWidth={2.5}/>
+        </button>
+
+        {/* Trends + Coach */}
+        {NAV_ITEMS.slice(2).map((item) => (
+          <MobileNavItem key={item.to} {...item} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function MobileNavItem({ to, label, Icon }: { to: string; label: string; Icon: React.ElementType }) {
   return (
     <NavLink
       to={to}
-      className={({ isActive }) =>
-        clsx(
-          'flex flex-col items-center gap-0.5 px-4 py-1 text-xs transition-colors',
-          isActive ? 'text-brand-500' : 'text-slate-500',
-        )
-      }
+      style={({ isActive }) => ({
+        flex: 1, padding: '6px 4px',
+        background: 'transparent', border: 'none', cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+        color: isActive ? 'var(--sky-300)' : 'var(--fg-quiet)',
+        textDecoration: 'none',
+      })}
     >
-      <span className="text-xl leading-none">{icon}</span>
-      {label}
+      <Icon size={20}/>
+      <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.02em' }}>{label}</span>
     </NavLink>
   )
 }

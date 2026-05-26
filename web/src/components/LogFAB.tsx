@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import { useUIStore } from '../stores'
 
 export default function LogFAB() {
@@ -5,10 +6,11 @@ export default function LogFAB() {
   return (
     <button
       onClick={open}
-      className="w-12 h-12 rounded-full bg-brand-500 text-white text-2xl flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+      className="btn btn-primary"
+      style={{ padding: '10px 18px', gap: 6 }}
       aria-label="Log meal"
     >
-      +
+      <Plus size={15} strokeWidth={2}/> Log meal
     </button>
   )
 }
