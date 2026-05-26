@@ -314,52 +314,95 @@ export default function LogSheet() {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end md:items-stretch transition-opacity duration-300">
+    <div style={{
+      position: 'fixed', inset: 0,
+      background: 'rgba(5,8,17,0.75)',
+      backdropFilter: 'blur(8px)',
+      zIndex: 50,
+      display: 'flex', justifyContent: 'flex-end', alignItems: 'stretch',
+    }}>
       {/* Sliding Sheet Panel */}
-      <div className="w-full md:w-[480px] bg-slate-900 border-t md:border-t-0 md:border-l border-slate-800 flex flex-col h-[90vh] md:h-full mt-auto md:mt-0 rounded-t-2xl md:rounded-t-none shadow-2xl relative">
-        
+      <div style={{
+        width: '100%', maxWidth: 480,
+        background: 'var(--bg-1)',
+        borderLeft: '1px solid var(--glass-edge)',
+        display: 'flex', flexDirection: 'column',
+        height: '100%',
+        boxShadow: '-20px 0 60px rgba(0,0,0,0.4)',
+      }}>
+
         {/* Header */}
-        <header className="p-4 border-b border-slate-800 flex items-center justify-between">
+        <header style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid var(--glass-edge)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
           <div>
-            <h2 className="text-lg font-bold text-slate-100">Log Meal</h2>
-            <p className="text-xs text-slate-400">Cardiovascular LDL nutrition tracker</p>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: 'var(--fg-primary)' }}>Log Meal</h2>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--fg-quiet)' }}>LDL cardiovascular tracker</p>
           </div>
           <button
             onClick={close}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 flex items-center justify-center transition-colors"
+            style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: 'var(--glass-2)', border: '1px solid var(--glass-edge)',
+              color: 'var(--fg-quiet)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14,
+            }}
           >
             ✕
           </button>
         </header>
 
         {/* Slot Selection */}
-        <div className="p-4 bg-slate-950/40 border-b border-slate-800/60 flex gap-2 overflow-x-auto">
-          {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setSlot(s)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all shrink-0 ${
-                slot === s
-                  ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-750'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
+        <div style={{
+          padding: '12px 20px',
+          borderBottom: '1px solid var(--glass-edge)',
+          display: 'flex', gap: 8, overflowX: 'auto',
+        }}>
+          {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((s) => {
+            const colors: Record<string, string> = { breakfast: '#fbbf24', lunch: '#38bdf8', dinner: '#a78bfa', snack: '#34d399' }
+            const c = colors[s]
+            return (
+              <button
+                key={s}
+                onClick={() => setSlot(s)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 999,
+                  border: `1px solid ${slot === s ? `${c}60` : 'var(--glass-edge)'}`,
+                  background: slot === s ? `${c}18` : 'var(--glass-1)',
+                  color: slot === s ? c : 'var(--fg-tertiary)',
+                  fontSize: 11, fontWeight: 600,
+                  textTransform: 'uppercase', letterSpacing: '0.08em',
+                  cursor: 'pointer', flexShrink: 0,
+                  fontFamily: 'var(--font-mono)',
+                  transition: 'all 150ms',
+                }}
+              >
+                {s}
+              </button>
+            )
+          })}
         </div>
 
         {/* Mode Tabs */}
-        <div className="flex border-b border-slate-800">
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--glass-edge)' }}>
           {(['voice', 'barcode', 'search'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-3 text-sm font-semibold capitalize transition-all border-b-2 ${
-                activeTab === tab
-                  ? 'border-brand-500 text-brand-400'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
+              style={{
+                flex: 1, padding: '12px',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: `2px solid ${activeTab === tab ? 'var(--sky-400)' : 'transparent'}`,
+                color: activeTab === tab ? 'var(--sky-300)' : 'var(--fg-quiet)',
+                fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                fontFamily: 'var(--font-sans)', textTransform: 'capitalize',
+                transition: 'all 150ms',
+              }}
             >
               {tab === 'search' ? 'Plate / Search' : tab}
             </button>
@@ -367,7 +410,7 @@ export default function LogSheet() {
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
           
           {/* Tab 1: Voice */}
           {activeTab === 'voice' && (
@@ -574,36 +617,35 @@ export default function LogSheet() {
 
         {/* Aggregate Plate Nutrition Totals Card */}
         {draftItems.length > 0 && (
-          <div className="p-4 bg-slate-950 border-t border-slate-800/90 space-y-3">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-              Cumulative Plate Nutrition
-            </h4>
-            
-            <div className="grid grid-cols-4 gap-2">
-              <div className="bg-slate-900 p-2 rounded text-center border border-slate-850">
-                <span className="text-xs text-slate-500 block">Calories</span>
-                <span className="text-sm font-extrabold text-slate-100">{Math.round(totals.calories)}</span>
-              </div>
-              <div className="bg-slate-900 p-2 rounded text-center border border-slate-850">
-                <span className="text-xs text-slate-500 block">Sat Fat</span>
-                <span className="text-sm font-extrabold text-red-400">{totals.saturated_fat_g.toFixed(1)}g</span>
-              </div>
-              <div className="bg-slate-900 p-2 rounded text-center border border-slate-850">
-                <span className="text-xs text-slate-500 block">Sol Fiber</span>
-                <span className="text-sm font-extrabold text-emerald-400">{totals.soluble_fiber_g.toFixed(1)}g</span>
-              </div>
-              <div className="bg-slate-900 p-2 rounded text-center border border-slate-850">
-                <span className="text-xs text-slate-500 block">Protein</span>
-                <span className="text-sm font-extrabold text-indigo-400">{totals.protein_g.toFixed(1)}g</span>
-              </div>
+          <div style={{
+            padding: '16px 20px',
+            borderTop: '1px solid var(--glass-edge)',
+            background: 'var(--bg-0)',
+            display: 'flex', flexDirection: 'column', gap: 12,
+          }}>
+            <div className="eyebrow">Cumulative Plate Nutrition</div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+              {[
+                { l: 'Calories', v: Math.round(totals.calories), c: 'var(--fg-primary)' },
+                { l: 'Sat Fat', v: `${totals.saturated_fat_g.toFixed(1)}g`, c: 'var(--bad)' },
+                { l: 'Sol Fiber', v: `${totals.soluble_fiber_g.toFixed(1)}g`, c: 'var(--good)' },
+                { l: 'Protein', v: `${totals.protein_g.toFixed(1)}g`, c: '#a78bfa' },
+              ].map((n) => (
+                <div key={n.l} className="glass-inset" style={{ padding: '8px 10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginBottom: 2 }}>{n.l}</div>
+                  <div className="num" style={{ fontSize: 14, fontWeight: 600, color: n.c }}>{n.v}</div>
+                </div>
+              ))}
             </div>
 
             <button
+              className="btn btn-primary"
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending}
-              className="w-full py-3 bg-brand-500 hover:bg-brand-600 disabled:bg-slate-800 text-white text-sm font-extrabold rounded-xl transition-all shadow-lg active:scale-95 mt-1"
+              style={{ width: '100%', padding: '13px', fontSize: 14, opacity: saveMutation.isPending ? 0.7 : 1 }}
             >
-              {saveMutation.isPending ? 'Logging Meal...' : 'Save Meal Event Log'}
+              {saveMutation.isPending ? 'Logging…' : 'Save Meal Log'}
             </button>
           </div>
         )}
