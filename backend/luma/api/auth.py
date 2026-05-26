@@ -24,7 +24,7 @@ class LoginRequest(BaseModel):
 
 
 class UserOut(BaseModel):
-    id: str
+    id: UUID
     email: str
     display_name: str
     role: str

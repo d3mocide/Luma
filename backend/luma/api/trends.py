@@ -43,7 +43,7 @@ async def get_trend(
             FROM biometrics_daily
             WHERE user_id = :user_id
               AND metric   = :metric
-              AND day      >= now() - (:days || ' days')::interval
+              AND day      >= now() - (:days * INTERVAL '1 day')
             ORDER BY day
         """),
         {"user_id": str(user.id), "metric": metric, "days": days},

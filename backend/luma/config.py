@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
-from typing import Literal
+from typing import Any, Literal
 
 
 class Settings(BaseSettings):
@@ -21,11 +21,11 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
 
     environment: Literal["development", "production"] = "development"
-    cors_origins: list[str] = ["http://localhost:5173"]
+    cors_origins: Any = ["http://localhost:5173"]
 
     @field_validator("cors_origins", mode="before")
     @classmethod
-    def parse_cors(cls, v: str | list[str]) -> list[str]:
+    def parse_cors(cls, v: Any) -> list[str]:
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",")]
         return v

@@ -22,6 +22,25 @@ if db_url:
     config.set_main_option("sqlalchemy.url", db_url)
 
 
+def include_object(object, name, type_, reflected, compare_to):
+    # Ignore TimescaleDB hypertables and continuous aggregates managed via raw SQL
+    if name in {"biometrics", "meal_events", "alerts", "biometrics_daily"}:
+        return False
+    if type_ == "index" and (
+        name in {"foods_name_trgm", "foods_source_id_idx", "meal_plan_slots_lookup", "meal_plans_active_idx"}
+        or name.startswith(("biometrics_", "meal_events_", "alerts_"))
+        or (getattr(object, "table", None) is not None and object.table.name in {"biometrics", "meal_events", "alerts", "biometrics_daily"})
+    ):
+        return False
+    # Ignore duplicate unique constraints reflected from composite primary key tables
+    if type_ == "unique_constraint" and (
+        (getattr(object, "table", None) is not None and object.table.name in {"preferences", "shopping_list_items"})
+        or name is None
+    ):
+        return False
+    return True
+
+
 def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
@@ -29,13 +48,18 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_object=include_object,
+    )
     with context.begin_transaction():
         context.run_migrations()
 
