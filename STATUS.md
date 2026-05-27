@@ -1,6 +1,6 @@
 # Lumo — Status
 
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 ## Phase 0 — Foundations
 
@@ -10,14 +10,14 @@ Last updated: 2026-05-26
 - [x] `compose.yml` — all services with health checks (postgres/TimescaleDB, redis, api, worker, nginx, litellm [remote AI], whisper)
 - [x] Alembic migration `0001_initial` — all 13 relational tables + 3 hypertables (biometrics, meal_events, alerts) + `biometrics_daily` continuous aggregate
 - [x] `POST /api/v1/auth/login|logout|refresh` + `GET /auth/me` — Argon2id + JWT, HTTP-only cookies
-- [x] `POST /api/v1/ingest/hae` — HMAC-SHA256 verified, normalizes all 9 HAE metric types into biometrics
-- [x] `GET /api/v1/today` — live biometric query + weight slope; returns real data where available, nulls otherwise
-- [x] `GET /api/v1/trends/{metric}` — queries `biometrics_daily` CAgg, supports 7d/30d/90d/1y
+- [x] `POST /api/v1/ingest/hae` — HMAC-SHA256 verified + replay protection (Redis nonce, 10-min TTL); normalizes all 24 HAE metric types + computed `sleep_score` into biometrics
+- [x] `GET /api/v1/today` — live biometric query + weight slope; `biometrics_latest` surfaces 10 fields (hrv, rhr, heart rate, sleep score/duration, steps, active kcal, BMR, exercise, respiratory rate)
+- [x] `GET /api/v1/trends/{metric}` — queries `biometrics_daily` CAgg, supports 7d/30d/90d/1y; allowlist covers all 30 ingested metric names
 - [x] `GET|PUT /api/v1/goals` + `GET|POST|DELETE /api/v1/preferences` — full CRUD
 - [x] All Phase 1+ API routes wired but stubbed (`log`, `plan`, `coach`, `foods`, `recipes`)
 - [x] `scripts/seed_admin.py`
 - [x] Frontend shell — AppShell with bottom nav (mobile) + sidebar (desktop)
-- [x] Today screen — weight hero, adherence pills, plan cards, biometrics strip (queries live API)
+- [x] Today screen — weight hero, adherence pills, plan cards, biometrics strip (queries live API); strip expanded with Steps and Active cal tiles
 - [x] Trends screen — Recharts line charts per metric with range toggle (queries live API)
 - [x] Plan / Coach / Settings routes — wired, Phase 1/2 placeholder UI
 - [x] PWA manifest + Vite PWA plugin + service worker config
@@ -25,7 +25,7 @@ Last updated: 2026-05-26
 - [x] **Verify compose stack comes up clean** — health checks verified green
 - [x] **Run `alembic upgrade head`** — verified 100% schema parity with no autogenerate drift (`alembic check` clean)
 - [x] **Run `seed_admin.py`** — verified administrator seeding successfully
-- [x] **Smoke test HAE ingest** — verified valid HMAC signatures and data ingestion
+- [x] **Smoke test HAE ingest** — verified valid HMAC signatures and data ingestion; 29-test suite covers normalizer, sleep_analysis path, sleep_score formula, HMAC verification, and replay protection
 - [x] **Run `pnpm build`** — verified production build compilation with zero errors
 - [x] **Point HAE** at local endpoint for end-to-end telemetry pipeline
 - [x] **Nginx TLS certs** — added automated `setup_dev.sh` script to auto-generate secure developer credentials and certificates on host initialization
