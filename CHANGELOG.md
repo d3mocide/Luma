@@ -4,6 +4,9 @@ All notable changes to the Luma health tracking and meal-planning PWA will be do
 
 ## [Phase 1] - Ingestion & Meal Planning (Active)
 
+### Fixed
+- **AppShell Compiler Fix**: Added the missing `useLayoutEffect` React import in [AppShell.tsx](file:///c:/Projects/Luma/frontend/src/components/AppShell.tsx) to resolve TypeScript compilation error `TS2304`.
+
 ### Added
 - **LLM Performance & Cost Telemetry**: Added a robust tracking service (`llm_metrics.py`) that captures prompt/completion tokens, processing latency, cache hit efficiency, and cost across all LLM requests, exposing a detailed Telemetry Dashboard on the Settings page displaying usage and budget charts.
 - **Goal Settings Management**: Enhanced the Settings page to support operator-scoped target settings for Target Weight, LDL Cholesterol limits, and dietary patterns, with robust validation and success/error message feedback.
