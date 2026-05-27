@@ -10,7 +10,6 @@ from tests.hae_fixtures import SAMPLE_PAYLOAD
 
 
 def test_hmac_signature_valid():
-    from fastapi import HTTPException
     from luma.api.ingest import _verify_hae_signature
 
     secret = "testsecret_at_least_32_bytes_long_!!"
@@ -19,7 +18,8 @@ def test_hmac_signature_valid():
 
     with patch("luma.api.ingest.settings") as mock_settings:
         mock_settings.hae_shared_secret = secret
-        _verify_hae_signature(body, sig)  # should not raise
+        replay_key = _verify_hae_signature(body, sig)
+    assert replay_key == sig.lower()
 
 
 def test_hmac_signature_wrong_secret_rejected():
@@ -73,3 +73,64 @@ def test_hmac_accepts_lowercase_signature():
     with patch("luma.api.ingest.settings") as mock_settings:
         mock_settings.hae_shared_secret = secret
         _verify_hae_signature(body, sig)  # should not raise
+
+
+def test_bearer_token_valid():
+    from luma.api.ingest import _verify_hae_signature
+
+    secret = "testsecret_at_least_32_bytes_long_!!"
+    body = b'{"data":{}}'
+
+    with patch("luma.api.ingest.settings") as mock_settings:
+        mock_settings.hae_shared_secret = secret
+        replay_key = _verify_hae_signature(body, None, bearer=secret)
+    assert replay_key == hashlib.sha256(body).hexdigest()
+
+
+def test_bearer_token_wrong_secret_rejected():
+    from fastapi import HTTPException
+    from luma.api.ingest import _verify_hae_signature
+
+    body = b'{"data":{}}'
+
+    with patch("luma.api.ingest.settings") as mock_settings:
+        mock_settings.hae_shared_secret = "correct_secret_32bytes_long_xxxxx"
+        with pytest.raises(HTTPException) as exc_info:
+            _verify_hae_signature(body, None, bearer="wrong_secret_32bytes_long_yyyyyy")
+    assert exc_info.value.status_code == 401
+
+
+def test_bearer_token_missing_both_rejected():
+    from fastapi import HTTPException
+    from luma.api.ingest import _verify_hae_signature
+
+    with patch("luma.api.ingest.settings") as mock_settings:
+        mock_settings.hae_shared_secret = "any_secret_32bytes_long_xxxxxxxxx"
+        with pytest.raises(HTTPException) as exc_info:
+            _verify_hae_signature(b"body", None, bearer=None)
+    assert exc_info.value.status_code == 401
+
+
+def test_extract_bearer_parses_header():
+    from luma.api.ingest import _extract_bearer
+
+    assert _extract_bearer("Bearer mytoken123") == "mytoken123"
+    assert _extract_bearer("bearer mytoken123") == "mytoken123"
+    assert _extract_bearer("BEARER mytoken123") == "mytoken123"
+    assert _extract_bearer("mytoken123") is None
+    assert _extract_bearer(None) is None
+    assert _extract_bearer("") is None
+
+
+def test_hmac_takes_precedence_over_bearer():
+    from luma.api.ingest import _verify_hae_signature
+
+    secret = "testsecret_at_least_32_bytes_long_!!"
+    body = b'{"data":{}}'
+    sig = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+
+    with patch("luma.api.ingest.settings") as mock_settings:
+        mock_settings.hae_shared_secret = secret
+        # Both headers present — HMAC wins, replay key is the signature not body hash
+        replay_key = _verify_hae_signature(body, sig, bearer=secret)
+    assert replay_key == sig.lower()
