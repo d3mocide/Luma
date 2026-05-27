@@ -110,18 +110,21 @@ All services should show `healthy` or `running` within ~30 seconds. If Postgres 
 
 ---
 
-### Step 3 — Run migrations and seed admin
+### Step 3 — Run migrations
 
 ```bash
 make migrate    # runs: alembic upgrade head
-make seed       # creates the first admin account (interactive prompt)
 ```
 
 ---
 
-### Step 4 — Open Luma
+### Step 4 — Open Luma and create the operator account
 
 Navigate to `https://localhost` in your browser. Accept the self-signed certificate warning (dev only — swap in a real cert for production). Log in with the admin credentials from Step 3.
+
+On a fresh database, Luma will show the first-run setup screen and prompt you to create the initial operator account in the browser. This is the primary first-user workflow.
+
+If you need non-interactive bootstrap for recovery or automation, `make seed` is still available as an optional utility.
 
 ---
 
@@ -176,7 +179,7 @@ See **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** for migrations, testing, loca
 | `make down` | Stop and remove containers and networks |
 | `make rebuild` | Rebuild all images and restart the stack |
 | `make migrate` | Run `alembic upgrade head` inside the api container |
-| `make seed` | Seed the first admin account |
+| `make seed` | Optional: bootstrap an operator account for recovery or automation |
 | `make ps` | Show live service status |
 | `make logs` | Tail logs across all services |
 | `make logs-api` | Tail API service logs only |

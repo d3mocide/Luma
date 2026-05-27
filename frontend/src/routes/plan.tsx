@@ -249,7 +249,7 @@ export default function PlanRoute() {
                 onClick={() => generateMutation.mutate(customConstraints)}
                 disabled={generateMutation.isPending}
               >
-                {generateMutation.isPending ? 'Claude is orchestrating…' : 'Generate Personalized 7-Day Plan'}
+                {generateMutation.isPending ? 'Luma is orchestrating…' : 'Generate Personalized 7-Day Plan'}
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-"""Seed the initial operator user.
+"""Bootstrap the initial operator user when browser setup is unavailable.
 
 Run with:
     docker compose run --rm api python -m luma.scripts.seed_admin

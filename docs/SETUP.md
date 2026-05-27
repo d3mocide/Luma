@@ -43,16 +43,19 @@ openssl rand -hex 32   # run once per secret
 make prod
 ```
 
-### 4. Migrate and seed
+### 4. Migrate
 
 ```bash
 make migrate   # applies all Alembic migrations
-make seed      # prompts for an admin email + password
 ```
 
-### 5. Open
+### 5. Open and create the operator account
 
 Navigate to `https://localhost`. Accept the browser's self-signed certificate warning in development.
+
+On first boot, the login screen will switch into setup mode if no users exist yet. Create the initial operator account there.
+
+`make seed` remains available as an optional bootstrap path for recovery, automation, or environments where browser-based setup is not practical.
 
 ---
 

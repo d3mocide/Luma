@@ -208,8 +208,9 @@ docker compose --profile dev restart frontend-dev
 make nuke      # removes all containers, volumes, and networks
 make prod
 make migrate
-make seed
 ```
+
+Then open Luma in the browser and create the initial operator account through the first-run setup flow.
 
 **Wipe just the database:**
 

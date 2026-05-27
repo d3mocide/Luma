@@ -13,11 +13,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const queryClient = useQueryClient()
 
-  const { data: setupStatus, isLoading: checkingSetup } = useQuery<{ setup_required: boolean }>({
+  const { data: setupStatus, isLoading: checkingSetup, error: setupStatusError } = useQuery<{ setup_required: boolean }>({
     queryKey: ['setupStatus'],
     queryFn: () => api.get('/auth/setup-status'),
     retry: false,
   })
+
+  const bootstrapError = setupStatusError instanceof Error ? setupStatusError.message : null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -174,7 +176,7 @@ export default function Login() {
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            {error && (
+            {(bootstrapError || error) && (
               <div style={{
                 padding: '12px 14px',
                 background: 'rgba(251,113,133,0.10)',
@@ -184,7 +186,7 @@ export default function Login() {
                 color: 'var(--bad)',
                 display: 'flex', gap: 8, alignItems: 'center',
               }}>
-                <AlertCircle size={14} strokeWidth={1.5}/> {error}
+                <AlertCircle size={14} strokeWidth={1.5}/> {bootstrapError || error}
               </div>
             )}
 
@@ -243,9 +245,9 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || Boolean(bootstrapError)}
               className="btn btn-primary"
-              style={{ marginTop: 8, padding: '14px 20px', fontSize: 14, width: '100%', opacity: loading ? 0.7 : 1 }}
+              style={{ marginTop: 8, padding: '14px 20px', fontSize: 14, width: '100%', opacity: loading || bootstrapError ? 0.7 : 1 }}
             >
               {loading ? (
                 <span style={{

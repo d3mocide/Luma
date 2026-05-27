@@ -21,7 +21,7 @@ help:
 	@echo "  make logs-frontend - tail logs for frontend-dev service"
 	@echo "  make logs-web - alias for logs-frontend"
 	@echo "  make migrate  - run alembic migrations"
-	@echo "  make seed     - seed admin account"
+	@echo "  make seed     - optional operator bootstrap / recovery"
 	@echo "  make clean    - remove stopped containers"
 	@echo "  make nuke     - remove containers, volumes, and orphans"
 

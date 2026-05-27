@@ -38,7 +38,6 @@ type PlanData = {
 }
 
 let signedIn = true
-let mockPlan = createMockPlan()
 let measurementSystem: 'metric' | 'imperial' = 'metric'
 
 const MOCK_SHOPPING_LIST = [
@@ -79,6 +78,8 @@ const MOCK_SLOT_NUTRITION: Record<string, Record<string, number>> = {
   snack:     { calories: 210, protein_g: 6,  fat_g: 12, saturated_fat_g: 1.2, carbohydrates_g: 22, fiber_g: 3.5, soluble_fiber_g: 1.5, sodium_mg: 60  },
   dinner:    { calories: 580, protein_g: 38, fat_g: 20, saturated_fat_g: 3.5, carbohydrates_g: 60, fiber_g: 9,   soluble_fiber_g: 3.5, sodium_mg: 520 },
 }
+
+let mockPlan = createMockPlan()
 
 function createMockPlan(): PlanData {
   const weekStart = getWeekStartIso(new Date())
@@ -290,8 +291,8 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     const servingG = Number(body?.serving_g ?? 100)
     const factor = servingG / 100
     const nutrition: Record<string, number> = {}
-    for (const k of Object.keys(food.nutrients_per_100g)) {
-      nutrition[k] = Math.round((food.nutrients_per_100g[k] ?? 0) * factor * 10) / 10
+    for (const [key, value] of Object.entries(food.nutrients_per_100g)) {
+      nutrition[key] = Math.round((value ?? 0) * factor * 10) / 10
     }
     slot.food_id = food.id
     slot.custom_name = food.name

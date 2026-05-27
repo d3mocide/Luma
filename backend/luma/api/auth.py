@@ -8,6 +8,7 @@ from argon2.exceptions import VerifyMismatchError
 from fastapi import APIRouter, Cookie, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import select, update, func
+from sqlalchemy.exc import SQLAlchemyError
 
 from luma.config import settings
 from luma.db.models import User
@@ -16,6 +17,28 @@ from luma.deps import DbDep, CurrentUser
 logger = logging.getLogger(__name__)
 router = APIRouter()
 ph = PasswordHasher()
+
+
+def _raise_auth_db_http_error(exc: SQLAlchemyError) -> None:
+    logger.exception("Auth database operation failed")
+    message = str(getattr(exc, "orig", exc)).lower()
+
+    if 'relation "users" does not exist' in message:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database is not initialized. Run `make migrate` and try again.",
+        )
+
+    if 'password authentication failed' in message:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database credentials are invalid. Check PG_PASSWORD and DATABASE_URL.",
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Authentication service is temporarily unavailable.",
+    )
 
 
 class LoginRequest(BaseModel):
@@ -70,8 +93,11 @@ def _set_auth_cookies(response: Response, user_id: UUID) -> None:
 
 @router.post("/login")
 async def login(body: LoginRequest, response: Response, db: DbDep) -> UserOut:
-    result = await db.execute(select(User).where(User.email == body.email))
-    user = result.scalar_one_or_none()
+    try:
+        result = await db.execute(select(User).where(User.email == body.email))
+        user = result.scalar_one_or_none()
+    except SQLAlchemyError as exc:
+        _raise_auth_db_http_error(exc)
 
     # Use constant-time comparison; always verify even if user not found (mitigate timing oracle)
     dummy_hash = "$argon2id$v=19$m=65536,t=3,p=4$SGjslnqhTZtq5oGVdGyUMw$xS8p1ZFkUZfxWOINsNc8FQUOnSXfgVZK0D4GIpn5luI"
@@ -84,8 +110,11 @@ async def login(body: LoginRequest, response: Response, db: DbDep) -> UserOut:
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    await db.execute(update(User).where(User.id == user.id).values(last_login_at=datetime.now(timezone.utc)))
-    await db.commit()
+    try:
+        await db.execute(update(User).where(User.id == user.id).values(last_login_at=datetime.now(timezone.utc)))
+        await db.commit()
+    except SQLAlchemyError as exc:
+        _raise_auth_db_http_error(exc)
 
     _set_auth_cookies(response, user.id)
     return UserOut.model_validate(user)
@@ -121,8 +150,12 @@ async def refresh(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
 
     user_id = payload.get("sub")
-    result = await db.execute(select(User).where(User.id == UUID(user_id)))
-    user = result.scalar_one_or_none()
+    try:
+        result = await db.execute(select(User).where(User.id == UUID(user_id)))
+        user = result.scalar_one_or_none()
+    except SQLAlchemyError as exc:
+        _raise_auth_db_http_error(exc)
+
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
@@ -133,16 +166,24 @@ async def refresh(
 @router.get("/setup-status")
 async def setup_status(db: DbDep) -> SetupStatusResponse:
     # Check if any users exist in the database
-    result = await db.execute(select(func.count(User.id)))
-    count = result.scalar() or 0
+    try:
+        result = await db.execute(select(func.count(User.id)))
+        count = result.scalar() or 0
+    except SQLAlchemyError as exc:
+        _raise_auth_db_http_error(exc)
+
     return SetupStatusResponse(setup_required=(count == 0))
 
 
 @router.post("/setup")
 async def setup(body: SetupRequest, response: Response, db: DbDep) -> UserOut:
     # Ensure setup is only allowed on empty database
-    result = await db.execute(select(func.count(User.id)))
-    count = result.scalar() or 0
+    try:
+        result = await db.execute(select(func.count(User.id)))
+        count = result.scalar() or 0
+    except SQLAlchemyError as exc:
+        _raise_auth_db_http_error(exc)
+
     if count > 0:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Setup has already been completed.")
 
@@ -154,9 +195,12 @@ async def setup(body: SetupRequest, response: Response, db: DbDep) -> UserOut:
         display_name=body.display_name,
         role="operator",
     )
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
+    try:
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    except SQLAlchemyError as exc:
+        _raise_auth_db_http_error(exc)
 
     _set_auth_cookies(response, user.id)
     return UserOut.model_validate(user)
