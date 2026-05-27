@@ -8,7 +8,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['icons/*.png', 'icons/*.svg'],
+      includeAssets: ['icons/*.png', 'icons/*.svg', 'assets/*.svg'],
       manifest: false, // using public/manifest.webmanifest
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],

@@ -444,10 +444,11 @@ function MobileNav() {
 
   return (
     <div
-      className="mobile-nav-wrap safe-bottom md:hidden"
+      className="mobile-nav-wrap md:hidden"
       style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
-        padding: '10px 18px 12px',
+        paddingTop: 10, paddingLeft: 18, paddingRight: 18,
+        paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
         zIndex: 20,
       }}
     >

@@ -1064,7 +1064,7 @@
  * MOBILE PAGE HEADER SYSTEM
  * ══════════════════════════════════════════════════════════════════════════ */
 .today-mobile-scroll {
-  padding: 16px 22px 110px;
+  padding: 16px 22px 100px;
   height: 100%;
   overflow-y: auto;
 }
@@ -1237,7 +1237,7 @@
   }
 
   .mobile-shell-main {
-    padding-top: calc(env(safe-area-inset-top) + 16px);
+    padding-top: 0;
   }
 
   .settings-grid {
@@ -1478,7 +1478,7 @@
 
 @media (max-width: 900px) {
   .plan-page {
-    padding: calc(env(safe-area-inset-top) + 64px) 16px calc(120px + env(safe-area-inset-bottom));
+    padding: calc(env(safe-area-inset-top) + 64px) 16px 100px;
   }
 
   .plan-header {
@@ -1662,7 +1662,7 @@
 
 @media (max-width: 900px) {
   .trends-page {
-    padding: calc(env(safe-area-inset-top) + 64px) 16px calc(120px + env(safe-area-inset-bottom));
+    padding: calc(env(safe-area-inset-top) + 64px) 16px 100px;
   }
 
   .trends-header {
@@ -1749,7 +1749,7 @@
   }
 
   .coach-composer {
-    padding: 12px 16px calc(120px + env(safe-area-inset-bottom)) !important;
+    padding: 12px 16px 100px !important;
   }
 }
 
@@ -1781,6 +1781,6 @@
 
 @media (max-width: 900px) {
   .settings-page {
-    padding: calc(env(safe-area-inset-top) + 64px) 16px calc(120px + env(safe-area-inset-bottom)) !important;
+    padding: calc(env(safe-area-inset-top) + 64px) 16px 100px !important;
   }
 }
