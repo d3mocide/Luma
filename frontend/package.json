@@ -25,7 +25,6 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@resvg/resvg-js": "^2.6.2",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^8.5.0",
