@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta, timezone
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from uuid import UUID
 import uuid
 
@@ -11,51 +11,14 @@ from luma.deps import DbDep, CurrentUser
 from luma.db.models import MealPlan, MealPlanSlot, ShoppingListItem, MealEvent, Food
 from luma.agents.meal_planner import generate_meal_plan
 from luma.services.nutrition import ZERO_NUTRIENTS
+from luma.services.plan_helpers import _slot_dict, _sum_nutrition, _nutrition_from_food, _parse_uuid
 
 router = APIRouter()
 
-NUTRITION_KEYS = list(ZERO_NUTRIENTS.keys())
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def get_current_week_monday() -> date:
     today = date.today()
     return today - timedelta(days=today.weekday())
-
-
-def _slot_dict(s: MealPlanSlot) -> dict:
-    return {
-        "id":          str(s.id),
-        "slot_date":   s.slot_date.isoformat(),
-        "slot":        s.slot,
-        "custom_name": s.custom_name,
-        "notes":       s.notes,
-        "food_id":     str(s.food_id) if s.food_id else None,
-        "recipe_id":   str(s.recipe_id) if s.recipe_id else None,
-        "nutrition":   s.nutrition or {},
-    }
-
-
-def _sum_nutrition(slots: list[MealPlanSlot]) -> dict:
-    totals: dict[str, float] = {k: 0.0 for k in NUTRITION_KEYS}
-    for s in slots:
-        for k in NUTRITION_KEYS:
-            totals[k] += float((s.nutrition or {}).get(k) or 0.0)
-    return totals
-
-
-def _nutrition_from_food(food: Food, serving_g: float) -> dict:
-    factor = serving_g / 100.0
-    per100 = food.nutrients_per_100g or {}
-    return {k: round(float(per100.get(k) or 0.0) * factor, 2) for k in NUTRITION_KEYS}
-
-
-def _parse_uuid(value: str, label: str = "UUID") -> UUID:
-    try:
-        return UUID(value)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid {label} format")
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
@@ -101,7 +64,6 @@ async def get_current_plan(db: DbDep, current_user: CurrentUser) -> dict:
     )
     slots: list[MealPlanSlot] = list(slots_res.scalars().all())
 
-    # Group slots by date and compute per-day nutrition totals.
     by_date: dict[str, list[MealPlanSlot]] = {}
     for s in slots:
         key = s.slot_date.isoformat()
@@ -110,11 +72,11 @@ async def get_current_plan(db: DbDep, current_user: CurrentUser) -> dict:
     day_totals = {day: _sum_nutrition(day_slots) for day, day_slots in by_date.items()}
 
     return {
-        "id":          str(plan.id),
-        "week_start":  plan.week_start.isoformat(),
-        "status":      plan.status,
-        "slots":       [_slot_dict(s) for s in slots],
-        "day_totals":  day_totals,
+        "id":         str(plan.id),
+        "week_start": plan.week_start.isoformat(),
+        "status":     plan.status,
+        "slots":      [_slot_dict(s) for s in slots],
+        "day_totals": day_totals,
     }
 
 
@@ -155,7 +117,7 @@ async def regenerate_weekly_plan(req: PlanGenerateRequest, db: DbDep, current_us
                 slot=sl["slot"],
                 custom_name=sl["custom_name"],
                 notes=sl.get("notes", ""),
-                nutrition=sl.get("nutrients"),       # persist agent-calculated nutrition
+                nutrition=sl.get("nutrients"),
             ))
 
     created_food_ids_by_name: dict[str, UUID] = {}
@@ -175,7 +137,6 @@ async def regenerate_weekly_plan(req: PlanGenerateRequest, db: DbDep, current_us
             item_name = str(item.get("name") or "").strip()
             if not item_name:
                 continue
-
             cached_id = created_food_ids_by_name.get(item_name.lower())
             if cached_id:
                 food_id = cached_id
@@ -188,19 +149,13 @@ async def regenerate_weekly_plan(req: PlanGenerateRequest, db: DbDep, current_us
                 food_id = matching.id
                 created_food_ids_by_name[item_name.lower()] = matching.id
 
-        # If no existing food matches, create a lightweight catalog item so the
-        # shopping list can still render immediately.
         if not food_id:
             item_name = str(item.get("name") or "").strip()
             if not item_name:
                 continue
             new_food = Food(
-                id=uuid.uuid4(),
-                source="llm",
-                name=item_name,
-                brand=None,
-                serving_size_g=100.0,
-                nutrients_per_100g={},
+                id=uuid.uuid4(), source="llm", name=item_name, brand=None,
+                serving_size_g=100.0, nutrients_per_100g={},
             )
             db.add(new_food)
             await db.flush()
@@ -209,12 +164,9 @@ async def regenerate_weekly_plan(req: PlanGenerateRequest, db: DbDep, current_us
 
         if food_id:
             db.add(ShoppingListItem(
-                plan_id=plan.id,
-                food_id=food_id,
-                quantity=item.get("quantity", 1.0),
-                unit=item.get("unit", "g"),
-                aisle=item.get("aisle", "Grocery"),
-                purchased=False,
+                plan_id=plan.id, food_id=food_id,
+                quantity=item.get("quantity", 1.0), unit=item.get("unit", "g"),
+                aisle=item.get("aisle", "Grocery"), purchased=False,
             ))
 
     await db.commit()
@@ -244,7 +196,6 @@ async def patch_slot(slot_id: str, req: SlotPatchRequest, db: DbDep, current_use
 
 @router.post("/slot/{slot_id}/replace")
 async def replace_slot(slot_id: str, req: SlotReplaceRequest, db: DbDep, current_user: CurrentUser) -> dict:
-    """Replace a slot's meal with a specific food from the food browser."""
     slot_uuid = _parse_uuid(slot_id, "slot UUID")
 
     slot_res = await db.execute(
@@ -286,7 +237,6 @@ async def log_as_eaten(plan_id: str, slot_id: str, db: DbDep, current_user: Curr
     if not slot:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found")
 
-    # Use the actual persisted nutrition — no more hardcoded dummy values.
     nutrition = slot.nutrition or dict(ZERO_NUTRIENTS)
 
     event = MealEvent(
@@ -310,7 +260,6 @@ async def log_as_eaten(plan_id: str, slot_id: str, db: DbDep, current_user: Curr
 async def get_shopping_list(plan_id: str, db: DbDep, current_user: CurrentUser) -> dict:
     plan_uuid = _parse_uuid(plan_id, "plan UUID")
 
-    # Verify ownership
     plan_res = await db.execute(
         select(MealPlan).where(MealPlan.id == plan_uuid, MealPlan.user_id == current_user.id)
     )
@@ -341,16 +290,12 @@ async def get_shopping_list(plan_id: str, db: DbDep, current_user: CurrentUser) 
 
 @router.patch("/{plan_id}/shopping-list/{food_id}")
 async def toggle_shopping_item(
-    plan_id: str,
-    food_id: str,
-    req: ShoppingToggleRequest,
-    db: DbDep,
-    current_user: CurrentUser,
+    plan_id: str, food_id: str, req: ShoppingToggleRequest,
+    db: DbDep, current_user: CurrentUser,
 ) -> dict:
     plan_uuid = _parse_uuid(plan_id, "plan UUID")
     food_uuid = _parse_uuid(food_id, "food UUID")
 
-    # Verify plan ownership
     plan_res = await db.execute(
         select(MealPlan).where(MealPlan.id == plan_uuid, MealPlan.user_id == current_user.id)
     )
