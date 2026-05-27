@@ -158,19 +158,54 @@ async def regenerate_weekly_plan(req: PlanGenerateRequest, db: DbDep, current_us
                 nutrition=sl.get("nutrients"),       # persist agent-calculated nutrition
             ))
 
+    created_food_ids_by_name: dict[str, UUID] = {}
+
     for item in generated.get("shopping_list", []):
         food_id = None
         if item.get("food_id"):
             try:
-                food_id = UUID(item["food_id"])
+                candidate_id = UUID(item["food_id"])
+                existing_food_res = await db.execute(select(Food).where(Food.id == candidate_id))
+                if existing_food_res.scalar_one_or_none():
+                    food_id = candidate_id
             except ValueError:
                 pass
 
         if not food_id:
-            res_f = await db.execute(select(Food).where(Food.name.ilike(f"%{item['name']}%")).limit(1))
+            item_name = str(item.get("name") or "").strip()
+            if not item_name:
+                continue
+
+            cached_id = created_food_ids_by_name.get(item_name.lower())
+            if cached_id:
+                food_id = cached_id
+
+        if not food_id:
+            item_name = str(item.get("name") or "").strip()
+            res_f = await db.execute(select(Food).where(Food.name.ilike(f"%{item_name}%")).limit(1))
             matching = res_f.scalar_one_or_none()
             if matching:
                 food_id = matching.id
+                created_food_ids_by_name[item_name.lower()] = matching.id
+
+        # If no existing food matches, create a lightweight catalog item so the
+        # shopping list can still render immediately.
+        if not food_id:
+            item_name = str(item.get("name") or "").strip()
+            if not item_name:
+                continue
+            new_food = Food(
+                id=uuid.uuid4(),
+                source="llm",
+                name=item_name,
+                brand=None,
+                serving_size_g=100.0,
+                nutrients_per_100g={},
+            )
+            db.add(new_food)
+            await db.flush()
+            food_id = new_food.id
+            created_food_ids_by_name[item_name.lower()] = new_food.id
 
         if food_id:
             db.add(ShoppingListItem(

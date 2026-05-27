@@ -273,7 +273,7 @@ export default function PlanRoute() {
 
       {/* Calendar view */}
       {plan && activeTab === 'calendar' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12 }}>
+        <div className="plan-calendar-grid">
           {dates.map((dateStr) => {
             const today = dateStr === new Date().toISOString().slice(0, 10)
             const dayTotals = plan.day_totals?.[dateStr]

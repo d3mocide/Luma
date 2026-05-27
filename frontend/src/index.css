@@ -946,7 +946,7 @@
 
 .plan-calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1057,13 +1057,11 @@
   color: var(--fg-secondary);
 }
 
-@media (max-width: 1280px) {
-  .plan-calendar-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 1024px) {
+  .plan-calendar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .plan-page {
     padding: 26px 24px 24px;
   }
