@@ -16,6 +16,34 @@ from luma.agents import food_extractor
 router = APIRouter()
 
 
+def _format_food_response(food: Food) -> dict:
+    return {
+        "id": str(food.id),
+        "source": food.source,
+        "source_id": food.source_id,
+        "name": food.name,
+        "brand": food.brand,
+        "serving_size_g": float(food.serving_size_g or 100.0),
+        "nutrients_per_100g": food.nutrients_per_100g,
+        "tags": food.tags or [],
+    }
+
+
+def _format_event_response(event: MealEvent) -> dict:
+    return {
+        "id": str(event.id),
+        "user_id": str(event.user_id),
+        "ts": event.ts.isoformat(),
+        "slot": event.slot,
+        "source": event.source,
+        "items": event.items,
+        "nutrition": event.nutrition,
+        "plan_slot_id": str(event.plan_slot_id) if event.plan_slot_id else None,
+        "raw_input": event.raw_input,
+        "confidence": float(event.confidence) if event.confidence is not None else None,
+    }
+
+
 class BarcodeLookupRequest(BaseModel):
     barcode: str
 
@@ -59,17 +87,8 @@ async def log_meal_barcode(
     food = res.scalar_one_or_none()
     
     if food:
-        return {
-            "id": str(food.id),
-            "source": food.source,
-            "source_id": food.source_id,
-            "name": food.name,
-            "brand": food.brand,
-            "serving_size_g": float(food.serving_size_g or 100.0),
-            "nutrients_per_100g": food.nutrients_per_100g,
-            "tags": food.tags or [],
-        }
-        
+        return _format_food_response(food)
+
     # 2. Fall back to Open Food Facts
     off_data = await off_client.lookup_barcode(barcode)
     if not off_data:
@@ -93,17 +112,7 @@ async def log_meal_barcode(
     db.add(food)
     await db.commit()
     await db.refresh(food)
-    
-    return {
-        "id": str(food.id),
-        "source": food.source,
-        "source_id": food.source_id,
-        "name": food.name,
-        "brand": food.brand,
-        "serving_size_g": float(food.serving_size_g or 100.0),
-        "nutrients_per_100g": food.nutrients_per_100g,
-        "tags": food.tags or [],
-    }
+    return _format_food_response(food)
 
 
 @router.post("/meal/voice")
@@ -160,19 +169,7 @@ async def log_meal(
     db.add(event)
     await db.commit()
     await db.refresh(event)
-    
-    return {
-        "id": str(event.id),
-        "user_id": str(event.user_id),
-        "ts": event.ts.isoformat(),
-        "slot": event.slot,
-        "source": event.source,
-        "items": event.items,
-        "nutrition": event.nutrition,
-        "plan_slot_id": str(event.plan_slot_id) if event.plan_slot_id else None,
-        "raw_input": event.raw_input,
-        "confidence": float(event.confidence) if event.confidence is not None else None,
-    }
+    return _format_event_response(event)
 
 
 @router.patch("/meal/{meal_id}")
@@ -212,19 +209,7 @@ async def patch_meal(
         
     await db.commit()
     await db.refresh(event)
-    
-    return {
-        "id": str(event.id),
-        "user_id": str(event.user_id),
-        "ts": event.ts.isoformat(),
-        "slot": event.slot,
-        "source": event.source,
-        "items": event.items,
-        "nutrition": event.nutrition,
-        "plan_slot_id": str(event.plan_slot_id) if event.plan_slot_id else None,
-        "raw_input": event.raw_input,
-        "confidence": float(event.confidence) if event.confidence is not None else None,
-    }
+    return _format_event_response(event)
 
 
 @router.delete("/meal/{meal_id}")
@@ -264,20 +249,4 @@ async def list_meals(
     stmt = select(MealEvent).where(MealEvent.user_id == current_user.id).order_by(MealEvent.ts.desc()).limit(limit)
     res = await db.execute(stmt)
     events = res.scalars().all()
-    return {
-        "meals": [
-            {
-                "id": str(e.id),
-                "user_id": str(e.user_id),
-                "ts": e.ts.isoformat(),
-                "slot": e.slot,
-                "source": e.source,
-                "items": e.items,
-                "nutrition": e.nutrition,
-                "plan_slot_id": str(e.plan_slot_id) if e.plan_slot_id else None,
-                "raw_input": e.raw_input,
-                "confidence": float(e.confidence) if e.confidence is not None else None,
-            }
-            for e in events
-        ]
-    }
+    return {"meals": [_format_event_response(e) for e in events]}
