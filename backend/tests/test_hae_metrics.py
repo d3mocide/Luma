@@ -178,6 +178,50 @@ async def test_normalize_heart_rate_missing_avg_logs_warning():
     assert count == 0
 
 
+@pytest.mark.asyncio
+async def test_normalize_insert_sql_binds_rows_param():
+    """Regression: SQLAlchemy text() must surface a bind param named 'rows'.
+
+    `:rows::jsonb` is parsed as bind `row` due to the regex's `(?!:)`
+    lookahead; the trailing 's' leaks into the SQL and Postgres rejects it
+    with a ProgrammingError. The fix wraps the param in CAST(...).
+    """
+    from sqlalchemy import text as sa_text
+    from sqlalchemy.dialects import postgresql
+
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    fake_user = make_fake_user()
+    captured_stmt: list = []
+
+    db = AsyncMock()
+    select_result = MagicMock()
+    select_result.scalar_one_or_none.return_value = fake_user
+    call_count = [0]
+
+    async def execute_side_effect(stmt, params=None):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            return select_result
+        captured_stmt.append((stmt, params))
+        return MagicMock()
+
+    db.execute.side_effect = execute_side_effect
+
+    await normalize_hae_payload(SAMPLE_PAYLOAD, db)
+
+    assert captured_stmt, "INSERT was never executed"
+    stmt, params = captured_stmt[0]
+    assert isinstance(stmt, type(sa_text("x"))), "expected a text() construct"
+    assert list(stmt._bindparams.keys()) == ["rows"], (
+        f"bind keys {list(stmt._bindparams.keys())!r} — '::' after :rows clipped the name"
+    )
+    compiled = stmt.compile(dialect=postgresql.asyncpg.dialect())
+    assert ":rows" not in compiled.string, "unsubstituted :rows leaked to Postgres"
+    assert "$1" in compiled.string
+    assert params and "rows" in params
+
+
 def test_sample_payload_metric_coverage():
     from luma.services.hae_normalizer import HAE_AGGREGATE_MAP, HAE_METRIC_MAP, SLEEP_MAP
 

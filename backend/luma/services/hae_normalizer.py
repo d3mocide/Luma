@@ -169,7 +169,9 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession) -> in
     if not rows:
         return 0
 
-    # Upsert — idempotent on (user_id, ts, metric, source)
+    # Upsert — idempotent on (user_id, ts, metric, source).
+    # NB: bind param is wrapped in CAST(...) so SQLAlchemy's text() regex doesn't
+    # see `:rows::jsonb` (negative-lookahead on `::` would clip the param name).
     await db.execute(
         text("""
             INSERT INTO biometrics (user_id, ts, metric, value, source, source_meta)
@@ -180,7 +182,7 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession) -> in
                 (r->>'value')::double precision,
                 r->>'source',
                 (r->>'source_meta')::jsonb
-            FROM jsonb_array_elements(:rows::jsonb) AS r
+            FROM jsonb_array_elements(CAST(:rows AS jsonb)) AS r
             ON CONFLICT (user_id, ts, metric, source) DO NOTHING
         """),
         {"rows": __import__("orjson").dumps(rows).decode()},
