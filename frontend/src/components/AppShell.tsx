@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
-import { useIsFetching, useQuery } from '@tanstack/react-query'
+import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CircleDot, Utensils, Activity, Sparkles, Settings, Plus, Moon, Sun, Loader2, ChevronDown,
 } from 'lucide-react'
@@ -80,9 +80,74 @@ export default function AppShell() {
 }
 
 function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: boolean }) {
-  const { theme, toggleTheme } = useUIStore()
+  const location = useLocation()
+  const queryClient = useQueryClient()
+  const { theme, setTheme, openLogSheet } = useUIStore()
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [profilePlacement, setProfilePlacement] = useState<'up' | 'down'>('up')
+  const [profileMaxHeight, setProfileMaxHeight] = useState(240)
+  const profileRef = useRef<HTMLDivElement | null>(null)
+  const profileTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   const initials = getUserInitials(user.display_name)
+
+  useEffect(() => {
+    setIsProfileOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!isProfileOpen) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsProfileOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isProfileOpen])
+
+  useLayoutEffect(() => {
+    if (!isProfileOpen) return
+
+    const updatePlacement = () => {
+      const triggerRect = profileTriggerRef.current?.getBoundingClientRect()
+      if (!triggerRect) return
+
+      const viewportPadding = 16
+      const spaceAbove = triggerRect.top - viewportPadding
+      const spaceBelow = window.innerHeight - triggerRect.bottom - viewportPadding
+      const shouldOpenDown = spaceBelow > spaceAbove
+
+      setProfilePlacement(shouldOpenDown ? 'down' : 'up')
+      setProfileMaxHeight(Math.max(120, shouldOpenDown ? spaceBelow : spaceAbove))
+    }
+
+    updatePlacement()
+    window.addEventListener('resize', updatePlacement)
+
+    return () => {
+      window.removeEventListener('resize', updatePlacement)
+    }
+  }, [isProfileOpen])
+
+  const handleLogout = async () => {
+    setIsProfileOpen(false)
+    await api.post('/auth/logout')
+    await queryClient.invalidateQueries({ queryKey: ['me'] })
+    await queryClient.invalidateQueries({ queryKey: ['today'] })
+    window.location.assign('/')
+  }
 
   return (
     <aside style={{
@@ -111,36 +176,98 @@ function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: 
         ))}
       </nav>
 
+      <button
+        type="button"
+        onClick={openLogSheet}
+        className="btn btn-primary"
+        style={{
+          width: '100%',
+          marginTop: 14,
+          padding: '10px 12px',
+          gap: 6,
+          justifyContent: 'center',
+        }}
+        aria-label="Log meal"
+      >
+        <Plus size={15} strokeWidth={2} />
+        Log meal
+      </button>
+
       <div style={{ flex: 1 }}/>
 
-      {/* Theme toggle */}
-      <div style={{ marginBottom: 14 }}>
-        <div className={`theme-toggle ${theme === 'light' ? 'light-mode' : ''}`} style={{ width: '100%' }}>
-          <button data-active={theme === 'dark' ? 'true' : 'false'} onClick={() => theme !== 'dark' && toggleTheme()}>
-            <Moon size={12} strokeWidth={1.5}/> Dark
-          </button>
-          <button data-active={theme === 'light' ? 'true' : 'false'} onClick={() => theme !== 'light' && toggleTheme()}>
-            <Sun size={12} strokeWidth={1.5}/> Light
-          </button>
-        </div>
-      </div>
+      <div ref={profileRef} className="desktop-profile-menu">
+        <button
+          type="button"
+          className="glass desktop-profile-trigger"
+          ref={profileTriggerRef}
+          onClick={() => setIsProfileOpen((open) => !open)}
+          aria-label="Open account panel"
+          aria-expanded={isProfileOpen}
+        >
+          <span
+            style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'linear-gradient(135deg, var(--sun-200), var(--sky-300) 46%, var(--sky-500))',
+              boxShadow: '0 0 0 1px rgba(255,255,255,0.14), 0 0 14px rgba(56,189,248,0.30)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 600, fontSize: 13, color: '#06121d', flexShrink: 0,
+            }}
+          >
+            {initials}
+          </span>
+          <span style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
+            <span style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{user.display_name || 'Operator'}</span>
+            <span style={{ display: 'block', fontSize: 11, color: 'var(--fg-quiet)' }}>self-hosted</span>
+          </span>
+          <Settings size={15} strokeWidth={1.5} color="currentColor" style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
+        </button>
 
-      {/* User chip */}
-      <div className="glass" style={{ padding: 12, display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14 }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: '50%',
-          background: 'linear-gradient(135deg, var(--sun-200), var(--sky-300) 46%, var(--sky-500))',
-          boxShadow: '0 0 0 1px rgba(255,255,255,0.14), 0 0 14px rgba(56,189,248,0.30)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: 600, fontSize: 13, color: '#06121d', flexShrink: 0,
-        }}>{initials}</div>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{user.display_name || 'Operator'}</div>
-          <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>self-hosted</div>
-        </div>
-        <NavLink to="/settings">
-          <Settings size={15} strokeWidth={1.5} color="currentColor" style={{ color: 'var(--fg-quiet)' }} />
-        </NavLink>
+        {isProfileOpen && (
+          <div
+            className="desktop-profile-panel glass-bright"
+            style={profilePlacement === 'down'
+              ? { top: 'calc(100% + 10px)', bottom: 'auto', maxHeight: `${profileMaxHeight}px` }
+              : { bottom: 'calc(100% + 10px)', top: 'auto', maxHeight: `${profileMaxHeight}px` }
+            }
+          >
+            <div className="eyebrow" style={{ marginBottom: 10 }}>Display</div>
+            <div className={`theme-toggle ${theme === 'light' ? 'light-mode' : ''}`} style={{ width: '100%', marginBottom: 12 }}>
+              <button data-active={theme === 'dark' ? 'true' : 'false'} onClick={() => setTheme('dark')}>
+                <Moon size={12} strokeWidth={1.5}/> Dark
+              </button>
+              <button data-active={theme === 'light' ? 'true' : 'false'} onClick={() => setTheme('light')}>
+                <Sun size={12} strokeWidth={1.5}/> Light
+              </button>
+            </div>
+
+            <div style={{ height: 1, background: 'var(--glass-edge)', margin: '14px 0 12px' }} />
+
+            <NavLink
+              to="/settings"
+              className="mobile-profile-action"
+              onClick={() => setIsProfileOpen(false)}
+              style={{ marginBottom: 10 }}
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <Settings size={15} strokeWidth={1.6} />
+                <span>Open settings</span>
+              </span>
+              <ChevronDown size={14} strokeWidth={1.8} style={{ transform: 'rotate(-90deg)' }} />
+            </NavLink>
+
+            <button
+              type="button"
+              className="mobile-profile-action desktop-profile-signout"
+              onClick={() => { void handleLogout() }}
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--bad)', boxShadow: '0 0 10px var(--bad-glow)' }} />
+                <span>Sign out</span>
+              </span>
+              <ChevronDown size={14} strokeWidth={1.8} style={{ transform: 'rotate(-90deg)' }} />
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   )
@@ -148,6 +275,7 @@ function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: 
 
 function MobileProfileMenu({ initials }: { initials: string }) {
   const location = useLocation()
+  const queryClient = useQueryClient()
   const { theme, setTheme } = useUIStore()
   const [isOpen, setIsOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement | null>(null)
@@ -177,6 +305,14 @@ function MobileProfileMenu({ initials }: { initials: string }) {
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [isOpen])
+
+  const handleLogout = async () => {
+    setIsOpen(false)
+    await api.post('/auth/logout')
+    await queryClient.invalidateQueries({ queryKey: ['me'] })
+    await queryClient.invalidateQueries({ queryKey: ['today'] })
+    window.location.assign('/')
+  }
 
   return (
     <div ref={panelRef} className="mobile-profile-menu safe-top md:hidden">
@@ -223,6 +359,19 @@ function MobileProfileMenu({ initials }: { initials: string }) {
             </span>
             <ChevronDown size={14} strokeWidth={1.8} style={{ transform: 'rotate(-90deg)' }} />
           </NavLink>
+
+          <button
+            type="button"
+            className="mobile-profile-action"
+            onClick={() => { void handleLogout() }}
+            style={{ marginTop: 10 }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--bad)', boxShadow: '0 0 10px var(--bad-glow)' }} />
+              <span>Sign out</span>
+            </span>
+            <ChevronDown size={14} strokeWidth={1.8} style={{ transform: 'rotate(-90deg)' }} />
+          </button>
         </div>
       )}
     </div>

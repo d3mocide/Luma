@@ -199,7 +199,8 @@ export default function LogSheet() {
       setIsSearching(true)
       try {
         const res: any = await api.get(`/foods/search?q=${encodeURIComponent(searchQuery)}`)
-        setSearchResults(res.results || [])
+        const foods = Array.isArray(res) ? res : (res?.results ?? [])
+        setSearchResults(foods)
       } catch (err) {
         console.error(err)
       } finally {
@@ -312,7 +313,7 @@ export default function LogSheet() {
   if (!isOpen) return null
 
   return (
-    <div style={{
+    <div className="log-sheet-overlay" style={{
       position: 'fixed', inset: 0,
       background: 'rgba(5,8,17,0.75)',
       backdropFilter: 'blur(8px)',
@@ -320,43 +321,57 @@ export default function LogSheet() {
       display: 'flex', justifyContent: 'flex-end', alignItems: 'stretch',
     }}>
       {/* Sliding Sheet Panel */}
-      <div style={{
+      <div className="glass log-sheet-panel" style={{
         width: '100%', maxWidth: 480,
-        background: 'var(--bg-1)',
+        background: 'linear-gradient(180deg, rgba(13,20,37,0.98), rgba(8,13,26,0.98))',
         borderLeft: '1px solid var(--glass-edge)',
         display: 'flex', flexDirection: 'column',
         height: '100%',
         boxShadow: '-20px 0 60px rgba(0,0,0,0.4)',
+        position: 'relative',
+        overflow: 'hidden',
       }}>
+        <div className="log-sheet-atmo" aria-hidden="true" />
 
         {/* Header */}
-        <header style={{
-          padding: '16px 20px',
+        <header className="log-sheet-header" style={{
+          padding: '18px 20px 16px',
           borderBottom: '1px solid var(--glass-edge)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16,
+          position: 'relative',
+          zIndex: 1,
         }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: 'var(--fg-primary)' }}>Log Meal</h2>
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--fg-quiet)' }}>LDL cardiovascular tracker</p>
+          <div style={{ minWidth: 0 }}>
+            <div className="eyebrow" style={{ marginBottom: 8 }}>Meal logging</div>
+            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>Add a food item</h2>
+            <p style={{ margin: '6px 0 0', fontSize: 13, lineHeight: 1.45, color: 'var(--fg-tertiary)', maxWidth: 32 + 'ch' }}>
+              Capture a meal quickly, then tune the portion or ingredient details before saving.
+            </p>
           </div>
           <button
             onClick={close}
+            className="log-sheet-close btn btn-ghost"
             style={{
               width: 28, height: 28, borderRadius: '50%',
-              background: 'var(--glass-2)', border: '1px solid var(--glass-edge)',
-              color: 'var(--fg-quiet)', cursor: 'pointer',
+              background: 'rgba(251, 113, 133, 0.08)', border: '1px solid rgba(251, 113, 133, 0.22)',
+              color: 'var(--bad)', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'transform 160ms ease-out, background 160ms ease-out, border-color 160ms ease-out, box-shadow 160ms ease-out',
             }}
           >
-            <X size={14} strokeWidth={1.5} />
+            <span className="log-sheet-close-icon" style={{ display: 'inline-flex', transition: 'transform 160ms ease-out' }}>
+              <X size={14} strokeWidth={2} />
+            </span>
           </button>
         </header>
 
         {/* Slot Selection */}
-        <div style={{
-          padding: '12px 20px',
+        <div className="log-sheet-slotbar" style={{
+          padding: '14px 20px',
           borderBottom: '1px solid var(--glass-edge)',
           display: 'flex', gap: 8, overflowX: 'auto',
+          position: 'relative',
+          zIndex: 1,
         }}>
           {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((s) => {
             const colors: Record<string, string> = {
@@ -390,7 +405,7 @@ export default function LogSheet() {
         </div>
 
         {/* Mode Tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--glass-edge)' }}>
+        <div className="log-sheet-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--glass-edge)', position: 'relative', zIndex: 1 }}>
           {(['voice', 'barcode', 'search'] as const).map((tab) => (
             <button
               key={tab}
@@ -406,74 +421,79 @@ export default function LogSheet() {
                 transition: 'all 150ms',
               }}
             >
-              {tab === 'search' ? 'Plate / Search' : tab}
+              {tab === 'search' ? 'Search' : tab}
             </button>
           ))}
         </div>
 
         {/* Content Body */}
-        <div className="thin-scroll" style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+        <div className="thin-scroll log-sheet-body" style={{ flex: 1, overflowY: 'auto', padding: '18px 20px 20px', position: 'relative', zIndex: 1 }}>
           
           {/* Tab 1: Voice */}
           {activeTab === 'voice' && (
-            <div className="space-y-6 py-4 flex flex-col items-center justify-center">
-              <div className="text-center space-y-2 max-w-xs">
-                <h3 className="text-sm font-semibold text-slate-200">AI Voice Log</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Describe your meal in natural English. Luma will transcribe and calculate LDL cholesterol impact.
-                </p>
-              </div>
+            <div className="log-sheet-section log-sheet-center-stack">
+              <div className="log-sheet-voice-main">
+                <div className="text-center space-y-2 max-w-xs mx-auto">
+                  <div className="eyebrow" style={{ marginBottom: 8 }}>Voice</div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 500, color: 'var(--fg-primary)', letterSpacing: '-0.01em' }}>Describe the meal</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed" style={{ margin: '8px 0 0', color: 'var(--fg-tertiary)', lineHeight: 1.55 }}>
+                    Describe your meal in natural English. Luma will transcribe and calculate LDL cholesterol impact.
+                  </p>
+                </div>
 
-              {/* Pulsing Mic Recorder */}
-              <div className="relative flex items-center justify-center py-6">
+                {/* Pulsing Mic Recorder */}
+                <div className="relative flex items-center justify-center py-6">
+                  {isRecording && (
+                    <div className="absolute inset-0 w-28 h-28 bg-red-500/10 rounded-full animate-ping" />
+                  )}
+                  <button
+                    onClick={isRecording ? stopRecording : startRecording}
+                    className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${
+                      isRecording ? 'bg-red-500 text-white' : 'bg-brand-500 text-white hover:bg-brand-600'
+                    }`}
+                  >
+                    {isRecording
+                      ? <span className="text-sm font-semibold uppercase tracking-wide">Stop</span>
+                      : <Mic size={28} strokeWidth={1.5} />
+                    }
+                  </button>
+                </div>
+
                 {isRecording && (
-                  <div className="absolute inset-0 w-28 h-28 bg-red-500/10 rounded-full animate-ping" />
+                  <span className="text-sm font-mono text-red-400 animate-pulse" style={{ textAlign: 'center' }}>
+                    Recording: {recordingTime}s
+                  </span>
                 )}
-                <button
-                  onClick={isRecording ? stopRecording : startRecording}
-                  className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${
-                    isRecording ? 'bg-red-500 text-white' : 'bg-brand-500 text-white hover:bg-brand-600'
-                  }`}
-                >
-                  {isRecording
-                    ? <span className="text-sm font-semibold uppercase tracking-wide">Stop</span>
-                    : <Mic size={28} strokeWidth={1.5} />
-                  }
-                </button>
+
+                {audioBlob && !isRecording && (
+                  <button
+                    onClick={() => handleUploadAudio(audioBlob)}
+                    disabled={isProcessing}
+                    className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white text-sm font-bold rounded-lg shadow transition-colors w-full"
+                  >
+                    {isProcessing ? 'Processing with Luma AI...' : 'Analyze Audio Transcription'}
+                  </button>
+                )}
               </div>
 
-              {isRecording && (
-                <span className="text-sm font-mono text-red-400 animate-pulse">
-                  Recording: {recordingTime}s
-                </span>
-              )}
-
-              {audioBlob && !isRecording && (
-                <button
-                  onClick={() => handleUploadAudio(audioBlob)}
-                  disabled={isProcessing}
-                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white text-sm font-bold rounded-lg shadow transition-colors w-full"
-                >
-                  {isProcessing ? 'Processing with Luma AI...' : 'Analyze Audio Transcription'}
-                </button>
-              )}
-
-              <div className="w-full border-t border-slate-800 pt-6">
-                <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block mb-3">
-                  Quick Voice Presets (Testing)
+              <div className="log-sheet-voice-presets w-full border-t border-slate-800 pt-6">
+                <span className="eyebrow block mb-3" style={{ color: 'var(--fg-quiet)' }}>
+                  Voice presets
                 </span>
                 <div className="grid grid-cols-1 gap-2">
                   <button
                     onClick={() => handleMockVoice('One cup of cooked steel cut oatmeal with blueberries and ground flaxseeds')}
-                    className="p-3 bg-slate-800 hover:bg-slate-750 text-left rounded-lg border border-slate-700/60 text-xs text-slate-300 transition-colors"
+                    className="p-3 text-left rounded-lg border transition-colors"
+                    style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)' }}
                   >
-                    "1 cup steel cut oatmeal with blueberries & flax"
+                    Steel cut oatmeal with blueberries and flax
                   </button>
                   <button
                     onClick={() => handleMockVoice('Grilled salmon fillet with two tablespoons of olive oil and steamed broccoli')}
-                    className="p-3 bg-slate-800 hover:bg-slate-750 text-left rounded-lg border border-slate-700/60 text-xs text-slate-300 transition-colors"
+                    className="p-3 text-left rounded-lg border transition-colors"
+                    style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)' }}
                   >
-                    "Grilled salmon with olive oil & broccoli"
+                    Grilled salmon with olive oil and broccoli
                   </button>
                 </div>
               </div>
@@ -484,8 +504,8 @@ export default function LogSheet() {
           {activeTab === 'barcode' && (
             <div className="space-y-6 py-4">
               <form onSubmit={handleBarcodeLookup} className="space-y-3">
-                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block">
-                  Enter Barcode Number
+                <label className="eyebrow block">
+                  Barcode
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -493,7 +513,8 @@ export default function LogSheet() {
                     value={barcode}
                     onChange={(e) => setBarcode(e.target.value)}
                     placeholder="e.g. 0021000612239"
-                    className="flex-1 bg-slate-950 border border-slate-800 focus:border-brand-500 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none"
+                    className="field-input flex-1 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none"
+                    style={{ border: '1px solid var(--glass-edge)' }}
                   />
                   <button
                     type="submit"
@@ -506,19 +527,21 @@ export default function LogSheet() {
               </form>
 
               <div className="border-t border-slate-800 pt-6">
-                <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block mb-3">
-                  Simulation / Mock Barcodes
+                <span className="eyebrow block mb-3">
+                  Presets
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setBarcode('028400070566')}
-                    className="p-2.5 bg-slate-800 hover:bg-slate-750 text-center rounded-lg border border-slate-700/60 text-xs text-slate-300 transition-colors"
+                    className="p-2.5 text-center rounded-lg border transition-colors"
+                    style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)' }}
                   >
                     Quaker Oats
                   </button>
                   <button
                     onClick={() => setBarcode('5411188110825')}
-                    className="p-2.5 bg-slate-800 hover:bg-slate-750 text-center rounded-lg border border-slate-700/60 text-xs text-slate-300 transition-colors"
+                    className="p-2.5 text-center rounded-lg border transition-colors"
+                    style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)' }}
                   >
                     Alpro Soy Milk
                   </button>
@@ -538,7 +561,8 @@ export default function LogSheet() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search oats, salmon, fruits, vegetables..."
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-brand-500 rounded-lg pl-9 pr-3 py-2 text-sm text-slate-200 focus:outline-none"
+                  className="field-input w-full rounded-lg pl-9 pr-3 py-2 text-sm text-slate-200 focus:outline-none"
+                  style={{ border: '1px solid var(--glass-edge)' }}
                 />
                 <span className="absolute left-3 top-2.5 text-slate-500 text-sm"><Search size={14} strokeWidth={1.5} /></span>
                 {isSearching && (
@@ -548,18 +572,19 @@ export default function LogSheet() {
 
               {/* Fuzzy Search Results */}
               {searchResults.length > 0 && (
-                <div className="bg-slate-950 border border-slate-800 rounded-lg overflow-hidden max-h-48 overflow-y-auto divide-y divide-slate-800/80">
+                <div className="glass-inset overflow-hidden max-h-48 overflow-y-auto divide-y divide-slate-800/80">
                   {searchResults.map((food) => (
                     <button
                       key={food.id}
                       onClick={() => addSearchItem(food)}
-                      className="w-full p-2.5 text-left hover:bg-slate-900/60 flex items-center justify-between transition-colors"
+                      className="w-full p-2.5 text-left flex items-center justify-between transition-colors"
+                      style={{ color: 'var(--fg-secondary)' }}
                     >
                       <div>
-                        <span className="text-sm font-semibold text-slate-200 block">{food.name}</span>
-                        <span className="text-xs text-slate-500">{food.brand || 'USDA Reference'}</span>
+                        <span className="text-sm font-semibold block" style={{ color: 'var(--fg-primary)' }}>{food.name}</span>
+                        <span className="text-xs" style={{ color: 'var(--fg-quiet)' }}>{food.brand || 'USDA reference'}</span>
                       </div>
-                      <span className="text-xs font-bold text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: 'var(--sky-300)', background: 'rgba(56,189,248,0.10)' }}>
                         {Math.round(food.nutrients_per_100g.calories)} kcal
                       </span>
                     </button>
@@ -569,46 +594,48 @@ export default function LogSheet() {
 
               {/* Draft Plate List */}
               <div className="space-y-2">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                <h4 className="eyebrow block">
                   Plate Items ({draftItems.length})
                 </h4>
                 
                 {draftItems.length === 0 ? (
-                  <div className="p-8 text-center bg-slate-950/35 border border-dashed border-slate-850 rounded-xl">
+                  <div className="p-8 text-center glass-inset rounded-xl" style={{ borderStyle: 'dashed' }}>
                     <span className="text-2xl block mb-2 opacity-50"><Utensils size={20} strokeWidth={1.5} /></span>
-                    <p className="text-xs text-slate-500">Your plate is currently empty</p>
+                    <p className="text-xs" style={{ color: 'var(--fg-quiet)' }}>Your plate is currently empty.</p>
                   </div>
                 ) : (
                   <div className="space-y-2.5">
                     {draftItems.map((item, idx) => (
                       <div
                         key={idx}
-                        className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 flex flex-col gap-2 relative group"
+                        className="glass-inset rounded-xl p-3 flex flex-col gap-2 relative group"
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <span className="text-sm font-bold text-slate-200 block">{item.name}</span>
-                            <span className="text-xs text-slate-500">{item.brand || 'Generic'}</span>
+                            <span className="text-sm font-bold block" style={{ color: 'var(--fg-primary)' }}>{item.name}</span>
+                            <span className="text-xs" style={{ color: 'var(--fg-quiet)' }}>{item.brand || 'Generic'}</span>
                           </div>
                           <button
                             onClick={() => removeItem(idx)}
-                            className="text-slate-500 hover:text-red-400 text-xs transition-colors"
+                            className="text-xs transition-colors"
+                            style={{ color: 'var(--fg-quiet)' }}
                           >
                             Remove
                           </button>
                         </div>
                         
                         {/* Portion adjustment slider/input */}
-                        <div className="flex items-center justify-between gap-4 mt-1 bg-slate-900/60 p-2 rounded-lg">
-                          <span className="text-xs text-slate-400 font-semibold">Weight:</span>
+                        <div className="flex items-center justify-between gap-4 mt-1 p-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                          <span className="eyebrow" style={{ fontSize: 10 }}>Weight</span>
                           <div className="flex items-center gap-1.5">
                             <input
                               type="number"
                               value={Math.round(item.estimated_weight_g)}
                               onChange={(e) => updateItemWeight(idx, Math.max(1, parseInt(e.target.value) || 0))}
-                              className="w-16 bg-slate-950 border border-slate-850 text-center text-xs text-slate-200 font-bold py-1 rounded focus:outline-none"
+                              className="field-input w-16 text-center text-xs font-bold py-1 rounded focus:outline-none"
+                              style={{ border: '1px solid var(--glass-edge)' }}
                             />
-                            <span className="text-xs text-slate-500 font-bold">g</span>
+                            <span className="eyebrow" style={{ fontSize: 10 }}>g</span>
                           </div>
                         </div>
                       </div>
@@ -622,13 +649,15 @@ export default function LogSheet() {
 
         {/* Aggregate Plate Nutrition Totals Card */}
         {draftItems.length > 0 && (
-          <div style={{
+          <div className="log-sheet-footer" style={{
             padding: '16px 20px',
             borderTop: '1px solid var(--glass-edge)',
-            background: 'var(--bg-0)',
+            background: 'linear-gradient(180deg, rgba(8,13,26,0.98), rgba(5,8,17,0.98))',
             display: 'flex', flexDirection: 'column', gap: 12,
+            position: 'relative',
+            zIndex: 1,
           }}>
-            <div className="eyebrow">Cumulative Plate Nutrition</div>
+            <div className="eyebrow">Cumulative nutrition</div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
               {[
@@ -650,7 +679,7 @@ export default function LogSheet() {
               disabled={saveMutation.isPending}
               style={{ width: '100%', padding: '13px', fontSize: 14, opacity: saveMutation.isPending ? 0.7 : 1 }}
             >
-              {saveMutation.isPending ? 'Logging…' : 'Save Meal Log'}
+              {saveMutation.isPending ? 'Logging…' : 'Save meal log'}
             </button>
           </div>
         )}
