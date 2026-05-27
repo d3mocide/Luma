@@ -17,7 +17,27 @@ const NAV_ITEMS = [
   { to: '/coach',  label: 'Luma',   Icon: Sparkles  },
 ]
 
+// iOS Safari reports an incorrect 100dvh on first paint before the visual
+// viewport settles (URL bar / home indicator). Keep --app-h in sync with the
+// real visual-viewport height so the flex column always fills the screen.
+function useAppHeight() {
+  useLayoutEffect(() => {
+    const set = () => {
+      const h = window.visualViewport?.height ?? window.innerHeight
+      document.documentElement.style.setProperty('--app-h', `${h}px`)
+    }
+    set()
+    window.visualViewport?.addEventListener('resize', set)
+    window.addEventListener('resize', set)
+    return () => {
+      window.visualViewport?.removeEventListener('resize', set)
+      window.removeEventListener('resize', set)
+    }
+  }, [])
+}
+
 export default function AppShell() {
+  useAppHeight()
   const location = useLocation()
   const todayFetchCount = useIsFetching({ queryKey: ['today'] })
   const isTodayLoading = location.pathname === '/today' && todayFetchCount > 0
@@ -51,7 +71,7 @@ export default function AppShell() {
   const initials = getUserInitials(user.display_name)
 
   return (
-    <div className="luma-bg" style={{ height: '100dvh', display: 'flex', flexDirection: 'row' }}>
+    <div className="luma-bg" style={{ height: 'var(--app-h, 100dvh)', display: 'flex', flexDirection: 'row' }}>
       <LogSheet />
 
       {/* Desktop Sidebar */}
