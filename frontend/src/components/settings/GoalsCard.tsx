@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import { type GoalSettings, type GoalFormState, formatGoalNumber } from './types'
+import { type GoalSettings, type GoalFormState, type MeasurementSystem, formatGoalNumber } from './types'
+import { convertWeight, measurementWeightUnit } from '../../lib/measurements'
 
 function SummaryPill({ label, value }: { label: string; value: string }) {
   return (
@@ -30,9 +31,11 @@ type Props = {
   goalSaveSuccess: string | null
   onSubmit: () => void
   isPending: boolean
+  measurementSystem: MeasurementSystem
 }
 
-export function GoalsCard({ goalForm, onFieldChange, goalSaveError, goalSaveSuccess, onSubmit, isPending }: Props) {
+export function GoalsCard({ goalForm, onFieldChange, goalSaveError, goalSaveSuccess, onSubmit, isPending, measurementSystem }: Props) {
+  const weightUnit = measurementWeightUnit(measurementSystem)
   const { data: goalSettings, isLoading: goalLoading } = useQuery<Partial<GoalSettings>>({
     queryKey: ['settings', 'goals'],
     queryFn: () => api.get('/goals'),
@@ -53,7 +56,7 @@ export function GoalsCard({ goalForm, onFieldChange, goalSaveError, goalSaveSucc
       </div>
 
       <div className="settings-goals-summary">
-        <SummaryPill label="Target weight" value={formatGoalNumber(goalSettings?.target_weight_kg, 1, 'kg')} />
+        <SummaryPill label="Target weight" value={formatGoalNumber(convertWeight(goalSettings?.target_weight_kg, measurementSystem), 1, weightUnit)} />
         <SummaryPill label="Target LDL" value={formatGoalNumber(goalSettings?.target_ldl_mg_dl, 0, 'mg/dL')} />
         <SummaryPill label="Calories" value={formatGoalNumber(goalSettings?.daily_calorie_target, 0, 'kcal')} />
         <SummaryPill label="Sat fat max" value={formatGoalNumber(goalSettings?.daily_sat_fat_g_max, 1, 'g')} />
@@ -62,14 +65,14 @@ export function GoalsCard({ goalForm, onFieldChange, goalSaveError, goalSaveSucc
       <div className="settings-goals-grid">
         {(
           [
-            { field: 'target_weight_kg', label: 'Target weight', unit: 'kg', mode: 'decimal', placeholder: '78.4' },
+            { field: 'target_weight_kg', label: 'Target weight', unit: weightUnit, mode: 'decimal', placeholder: measurementSystem === 'imperial' ? '172.8' : '78.4' },
             { field: 'target_ldl_mg_dl', label: 'Target LDL', unit: 'mg/dL', mode: 'numeric', placeholder: '100' },
             { field: 'current_ldl_mg_dl', label: 'Current LDL', unit: 'mg/dL', mode: 'numeric', placeholder: '132' },
             { field: 'daily_calorie_target', label: 'Calories', unit: 'kcal', mode: 'numeric', placeholder: '1850' },
             { field: 'daily_sat_fat_g_max', label: 'Sat fat max', unit: 'g', mode: 'decimal', placeholder: '12' },
             { field: 'daily_soluble_fiber_g', label: 'Soluble fiber', unit: 'g', mode: 'decimal', placeholder: '18' },
             { field: 'daily_protein_g_min', label: 'Protein floor', unit: 'g', mode: 'decimal', placeholder: '100' },
-          ] as const
+          ] as { field: keyof GoalFormState; label: string; unit: string; mode: 'decimal' | 'numeric'; placeholder: string }[]
         ).map(({ field, label, unit, mode, placeholder }) => (
           <Field key={field} label={label} unit={unit}>
             <input

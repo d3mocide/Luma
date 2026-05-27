@@ -35,3 +35,8 @@ export function convertWeightSlope(valueKgPerWeek: number | null | undefined, sy
   if (valueKgPerWeek == null) return null
   return system === 'imperial' ? valueKgPerWeek * KG_TO_LB : valueKgPerWeek
 }
+
+export function convertWeightToKg(valueLbOrKg: number | null | undefined, system: MeasurementSystem): number | null {
+  if (valueLbOrKg == null) return null
+  return system === 'imperial' ? valueLbOrKg / KG_TO_LB : valueLbOrKg
+}

@@ -8,6 +8,10 @@ import {
 import { GoalsCard } from '../components/settings/GoalsCard'
 import { MeasurementsCard } from '../components/settings/MeasurementsCard'
 import { LlmMetricsCard } from '../components/settings/LlmMetricsCard'
+import { HaeMetricsCard } from '../components/settings/HaeMetricsCard'
+import { useMeasurementSystem, convertWeightToKg } from '../lib/measurements'
+
+const KG_TO_LB = 2.2046226218
 
 function Row({ label, value, last }: { label: string; value: string; last?: boolean }) {
   return (
@@ -20,6 +24,7 @@ function Row({ label, value, last }: { label: string; value: string; last?: bool
 
 export default function SettingsRoute() {
   const queryClient = useQueryClient()
+  const measurementSystem = useMeasurementSystem()
   const [loggingOut, setLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState<string | null>(null)
   const [goalSaveError, setGoalSaveError] = useState<string | null>(null)
@@ -51,8 +56,12 @@ export default function SettingsRoute() {
   })
 
   useEffect(() => {
-    setGoalForm(toGoalFormState(goalSettings))
-  }, [goalSettings])
+    const base = toGoalFormState(goalSettings)
+    if (measurementSystem === 'imperial' && goalSettings?.target_weight_kg != null) {
+      base.target_weight_kg = (goalSettings.target_weight_kg * KG_TO_LB).toFixed(1)
+    }
+    setGoalForm(base)
+  }, [goalSettings, measurementSystem])
 
   const handleLogout = async () => {
     setLogoutError(null)
@@ -79,7 +88,7 @@ export default function SettingsRoute() {
     setGoalSaveError(null)
     setGoalSaveSuccess(null)
     goalMutation.mutate({
-      target_weight_kg: parseOptionalNumber(goalForm.target_weight_kg),
+      target_weight_kg: convertWeightToKg(parseOptionalNumber(goalForm.target_weight_kg), measurementSystem),
       target_ldl_mg_dl: parseOptionalInteger(goalForm.target_ldl_mg_dl),
       current_ldl_mg_dl: parseOptionalInteger(goalForm.current_ldl_mg_dl),
       current_ldl_drawn_at: goalForm.current_ldl_drawn_at.trim() || null,
@@ -127,6 +136,7 @@ export default function SettingsRoute() {
             goalSaveSuccess={goalSaveSuccess}
             onSubmit={handleGoalSubmit}
             isPending={goalMutation.isPending}
+            measurementSystem={measurementSystem}
           />
 
           <div className="glass settings-card" style={{ padding: 24 }}>
@@ -147,6 +157,7 @@ export default function SettingsRoute() {
 
         <div className="settings-stack settings-secondary">
           <MeasurementsCard />
+          <HaeMetricsCard />
           <LlmMetricsCard />
         </div>
       </div>
