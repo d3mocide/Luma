@@ -17,6 +17,14 @@ const NAV_ITEMS = [
   { to: '/coach',  label: 'Luma',   Icon: Sparkles  },
 ]
 
+const ROUTE_LABELS: Record<string, string> = {
+  '/today':    'Today',
+  '/plan':     'Meal Plan',
+  '/trends':   'Trends',
+  '/coach':    'Luma',
+  '/settings': 'Settings',
+}
+
 export default function AppShell() {
   const location = useLocation()
   const todayFetchCount = useIsFetching({ queryKey: ['today'] })
@@ -70,8 +78,8 @@ export default function AppShell() {
         <Outlet />
       </main>
 
-      {/* Mobile Profile Menu */}
-      <MobileProfileMenu initials={initials} />
+      {/* Unified Mobile Header */}
+      <MobileHeader initials={initials} />
 
       {/* Mobile Bottom Nav */}
       <MobileNav />
@@ -273,7 +281,7 @@ function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: 
   )
 }
 
-function MobileProfileMenu({ initials }: { initials: string }) {
+function MobileHeader({ initials }: { initials: string }) {
   const location = useLocation()
   const queryClient = useQueryClient()
   const { theme, setTheme } = useUIStore()
@@ -314,66 +322,73 @@ function MobileProfileMenu({ initials }: { initials: string }) {
     window.location.assign('/')
   }
 
+  const label = ROUTE_LABELS[location.pathname] ?? 'Luma'
+
   return (
-    <div ref={panelRef} className="mobile-profile-menu safe-top md:hidden">
-      <button
-        type="button"
-        className="mobile-profile-trigger"
-        onClick={() => setIsOpen((open) => !open)}
-        aria-label="Open account panel"
-        aria-expanded={isOpen}
-      >
-        <span>{initials}</span>
-      </button>
-
-      {isOpen && (
-        <div className="mobile-profile-panel glass-bright">
-          <div className="eyebrow" style={{ marginBottom: 10 }}>Display</div>
-          <div className={`theme-toggle ${theme === 'light' ? 'light-mode' : ''}`} style={{ width: '100%' }}>
-            <button
-              type="button"
-              data-active={theme === 'dark' ? 'true' : 'false'}
-              onClick={() => setTheme('dark')}
-            >
-              <Moon size={12} strokeWidth={1.5}/> Dark
-            </button>
-            <button
-              type="button"
-              data-active={theme === 'light' ? 'true' : 'false'}
-              onClick={() => setTheme('light')}
-            >
-              <Sun size={12} strokeWidth={1.5}/> Light
-            </button>
-          </div>
-
-          <div style={{ height: 1, background: 'var(--glass-edge)', margin: '14px 0 12px' }} />
-
-          <NavLink
-            to="/settings"
-            className="mobile-profile-action"
-            onClick={() => setIsOpen(false)}
-          >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <Settings size={15} strokeWidth={1.6} />
-              <span>Open settings</span>
-            </span>
-            <ChevronDown size={14} strokeWidth={1.8} style={{ transform: 'rotate(-90deg)' }} />
-          </NavLink>
-
+    <div ref={panelRef} className="mobile-header md:hidden">
+      <div className="mobile-header-inner">
+        <span className="eyebrow" style={{ fontSize: 11, letterSpacing: '0.13em' }}>{label}</span>
+        <div style={{ position: 'relative' }}>
           <button
             type="button"
-            className="mobile-profile-action"
-            onClick={() => { void handleLogout() }}
-            style={{ marginTop: 10 }}
+            className="mobile-profile-trigger"
+            onClick={() => setIsOpen((open) => !open)}
+            aria-label="Open account panel"
+            aria-expanded={isOpen}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--bad)', boxShadow: '0 0 10px var(--bad-glow)' }} />
-              <span>Sign out</span>
-            </span>
-            <ChevronDown size={14} strokeWidth={1.8} style={{ transform: 'rotate(-90deg)' }} />
+            <span>{initials}</span>
           </button>
+
+          {isOpen && (
+            <div className="mobile-profile-panel glass-bright">
+              <div className="eyebrow" style={{ marginBottom: 10 }}>Display</div>
+              <div className={`theme-toggle ${theme === 'light' ? 'light-mode' : ''}`} style={{ width: '100%' }}>
+                <button
+                  type="button"
+                  data-active={theme === 'dark' ? 'true' : 'false'}
+                  onClick={() => setTheme('dark')}
+                >
+                  <Moon size={12} strokeWidth={1.5}/> Dark
+                </button>
+                <button
+                  type="button"
+                  data-active={theme === 'light' ? 'true' : 'false'}
+                  onClick={() => setTheme('light')}
+                >
+                  <Sun size={12} strokeWidth={1.5}/> Light
+                </button>
+              </div>
+
+              <div style={{ height: 1, background: 'var(--glass-edge)', margin: '14px 0 12px' }} />
+
+              <NavLink
+                to="/settings"
+                className="mobile-profile-action"
+                onClick={() => setIsOpen(false)}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <Settings size={15} strokeWidth={1.6} />
+                  <span>Open settings</span>
+                </span>
+                <ChevronDown size={14} strokeWidth={1.8} style={{ transform: 'rotate(-90deg)' }} />
+              </NavLink>
+
+              <button
+                type="button"
+                className="mobile-profile-action"
+                onClick={() => { void handleLogout() }}
+                style={{ marginTop: 10 }}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--bad)', boxShadow: '0 0 10px var(--bad-glow)' }} />
+                  <span>Sign out</span>
+                </span>
+                <ChevronDown size={14} strokeWidth={1.8} style={{ transform: 'rotate(-90deg)' }} />
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
