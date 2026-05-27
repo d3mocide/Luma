@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from luma.db.models import Goal, Preference
 from luma.deps import CurrentUser, DbDep
+from luma.services.llm_metrics import tracker as llm_metrics_tracker
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -131,3 +132,8 @@ async def put_measurement_settings(
     db.add(Preference(user_id=user.id, kind=MEASUREMENT_PREF_KIND, value=body.system))
     await db.commit()
     return MeasurementSettingsOut(system=body.system)
+
+
+@router.get("/settings/llm-metrics")
+async def get_llm_metrics(user: CurrentUser) -> dict[str, Any]:
+    return await llm_metrics_tracker.snapshot()

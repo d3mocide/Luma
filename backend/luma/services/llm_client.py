@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from time import perf_counter
 import logging
 from typing import Any
 
 import litellm
 
 from luma.config import settings
+from luma.services.llm_metrics import tracker as llm_metrics_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,88 @@ def build_litellm_target(model_name: str) -> dict[str, Any]:
     return {"model": model_name}
 
 
+def _usage_snapshot(response: Any) -> dict[str, Any]:
+    usage = getattr(response, "usage", None)
+    if usage is None and isinstance(response, dict):
+        usage = response.get("usage")
+
+    if usage is None:
+        return {}
+
+    if isinstance(usage, dict):
+        return {
+            "prompt_tokens": usage.get("prompt_tokens"),
+            "completion_tokens": usage.get("completion_tokens"),
+            "total_tokens": usage.get("total_tokens"),
+        }
+
+    return {
+        "prompt_tokens": getattr(usage, "prompt_tokens", None),
+        "completion_tokens": getattr(usage, "completion_tokens", None),
+        "total_tokens": getattr(usage, "total_tokens", None),
+    }
+
+
+def _usage_fields(response: Any) -> dict[str, int | None]:
+    usage = _usage_snapshot(response)
+    return {
+        "prompt_tokens": usage.get("prompt_tokens"),
+        "completion_tokens": usage.get("completion_tokens"),
+        "total_tokens": usage.get("total_tokens"),
+    }
+
+
+async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str, **kwargs: Any) -> Any:
+    started = perf_counter()
+    try:
+        response = await litellm.acompletion(**target, **kwargs)
+        elapsed_ms = round((perf_counter() - started) * 1000, 1)
+        usage = _usage_fields(response)
+        await llm_metrics_tracker.record_event(
+            event="success",
+            model=model_alias,
+            provider=target.get("custom_llm_provider") or "native",
+            attempt=attempt,
+            elapsed_ms=elapsed_ms,
+            prompt_tokens=usage["prompt_tokens"],
+            completion_tokens=usage["completion_tokens"],
+            total_tokens=usage["total_tokens"],
+        )
+        logger.info(
+            "LLM call succeeded",
+            extra={
+                "llm_event": "success",
+                "llm_attempt": attempt,
+                "llm_model": model_alias,
+                "llm_provider": target.get("custom_llm_provider") or "native",
+                "llm_elapsed_ms": elapsed_ms,
+                **_usage_snapshot(response),
+            },
+        )
+        return response
+    except Exception as exc:
+        elapsed_ms = round((perf_counter() - started) * 1000, 1)
+        await llm_metrics_tracker.record_event(
+            event="failure",
+            model=model_alias,
+            provider=target.get("custom_llm_provider") or "native",
+            attempt=attempt,
+            elapsed_ms=elapsed_ms,
+            error_type=type(exc).__name__,
+        )
+        logger.exception(
+            "LLM call failed",
+            extra={
+                "llm_event": "failure",
+                "llm_attempt": attempt,
+                "llm_model": model_alias,
+                "llm_provider": target.get("custom_llm_provider") or "native",
+                "llm_elapsed_ms": elapsed_ms,
+            },
+        )
+        raise
+
+
 async def call_llm(
     primary_model: str,
     fallback_model: str,
@@ -70,12 +154,22 @@ async def call_llm(
 
     if fallback_model:
         fallback = build_litellm_target(fallback_model)
-        logger.debug(
-            "LLM call: primary=%s fallback=%s",
-            primary_model,
-            fallback_model,
-        )
-        return await litellm.acompletion(**primary, fallbacks=[fallback], **kwargs)
+        logger.debug("LLM call configured with fallback", extra={"llm_model": primary_model, "llm_fallback_model": fallback_model})
+        try:
+            return await _call_target(primary, model_alias=primary_model, attempt="primary", **kwargs)
+        except Exception:
+            await llm_metrics_tracker.record_event(
+                event="fallback_retry",
+                model=primary_model,
+                provider=primary.get("custom_llm_provider") or "native",
+                attempt="primary",
+                fallback_model=fallback_model,
+            )
+            logger.warning(
+                "LLM primary failed; retrying with fallback",
+                extra={"llm_event": "fallback_retry", "llm_model": primary_model, "llm_fallback_model": fallback_model},
+            )
+            return await _call_target(fallback, model_alias=fallback_model, attempt="fallback", **kwargs)
 
-    logger.debug("LLM call: primary=%s (no fallback)", primary_model)
-    return await litellm.acompletion(**primary, **kwargs)
+    logger.debug("LLM call configured without fallback", extra={"llm_model": primary_model})
+    return await _call_target(primary, model_alias=primary_model, attempt="primary", **kwargs)
