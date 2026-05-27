@@ -69,6 +69,48 @@ def _parse_hae_ts(date_str: str) -> datetime:
     return dtparser.parse(date_str).astimezone(timezone.utc)
 
 
+def _compute_sleep_scores(rows: list[dict], user_id: str) -> list[dict]:
+    """Derive a sleep_score row for each timestamp that has sleep_duration_min.
+
+    Score (0–100):
+      Duration component  (0–60): scales linearly to 480 min (8 h), capped at 60.
+      Efficiency component (0–40): asleep/inBed ratio × 40. Falls back to 20
+                                   (neutral) when only inBed data is present.
+    """
+    sleep_by_ts: dict[datetime, dict[str, dict]] = {}
+    for row in rows:
+        if row["metric"] in ("sleep_duration_min", "sleep_asleep_min"):
+            sleep_by_ts.setdefault(row["ts"], {})[row["metric"]] = row
+
+    score_rows: list[dict] = []
+    for ts, sleep_rows in sleep_by_ts.items():
+        duration_row = sleep_rows.get("sleep_duration_min")
+        if not duration_row:
+            continue
+        duration = duration_row["value"]
+        asleep_row = sleep_rows.get("sleep_asleep_min")
+        asleep = asleep_row["value"] if asleep_row else None
+
+        duration_score = min(60.0, (duration / 480.0) * 60.0)
+        if asleep is not None and duration > 0:
+            efficiency_score = min(40.0, (asleep / duration) * 40.0)
+        else:
+            efficiency_score = 20.0  # neutral when efficiency is unknown
+
+        score_rows.append({
+            "user_id": user_id,
+            "ts": ts,
+            "metric": "sleep_score",
+            "value": round(duration_score + efficiency_score, 1),
+            "source": "hae",
+            "source_meta": {
+                "hae_source": duration_row["source_meta"]["hae_source"],
+                "hae_metric": "computed",
+            },
+        })
+    return score_rows
+
+
 async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession) -> int:
     """Ingest an HAE webhook payload. Returns number of rows inserted."""
     from luma.db.models import User
@@ -120,6 +162,9 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession) -> in
                 "source": "hae",
                 "source_meta": {"hae_source": source, "hae_metric": hae_name},
             })
+
+    # Derive sleep_score from any sleep metrics in this payload.
+    rows.extend(_compute_sleep_scores(rows, str(user.id)))
 
     if not rows:
         return 0

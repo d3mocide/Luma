@@ -484,3 +484,224 @@ def test_sample_payload_metric_coverage():
 
     for expected in ("active_energy", "heart_rate", "heart_rate_variability", "resting_heart_rate", "step_count"):
         assert expected in handled
+
+
+# ---------------------------------------------------------------------------
+# sleep_analysis ingestion and sleep_score computation
+# ---------------------------------------------------------------------------
+
+def _sleep_db(fake_user):
+    """DB mock that captures the INSERT rows for sleep tests."""
+    import orjson
+    db = AsyncMock()
+    first_result = MagicMock()
+    first_result.scalar_one_or_none.return_value = fake_user
+    captured = []
+    call_count = [0]
+
+    async def execute_side_effect(stmt, params=None):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            return first_result
+        if params and "rows" in params:
+            captured.extend(orjson.loads(params["rows"]))
+        return MagicMock()
+
+    db.execute.side_effect = execute_side_effect
+    return db, captured
+
+
+@pytest.mark.asyncio
+async def test_sleep_analysis_in_bed_hours_converted():
+    """sleep_analysis.inBed in hours → sleep_duration_min in minutes."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "sleep_analysis.inBed", "units": "hr", "data": [
+            {"qty": 7.5, "date": "2026-05-19 00:00:00 -0700", "source": "Apple Watch"}
+        ]}
+    ]}}
+
+    fake_user = _make_fake_user()
+    db, captured = _sleep_db(fake_user)
+    await normalize_hae_payload(payload, db)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "sleep_duration_min" in by_metric
+    assert by_metric["sleep_duration_min"]["value"] == pytest.approx(450.0)
+
+
+@pytest.mark.asyncio
+async def test_sleep_analysis_asleep_hours_converted():
+    """sleep_analysis.asleep in hours → sleep_asleep_min in minutes."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "sleep_analysis.asleep", "units": "hr", "data": [
+            {"qty": 6.75, "date": "2026-05-19 00:00:00 -0700", "source": "Apple Watch"}
+        ]}
+    ]}}
+
+    fake_user = _make_fake_user()
+    db, captured = _sleep_db(fake_user)
+    await normalize_hae_payload(payload, db)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "sleep_asleep_min" in by_metric
+    assert by_metric["sleep_asleep_min"]["value"] == pytest.approx(405.0)
+
+
+@pytest.mark.asyncio
+async def test_sleep_analysis_no_dot_defaults_to_in_bed():
+    """'sleep_analysis' with no dot sub-type defaults to inBed → sleep_duration_min."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "sleep_analysis", "units": "hr", "data": [
+            {"qty": 8.0, "date": "2026-05-19 00:00:00 -0700", "source": "Apple Watch"}
+        ]}
+    ]}}
+
+    fake_user = _make_fake_user()
+    db, captured = _sleep_db(fake_user)
+    await normalize_hae_payload(payload, db)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "sleep_duration_min" in by_metric
+    assert by_metric["sleep_duration_min"]["value"] == pytest.approx(480.0)
+
+
+@pytest.mark.asyncio
+async def test_sleep_analysis_unknown_subtype_skipped():
+    """sleep_analysis.deep is not in SLEEP_MAP — must be skipped without error."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "sleep_analysis.deep", "units": "hr", "data": [
+            {"qty": 1.5, "date": "2026-05-19 00:00:00 -0700", "source": "Apple Watch"}
+        ]}
+    ]}}
+
+    fake_user = _make_fake_user()
+    db = AsyncMock()
+    first_result = MagicMock()
+    first_result.scalar_one_or_none.return_value = fake_user
+    db.execute.return_value = first_result
+
+    count = await normalize_hae_payload(payload, db)
+    assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_sleep_score_computed_from_duration_and_efficiency():
+    """sleep_score is derived when both inBed and asleep are present in the payload."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "sleep_analysis.inBed",  "units": "hr", "data": [
+            {"qty": 8.0, "date": "2026-05-19 00:00:00 -0700", "source": "Apple Watch"}
+        ]},
+        {"name": "sleep_analysis.asleep", "units": "hr", "data": [
+            {"qty": 7.2, "date": "2026-05-19 00:00:00 -0700", "source": "Apple Watch"}
+        ]},
+    ]}}
+
+    fake_user = _make_fake_user()
+    db, captured = _sleep_db(fake_user)
+    await normalize_hae_payload(payload, db)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "sleep_score" in by_metric, "sleep_score should be computed"
+
+    # 8h inBed → duration_score = 60.0 (capped)
+    # 7.2/8 = 90% efficiency → efficiency_score = 36.0
+    # total = 96.0
+    assert by_metric["sleep_score"]["value"] == pytest.approx(96.0)
+    assert by_metric["sleep_score"]["source"] == "hae"
+    assert by_metric["sleep_score"]["source_meta"]["hae_metric"] == "computed"
+
+
+@pytest.mark.asyncio
+async def test_sleep_score_neutral_efficiency_when_only_in_bed():
+    """sleep_score falls back to 20-pt efficiency component when asleep is absent."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "sleep_analysis.inBed", "units": "hr", "data": [
+            {"qty": 7.0, "date": "2026-05-19 00:00:00 -0700", "source": "Apple Watch"}
+        ]},
+    ]}}
+
+    fake_user = _make_fake_user()
+    db, captured = _sleep_db(fake_user)
+    await normalize_hae_payload(payload, db)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "sleep_score" in by_metric
+
+    # 7h → duration_score = (420/480)*60 = 52.5; efficiency_score = 20 (neutral)
+    assert by_metric["sleep_score"]["value"] == pytest.approx(72.5)
+
+
+@pytest.mark.asyncio
+async def test_sleep_score_not_computed_without_sleep_data():
+    """A payload with no sleep metrics produces no sleep_score row."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "step_count", "units": "count", "data": [
+            {"qty": 5000, "date": "2026-05-19 00:00:00 -0700", "source": "Watch"}
+        ]}
+    ]}}
+
+    fake_user = _make_fake_user()
+    db, captured = _sleep_db(fake_user)
+    await normalize_hae_payload(payload, db)
+
+    assert not any(r["metric"] == "sleep_score" for r in captured)
+
+
+# ---------------------------------------------------------------------------
+# Replay protection
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_replay_first_request_accepted():
+    """A new signature is stored in Redis and the request proceeds."""
+    from luma.api.ingest import _check_replay
+
+    mock_redis = AsyncMock()
+    mock_redis.set.return_value = True  # nx=True, key was new
+
+    with patch("luma.api.ingest._get_redis", return_value=mock_redis):
+        await _check_replay("abc123sig")  # should not raise
+
+    mock_redis.set.assert_awaited_once_with("hae:replay:abc123sig", "1", nx=True, ex=600)
+
+
+@pytest.mark.asyncio
+async def test_replay_duplicate_rejected():
+    """A previously seen signature (Redis returns None) raises 409."""
+    from fastapi import HTTPException
+    from luma.api.ingest import _check_replay
+
+    mock_redis = AsyncMock()
+    mock_redis.set.return_value = None  # nx=True, key already existed
+
+    with patch("luma.api.ingest._get_redis", return_value=mock_redis):
+        with pytest.raises(HTTPException) as exc_info:
+            await _check_replay("already_seen_sig")
+
+    assert exc_info.value.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_replay_redis_down_fails_open():
+    """If Redis is unavailable the request is allowed through (fail open)."""
+    from luma.api.ingest import _check_replay
+
+    mock_redis = AsyncMock()
+    mock_redis.set.side_effect = ConnectionError("Redis unreachable")
+
+    with patch("luma.api.ingest._get_redis", return_value=mock_redis):
+        await _check_replay("some_sig")  # should not raise
