@@ -51,7 +51,7 @@ export default function AppShell() {
   const initials = getUserInitials(user.display_name)
 
   return (
-    <div className="luma-bg" style={{ height: '100svh', display: 'flex', flexDirection: 'row' }}>
+    <div className="luma-bg" style={{ height: '100dvh', display: 'flex', flexDirection: 'row' }}>
       <LogSheet />
 
       {/* Desktop Sidebar */}
