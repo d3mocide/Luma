@@ -40,6 +40,22 @@ export const emptyGoalForm: GoalFormState = {
   dietary_pattern: '',
 }
 
+export type HaeMetrics = {
+  totals: {
+    attempts: number
+    successes: number
+    errors: number
+    rows_inserted: number
+  }
+  last_success_at: string | null
+  last_error_at: string | null
+  recent_events: Array<{
+    ts: string
+    rows_inserted: number
+    error?: string
+  }>
+}
+
 export type LlmMetrics = {
   scope: string
   resets_on_restart: boolean

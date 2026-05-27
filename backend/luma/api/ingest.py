@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from luma.config import settings
 from luma.deps import DbDep
+from luma.services.hae_metrics import tracker as hae_metrics_tracker
 from luma.services.hae_normalizer import normalize_hae_payload
 
 logger = logging.getLogger(__name__)
@@ -74,5 +75,11 @@ async def ingest_hae(
     except Exception:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid JSON")
 
-    rows_inserted = await normalize_hae_payload(payload, db)
+    try:
+        rows_inserted = await normalize_hae_payload(payload, db)
+    except Exception as exc:
+        await hae_metrics_tracker.record_ingest(rows_inserted=0, error=str(exc))
+        raise
+
+    await hae_metrics_tracker.record_ingest(rows_inserted=rows_inserted)
     return {"status": "ok", "rows_inserted": rows_inserted}
