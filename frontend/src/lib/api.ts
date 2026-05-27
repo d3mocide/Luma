@@ -64,10 +64,22 @@ export interface TodayData {
     sleep_duration_min: number | null
   }
   plan_today: Array<{
+    id: string
+    plan_id: string
     slot: string
-    name: string
+    custom_name: string | null
+    notes: string | null
     recipe_id: string | null
     logged: boolean
+  }>
+  recent_meals: Array<{
+    id: string
+    ts: string
+    slot: string
+    source: string
+    item_count: number
+    calories: number
+    headline: string
   }>
   active_insight: {
     id: string

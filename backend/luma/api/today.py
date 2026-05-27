@@ -1,5 +1,5 @@
 import logging
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter
@@ -27,9 +27,10 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     target_sol = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else None
     
     # 2. Fetch yesterday's meal events
-    from datetime import datetime, timezone
     yesterday_start = datetime.combine(yesterday_dt, datetime.min.time()).replace(tzinfo=timezone.utc)
     yesterday_end = datetime.combine(today_dt, datetime.min.time()).replace(tzinfo=timezone.utc)
+    today_start = yesterday_end
+    today_end = datetime.combine(today_dt + timedelta(days=1), datetime.min.time()).replace(tzinfo=timezone.utc)
     
     stmt_events = (
         select(MealEvent)
@@ -41,6 +42,18 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     )
     res_events = await db.execute(stmt_events)
     events = res_events.scalars().all()
+
+    stmt_today_events = (
+        select(MealEvent)
+        .where(
+            MealEvent.user_id == user.id,
+            MealEvent.ts >= today_start,
+            MealEvent.ts < today_end,
+        )
+        .order_by(MealEvent.ts.desc())
+    )
+    res_today_events = await db.execute(stmt_today_events)
+    today_events = res_today_events.scalars().all()
     
     logged_cal = 0.0
     logged_sat = 0.0
@@ -68,6 +81,25 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     )
     res_plan = await db.execute(stmt_plan)
     slots_today = res_plan.scalars().all()
+
+    logged_slots = {str(e.slot).lower() for e in today_events if e.slot}
+
+    recent_meals = []
+    for event in today_events[:6]:
+        items = event.items if isinstance(event.items, list) else []
+        first_item = items[0].get("name") if items and isinstance(items[0], dict) else None
+        nutrition = event.nutrition if isinstance(event.nutrition, dict) else {}
+        recent_meals.append(
+            {
+                "id": str(event.id),
+                "ts": event.ts.isoformat(),
+                "slot": event.slot,
+                "source": event.source,
+                "item_count": len(items),
+                "calories": float(nutrition.get("calories") or 0.0),
+                "headline": first_item or "Logged meal",
+            }
+        )
 
     # Fetch latest biometrics
     biometric_rows = await db.execute(
@@ -110,13 +142,16 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         "plan_today": [
             {
                 "id": str(s.id),
+                "plan_id": str(s.plan_id),
                 "slot": s.slot,
                 "custom_name": s.custom_name,
                 "notes": s.notes,
-                "recipe_id": str(s.recipe_id) if s.recipe_id else None
+                "recipe_id": str(s.recipe_id) if s.recipe_id else None,
+                "logged": str(s.slot).lower() in logged_slots,
             }
             for s in slots_today
         ],
+        "recent_meals": recent_meals,
         "active_insight": None,
     }
 

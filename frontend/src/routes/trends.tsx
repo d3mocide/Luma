@@ -30,7 +30,7 @@ export default function TrendsRoute() {
 
   return (
     <div className="thin-scroll trends-page">
-      <header className="mobile-hero mobile-hero-with-controls trends-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
+      <header className="mobile-hero mobile-hero-with-controls trends-header" style={{ marginBottom: 24 }}>
         <div className="mobile-hero-content">
           <div className="eyebrow">Trends</div>
           <h1 className="mobile-hero-title" style={{ margin: '6px 0 6px', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>

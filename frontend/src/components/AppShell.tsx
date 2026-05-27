@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CircleDot, Utensils, Activity, Sparkles, Settings, Plus, Moon, Sun, Loader2, ChevronDown,
@@ -17,18 +17,11 @@ const NAV_ITEMS = [
   { to: '/coach',  label: 'Luma',   Icon: Sparkles  },
 ]
 
-const ROUTE_LABELS: Record<string, string> = {
-  '/today':    'Today',
-  '/plan':     'Meal Plan',
-  '/trends':   'Trends',
-  '/coach':    'Luma',
-  '/settings': 'Settings',
-}
-
 export default function AppShell() {
   const location = useLocation()
   const todayFetchCount = useIsFetching({ queryKey: ['today'] })
   const isTodayLoading = location.pathname === '/today' && todayFetchCount > 0
+  const isLogRoute = location.pathname === '/log'
 
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['me'],
@@ -66,7 +59,7 @@ export default function AppShell() {
 
       {/* Main content */}
       <main
-        className="thin-scroll"
+        className="thin-scroll mobile-shell-main"
         style={{
           flex: 1,
           overflowY: 'auto',
@@ -79,10 +72,10 @@ export default function AppShell() {
       </main>
 
       {/* Unified Mobile Header */}
-      <MobileHeader initials={initials} />
+      {!isLogRoute && <MobileHeader initials={initials} />}
 
       {/* Mobile Bottom Nav */}
-      <MobileNav />
+      {!isLogRoute && <MobileNav />}
     </div>
   )
 }
@@ -322,12 +315,9 @@ function MobileHeader({ initials }: { initials: string }) {
     window.location.assign('/')
   }
 
-  const label = ROUTE_LABELS[location.pathname] ?? 'Luma'
-
   return (
     <div ref={panelRef} className="mobile-header md:hidden">
       <div className="mobile-header-inner">
-        <span className="eyebrow" style={{ fontSize: 11, letterSpacing: '0.13em' }}>{label}</span>
         <div style={{ position: 'relative' }}>
           <button
             type="button"
@@ -450,7 +440,7 @@ function SideLink({
 }
 
 function MobileNav() {
-  const openLog = useUIStore((s) => s.openLogSheet)
+  const navigate = useNavigate()
 
   return (
     <div
@@ -474,7 +464,7 @@ function MobileNav() {
 
         {/* FAB */}
         <button
-          onClick={openLog}
+          onClick={() => navigate('/log')}
           className="mobile-fab"
           style={{
             width: 52, height: 52,

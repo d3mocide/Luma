@@ -29,10 +29,21 @@ export function createMockTodayData(): TodayData {
       sleep_duration_min: 438,
     },
     plan_today: [
-      { slot: 'breakfast', name: 'Greek yogurt + berries + flax', recipe_id: null, logged: true },
-      { slot: 'lunch', name: 'Lentil bowl with salmon', recipe_id: null, logged: false },
-      { slot: 'snack', name: 'Apple + walnuts', recipe_id: null, logged: false },
-      { slot: 'dinner', name: 'Chickpea pasta + greens', recipe_id: null, logged: false },
+      { id: 'mock-plan-breakfast', plan_id: 'mock-plan-id', slot: 'breakfast', custom_name: 'Greek yogurt + berries + flax', notes: null, recipe_id: null, logged: true },
+      { id: 'mock-plan-lunch', plan_id: 'mock-plan-id', slot: 'lunch', custom_name: 'Lentil bowl with salmon', notes: null, recipe_id: null, logged: false },
+      { id: 'mock-plan-snack', plan_id: 'mock-plan-id', slot: 'snack', custom_name: 'Apple + walnuts', notes: null, recipe_id: null, logged: false },
+      { id: 'mock-plan-dinner', plan_id: 'mock-plan-id', slot: 'dinner', custom_name: 'Chickpea pasta + greens', notes: null, recipe_id: null, logged: false },
+    ],
+    recent_meals: [
+      {
+        id: 'mock-meal-1',
+        ts: new Date(now.getTime() - 40 * 60 * 1000).toISOString(),
+        slot: 'breakfast',
+        source: 'voice',
+        item_count: 3,
+        calories: 438,
+        headline: 'Steel cut oats with blueberries',
+      },
     ],
     active_insight: {
       id: 'mock-insight-1',

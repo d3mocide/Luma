@@ -7,6 +7,7 @@ import PlanRoute from './routes/plan'
 import TrendsRoute from './routes/trends'
 import CoachRoute from './routes/coach'
 import SettingsRoute from './routes/settings'
+import LogRoute from './routes/log'
 
 export default function App() {
   const theme = useUIStore((s) => s.theme)
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/coach" element={<CoachRoute />} />
           <Route path="/coach/:threadId" element={<CoachRoute />} />
           <Route path="/settings" element={<SettingsRoute />} />
+          <Route path="/log" element={<LogRoute />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -525,8 +525,12 @@
 .mobile-header-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 8px 16px 10px;
+}
+
+.mobile-shell-main {
+  padding-top: 0;
 }
 
 .mobile-profile-trigger {
@@ -1232,6 +1236,10 @@
     max-width: 46ch;
   }
 
+  .mobile-shell-main {
+    padding-top: calc(env(safe-area-inset-top) + 16px);
+  }
+
   .settings-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -1437,7 +1445,7 @@
 }
 
 .plan-slot-type {
-  font-size: 9px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-family: var(--font-mono);
@@ -1445,8 +1453,8 @@
 }
 
 .plan-slot-name {
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 13px;
+  line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -1474,12 +1482,24 @@
   }
 
   .plan-header {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
+    gap: 10px;
+  }
+
+  .plan-header-top {
+    max-width: none;
+  }
+
+  .plan-header .eyebrow {
+    margin-bottom: 2px;
   }
 
   .plan-header-controls {
     justify-content: flex-start;
     flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    align-items: stretch;
   }
 
   .plan-sticky-controls {
@@ -1493,6 +1513,38 @@
 
   [data-theme="light"] .plan-sticky-controls {
     background: none;
+  }
+
+  .plan-header h1 {
+    font-size: 24px !important;
+    line-height: 1.04;
+    letter-spacing: -0.03em;
+    margin: 4px 0 6px !important;
+    max-width: none;
+  }
+
+  .plan-header p {
+    max-width: none;
+    font-size: 13px !important;
+    line-height: 1.45;
+  }
+
+  .plan-header .btn,
+  .plan-header .plan-view-toggle {
+    width: 100%;
+  }
+
+  .plan-header .btn {
+    justify-content: center;
+  }
+
+  .plan-header .plan-view-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .plan-header .plan-view-toggle-btn {
+    width: 100%;
   }
 
   .plan-week-summary {
@@ -1583,7 +1635,16 @@
 }
 
 .trends-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 24px;
+}
+
+.trends-range-toggle {
+  width: fit-content;
+  max-width: 100%;
 }
 
 .trends-metric-grid {
@@ -1605,12 +1666,31 @@
   }
 
   .trends-header {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
     margin-bottom: 16px !important;
   }
 
+  .trends-header .mobile-hero-content {
+    width: 100%;
+  }
+
+  .trends-header .mobile-hero-title,
+  .trends-header .mobile-hero-subcopy {
+    max-width: none;
+  }
+
   .trends-range-toggle {
-    width: fit-content;
+    width: 100%;
     max-width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .trends-range-toggle button {
+    width: 100%;
   }
 
   .trends-metric-grid {

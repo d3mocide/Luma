@@ -4,10 +4,26 @@ import { api } from '../lib/api'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Mic, Search, Utensils, X } from 'lucide-react'
 
-export default function LogSheet() {
+type LogSheetMode = 'sheet' | 'page'
+
+type LogSheetProps = {
+  mode?: LogSheetMode
+  onClose?: () => void
+}
+
+export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const isOpen = useUIStore((s) => s.logSheetOpen)
   const close = useUIStore((s) => s.closeLogSheet)
   const queryClient = useQueryClient()
+  const isPageMode = mode === 'page'
+  const isVisible = isPageMode || isOpen
+  const handleClose = () => {
+    if (isPageMode) {
+      onClose?.()
+      return
+    }
+    close()
+  }
 
   const [activeTab, setActiveTab] = useState<'voice' | 'barcode' | 'search'>('voice')
   const [slot, setSlot] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast')
@@ -302,7 +318,7 @@ export default function LogSheet() {
       queryClient.invalidateQueries({ queryKey: ['meals'] })
       setDraftItems([])
       setTranscription('')
-      close()
+      handleClose()
     },
     onError: (err) => {
       console.error(err)
@@ -310,10 +326,18 @@ export default function LogSheet() {
     }
   })
 
-  if (!isOpen) return null
+  if (!isVisible) return null
 
   return (
-    <div className="log-sheet-overlay" style={{
+    <div className="log-sheet-overlay" style={isPageMode ? {
+      position: 'relative',
+      inset: 'auto',
+      background: 'transparent',
+      backdropFilter: 'none',
+      zIndex: 1,
+      display: 'block',
+      height: '100%',
+    } : {
       position: 'fixed', inset: 0,
       background: 'rgba(5,8,17,0.75)',
       backdropFilter: 'blur(8px)',
@@ -322,12 +346,12 @@ export default function LogSheet() {
     }}>
       {/* Sliding Sheet Panel */}
       <div className="glass log-sheet-panel" style={{
-        width: '100%', maxWidth: 480,
+        width: '100%', maxWidth: isPageMode ? 'none' : 480,
         background: 'linear-gradient(180deg, rgba(13,20,37,0.98), rgba(8,13,26,0.98))',
-        borderLeft: '1px solid var(--glass-edge)',
+        borderLeft: isPageMode ? 'none' : '1px solid var(--glass-edge)',
         display: 'flex', flexDirection: 'column',
         height: '100%',
-        boxShadow: '-20px 0 60px rgba(0,0,0,0.4)',
+        boxShadow: isPageMode ? 'none' : '-20px 0 60px rgba(0,0,0,0.4)',
         position: 'relative',
         overflow: 'hidden',
       }}>
@@ -349,7 +373,7 @@ export default function LogSheet() {
             </p>
           </div>
           <button
-            onClick={close}
+            onClick={handleClose}
             className="log-sheet-close btn btn-ghost"
             style={{
               width: 28, height: 28, borderRadius: '50%',

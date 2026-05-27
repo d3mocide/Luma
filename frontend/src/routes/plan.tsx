@@ -174,11 +174,11 @@ export default function PlanRoute() {
       : null
 
   return (
-    <div className="thin-scroll" style={{ height: '100%', overflowY: 'auto', padding: '32px 40px 40px' }}>
+    <div className="thin-scroll plan-page">
 
       {/* Header */}
-      <header style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 28 }}>
-        <div>
+      <header className="plan-header">
+        <div className="plan-header-top">
           <div className="eyebrow">
             {plan ? `Week of ${formatWeek(plan.week_start)}` : 'Meal Plan'}
           </div>
@@ -190,11 +190,11 @@ export default function PlanRoute() {
             }}>heart-healthy</span> week.
           </h1>
           <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-tertiary)' }}>
-            Tuned for LDL reduction · <span className="num">18g</span> soluble fiber / day · <span className="num">&lt;12g</span> saturated fat
+            Targeting LDL reduction · <span className="num">18g</span> soluble fiber / day · <span className="num">&lt;12g</span> saturated fat / day
           </p>
         </div>
         {plan && (
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div className="plan-header-controls plan-sticky-controls">
             <button className="btn" style={{ padding: '10px 14px' }}
               onClick={() => generateMutation.mutate(customConstraints)}
               disabled={generateMutation.isPending}>
@@ -305,12 +305,12 @@ export default function PlanRoute() {
                         style={{ padding: '8px 10px', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 4,
                           cursor: 'pointer', border: 'none', textAlign: 'left', width: '100%' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <span style={{ fontSize: 9, color: meta.color }}>{meta.emoji}</span>
-                          <span className="plan-slot-type" style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
+                          <span style={{ fontSize: 10, color: meta.color }}>{meta.emoji}</span>
+                          <span className="plan-slot-type">
                             {slot.slot}
                           </span>
                         </div>
-                        <div className="plan-slot-name" style={{ fontSize: 11.5, lineHeight: 1.3 }}>
+                        <div className="plan-slot-name">
                           {slot.custom_name}
                         </div>
                       </button>
