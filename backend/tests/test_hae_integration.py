@@ -45,8 +45,36 @@ SAMPLE_PAYLOAD = {
     }
 }
 
-# The 4 metrics in the sample that the normalizer currently maps
-EXPECTED_METRICS = {"active_kcal", "hrv_ms", "rhr_bpm", "steps"}
+# All metrics from the sample that the normalizer now maps
+EXPECTED_METRICS = {
+    "active_kcal",
+    "hrv_ms",
+    "rhr_bpm",
+    "steps",
+    # Tier A
+    "bmr_kcal",
+    "heart_rate_avg_bpm",
+    "exercise_min",
+    "respiratory_rate_bpm",
+    "wrist_temp_f",
+    "breathing_disturbances",
+    # Tier B
+    "flights_climbed",
+    "stand_min",
+    "stand_hours",
+    "distance_mi",
+    "walking_hr_bpm",
+    "daylight_min",
+    "physical_effort_kcal_hr_kg",
+    # Tier C
+    "walking_speed_mph",
+    "step_length_in",
+    "walking_asymmetry_pct",
+    "double_support_pct",
+    "stair_speed_up_fps",
+    "stair_speed_down_fps",
+    "audio_exposure_db",
+}
 
 # Expected UTC timestamp: "2026-05-19 00:00:00 -0700" → 07:00 UTC
 EXPECTED_TS = datetime(2026, 5, 19, 7, 0, 0, tzinfo=timezone.utc)
@@ -126,7 +154,7 @@ async def test_normalize_sample_payload_row_count():
 
     assert rows_inserted == len(EXPECTED_METRICS), (
         f"Expected {len(EXPECTED_METRICS)} rows, got {rows_inserted}. "
-        f"Check HAE_METRIC_MAP against sample metrics."
+        f"Check HAE_METRIC_MAP / HAE_AGGREGATE_MAP against sample metrics."
     )
 
 
@@ -196,6 +224,16 @@ async def test_normalize_sample_payload_values():
     assert by_metric["hrv_ms"]["value"] == pytest.approx(59.771549595894335, rel=1e-6)
     assert by_metric["rhr_bpm"]["value"] == pytest.approx(62.0, rel=1e-6)
     assert by_metric["steps"]["value"] == pytest.approx(7369.1420323996308, rel=1e-6)
+    # Aggregate map: heart_rate uses Avg field, not qty
+    assert by_metric["heart_rate_avg_bpm"]["value"] == pytest.approx(74.613139994679827, rel=1e-6)
+    # Tier A additions
+    assert by_metric["bmr_kcal"]["value"] == pytest.approx(2264.7115533249325, rel=1e-6)
+    assert by_metric["exercise_min"]["value"] == pytest.approx(4.0, rel=1e-6)
+    assert by_metric["respiratory_rate_bpm"]["value"] == pytest.approx(17.222222222222221, rel=1e-6)
+    # Tier B sample checks
+    assert by_metric["flights_climbed"]["value"] == pytest.approx(5.0, rel=1e-6)
+    assert by_metric["distance_mi"]["value"] == pytest.approx(3.2878305909330341, rel=1e-6)
+    assert by_metric["daylight_min"]["value"] == pytest.approx(37.0, rel=1e-6)
 
 
 @pytest.mark.asyncio
@@ -276,8 +314,8 @@ async def test_normalize_no_operator_returns_zero():
 
 
 @pytest.mark.asyncio
-async def test_normalize_heart_rate_gracefully_skipped():
-    """heart_rate has Min/Avg/Max but no qty — must not raise, just skip."""
+async def test_normalize_heart_rate_uses_avg_field():
+    """heart_rate has Min/Avg/Max — normalizer reads Avg via HAE_AGGREGATE_MAP."""
     import orjson
     from luma.services.hae_normalizer import normalize_hae_payload
 
@@ -293,10 +331,46 @@ async def test_normalize_heart_rate_gracefully_skipped():
     db = AsyncMock()
     first_result = MagicMock()
     first_result.scalar_one_or_none.return_value = fake_user
+
+    captured_rows = []
+    call_count = [0]
+
+    async def execute_side_effect(stmt, params=None):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            return first_result
+        if params and "rows" in params:
+            captured_rows.extend(orjson.loads(params["rows"]))
+        return MagicMock()
+
+    db.execute.side_effect = execute_side_effect
+
+    count = await normalize_hae_payload(heart_rate_only, db)
+    assert count == 1
+    assert captured_rows[0]["metric"] == "heart_rate_avg_bpm"
+    assert captured_rows[0]["value"] == pytest.approx(74.6)
+
+
+@pytest.mark.asyncio
+async def test_normalize_heart_rate_missing_avg_logs_warning():
+    """A heart_rate point missing the Avg field is warned and skipped, not raised."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    heart_rate_no_avg = {
+        "data": {"metrics": [
+            {"name": "heart_rate", "units": "count/min", "data": [
+                {"Min": 52, "Max": 116, "date": "2026-05-19 00:00:00 -0700", "source": "Watch"}
+            ]}
+        ]}
+    }
+
+    fake_user = _make_fake_user()
+    db = AsyncMock()
+    first_result = MagicMock()
+    first_result.scalar_one_or_none.return_value = fake_user
     db.execute.return_value = first_result
 
-    # Should not raise — heart_rate is not in HAE_METRIC_MAP so it's skipped entirely
-    count = await normalize_hae_payload(heart_rate_only, db)
+    count = await normalize_hae_payload(heart_rate_no_avg, db)
     assert count == 0
 
 
@@ -379,7 +453,7 @@ def test_hmac_accepts_lowercase_signature():
 
 def test_sample_payload_metric_coverage():
     """Document which metrics in the sample are handled vs. skipped."""
-    from luma.services.hae_normalizer import HAE_METRIC_MAP, SLEEP_MAP
+    from luma.services.hae_normalizer import HAE_AGGREGATE_MAP, HAE_METRIC_MAP, SLEEP_MAP
 
     sample_metrics = [m["name"] for m in SAMPLE_PAYLOAD["data"]["metrics"]]
     handled, skipped = [], []
@@ -388,19 +462,25 @@ def test_sample_payload_metric_coverage():
         if name.startswith("sleep_analysis"):
             sub = name.split(".")[-1] if "." in name else "inBed"
             mapped = sub in SLEEP_MAP
+        elif name in HAE_AGGREGATE_MAP:
+            mapped = True
         else:
             mapped = name in HAE_METRIC_MAP
         (handled if mapped else skipped).append(name)
+
+    def _label(name: str) -> str:
+        if name in HAE_AGGREGATE_MAP:
+            return HAE_AGGREGATE_MAP[name][0]
+        return HAE_METRIC_MAP.get(name, SLEEP_MAP.get(name.split(".")[-1], "?"))
 
     print(f"\n{'='*60}")
     print(f"HAE sample coverage: {len(handled)}/{len(sample_metrics)} metrics handled")
     print(f"\nHandled ({len(handled)}):")
     for m in handled:
-        print(f"  + {m} → {HAE_METRIC_MAP.get(m, SLEEP_MAP.get(m.split('.')[-1]))}")
+        print(f"  + {m} → {_label(m)}")
     print(f"\nSkipped ({len(skipped)}):")
     for m in skipped:
         print(f"  - {m}")
 
-    # Structural assertion: at minimum the 4 metrics we care about are handled
-    for expected in ("active_energy", "heart_rate_variability", "resting_heart_rate", "step_count"):
+    for expected in ("active_energy", "heart_rate", "heart_rate_variability", "resting_heart_rate", "step_count"):
         assert expected in handled
