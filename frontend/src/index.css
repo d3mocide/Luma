@@ -140,10 +140,12 @@
 
 @layer base {
   html {
+    height: 100%;
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
+    min-height: 100%;
     margin: 0;
     font-family: var(--font-sans);
     color: var(--fg-primary);
@@ -168,7 +170,8 @@
 .luma-bg {
   position: relative;
   background: var(--bg-0);
-  overflow: hidden;
+  /* overflow: clip (not hidden) so position:fixed children aren't trapped on iOS Safari/PWA */
+  overflow: clip;
   isolation: isolate;
 }
 
@@ -507,6 +510,9 @@
  * ══════════════════════════════════════════════════════════════════════════ */
 .mobile-nav-wrap {
   background: linear-gradient(180deg, transparent, rgba(5,8,17,0.9) 30%);
+  /* GPU layer: prevents iOS PWA from dropping fixed nav during scroll */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .mobile-header {
@@ -520,6 +526,8 @@
   border-bottom: 1px solid var(--glass-edge);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .mobile-header-inner {
@@ -1192,7 +1200,7 @@
 
 @media (max-width: 900px) {
   .today-mobile-scroll {
-    padding-top: calc(env(safe-area-inset-top) + 64px);
+    padding-top: calc(env(safe-area-inset-top) + 70px);
   }
 
   .mobile-hero {
@@ -1478,7 +1486,7 @@
 
 @media (max-width: 900px) {
   .plan-page {
-    padding: calc(env(safe-area-inset-top) + 64px) 16px 100px;
+    padding: calc(env(safe-area-inset-top) + 70px) 16px 100px;
   }
 
   .plan-header {
@@ -1662,7 +1670,7 @@
 
 @media (max-width: 900px) {
   .trends-page {
-    padding: calc(env(safe-area-inset-top) + 64px) 16px 100px;
+    padding: calc(env(safe-area-inset-top) + 70px) 16px 100px;
   }
 
   .trends-header {
@@ -1712,7 +1720,7 @@
  * ══════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 900px) {
   .coach-header {
-    padding: calc(env(safe-area-inset-top) + 64px) 16px 14px 16px !important;
+    padding: calc(env(safe-area-inset-top) + 70px) 16px 14px 16px !important;
     align-items: flex-start !important;
     gap: 10px;
   }
@@ -1781,6 +1789,6 @@
 
 @media (max-width: 900px) {
   .settings-page {
-    padding: calc(env(safe-area-inset-top) + 64px) 16px 100px !important;
+    padding: calc(env(safe-area-inset-top) + 70px) 16px 100px !important;
   }
 }

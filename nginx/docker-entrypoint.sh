@@ -56,7 +56,19 @@ server {
         try_files \$uri \$uri/ /index.html;
     }
 
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|woff2?|svg|webmanifest)$ {
+    # Service worker must never be immutably cached — iOS PWA won't update otherwise
+    location = /sw.js {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        try_files \$uri =404;
+    }
+
+    # Manifest changes (icons, colors) must be visible quickly
+    location = /manifest.webmanifest {
+        add_header Cache-Control "no-cache";
+        try_files \$uri =404;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|woff2?|svg)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
         try_files \$uri =404;
@@ -124,7 +136,19 @@ server {
         try_files \$uri \$uri/ /index.html;
     }
 
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|woff2?|svg|webmanifest)$ {
+    # Service worker must never be immutably cached — iOS PWA won't update otherwise
+    location = /sw.js {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        try_files \$uri =404;
+    }
+
+    # Manifest changes (icons, colors) must be visible quickly
+    location = /manifest.webmanifest {
+        add_header Cache-Control "no-cache";
+        try_files \$uri =404;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|woff2?|svg)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
         try_files \$uri =404;
