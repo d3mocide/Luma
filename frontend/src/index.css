@@ -516,10 +516,6 @@
 }
 
 .mobile-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
   z-index: 25;
   padding-top: env(safe-area-inset-top);
   background: linear-gradient(165deg, var(--glass-3), var(--glass-2));
@@ -1072,7 +1068,7 @@
  * MOBILE PAGE HEADER SYSTEM
  * ══════════════════════════════════════════════════════════════════════════ */
 .today-mobile-scroll {
-  padding: 16px 22px 100px;
+  padding: 16px 22px 24px;
   height: 100%;
   overflow-y: auto;
 }
@@ -1200,7 +1196,7 @@
 
 @media (max-width: 900px) {
   .today-mobile-scroll {
-    padding-top: calc(env(safe-area-inset-top) + 70px);
+    padding-top: 16px;
   }
 
   .mobile-hero {
@@ -1486,7 +1482,7 @@
 
 @media (max-width: 900px) {
   .plan-page {
-    padding: calc(env(safe-area-inset-top) + 70px) 16px 100px;
+    padding: 16px 16px 24px;
   }
 
   .plan-header {
@@ -1670,7 +1666,7 @@
 
 @media (max-width: 900px) {
   .trends-page {
-    padding: calc(env(safe-area-inset-top) + 70px) 16px 100px;
+    padding: 16px 16px 24px;
   }
 
   .trends-header {
@@ -1720,7 +1716,7 @@
  * ══════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 900px) {
   .coach-header {
-    padding: calc(env(safe-area-inset-top) + 70px) 16px 14px 16px !important;
+    padding: 20px 16px 14px 16px !important;
     align-items: flex-start !important;
     gap: 10px;
   }
@@ -1757,7 +1753,7 @@
   }
 
   .coach-composer {
-    padding: 12px 16px 100px !important;
+    padding: 12px 16px 24px !important;
   }
 }
 
@@ -1789,6 +1785,6 @@
 
 @media (max-width: 900px) {
   .settings-page {
-    padding: calc(env(safe-area-inset-top) + 70px) 16px 100px !important;
+    padding: 16px 16px 24px !important;
   }
 }

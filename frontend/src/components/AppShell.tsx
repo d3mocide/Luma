@@ -57,25 +57,28 @@ export default function AppShell() {
       {/* Desktop Sidebar */}
       <DesktopSidebar user={user} isTodayLoading={isTodayLoading} />
 
-      {/* Main content */}
-      <main
-        className="thin-scroll mobile-shell-main"
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          paddingBottom: 0,
-          position: 'relative',
-          zIndex: 1,
-        }}
-      >
-        <Outlet />
-      </main>
+      {/* Content column — flex column so mobile header/nav are in-flow (not fixed) */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Mobile header anchored to top of column */}
+        {!isLogRoute && <MobileHeader initials={initials} />}
 
-      {/* Unified Mobile Header */}
-      {!isLogRoute && <MobileHeader initials={initials} />}
+        {/* Scrollable page content */}
+        <main
+          className="thin-scroll mobile-shell-main"
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
+          <Outlet />
+        </main>
 
-      {/* Mobile Bottom Nav */}
-      {!isLogRoute && <MobileNav />}
+        {/* Mobile nav anchored to bottom of column */}
+        {!isLogRoute && <MobileNav />}
+      </div>
     </div>
   )
 }
@@ -446,10 +449,8 @@ function MobileNav() {
     <div
       className="mobile-nav-wrap md:hidden"
       style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
         paddingTop: 10, paddingLeft: 18, paddingRight: 18,
         paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
-        zIndex: 20,
       }}
     >
       <div className="glass-bright" style={{
