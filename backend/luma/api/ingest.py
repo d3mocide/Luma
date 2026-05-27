@@ -29,24 +29,49 @@ class HAEPayload(BaseModel):
     data: dict[str, Any]
 
 
-def _verify_hae_signature(body: bytes, signature: str | None) -> None:
-    if not signature:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing signature")
-    expected = hmac.new(
-        settings.hae_shared_secret.encode(),
-        body,
-        hashlib.sha256,
-    ).hexdigest()
-    if not hmac.compare_digest(expected, signature.lower()):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
+def _extract_bearer(authorization: str | None) -> str | None:
+    """Return the token from 'Authorization: Bearer <token>', or None."""
+    if not authorization:
+        return None
+    parts = authorization.split(" ", 1)
+    if len(parts) == 2 and parts[0].lower() == "bearer":
+        return parts[1]
+    return None
 
 
-async def _check_replay(signature: str) -> None:
-    """Reject replayed requests by storing seen signatures in Redis for 10 minutes.
+def _verify_hae_signature(body: bytes, signature: str | None, bearer: str | None = None) -> str:
+    """Verify request authenticity and return a canonical replay key.
+
+    Accepts either:
+    - X-Hae-Signature: <hmac-sha256-hex>  (body integrity protected)
+    - Authorization: Bearer <shared-secret>  (HAE native bearer-token auth)
+    """
+    if signature:
+        expected = hmac.new(
+            settings.hae_shared_secret.encode(),
+            body,
+            hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(expected, signature.lower()):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
+        return signature.lower()
+
+    if bearer is not None:
+        # Constant-time compare to avoid timing oracle on the secret.
+        if not hmac.compare_digest(settings.hae_shared_secret, bearer):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        # Derive a per-request replay key from the body so duplicate uploads are still caught.
+        return hashlib.sha256(body).hexdigest()
+
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing signature")
+
+
+async def _check_replay(replay_key: str) -> None:
+    """Reject replayed requests by storing seen keys in Redis for 10 minutes.
 
     Fails open if Redis is unavailable — health data ingestion is not blocked.
     """
-    key = f"hae:replay:{signature}"
+    key = f"hae:replay:{replay_key}"
     try:
         redis = _get_redis()
         stored = await redis.set(key, "1", nx=True, ex=600)
@@ -64,10 +89,11 @@ async def ingest_hae(
     request: Request,
     db: DbDep,
     x_hae_signature: str | None = Header(None),
+    authorization: str | None = Header(None),
 ) -> dict:
     body = await request.body()
-    _verify_hae_signature(body, x_hae_signature)
-    await _check_replay(x_hae_signature)  # type: ignore[arg-type]  # signature verified non-None above
+    replay_key = _verify_hae_signature(body, x_hae_signature, _extract_bearer(authorization))
+    await _check_replay(replay_key)
 
     import orjson
     try:
