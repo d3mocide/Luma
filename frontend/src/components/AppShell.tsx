@@ -20,6 +20,11 @@ const NAV_ITEMS = [
 // iOS Safari reports an incorrect 100dvh on first paint before the visual
 // viewport settles (URL bar / home indicator). Keep --app-h in sync with the
 // real visual-viewport height so the flex column always fills the screen.
+//
+// On iOS PWA cold-start, visualViewport.height itself is wrong at first paint
+// because Safari's chrome is still animating in. Re-measure across a few RAFs
+// + short timeouts + lifecycle events so the bottom nav lands at the real
+// viewport bottom without needing a pull-to-refresh.
 function useAppHeight() {
   useLayoutEffect(() => {
     const set = () => {
@@ -27,11 +32,24 @@ function useAppHeight() {
       document.documentElement.style.setProperty('--app-h', `${h}px`)
     }
     set()
+    const raf = requestAnimationFrame(set)
+    const timeouts = [50, 150, 400, 900].map((d) => window.setTimeout(set, d))
+
     window.visualViewport?.addEventListener('resize', set)
+    window.visualViewport?.addEventListener('scroll', set)
     window.addEventListener('resize', set)
+    window.addEventListener('orientationchange', set)
+    window.addEventListener('pageshow', set)
+    window.addEventListener('load', set)
     return () => {
+      cancelAnimationFrame(raf)
+      timeouts.forEach(clearTimeout)
       window.visualViewport?.removeEventListener('resize', set)
+      window.visualViewport?.removeEventListener('scroll', set)
       window.removeEventListener('resize', set)
+      window.removeEventListener('orientationchange', set)
+      window.removeEventListener('pageshow', set)
+      window.removeEventListener('load', set)
     }
   }, [])
 }

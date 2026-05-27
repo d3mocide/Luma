@@ -12,6 +12,11 @@ export default defineConfig({
       manifest: false, // using public/manifest.webmanifest
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Activate new SW immediately so iOS PWAs pick up fixes on next launch
+        // instead of waiting for every installed instance to be closed.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^\/api\/v1\/today$/,
