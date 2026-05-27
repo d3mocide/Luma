@@ -60,8 +60,14 @@ export interface TodayData {
   biometrics_latest: {
     hrv_ms: number | null
     rhr_bpm: number | null
+    heart_rate_avg_bpm: number | null
     sleep_score: number | null
     sleep_duration_min: number | null
+    steps: number | null
+    active_kcal: number | null
+    bmr_kcal: number | null
+    exercise_min: number | null
+    respiratory_rate_bpm: number | null
   }
   plan_today: Array<{
     id: string

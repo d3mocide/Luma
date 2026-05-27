@@ -136,8 +136,14 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         "biometrics_latest": {
             "hrv_ms":              latest.get("hrv_ms"),
             "rhr_bpm":             latest.get("rhr_bpm"),
+            "heart_rate_avg_bpm":  latest.get("heart_rate_avg_bpm"),
             "sleep_score":         latest.get("sleep_score"),
             "sleep_duration_min":  latest.get("sleep_duration_min"),
+            "steps":               latest.get("steps"),
+            "active_kcal":         latest.get("active_kcal"),
+            "bmr_kcal":            latest.get("bmr_kcal"),
+            "exercise_min":        latest.get("exercise_min"),
+            "respiratory_rate_bpm": latest.get("respiratory_rate_bpm"),
         },
         "plan_today": [
             {
