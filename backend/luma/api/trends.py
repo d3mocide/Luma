@@ -10,9 +10,23 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 VALID_METRICS = {
-    "weight_kg", "bmi", "body_fat_pct", "hrv_ms", "rhr_bpm",
-    "sleep_duration_min", "sleep_asleep_min", "active_kcal", "steps",
-    "sleep_score",
+    # Body composition
+    "weight_kg", "bmi", "body_fat_pct",
+    # Cardiovascular
+    "hrv_ms", "rhr_bpm", "heart_rate_avg_bpm", "walking_hr_bpm", "respiratory_rate_bpm",
+    # Energy
+    "active_kcal", "bmr_kcal", "physical_effort_kcal_hr_kg",
+    # Activity
+    "steps", "flights_climbed", "exercise_min", "stand_min", "stand_hours",
+    "distance_mi", "daylight_min",
+    # Sleep
+    "sleep_duration_min", "sleep_asleep_min", "sleep_score",
+    "wrist_temp_f", "breathing_disturbances",
+    # Gait
+    "walking_speed_mph", "step_length_in", "walking_asymmetry_pct",
+    "double_support_pct", "stair_speed_up_fps", "stair_speed_down_fps",
+    # Environment
+    "audio_exposure_db",
 }
 
 RANGE_TO_DAYS = {"7d": 7, "30d": 30, "90d": 90, "1y": 365}

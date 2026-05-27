@@ -25,8 +25,14 @@ export function createMockTodayData(): TodayData {
     biometrics_latest: {
       hrv_ms: 49,
       rhr_bpm: 58,
+      heart_rate_avg_bpm: 72,
       sleep_score: 84,
       sleep_duration_min: 438,
+      steps: 8241,
+      active_kcal: 487,
+      bmr_kcal: 1820,
+      exercise_min: 34,
+      respiratory_rate_bpm: 16,
     },
     plan_today: [
       { id: 'mock-plan-breakfast', plan_id: 'mock-plan-id', slot: 'breakfast', custom_name: 'Greek yogurt + berries + flax', notes: null, recipe_id: null, logged: true },
