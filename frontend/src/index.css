@@ -141,11 +141,19 @@
 @layer base {
   html {
     height: 100%;
+    width: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
-    min-height: 100%;
+    position: fixed;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
     margin: 0;
     font-family: var(--font-sans);
     color: var(--fg-primary);

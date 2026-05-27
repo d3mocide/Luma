@@ -69,6 +69,7 @@ export default function AppShell() {
             flex: 1,
             minHeight: 0,
             overflowY: 'auto',
+            overscrollBehavior: 'contain',
             position: 'relative',
             zIndex: 1,
           }}
