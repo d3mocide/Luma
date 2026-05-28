@@ -173,52 +173,155 @@ Available sizes (accuracy / VRAM tradeoff): `tiny.en` · `base.en` · `small.en`
 
 ---
 
-## HAE Webhook
+## Health Auto Export (HAE) Setup
 
-The `/api/v1/ingest/hae` endpoint accepts biometric readings from any device or app that can send signed HTTP requests.
+Luma receives Apple Health data via the [Health Auto Export](https://www.healthyapps.dev/apps/health-auto-export/) iOS app. Configure a REST API automation in HAE with the settings below.
 
-### Request format
+### HAE app configuration
+
+| Setting | Value |
+|---|---|
+| **URL** | `https://<your-domain>/api/ingest/hae` |
+| **Method** | POST |
+| **Authentication** | Bearer Token → paste your `HAE_SHARED_SECRET` value |
+| **Data format** | JSON |
+| **Export type** | Object per metric (Metrics format) |
+| **Date range** | Last Export (incremental — sends only new data since the last successful sync) |
+| **Automation frequency** | Every 1 hour |
+| **Split requests** | Off (single request) |
+| **Timeout** | 30 seconds |
+
+> **Date range note:** Do not use "Today" or a fixed window. "Last Export" keeps payloads small and avoids hitting the 10-minute replay-detection window that deduplicates back-to-back uploads.
+
+### Metrics to enable
+
+Only enable the metrics listed below. Unknown metrics are silently skipped, but selecting everything generates unnecessary noise in the logs.
+
+**Activity**
+
+| HAE metric name | Description |
+|---|---|
+| `step_count` | Steps |
+| `active_energy` | Active calories burned |
+| `basal_energy_burned` | BMR / resting calories |
+| `apple_exercise_time` | Exercise minutes |
+| `apple_stand_time` | Stand minutes |
+| `apple_stand_hour` | Stand hours |
+| `flights_climbed` | Flights climbed |
+| `walking_running_distance` | Distance (miles) |
+| `time_in_daylight` | Daylight exposure (minutes) |
+| `physical_effort` | Physical effort (kcal/hr·kg) |
+
+**Cardiovascular**
+
+| HAE metric name | Description |
+|---|---|
+| `heart_rate_variability` | HRV (ms) |
+| `resting_heart_rate` | Resting heart rate (bpm) |
+| `heart_rate` | Heart rate avg/min/max (bpm) |
+| `walking_heart_rate_average` | Walking heart rate (bpm) |
+| `respiratory_rate` | Respiratory rate (breaths/min) |
+
+**Body composition**
+
+| HAE metric name | Description |
+|---|---|
+| `weight_body_mass` | Body mass (kg) |
+| `body_mass_index` | BMI |
+| `body_fat_percentage` | Body fat % |
+
+**Sleep** — enable both sub-types
+
+| HAE metric name | Description |
+|---|---|
+| `sleep_analysis.inBed` | Time in bed (minutes) — used for sleep score duration component |
+| `sleep_analysis.asleep` | Time asleep (minutes) — used for sleep score efficiency component |
+
+> Both sub-types are required for accurate sleep scoring. If only `inBed` is present, the efficiency component defaults to a neutral 50 %.
+
+**Gait & mobility**
+
+| HAE metric name | Description |
+|---|---|
+| `walking_speed` | Walking speed (mph) |
+| `walking_step_length` | Step length (in) |
+| `walking_asymmetry_percentage` | Walking asymmetry % |
+| `walking_double_support_percentage` | Double support % |
+| `stair_speed_up` | Stair ascent speed (ft/s) |
+| `stair_speed_down` | Stair descent speed (ft/s) |
+
+**Environment**
+
+| HAE metric name | Description |
+|---|---|
+| `environmental_audio_exposure` | Audio exposure (dBASPL) |
+| `apple_sleeping_wrist_temperature` | Wrist temperature (°F) |
+| `breathing_disturbances` | Breathing disturbances (count) |
+
+---
+
+### Endpoint technical reference
 
 ```http
-POST https://<your-domain>/api/v1/ingest/hae
+POST https://<your-domain>/api/ingest/hae
 Content-Type: application/json
-X-Luma-Signature: hmac-sha256=<hex-digest>
+Authorization: Bearer <HAE_SHARED_SECRET>
+```
 
+HAE sends a metrics array. Each element has a `name`, `units`, and `data` array of timestamped readings:
+
+```json
 {
-  "metric":      "weight_kg",
-  "value":       82.4,
-  "recorded_at": "2026-05-26T08:14:00Z",
-  "source":      "withings"
+  "data": {
+    "metrics": [
+      {
+        "name": "step_count",
+        "units": "count",
+        "data": [
+          {
+            "date": "2026-05-27 08:00:00 -0700",
+            "qty": 4821,
+            "source": "Apple Watch"
+          }
+        ]
+      },
+      {
+        "name": "heart_rate",
+        "units": "count/min",
+        "data": [
+          {
+            "date": "2026-05-27 08:00:00 -0700",
+            "Min": 52,
+            "Avg": 74.6,
+            "Max": 116,
+            "source": "Apple Watch"
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
-### Signature
+Note that `heart_rate` uses `Min`/`Avg`/`Max` fields instead of `qty`. All other metrics use `qty`.
 
-The `X-Luma-Signature` header is `hmac-sha256=` followed by the lowercase hex digest of `HMAC-SHA256(HAE_SHARED_SECRET, request-body-bytes)`.
+**Responses**
 
-**Python example:**
+| Status | Meaning |
+|---|---|
+| `200 OK` | Accepted. Body: `{"status": "ok", "rows_inserted": <n>}` |
+| `401 Unauthorized` | Missing or invalid Bearer token |
+| `409 Conflict` | Duplicate request (identical body received within 10 minutes) |
 
-```python
-import hmac, hashlib, json
+### Advanced: HMAC-SHA256 signatures
 
-secret = b"your_hae_shared_secret"
-body   = json.dumps({"metric": "weight_kg", "value": 82.4, "recorded_at": "2026-05-26T08:14:00Z"}).encode()
-sig    = "hmac-sha256=" + hmac.new(secret, body, hashlib.sha256).hexdigest()
+If you prefer body-integrity protection over a static Bearer token, send an `X-Hae-Signature` header instead of `Authorization`:
+
+```
+X-Hae-Signature: <lowercase-hex-of-HMAC-SHA256(HAE_SHARED_SECRET, request-body-bytes)>
 ```
 
-### Supported metric types
-
-| `metric` | Unit | Description |
-|---|---|---|
-| `weight_kg` | kg | Body mass |
-| `body_fat_pct` | % | Body fat percentage |
-| `systolic_bp` | mmHg | Systolic blood pressure |
-| `diastolic_bp` | mmHg | Diastolic blood pressure |
-| `heart_rate` | bpm | Resting heart rate |
-| `hrv_ms` | ms | Heart rate variability (RMSSD) |
-| `spo2_pct` | % | Blood oxygen saturation |
-| `glucose_mmol` | mmol/L | Blood glucose |
-| `steps` | count | Daily step count |
+HAE does not natively generate HMAC signatures, so this path is only useful for custom integrations or scripts.
 
 ---
 
