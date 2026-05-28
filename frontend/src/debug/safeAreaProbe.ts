@@ -186,35 +186,42 @@ function activate(): void {
   window.addEventListener('orientationchange', resizeHandler)
 }
 
-function installCornerTapTrigger(): void {
-  // Top-left 64×64 invisible zone — 5 quick taps toggles the overlay. Works in
-  // the installed standalone PWA where ?debug=1 isn't available at launch.
-  const zone = document.createElement('div')
-  zone.setAttribute(
+function installToggleButton(): void {
+  // Visible floating button — taps in the installed standalone PWA where
+  // ?debug=1 isn't available at launch. Placed up the left edge so it clears
+  // the status bar/notch (top), the nav pill and the home indicator (bottom).
+  const btn = document.createElement('button')
+  btn.type = 'button'
+  btn.textContent = 'DBG'
+  btn.setAttribute(
     'style',
-    'position:fixed;top:0;left:0;width:64px;height:64px;z-index:2147483646;background:transparent',
+    [
+      'position:fixed',
+      'left:12px',
+      'bottom:140px',
+      'width:46px',
+      'height:46px',
+      'border-radius:50%',
+      'z-index:2147483646',
+      'background:rgba(251,191,36,0.92)',
+      'color:#1a0e02',
+      'font:700 11px/1 ui-monospace,Menlo,monospace',
+      'border:1px solid rgba(0,0,0,0.4)',
+      'box-shadow:0 4px 14px rgba(0,0,0,0.5)',
+      'cursor:pointer',
+    ].join(';'),
   )
-  let taps = 0
-  let timer: ReturnType<typeof setTimeout> | undefined
-  zone.addEventListener('click', () => {
-    taps += 1
-    clearTimeout(timer)
-    timer = setTimeout(() => { taps = 0 }, 1200)
-    if (taps >= 5) {
-      taps = 0
-      activate()
-    }
-  })
-  document.body.appendChild(zone)
+  btn.addEventListener('click', () => activate())
+  document.body.appendChild(btn)
 }
 
 export function mountSafeAreaDebug(): void {
   const enabledByUrl = new URLSearchParams(window.location.search).get('debug') === '1'
-  // Always install the gesture trigger so the installed PWA can opt in.
+  // Always install the visible toggle so the installed PWA can opt in.
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', installCornerTapTrigger)
+    document.addEventListener('DOMContentLoaded', installToggleButton)
   } else {
-    installCornerTapTrigger()
+    installToggleButton()
   }
   if (enabledByUrl) {
     if (document.readyState === 'loading') {
