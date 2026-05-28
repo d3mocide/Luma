@@ -40,6 +40,10 @@ export const emptyGoalForm: GoalFormState = {
   dietary_pattern: '',
 }
 
+export type HaeImportSettings = {
+  token: string
+}
+
 export type HaeMetrics = {
   totals: {
     attempts: number

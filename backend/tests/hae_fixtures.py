@@ -58,27 +58,19 @@ def make_fake_user():
     return user
 
 
-def build_mock_db(fake_user):
-    """AsyncMock db session that yields fake_user on first execute."""
+def build_mock_db():
+    """AsyncMock db session that accepts the INSERT call."""
     db = AsyncMock()
-    first_result = MagicMock()
-    first_result.scalar_one_or_none.return_value = fake_user
-    db.execute.side_effect = [first_result, AsyncMock()]
+    db.execute.return_value = AsyncMock()
     return db
 
 
-def build_capturing_db(fake_user):
+def build_capturing_db():
     """AsyncMock db that captures rows from the INSERT call."""
     db = AsyncMock()
-    first_result = MagicMock()
-    first_result.scalar_one_or_none.return_value = fake_user
     captured = []
-    call_count = [0]
 
     async def execute_side_effect(stmt, params=None):
-        call_count[0] += 1
-        if call_count[0] == 1:
-            return first_result
         if params and "rows" in params:
             captured.extend(orjson.loads(params["rows"]))
         return MagicMock()

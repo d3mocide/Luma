@@ -28,6 +28,7 @@ class User(Base):
     password_hash = Column(Text, nullable=False)
     display_name = Column(Text, nullable=False)
     role = Column(String(20), nullable=False, default="operator")
+    hae_import_token = Column(UUID(as_uuid=True), unique=True, nullable=False, default=uuid.uuid4)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     last_login_at = Column(DateTime(timezone=True))
 

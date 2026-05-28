@@ -9,6 +9,8 @@ from tests.hae_fixtures import (
     make_fake_user, build_mock_db, build_capturing_db,
 )
 
+_FAKE_USER_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+
 
 def test_parse_hae_ts_converts_to_utc():
     from luma.services.hae_normalizer import _parse_hae_ts
@@ -47,9 +49,8 @@ def test_metric_map_contains_expected_keys():
 async def test_normalize_sample_payload_row_count():
     from luma.services.hae_normalizer import normalize_hae_payload
 
-    fake_user = make_fake_user()
-    db = build_mock_db(fake_user)
-    rows_inserted = await normalize_hae_payload(SAMPLE_PAYLOAD, db)
+    db = build_mock_db()
+    rows_inserted = await normalize_hae_payload(SAMPLE_PAYLOAD, db, _FAKE_USER_ID)
 
     assert rows_inserted == len(EXPECTED_METRICS), (
         f"Expected {len(EXPECTED_METRICS)} rows, got {rows_inserted}. "
@@ -61,9 +62,8 @@ async def test_normalize_sample_payload_row_count():
 async def test_normalize_sample_payload_correct_metrics():
     from luma.services.hae_normalizer import normalize_hae_payload
 
-    fake_user = make_fake_user()
-    db, captured_rows = build_capturing_db(fake_user)
-    await normalize_hae_payload(SAMPLE_PAYLOAD, db)
+    db, captured_rows = build_capturing_db()
+    await normalize_hae_payload(SAMPLE_PAYLOAD, db, _FAKE_USER_ID)
 
     found_metrics = {r["metric"] for r in captured_rows}
     assert found_metrics == EXPECTED_METRICS, (
@@ -75,9 +75,8 @@ async def test_normalize_sample_payload_correct_metrics():
 async def test_normalize_sample_payload_values():
     from luma.services.hae_normalizer import normalize_hae_payload
 
-    fake_user = make_fake_user()
-    db, captured_rows = build_capturing_db(fake_user)
-    await normalize_hae_payload(SAMPLE_PAYLOAD, db)
+    db, captured_rows = build_capturing_db()
+    await normalize_hae_payload(SAMPLE_PAYLOAD, db, _FAKE_USER_ID)
 
     by_metric = {r["metric"]: r for r in captured_rows}
 
@@ -98,9 +97,8 @@ async def test_normalize_sample_payload_values():
 async def test_normalize_sample_payload_timestamps():
     from luma.services.hae_normalizer import normalize_hae_payload
 
-    fake_user = make_fake_user()
-    db, captured_rows = build_capturing_db(fake_user)
-    await normalize_hae_payload(SAMPLE_PAYLOAD, db)
+    db, captured_rows = build_capturing_db()
+    await normalize_hae_payload(SAMPLE_PAYLOAD, db, _FAKE_USER_ID)
 
     for row in captured_rows:
         ts = datetime.fromisoformat(row["ts"])
@@ -111,9 +109,8 @@ async def test_normalize_sample_payload_timestamps():
 async def test_normalize_sample_payload_source_meta():
     from luma.services.hae_normalizer import normalize_hae_payload
 
-    fake_user = make_fake_user()
-    db, captured_rows = build_capturing_db(fake_user)
-    await normalize_hae_payload(SAMPLE_PAYLOAD, db)
+    db, captured_rows = build_capturing_db()
+    await normalize_hae_payload(SAMPLE_PAYLOAD, db, _FAKE_USER_ID)
 
     for row in captured_rows:
         assert row["source"] == "hae"
@@ -123,16 +120,13 @@ async def test_normalize_sample_payload_source_meta():
 
 
 @pytest.mark.asyncio
-async def test_normalize_no_operator_returns_zero():
+async def test_normalize_empty_payload_returns_zero():
     from luma.services.hae_normalizer import normalize_hae_payload
 
     db = AsyncMock()
-    no_user_result = MagicMock()
-    no_user_result.scalar_one_or_none.return_value = None
-    db.execute.return_value = no_user_result
-
-    count = await normalize_hae_payload(SAMPLE_PAYLOAD, db)
+    count = await normalize_hae_payload({"data": {"metrics": []}}, db, _FAKE_USER_ID)
     assert count == 0
+    db.execute.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -147,9 +141,8 @@ async def test_normalize_heart_rate_uses_avg_field():
         ]}
     }
 
-    fake_user = make_fake_user()
-    db, captured_rows = build_capturing_db(fake_user)
-    count = await normalize_hae_payload(heart_rate_only, db)
+    db, captured_rows = build_capturing_db()
+    count = await normalize_hae_payload(heart_rate_only, db, _FAKE_USER_ID)
 
     assert count == 1
     assert captured_rows[0]["metric"] == "heart_rate_avg_bpm"
@@ -168,13 +161,8 @@ async def test_normalize_heart_rate_missing_avg_logs_warning():
         ]}
     }
 
-    fake_user = make_fake_user()
     db = AsyncMock()
-    first_result = MagicMock()
-    first_result.scalar_one_or_none.return_value = fake_user
-    db.execute.return_value = first_result
-
-    count = await normalize_hae_payload(heart_rate_no_avg, db)
+    count = await normalize_hae_payload(heart_rate_no_avg, db, _FAKE_USER_ID)
     assert count == 0
 
 
@@ -191,24 +179,17 @@ async def test_normalize_insert_sql_binds_rows_param():
 
     from luma.services.hae_normalizer import normalize_hae_payload
 
-    fake_user = make_fake_user()
     captured_stmt: list = []
 
     db = AsyncMock()
-    select_result = MagicMock()
-    select_result.scalar_one_or_none.return_value = fake_user
-    call_count = [0]
 
     async def execute_side_effect(stmt, params=None):
-        call_count[0] += 1
-        if call_count[0] == 1:
-            return select_result
         captured_stmt.append((stmt, params))
         return MagicMock()
 
     db.execute.side_effect = execute_side_effect
 
-    await normalize_hae_payload(SAMPLE_PAYLOAD, db)
+    await normalize_hae_payload(SAMPLE_PAYLOAD, db, _FAKE_USER_ID)
 
     assert captured_stmt, "INSERT was never executed"
     stmt, params = captured_stmt[0]

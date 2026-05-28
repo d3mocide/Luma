@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
 
-    hae_shared_secret: str
+    hae_shared_secret: str = ""  # deprecated: replaced by per-user hae_import_token
 
     local_ai_api_base: str = ""
     local_ai_api_key: str = ""

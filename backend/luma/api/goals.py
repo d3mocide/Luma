@@ -1,12 +1,13 @@
 import logging
+import uuid
 from typing import Any, Literal
 
 from fastapi import APIRouter
 from pydantic import BaseModel
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 
-from luma.db.models import Goal, Preference
+from luma.db.models import Goal, Preference, User
 from luma.deps import CurrentUser, DbDep
 from luma.services.hae_metrics import tracker as hae_metrics_tracker
 from luma.services.llm_metrics import tracker as llm_metrics_tracker
@@ -143,3 +144,20 @@ async def get_hae_metrics(user: CurrentUser) -> dict[str, Any]:
 @router.get("/settings/llm-metrics")
 async def get_llm_metrics(user: CurrentUser) -> dict[str, Any]:
     return await llm_metrics_tracker.snapshot()
+
+
+class HaeImportOut(BaseModel):
+    token: str
+
+
+@router.get("/settings/hae-import", response_model=HaeImportOut)
+async def get_hae_import(user: CurrentUser) -> HaeImportOut:
+    return HaeImportOut(token=str(user.hae_import_token))
+
+
+@router.post("/settings/hae-import/regenerate", response_model=HaeImportOut)
+async def regenerate_hae_import_token(user: CurrentUser, db: DbDep) -> HaeImportOut:
+    new_token = uuid.uuid4()
+    await db.execute(update(User).where(User.id == user.id).values(hae_import_token=new_token))
+    await db.commit()
+    return HaeImportOut(token=str(new_token))
