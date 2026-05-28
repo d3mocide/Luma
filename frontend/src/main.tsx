@@ -4,6 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App'
+import { mountSafeAreaDebug } from './debug/safeAreaProbe'
+
+// Temporary PR#9 diagnostic — ?debug=1 or 5 taps on the top-left corner.
+mountSafeAreaDebug()
 
 // Measure env(safe-area-inset-*) at the document root level — outside any
 // stacking context — and expose as CSS variables. iOS standalone PWA can fail
