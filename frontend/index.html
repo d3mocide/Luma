@@ -12,12 +12,11 @@
     <link rel="icon" type="image/svg+xml" href="/assets/luma-glyph-light.svg" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
     <title>Luma</title>
-    <!-- iOS standalone PWA: html/body/#root must use the LARGE viewport height
-         (100lvh = full screen incl. home-indicator strip), not 100% / 100svh /
-         innerHeight (= the shorter visual viewport), or this clipping cage cuts
-         the app shell short and the bare <body> background shows as a bottom bar.
-         100vh is an equivalent fallback for engines without lvh. -->
-    <style>html,body,#root{height:100vh;height:100lvh;overflow:hidden}</style>
+    <!-- Viewport height: dvh = the dynamic (visible) viewport so the bottom nav
+         stays reachable in a normal Safari tab; in the installed PWA we override
+         to lvh (full screen incl. home-indicator strip, static → stable at cold
+         start). 100vh is the fallback for engines without dvh/lvh. -->
+    <style>html,body,#root{height:100vh;height:100dvh;overflow:hidden}@media (display-mode:standalone){html,body,#root{height:100lvh}}</style>
   </head>
   <body>
     <div id="root"></div>
