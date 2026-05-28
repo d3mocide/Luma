@@ -137,14 +137,7 @@ export default function Login() {
       </div>
 
       {/* Right — sign-in card */}
-      <div style={{
-        flex: 1,
-        padding: '60px 60px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        position: 'relative',
-      }}
-      className="flex-1 flex items-center justify-center px-6 py-10 md:p-[60px]"
-      >
+      <div className="login-pane">
         <div
           className="login-side-atmo"
           style={{
@@ -156,6 +149,7 @@ export default function Login() {
 
         <div className="glass login-glass" style={{
           width: '100%', maxWidth: 420,
+          margin: 'auto',
           padding: 36,
           borderRadius: 28,
           position: 'relative',

@@ -231,6 +231,22 @@
 
 .luma-bg > * { position: relative; z-index: 1; }
 
+.login-pane {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  /* Full-bleed standalone PWA: keep the card clear of the notch/home indicator
+     and let it scroll when it's taller than the viewport (margin:auto on the
+     card centers it when there's room). */
+  padding: max(env(safe-area-inset-top, 0px), 28px) 22px max(env(safe-area-inset-bottom, 0px), 28px);
+}
+
+@media (min-width: 768px) {
+  .login-pane { padding: 60px; }
+}
+
 .login-side-atmo {
   position: absolute;
   inset: -18% -14% -20% -34%;
