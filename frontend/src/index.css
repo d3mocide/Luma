@@ -140,7 +140,7 @@
 
 @layer base {
   html {
-    height: 100vh;
+    height: 100%;
     width: 100%;
     overflow: hidden;
     overscroll-behavior: none;
@@ -151,7 +151,7 @@
   body {
     position: fixed;
     inset: 0;
-    height: 100vh;
+    height: 100%;
     width: 100%;
     overflow: hidden;
     overscroll-behavior: none;
@@ -164,7 +164,7 @@
   }
 
   #root {
-    height: 100vh;
+    height: 100%;
     width: 100%;
     overflow: hidden;
   }
@@ -532,7 +532,7 @@
 
 .mobile-header {
   z-index: 25;
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--sat, env(safe-area-inset-top, 0px));
   background: linear-gradient(165deg, var(--glass-3), var(--glass-2));
   border-bottom: 1px solid var(--glass-edge);
   backdrop-filter: blur(20px) saturate(160%);
