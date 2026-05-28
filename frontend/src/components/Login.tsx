@@ -58,7 +58,7 @@ export default function Login() {
   const isSetup = setupStatus?.setup_required
 
   return (
-    <div className="luma-bg luma-bg-dawn" style={{ position: 'fixed', inset: 0, display: 'flex', overflow: 'hidden', paddingBottom: 'var(--sab, env(safe-area-inset-bottom, 0px))' }}>
+    <div className="luma-bg luma-bg-dawn" style={{ position: 'fixed', inset: 0, display: 'flex', overflow: 'hidden' }}>
 
       {/* Left — brand story (desktop only) */}
       <div className="hidden md:flex" style={{
