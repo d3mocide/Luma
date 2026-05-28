@@ -451,7 +451,7 @@ function MobileNav() {
       className="mobile-nav-wrap md:hidden"
       style={{
         paddingTop: 10, paddingLeft: 18, paddingRight: 18,
-        paddingBottom: 'var(--sab, env(safe-area-inset-bottom, 0px))',
+        paddingBottom: 'max(calc(var(--sab, env(safe-area-inset-bottom, 0px)) - 20px), 8px)',
       }}
     >
       <div className="glass-bright" style={{
