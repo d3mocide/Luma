@@ -161,6 +161,12 @@
     -webkit-font-smoothing: antialiased;
     font-feature-settings: 'ss01', 'ss02';
   }
+
+  #root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
 }
 
 @layer utilities {
