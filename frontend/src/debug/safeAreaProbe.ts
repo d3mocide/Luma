@@ -66,6 +66,18 @@ function removeLayerColors(): void {
   document.getElementById(STYLE_ID)?.remove()
 }
 
+function measureVH(unit: 'vh' | 'svh' | 'lvh' | 'dvh'): number {
+  const probe = document.createElement('div')
+  probe.setAttribute(
+    'style',
+    `position:fixed;top:0;left:0;width:1px;height:100${unit};visibility:hidden;pointer-events:none;z-index:-9999`,
+  )
+  document.documentElement.appendChild(probe)
+  const h = probe.getBoundingClientRect().height
+  document.documentElement.removeChild(probe)
+  return Math.round(h)
+}
+
 function readState() {
   const nav = navigator as unknown as { standalone?: boolean }
   const vv = window.visualViewport
@@ -86,6 +98,8 @@ function readState() {
     'docEl.client H×W': `${document.documentElement.clientHeight} × ${document.documentElement.clientWidth}`,
     'screen H×W': `${screen.height} × ${screen.width}`,
     'screen.availH': String(screen.availHeight),
+    '100vh / 100lvh': `${measureVH('vh')} / ${measureVH('lvh')}`,
+    '100svh / 100dvh': `${measureVH('svh')} / ${measureVH('dvh')}`,
     'visualViewport H': vv ? `${Math.round(vv.height)} (offTop ${Math.round(vv.offsetTop)}, scale ${vv.scale})` : 'n/a',
     'devicePixelRatio': String(window.devicePixelRatio),
     'env inset top': `${insetTop}px`,
