@@ -188,6 +188,12 @@
   /* overflow: clip (not hidden) so position:fixed children aren't trapped on iOS Safari/PWA */
   overflow: clip;
   isolation: isolate;
+  /* iOS standalone PWA: a position:fixed inset:0 box is clamped to the layout
+     viewport (innerHeight), which stops above the home-indicator strip — the
+     bare <body> background then shows through as the "black bar". 100lvh is the
+     full (large) viewport incl. that strip, and is static so it's stable from
+     cold start (unlike dvh/svh). min-height keeps the box ≥ the inset height. */
+  min-height: 100lvh;
 }
 
 [data-theme="light"] .luma-bg {
