@@ -101,19 +101,50 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
             }
         )
 
-    # Fetch latest biometrics
+    # Cumulative activity metrics must be summed for today rather than
+    # latest-wins, because HAE sends many small interval readings throughout
+    # the day (e.g. 1 step per recent sample) and the newest row is never
+    # the day's running total.
+    _CUMULATIVE = (
+        "steps", "active_kcal", "exercise_min",
+        "stand_min", "stand_hours", "flights_climbed", "distance_mi",
+    )
+
+    # Fetch latest point-in-time biometrics (HRV, RHR, sleep, weight, …)
     biometric_rows = await db.execute(
         text("""
             SELECT DISTINCT ON (metric)
                 metric, value, ts
             FROM biometrics
             WHERE user_id = :user_id
+              AND metric != ALL(:cumulative)
             ORDER BY metric, ts DESC
         """),
-        {"user_id": str(user.id)},
+        {"user_id": str(user.id), "cumulative": list(_CUMULATIVE)},
     )
     latest: dict[str, float] = {}
     for row in biometric_rows:
+        latest[row.metric] = row.value
+
+    # Fetch today's cumulative activity metrics (sum all readings for today)
+    cumulative_rows = await db.execute(
+        text("""
+            SELECT metric, SUM(value) AS value
+            FROM biometrics
+            WHERE user_id = :user_id
+              AND metric = ANY(:cumulative)
+              AND ts >= :today_start
+              AND ts < :today_end
+            GROUP BY metric
+        """),
+        {
+            "user_id": str(user.id),
+            "cumulative": list(_CUMULATIVE),
+            "today_start": today_start,
+            "today_end": today_end,
+        },
+    )
+    for row in cumulative_rows:
         latest[row.metric] = row.value
 
     # Fetch 7-day and 28-day weight slopes (simple linear regression on daily averages)
