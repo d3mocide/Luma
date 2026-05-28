@@ -195,8 +195,19 @@
      viewport (innerHeight), which stops above the home-indicator strip — the
      bare <body> background then shows through as the "black bar". 100lvh is the
      full (large) viewport incl. that strip, and is static so it's stable from
-     cold start (unlike dvh/svh). min-height keeps the box ≥ the inset height. */
-  min-height: 100lvh;
+     cold start (unlike dvh/svh). min-height keeps the box ≥ the inset height.
+     In a browser tab we use dvh instead so the nav isn't hidden behind the
+     toolbar; the display-mode:standalone block below restores lvh for the PWA. */
+  min-height: 100dvh;
+}
+
+/* Installed PWA only: use the large (full-screen, static) viewport so the shell
+   covers the home-indicator strip and is stable at cold start. Browser tabs keep
+   the dynamic viewport (above) so the bottom nav stays reachable under Safari's
+   toolbar. */
+@media (display-mode: standalone) {
+  html, body, #root { height: 100lvh; }
+  .luma-bg { min-height: 100lvh; }
 }
 
 [data-theme="light"] .luma-bg {
@@ -230,6 +241,22 @@
 }
 
 .luma-bg > * { position: relative; z-index: 1; }
+
+.login-pane {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  /* Full-bleed standalone PWA: keep the card clear of the notch/home indicator
+     and let it scroll when it's taller than the viewport (margin:auto on the
+     card centers it when there's room). */
+  padding: max(env(safe-area-inset-top, 0px), 28px) 22px max(env(safe-area-inset-bottom, 0px), 28px);
+}
+
+@media (min-width: 768px) {
+  .login-pane { padding: 60px; }
+}
 
 .login-side-atmo {
   position: absolute;
