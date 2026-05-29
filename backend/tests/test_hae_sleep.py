@@ -134,3 +134,63 @@ async def test_sleep_score_not_computed_without_sleep_data():
     await normalize_hae_payload(payload, db, _FAKE_USER_ID)
 
     assert not any(r["metric"] == "sleep_score" for r in captured)
+
+
+@pytest.mark.asyncio
+async def test_sleep_analysis_hae_v4_aggregated_format():
+    """HAE v4 sends one record per night with InBed/Asleep/Core/Deep/Rem/Awake fields."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "sleep_analysis", "units": "hr", "data": [
+            {
+                "date": "2026-05-29 03:54:00 -0700",
+                "source": "Apple Watch",
+                "InBed": 5.85,
+                "Asleep": 4.858333,
+                "Core": 2.291667,
+                "Deep": 0.608333,
+                "Rem": 0.958333,
+                "Awake": 0.416667,
+                "Unspecified": 0.0,
+            }
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "sleep_duration_min" in by_metric
+    assert by_metric["sleep_duration_min"]["value"] == pytest.approx(5.85 * 60, rel=1e-3)
+    assert "sleep_asleep_min" in by_metric
+    assert by_metric["sleep_asleep_min"]["value"] == pytest.approx(4.858333 * 60, rel=1e-3)
+    assert "sleep_score" in by_metric
+    # Duration: (351/480)*60 ≈ 43.9; efficiency: (4.858/5.85)*40 ≈ 33.2 → ~77
+    assert 70 < by_metric["sleep_score"]["value"] < 85
+
+
+@pytest.mark.asyncio
+async def test_sleep_analysis_hae_v4_inbed_only():
+    """HAE v4 aggregated format with only InBed (no Asleep) uses neutral efficiency."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "sleep_analysis", "units": "hr", "data": [
+            {
+                "date": "2026-05-29 07:00:00 -0700",
+                "source": "Apple Watch",
+                "InBed": 7.0,
+                "Awake": 0.5,
+            }
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "sleep_duration_min" in by_metric
+    assert by_metric["sleep_duration_min"]["value"] == pytest.approx(420.0)
+    assert "sleep_score" in by_metric
+    assert by_metric["sleep_score"]["value"] == pytest.approx(72.5)  # (420/480)*60 + 20 neutral

@@ -126,8 +126,37 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
         # Resolve internal metric name and which field to read from each point.
         qty_field = "qty"
         if hae_name.startswith("sleep_analysis"):
-            sub = hae_name.split(".")[-1] if "." in hae_name else "inBed"
-            internal = SLEEP_MAP.get(sub)
+            if "." in hae_name:
+                sub = hae_name.split(".")[-1]
+                internal = SLEEP_MAP.get(sub)
+            elif data_points and "InBed" in data_points[0]:
+                # HAE v4 aggregated format: one record per night with InBed/Asleep/Core/Deep/Rem/Awake
+                for point in data_points:
+                    try:
+                        ts = _parse_hae_ts(point["date"])
+                        source = point.get("source", "hae")
+                    except (KeyError, ValueError, TypeError) as exc:
+                        logger.warning("Malformed HAE sleep point %s: %s", point, exc)
+                        continue
+                    for hae_field, iname in (("InBed", "sleep_duration_min"), ("Asleep", "sleep_asleep_min")):
+                        raw = point.get(hae_field)
+                        if raw is None:
+                            continue
+                        try:
+                            rows.append({
+                                "user_id": str(user_id),
+                                "ts": ts,
+                                "metric": iname,
+                                "value": _convert(float(raw), hae_unit, iname),
+                                "source": "hae",
+                                "source_meta": {"hae_source": source, "hae_metric": hae_name},
+                            })
+                        except (ValueError, TypeError) as exc:
+                            logger.warning("Bad HAE sleep field %s=%s: %s", hae_field, raw, exc)
+                continue  # aggregated sleep handled; move to next metric_block
+            else:
+                # Legacy/simple qty format — treat as inBed duration
+                internal = "sleep_duration_min"
         elif hae_name in HAE_AGGREGATE_MAP:
             internal, qty_field = HAE_AGGREGATE_MAP[hae_name]
         else:
