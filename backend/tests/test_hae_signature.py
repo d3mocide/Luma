@@ -31,6 +31,14 @@ def _make_ingest_app(db_user):
     return app
 
 
+APP_SECRET = "test-app-secret-that-is-long-enough-32b"
+
+
+def _post_hae(client, token=None, headers=None, **kwargs):
+    url = f"/api/v1/ingest/hae/{token or uuid4()}"
+    return client.post(url, json=SAMPLE_PAYLOAD, headers=headers or {}, **kwargs)
+
+
 def test_valid_import_token_accepted():
     fake_user = MagicMock()
     fake_user.id = uuid4()
@@ -40,24 +48,68 @@ def test_valid_import_token_accepted():
     with patch("luma.api.ingest._check_replay", new=AsyncMock()):
         with patch("luma.api.ingest.hae_metrics_tracker") as mock_tracker:
             mock_tracker.record_ingest = AsyncMock()
-            with TestClient(app, raise_server_exceptions=False) as client:
-                resp = client.post(
-                    f"/api/v1/ingest/hae/{uuid4()}",
-                    json=SAMPLE_PAYLOAD,
-                )
+            # no app secret configured — header check is skipped
+            with patch("luma.api.ingest.settings") as mock_settings:
+                mock_settings.hae_shared_secret = ""
+                with TestClient(app, raise_server_exceptions=False) as client:
+                    resp = _post_hae(client)
 
     assert resp.status_code == 200
     assert resp.json()["status"] == "ok"
 
 
+def test_correct_app_secret_accepted():
+    fake_user = MagicMock()
+    fake_user.id = uuid4()
+
+    app = _make_ingest_app(fake_user)
+
+    with patch("luma.api.ingest._check_replay", new=AsyncMock()):
+        with patch("luma.api.ingest.hae_metrics_tracker") as mock_tracker:
+            mock_tracker.record_ingest = AsyncMock()
+            with patch("luma.api.ingest.settings") as mock_settings:
+                mock_settings.hae_shared_secret = APP_SECRET
+                with TestClient(app, raise_server_exceptions=False) as client:
+                    resp = _post_hae(client, headers={"X-HAE-Signature": APP_SECRET})
+
+    assert resp.status_code == 200
+
+
+def test_missing_app_secret_header_returns_401():
+    fake_user = MagicMock()
+    fake_user.id = uuid4()
+
+    app = _make_ingest_app(fake_user)
+
+    with patch("luma.api.ingest.settings") as mock_settings:
+        mock_settings.hae_shared_secret = APP_SECRET
+        with TestClient(app, raise_server_exceptions=False) as client:
+            resp = _post_hae(client)  # no X-HAE-Signature header
+
+    assert resp.status_code == 401
+
+
+def test_wrong_app_secret_returns_401():
+    fake_user = MagicMock()
+    fake_user.id = uuid4()
+
+    app = _make_ingest_app(fake_user)
+
+    with patch("luma.api.ingest.settings") as mock_settings:
+        mock_settings.hae_shared_secret = APP_SECRET
+        with TestClient(app, raise_server_exceptions=False) as client:
+            resp = _post_hae(client, headers={"X-HAE-Signature": "wrong-secret"})
+
+    assert resp.status_code == 401
+
+
 def test_unknown_import_token_returns_401():
     app = _make_ingest_app(None)  # DB finds no matching user
 
-    with TestClient(app, raise_server_exceptions=False) as client:
-        resp = client.post(
-            f"/api/v1/ingest/hae/{uuid4()}",
-            json=SAMPLE_PAYLOAD,
-        )
+    with patch("luma.api.ingest.settings") as mock_settings:
+        mock_settings.hae_shared_secret = ""
+        with TestClient(app, raise_server_exceptions=False) as client:
+            resp = _post_hae(client)
 
     assert resp.status_code == 401
 

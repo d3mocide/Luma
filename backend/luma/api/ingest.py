@@ -1,9 +1,9 @@
 import hashlib
+import hmac
 import logging
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, status
-from pydantic import BaseModel
 
 from luma.config import settings
 from luma.deps import DbDep
@@ -22,6 +22,19 @@ def _get_redis():
         from redis.asyncio import Redis
         _redis = Redis.from_url(settings.redis_url, decode_responses=True)
     return _redis
+
+
+def _verify_app_secret(request: Request) -> None:
+    """Validate X-HAE-Signature header against the app-level shared secret.
+
+    Skipped when hae_shared_secret is not configured (dev / legacy setups).
+    Uses constant-time comparison to prevent timing attacks.
+    """
+    if not settings.hae_shared_secret:
+        return
+    header_value = request.headers.get("X-HAE-Signature", "")
+    if not hmac.compare_digest(header_value, settings.hae_shared_secret):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid app secret")
 
 
 async def _check_replay(replay_key: str) -> None:
@@ -48,6 +61,8 @@ async def ingest_hae(
     request: Request,
     db: DbDep,
 ) -> dict:
+    _verify_app_secret(request)
+
     from luma.db.models import User
     from sqlalchemy import select
 

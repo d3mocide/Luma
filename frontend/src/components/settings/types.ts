@@ -42,6 +42,7 @@ export const emptyGoalForm: GoalFormState = {
 
 export type HaeImportSettings = {
   token: string
+  app_secret: string
 }
 
 export type HaeMetrics = {
