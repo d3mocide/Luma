@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 
+from luma.config import settings
 from luma.db.models import Goal, Preference, User
 from luma.deps import CurrentUser, DbDep
 from luma.services.hae_metrics import tracker as hae_metrics_tracker
@@ -148,11 +149,12 @@ async def get_llm_metrics(user: CurrentUser) -> dict[str, Any]:
 
 class HaeImportOut(BaseModel):
     token: str
+    app_secret: str
 
 
 @router.get("/settings/hae-import", response_model=HaeImportOut)
 async def get_hae_import(user: CurrentUser) -> HaeImportOut:
-    return HaeImportOut(token=str(user.hae_import_token))
+    return HaeImportOut(token=str(user.hae_import_token), app_secret=settings.hae_shared_secret)
 
 
 @router.post("/settings/hae-import/regenerate", response_model=HaeImportOut)
