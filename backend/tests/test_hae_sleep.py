@@ -1,8 +1,10 @@
 """sleep_analysis ingestion and sleep_score computation tests."""
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 from tests.hae_fixtures import make_fake_user, build_capturing_db
+
+_FAKE_USER_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
 
 @pytest.mark.asyncio
@@ -15,9 +17,8 @@ async def test_sleep_analysis_in_bed_hours_converted():
         ]}
     ]}}
 
-    fake_user = make_fake_user()
-    db, captured = build_capturing_db(fake_user)
-    await normalize_hae_payload(payload, db)
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
 
     by_metric = {r["metric"]: r for r in captured}
     assert "sleep_duration_min" in by_metric
@@ -34,9 +35,8 @@ async def test_sleep_analysis_asleep_hours_converted():
         ]}
     ]}}
 
-    fake_user = make_fake_user()
-    db, captured = build_capturing_db(fake_user)
-    await normalize_hae_payload(payload, db)
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
 
     by_metric = {r["metric"]: r for r in captured}
     assert "sleep_asleep_min" in by_metric
@@ -53,9 +53,8 @@ async def test_sleep_analysis_no_dot_defaults_to_in_bed():
         ]}
     ]}}
 
-    fake_user = make_fake_user()
-    db, captured = build_capturing_db(fake_user)
-    await normalize_hae_payload(payload, db)
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
 
     by_metric = {r["metric"]: r for r in captured}
     assert "sleep_duration_min" in by_metric
@@ -72,13 +71,8 @@ async def test_sleep_analysis_unknown_subtype_skipped():
         ]}
     ]}}
 
-    fake_user = make_fake_user()
     db = AsyncMock()
-    first_result = MagicMock()
-    first_result.scalar_one_or_none.return_value = fake_user
-    db.execute.return_value = first_result
-
-    count = await normalize_hae_payload(payload, db)
+    count = await normalize_hae_payload(payload, db, _FAKE_USER_ID)
     assert count == 0
 
 
@@ -95,9 +89,8 @@ async def test_sleep_score_computed_from_duration_and_efficiency():
         ]},
     ]}}
 
-    fake_user = make_fake_user()
-    db, captured = build_capturing_db(fake_user)
-    await normalize_hae_payload(payload, db)
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
 
     by_metric = {r["metric"]: r for r in captured}
     assert "sleep_score" in by_metric
@@ -118,9 +111,8 @@ async def test_sleep_score_neutral_efficiency_when_only_in_bed():
         ]},
     ]}}
 
-    fake_user = make_fake_user()
-    db, captured = build_capturing_db(fake_user)
-    await normalize_hae_payload(payload, db)
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
 
     by_metric = {r["metric"]: r for r in captured}
     assert "sleep_score" in by_metric
@@ -138,8 +130,7 @@ async def test_sleep_score_not_computed_without_sleep_data():
         ]}
     ]}}
 
-    fake_user = make_fake_user()
-    db, captured = build_capturing_db(fake_user)
-    await normalize_hae_payload(payload, db)
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
 
     assert not any(r["metric"] == "sleep_score" for r in captured)

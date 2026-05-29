@@ -111,17 +111,9 @@ def _compute_sleep_scores(rows: list[dict], user_id: str) -> list[dict]:
     return score_rows
 
 
-async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession) -> int:
-    """Ingest an HAE webhook payload. Returns number of rows inserted."""
-    from luma.db.models import User
-    from sqlalchemy import select, text
-
-    # HAE doesn't send user_id — the shared secret identifies the operator.
-    result = await db.execute(select(User).where(User.role == "operator").limit(1))
-    user = result.scalar_one_or_none()
-    if not user:
-        logger.error("No operator user found; cannot ingest HAE payload")
-        return 0
+async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_id: Any) -> int:
+    """Ingest an HAE webhook payload for the given user. Returns number of rows inserted."""
+    from sqlalchemy import text
 
     metrics_list: list[dict] = payload.get("data", {}).get("metrics", [])
     rows: list[dict] = []
@@ -155,7 +147,7 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession) -> in
                 continue
 
             rows.append({
-                "user_id": str(user.id),
+                "user_id": str(user_id),
                 "ts": ts,
                 "metric": internal,
                 "value": value,
@@ -164,7 +156,7 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession) -> in
             })
 
     # Derive sleep_score from any sleep metrics in this payload.
-    rows.extend(_compute_sleep_scores(rows, str(user.id)))
+    rows.extend(_compute_sleep_scores(rows, str(user_id)))
 
     if not rows:
         return 0
@@ -188,5 +180,5 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession) -> in
         {"rows": __import__("orjson").dumps(rows).decode()},
     )
     await db.commit()
-    logger.info("HAE ingest: inserted up to %d rows for user %s", len(rows), user.id)
+    logger.info("HAE ingest: inserted up to %d rows for user %s", len(rows), user_id)
     return len(rows)

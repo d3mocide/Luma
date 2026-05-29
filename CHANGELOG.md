@@ -8,6 +8,9 @@ All notable changes to the Luma health tracking and meal-planning PWA will be do
 - **AppShell Compiler Fix**: Added the missing `useLayoutEffect` React import in [AppShell.tsx](file:///c:/Projects/Luma/frontend/src/components/AppShell.tsx) to resolve TypeScript compilation error `TS2304`.
 
 ### Added
+- **Per-User HAE Import Tokens (Migration 0004)**: Health Auto Export ingestion is now fully multi-user safe. Each account receives a unique webhook URL (`POST /ingest/hae/{token}`) that both identifies and authenticates the user — no more first-operator-wins ambiguity. The global `HAE_SHARED_SECRET` is retired. A new **Health import** card in Settings displays the user's personal webhook URL with a one-click copy button and a guarded **Regenerate URL** action. Replay protection is scoped per-user so identical payloads from different accounts never collide.
+
+### Added
 - **LLM Performance & Cost Telemetry**: Added a robust tracking service (`llm_metrics.py`) that captures prompt/completion tokens, processing latency, cache hit efficiency, and cost across all LLM requests, exposing a detailed Telemetry Dashboard on the Settings page displaying usage and budget charts.
 - **Goal Settings Management**: Enhanced the Settings page to support operator-scoped target settings for Target Weight, LDL Cholesterol limits, and dietary patterns, with robust validation and success/error message feedback.
 - **PWA Caching & Offline Capabilities**: Integrated a registered service worker utilizing `vite-plugin-pwa` and `workbox-window` to support precaching and standalone offline usability.

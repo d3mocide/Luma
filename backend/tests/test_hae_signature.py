@@ -1,136 +1,88 @@
-"""HMAC signature verification tests for the HAE ingest endpoint."""
-import hashlib
-import hmac
+"""Per-user import token auth tests for the HAE ingest endpoint."""
 import json
-from unittest.mock import patch
+import hashlib
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from tests.hae_fixtures import SAMPLE_PAYLOAD
 
 
-def test_hmac_signature_valid():
-    from luma.api.ingest import _verify_hae_signature
+def _make_ingest_app(db_user):
+    """Minimal FastAPI app with only the ingest router and a mocked DB dependency."""
+    from luma.api.ingest import router
+    from luma.deps import get_db
 
-    secret = "testsecret_at_least_32_bytes_long_!!"
+    app = FastAPI()
+    app.include_router(router, prefix="/api/v1/ingest")
+
+    async def mock_get_db():
+        db = AsyncMock()
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = db_user
+        db.execute.return_value = result
+        db.commit = AsyncMock()
+        yield db
+
+    app.dependency_overrides[get_db] = mock_get_db
+    return app
+
+
+def test_valid_import_token_accepted():
+    fake_user = MagicMock()
+    fake_user.id = uuid4()
+
+    app = _make_ingest_app(fake_user)
+
+    with patch("luma.api.ingest._check_replay", new=AsyncMock()):
+        with patch("luma.api.ingest.hae_metrics_tracker") as mock_tracker:
+            mock_tracker.record_ingest = AsyncMock()
+            with TestClient(app, raise_server_exceptions=False) as client:
+                resp = client.post(
+                    f"/api/v1/ingest/hae/{uuid4()}",
+                    json=SAMPLE_PAYLOAD,
+                )
+
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+
+
+def test_unknown_import_token_returns_401():
+    app = _make_ingest_app(None)  # DB finds no matching user
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        resp = client.post(
+            f"/api/v1/ingest/hae/{uuid4()}",
+            json=SAMPLE_PAYLOAD,
+        )
+
+    assert resp.status_code == 401
+
+
+def test_malformed_uuid_returns_422():
+    app = _make_ingest_app(MagicMock())
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        resp = client.post(
+            "/api/v1/ingest/hae/not-a-valid-uuid",
+            json=SAMPLE_PAYLOAD,
+        )
+
+    assert resp.status_code == 422
+
+
+def test_replay_key_scoped_per_user():
+    """Same body from two different users must produce different replay keys."""
     body = json.dumps(SAMPLE_PAYLOAD).encode()
-    sig = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    body_hash = hashlib.sha256(body).hexdigest()
 
-    with patch("luma.api.ingest.settings") as mock_settings:
-        mock_settings.hae_shared_secret = secret
-        replay_key = _verify_hae_signature(body, sig)
-    assert replay_key == sig.lower()
+    token_a = str(uuid4())
+    token_b = str(uuid4())
 
+    key_a = f"{token_a}:{body_hash}"
+    key_b = f"{token_b}:{body_hash}"
 
-def test_hmac_signature_wrong_secret_rejected():
-    from fastapi import HTTPException
-    from luma.api.ingest import _verify_hae_signature
-
-    body = b'{"data":{}}'
-    good_sig = hmac.new(b"correct_secret_32bytes_long_xxxxx", body, hashlib.sha256).hexdigest()
-
-    with patch("luma.api.ingest.settings") as mock_settings:
-        mock_settings.hae_shared_secret = "wrong_secret_32bytes_long_yyyyyy"
-        with pytest.raises(HTTPException) as exc_info:
-            _verify_hae_signature(body, good_sig)
-    assert exc_info.value.status_code == 401
-
-
-def test_hmac_signature_missing_header_rejected():
-    from fastapi import HTTPException
-    from luma.api.ingest import _verify_hae_signature
-
-    with patch("luma.api.ingest.settings") as mock_settings:
-        mock_settings.hae_shared_secret = "any_secret_32bytes_long_xxxxxxxxx"
-        with pytest.raises(HTTPException) as exc_info:
-            _verify_hae_signature(b"body", None)
-    assert exc_info.value.status_code == 401
-
-
-def test_hmac_signature_tampered_body_rejected():
-    from fastapi import HTTPException
-    from luma.api.ingest import _verify_hae_signature
-
-    secret = "testsecret_at_least_32_bytes_long_!!"
-    original_body = b'{"data":{"metrics":[]}}'
-    sig = hmac.new(secret.encode(), original_body, hashlib.sha256).hexdigest()
-    tampered_body = b'{"data":{"metrics":[],"injected":true}}'
-
-    with patch("luma.api.ingest.settings") as mock_settings:
-        mock_settings.hae_shared_secret = secret
-        with pytest.raises(HTTPException) as exc_info:
-            _verify_hae_signature(tampered_body, sig)
-    assert exc_info.value.status_code == 401
-
-
-def test_hmac_accepts_lowercase_signature():
-    from luma.api.ingest import _verify_hae_signature
-
-    secret = "testsecret_at_least_32_bytes_long_!!"
-    body = b'{"data":{}}'
-    sig = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest().upper()
-
-    with patch("luma.api.ingest.settings") as mock_settings:
-        mock_settings.hae_shared_secret = secret
-        _verify_hae_signature(body, sig)  # should not raise
-
-
-def test_bearer_token_valid():
-    from luma.api.ingest import _verify_hae_signature
-
-    secret = "testsecret_at_least_32_bytes_long_!!"
-    body = b'{"data":{}}'
-
-    with patch("luma.api.ingest.settings") as mock_settings:
-        mock_settings.hae_shared_secret = secret
-        replay_key = _verify_hae_signature(body, None, bearer=secret)
-    assert replay_key == hashlib.sha256(body).hexdigest()
-
-
-def test_bearer_token_wrong_secret_rejected():
-    from fastapi import HTTPException
-    from luma.api.ingest import _verify_hae_signature
-
-    body = b'{"data":{}}'
-
-    with patch("luma.api.ingest.settings") as mock_settings:
-        mock_settings.hae_shared_secret = "correct_secret_32bytes_long_xxxxx"
-        with pytest.raises(HTTPException) as exc_info:
-            _verify_hae_signature(body, None, bearer="wrong_secret_32bytes_long_yyyyyy")
-    assert exc_info.value.status_code == 401
-
-
-def test_bearer_token_missing_both_rejected():
-    from fastapi import HTTPException
-    from luma.api.ingest import _verify_hae_signature
-
-    with patch("luma.api.ingest.settings") as mock_settings:
-        mock_settings.hae_shared_secret = "any_secret_32bytes_long_xxxxxxxxx"
-        with pytest.raises(HTTPException) as exc_info:
-            _verify_hae_signature(b"body", None, bearer=None)
-    assert exc_info.value.status_code == 401
-
-
-def test_extract_bearer_parses_header():
-    from luma.api.ingest import _extract_bearer
-
-    assert _extract_bearer("Bearer mytoken123") == "mytoken123"
-    assert _extract_bearer("bearer mytoken123") == "mytoken123"
-    assert _extract_bearer("BEARER mytoken123") == "mytoken123"
-    assert _extract_bearer("mytoken123") is None
-    assert _extract_bearer(None) is None
-    assert _extract_bearer("") is None
-
-
-def test_hmac_takes_precedence_over_bearer():
-    from luma.api.ingest import _verify_hae_signature
-
-    secret = "testsecret_at_least_32_bytes_long_!!"
-    body = b'{"data":{}}'
-    sig = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
-
-    with patch("luma.api.ingest.settings") as mock_settings:
-        mock_settings.hae_shared_secret = secret
-        # Both headers present — HMAC wins, replay key is the signature not body hash
-        replay_key = _verify_hae_signature(body, sig, bearer=secret)
-    assert replay_key == sig.lower()
+    assert key_a != key_b
