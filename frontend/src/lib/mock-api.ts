@@ -332,6 +332,7 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
 
   if (method === 'POST' && pathname === '/log/meal/barcode') {
     requireAuth()
+    const body = parseBody(init)
     const barcode = body?.barcode ?? '028400070566'
     const mockProducts: Record<string, object> = {
       '028400070566': { id: 'mock-barcode-1', name: 'Quaker Old Fashioned Oats', brand: 'Quaker', serving_size_g: 40, nutrients_per_100g: { calories: 375, protein_g: 12.5, fat_g: 7.5, saturated_fat_g: 1.5, carbohydrates_g: 67.5, fiber_g: 10.0, soluble_fiber_g: 5.0, sodium_mg: 0 } },
@@ -344,6 +345,7 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
 
   if (method === 'POST' && pathname === '/log/meal/text') {
     requireAuth()
+    const body = parseBody(init)
     const text = (body?.text as string) ?? ''
     const isOats = text.toLowerCase().includes('oat') || text.toLowerCase().includes('flax')
     return {
