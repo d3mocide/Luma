@@ -28,18 +28,18 @@ HAE_METRIC_MAP: dict[str, str] = {
     "apple_exercise_time":          "exercise_min",
     "apple_stand_time":             "stand_min",
     "apple_stand_hour":             "stand_hours",
-    "walking_running_distance":     "distance_mi",
+    "walking_running_distance":     "distance_km",
     "time_in_daylight":             "daylight_min",
     # Gait
-    "walking_speed":                "walking_speed_mph",
-    "walking_step_length":          "step_length_in",
+    "walking_speed":                "walking_speed_kmh",
+    "walking_step_length":          "step_length_cm",
     "walking_asymmetry_percentage": "walking_asymmetry_pct",
     "walking_double_support_percentage": "double_support_pct",
-    "stair_speed_up":               "stair_speed_up_fps",
-    "stair_speed_down":             "stair_speed_down_fps",
+    "stair_speed_up":               "stair_speed_up_mps",
+    "stair_speed_down":             "stair_speed_down_mps",
     # Environment / sleep
     "environmental_audio_exposure": "audio_exposure_db",
-    "apple_sleeping_wrist_temperature": "wrist_temp_f",
+    "apple_sleeping_wrist_temperature": "wrist_temp_c",
     "breathing_disturbances":       "breathing_disturbances",
     # sleep_analysis handled separately via SLEEP_MAP (sub-type in name)
 }
@@ -55,10 +55,39 @@ SLEEP_MAP: dict[str, str] = {
     "asleep": "sleep_asleep_min",
 }
 
+# All unit strings HAE is known to emit for each unit-sensitive metric,
+# covering both imperial and metric export modes.  Anything outside this
+# set is unexpected and logged as a warning so silent data corruption is
+# caught in production logs rather than discovered later.
+_KNOWN_UNITS: dict[str, frozenset[str]] = {
+    "distance_km":          frozenset({"mi", "km"}),
+    "walking_speed_kmh":    frozenset({"mi/hr", "km/hr", "km/h"}),
+    "step_length_cm":       frozenset({"in", "cm"}),
+    "wrist_temp_c":         frozenset({"degF", "degC"}),
+    "stair_speed_up_mps":   frozenset({"ft/s", "m/s"}),
+    "stair_speed_down_mps": frozenset({"ft/s", "m/s"}),
+}
+
 
 def _convert(value: float, hae_unit: str, internal_metric: str) -> float:
     if internal_metric in ("sleep_duration_min", "sleep_asleep_min") and hae_unit in ("hr", "hours"):
         return value * 60
+    if hae_unit == "mi":
+        return value * 1.60934
+    if hae_unit == "mi/hr":
+        return value * 1.60934
+    if hae_unit == "in":
+        return value * 2.54
+    if hae_unit == "degF":
+        return (value - 32) * 5 / 9
+    if hae_unit == "ft/s":
+        return value * 0.3048
+    known = _KNOWN_UNITS.get(internal_metric)
+    if known is not None and hae_unit not in known:
+        logger.warning(
+            "HAE unexpected unit %r for metric %r — stored unconverted; verify HAE export settings",
+            hae_unit, internal_metric,
+        )
     return value
 
 
