@@ -28,18 +28,18 @@ HAE_METRIC_MAP: dict[str, str] = {
     "apple_exercise_time":          "exercise_min",
     "apple_stand_time":             "stand_min",
     "apple_stand_hour":             "stand_hours",
-    "walking_running_distance":     "distance_mi",
+    "walking_running_distance":     "distance_km",
     "time_in_daylight":             "daylight_min",
     # Gait
-    "walking_speed":                "walking_speed_mph",
-    "walking_step_length":          "step_length_in",
+    "walking_speed":                "walking_speed_kmh",
+    "walking_step_length":          "step_length_cm",
     "walking_asymmetry_percentage": "walking_asymmetry_pct",
     "walking_double_support_percentage": "double_support_pct",
-    "stair_speed_up":               "stair_speed_up_fps",
-    "stair_speed_down":             "stair_speed_down_fps",
+    "stair_speed_up":               "stair_speed_up_mps",
+    "stair_speed_down":             "stair_speed_down_mps",
     # Environment / sleep
     "environmental_audio_exposure": "audio_exposure_db",
-    "apple_sleeping_wrist_temperature": "wrist_temp_f",
+    "apple_sleeping_wrist_temperature": "wrist_temp_c",
     "breathing_disturbances":       "breathing_disturbances",
     # sleep_analysis handled separately via SLEEP_MAP (sub-type in name)
 }
@@ -59,6 +59,16 @@ SLEEP_MAP: dict[str, str] = {
 def _convert(value: float, hae_unit: str, internal_metric: str) -> float:
     if internal_metric in ("sleep_duration_min", "sleep_asleep_min") and hae_unit in ("hr", "hours"):
         return value * 60
+    if hae_unit == "mi":
+        return value * 1.60934
+    if hae_unit == "mi/hr":
+        return value * 1.60934
+    if hae_unit == "in":
+        return value * 2.54
+    if hae_unit == "degF":
+        return (value - 32) * 5 / 9
+    if hae_unit == "ft/s":
+        return value * 0.3048
     return value
 
 

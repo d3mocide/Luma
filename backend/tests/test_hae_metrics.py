@@ -38,6 +38,38 @@ def test_convert_passthrough_for_non_sleep():
     assert _convert(59.77, "ms", "hrv_ms") == pytest.approx(59.77)
 
 
+def test_convert_miles_to_km():
+    from luma.services.hae_normalizer import _convert
+    assert _convert(1.0, "mi", "distance_km") == pytest.approx(1.60934, rel=1e-5)
+    assert _convert(3.2878305909330341, "mi", "distance_km") == pytest.approx(3.2878305909330341 * 1.60934, rel=1e-6)
+
+
+def test_convert_mph_to_kmh():
+    from luma.services.hae_normalizer import _convert
+    assert _convert(1.0, "mi/hr", "walking_speed_kmh") == pytest.approx(1.60934, rel=1e-5)
+
+
+def test_convert_inches_to_cm():
+    from luma.services.hae_normalizer import _convert
+    assert _convert(1.0, "in", "step_length_cm") == pytest.approx(2.54, rel=1e-5)
+    assert _convert(12.0, "in", "step_length_cm") == pytest.approx(30.48, rel=1e-5)
+
+
+def test_convert_fahrenheit_to_celsius():
+    from luma.services.hae_normalizer import _convert
+    assert _convert(32.0, "degF", "wrist_temp_c") == pytest.approx(0.0, abs=1e-9)
+    assert _convert(212.0, "degF", "wrist_temp_c") == pytest.approx(100.0, rel=1e-5)
+    assert _convert(95.170452880859315, "degF", "wrist_temp_c") == pytest.approx(
+        (95.170452880859315 - 32) * 5 / 9, rel=1e-6
+    )
+
+
+def test_convert_fps_to_mps():
+    from luma.services.hae_normalizer import _convert
+    assert _convert(1.0, "ft/s", "stair_speed_up_mps") == pytest.approx(0.3048, rel=1e-5)
+    assert _convert(1.0, "ft/s", "stair_speed_down_mps") == pytest.approx(0.3048, rel=1e-5)
+
+
 def test_metric_map_contains_expected_keys():
     from luma.services.hae_normalizer import HAE_METRIC_MAP
     for hae_name in ("weight_body_mass", "heart_rate_variability", "resting_heart_rate",
@@ -89,7 +121,7 @@ async def test_normalize_sample_payload_values():
     assert by_metric["exercise_min"]["value"] == pytest.approx(4.0, rel=1e-6)
     assert by_metric["respiratory_rate_bpm"]["value"] == pytest.approx(17.222222222222221, rel=1e-6)
     assert by_metric["flights_climbed"]["value"] == pytest.approx(5.0, rel=1e-6)
-    assert by_metric["distance_mi"]["value"] == pytest.approx(3.2878305909330341, rel=1e-6)
+    assert by_metric["distance_km"]["value"] == pytest.approx(3.2878305909330341 * 1.60934, rel=1e-6)
     assert by_metric["daylight_min"]["value"] == pytest.approx(37.0, rel=1e-6)
 
 

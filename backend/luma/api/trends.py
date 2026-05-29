@@ -18,13 +18,13 @@ VALID_METRICS = {
     "active_kcal", "bmr_kcal", "physical_effort_kcal_hr_kg",
     # Activity
     "steps", "flights_climbed", "exercise_min", "stand_min", "stand_hours",
-    "distance_mi", "daylight_min",
+    "distance_km", "daylight_min",
     # Sleep
     "sleep_duration_min", "sleep_asleep_min", "sleep_score",
-    "wrist_temp_f", "breathing_disturbances",
+    "wrist_temp_c", "breathing_disturbances",
     # Gait
-    "walking_speed_mph", "step_length_in", "walking_asymmetry_pct",
-    "double_support_pct", "stair_speed_up_fps", "stair_speed_down_fps",
+    "walking_speed_kmh", "step_length_cm", "walking_asymmetry_pct",
+    "double_support_pct", "stair_speed_up_mps", "stair_speed_down_mps",
     # Environment
     "audio_exposure_db",
 }

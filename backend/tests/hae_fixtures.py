@@ -39,11 +39,11 @@ SAMPLE_PAYLOAD = {
 EXPECTED_METRICS = {
     "active_kcal", "hrv_ms", "rhr_bpm", "steps",
     "bmr_kcal", "heart_rate_avg_bpm", "exercise_min", "respiratory_rate_bpm",
-    "wrist_temp_f", "breathing_disturbances",
-    "flights_climbed", "stand_min", "stand_hours", "distance_mi",
+    "wrist_temp_c", "breathing_disturbances",
+    "flights_climbed", "stand_min", "stand_hours", "distance_km",
     "walking_hr_bpm", "daylight_min", "physical_effort_kcal_hr_kg",
-    "walking_speed_mph", "step_length_in", "walking_asymmetry_pct",
-    "double_support_pct", "stair_speed_up_fps", "stair_speed_down_fps",
+    "walking_speed_kmh", "step_length_cm", "walking_asymmetry_pct",
+    "double_support_pct", "stair_speed_up_mps", "stair_speed_down_mps",
     "audio_exposure_db",
 }
 
