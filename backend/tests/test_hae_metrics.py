@@ -70,6 +70,40 @@ def test_convert_fps_to_mps():
     assert _convert(1.0, "ft/s", "stair_speed_down_mps") == pytest.approx(0.3048, rel=1e-5)
 
 
+def test_convert_known_metric_units_no_warning(caplog):
+    """Metric-mode HAE exports (km, degC, etc.) pass through without warnings."""
+    import logging
+    from luma.services.hae_normalizer import _convert
+    with caplog.at_level(logging.WARNING, logger="luma.services.hae_normalizer"):
+        _convert(5.0, "km", "distance_km")
+        _convert(10.0, "km/h", "walking_speed_kmh")
+        _convert(10.0, "km/hr", "walking_speed_kmh")
+        _convert(70.0, "cm", "step_length_cm")
+        _convert(35.0, "degC", "wrist_temp_c")
+        _convert(1.5, "m/s", "stair_speed_up_mps")
+        _convert(1.2, "m/s", "stair_speed_down_mps")
+    assert not caplog.records
+
+
+def test_convert_unknown_unit_logs_warning(caplog):
+    """An unrecognised unit for a sensitive metric logs a warning and passes value through."""
+    import logging
+    from luma.services.hae_normalizer import _convert
+    with caplog.at_level(logging.WARNING, logger="luma.services.hae_normalizer"):
+        result = _convert(3.0, "mph", "walking_speed_kmh")
+    assert result == pytest.approx(3.0)  # stored unconverted — warning is the signal
+    assert any("unexpected unit" in r.message for r in caplog.records)
+
+
+def test_convert_unknown_unit_non_sensitive_no_warning(caplog):
+    """Unknown units for metrics not in _KNOWN_UNITS (kcal, bpm, etc.) never warn."""
+    import logging
+    from luma.services.hae_normalizer import _convert
+    with caplog.at_level(logging.WARNING, logger="luma.services.hae_normalizer"):
+        _convert(515.0, "kcal/some-weird-variant", "active_kcal")
+    assert not caplog.records
+
+
 def test_metric_map_contains_expected_keys():
     from luma.services.hae_normalizer import HAE_METRIC_MAP
     for hae_name in ("weight_body_mass", "heart_rate_variability", "resting_heart_rate",

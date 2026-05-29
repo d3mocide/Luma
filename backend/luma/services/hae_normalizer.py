@@ -55,6 +55,19 @@ SLEEP_MAP: dict[str, str] = {
     "asleep": "sleep_asleep_min",
 }
 
+# All unit strings HAE is known to emit for each unit-sensitive metric,
+# covering both imperial and metric export modes.  Anything outside this
+# set is unexpected and logged as a warning so silent data corruption is
+# caught in production logs rather than discovered later.
+_KNOWN_UNITS: dict[str, frozenset[str]] = {
+    "distance_km":          frozenset({"mi", "km"}),
+    "walking_speed_kmh":    frozenset({"mi/hr", "km/hr", "km/h"}),
+    "step_length_cm":       frozenset({"in", "cm"}),
+    "wrist_temp_c":         frozenset({"degF", "degC"}),
+    "stair_speed_up_mps":   frozenset({"ft/s", "m/s"}),
+    "stair_speed_down_mps": frozenset({"ft/s", "m/s"}),
+}
+
 
 def _convert(value: float, hae_unit: str, internal_metric: str) -> float:
     if internal_metric in ("sleep_duration_min", "sleep_asleep_min") and hae_unit in ("hr", "hours"):
@@ -69,6 +82,12 @@ def _convert(value: float, hae_unit: str, internal_metric: str) -> float:
         return (value - 32) * 5 / 9
     if hae_unit == "ft/s":
         return value * 0.3048
+    known = _KNOWN_UNITS.get(internal_metric)
+    if known is not None and hae_unit not in known:
+        logger.warning(
+            "HAE unexpected unit %r for metric %r — stored unconverted; verify HAE export settings",
+            hae_unit, internal_metric,
+        )
     return value
 
 
