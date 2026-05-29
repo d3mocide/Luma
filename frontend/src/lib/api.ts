@@ -52,7 +52,7 @@ export interface TodayData {
     trend_28d: number | null
     target_kg: number | null
   }
-  adherence_yesterday: {
+  adherence_today: {
     calories: { logged: number | null; target: number | null; pct: number | null }
     sat_fat_g: { logged: number | null; target: number | null; pct: number | null }
     soluble_fiber_g: { logged: number | null; target: number | null; pct: number | null }
@@ -78,6 +78,7 @@ export interface TodayData {
     recipe_id: string | null
     logged: boolean
   }>
+  streak_days: number | null
   recent_meals: Array<{
     id: string
     ts: string

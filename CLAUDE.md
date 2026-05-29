@@ -13,12 +13,12 @@ Brand/UI reference: `refrence/BRAND-GUIDE.md` is the canonical source for visual
 
 | Phase | Status | Exit Criteria |
 |-------|--------|---------------|
-| 0 — Foundations | **CURRENT** | Compose up, all migrations, auth + /today + /trends functional, HAE ingesting |
-| 1 — Logging + Plan | LOCKED | Phase 0 complete |
-| 2 — Intelligence | LOCKED | Phase 1 complete |
+| 0 — Foundations | **COMPLETE** | Compose up, all migrations, auth + /today + /trends functional, HAE ingesting |
+| 1 — Logging + Plan | **COMPLETE** | Meal CRUD + voice/barcode/search logging, plan generation + log-as-eaten, pytest coverage on logging paths |
+| 2 — Intelligence | **CURRENT** | Phase 1 complete |
 | 3 — Polish | LOCKED | Phase 2 complete |
 
-**Do not skip ahead.** If asked to implement Phase 1+ features while Phase 0 is incomplete, refuse and explain.
+**Do not skip ahead.** If asked to implement Phase 2+ features while Phase 1 is incomplete, refuse and explain.
 
 ## Stack Conventions
 

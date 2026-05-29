@@ -48,6 +48,10 @@ class BarcodeLookupRequest(BaseModel):
     barcode: str
 
 
+class TextLogRequest(BaseModel):
+    text: str
+
+
 class MealEventCreate(BaseModel):
     ts: Optional[datetime] = None
     slot: str  # "breakfast", "lunch", "dinner", "snack"
@@ -113,6 +117,22 @@ async def log_meal_barcode(
     await db.commit()
     await db.refresh(food)
     return _format_food_response(food)
+
+
+@router.post("/meal/text")
+async def log_meal_text(
+    req: TextLogRequest,
+    current_user: CurrentUser,
+) -> dict:
+    if not req.text.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Text cannot be empty")
+    extracted_items = await food_extractor.extract_foods_from_text(req.text)
+    return {
+        "raw_input": req.text,
+        "items": extracted_items,
+        "nutrition": aggregate_items(extracted_items),
+        "confidence": 0.90,
+    }
 
 
 @router.post("/meal/voice")

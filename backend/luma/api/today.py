@@ -58,7 +58,7 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     logged_cal = 0.0
     logged_sat = 0.0
     logged_sol = 0.0
-    for e in events:
+    for e in today_events:
         nutr = e.nutrition or {}
         logged_cal += float(nutr.get("calories") or 0.0)
         logged_sat += float(nutr.get("saturated_fat_g") or 0.0)
@@ -82,7 +82,7 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     res_plan = await db.execute(stmt_plan)
     slots_today = res_plan.scalars().all()
 
-    logged_slots = {str(e.slot).lower() for e in today_events if e.slot}
+    logged_plan_slot_ids = {str(e.plan_slot_id) for e in today_events if e.plan_slot_id}
 
     recent_meals = []
     for event in today_events[:6]:
@@ -147,6 +147,26 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     for row in cumulative_rows:
         latest[row.metric] = row.value
 
+    # Streak: consecutive days (UTC) where at least one meal was logged
+    streak_rows = await db.execute(
+        text("""
+            SELECT DISTINCT DATE(ts AT TIME ZONE 'UTC') AS day
+            FROM meal_events
+            WHERE user_id = :user_id
+              AND ts >= NOW() - INTERVAL '365 days'
+            ORDER BY day DESC
+        """),
+        {"user_id": str(user.id)},
+    )
+    days_set = {row.day for row in streak_rows}
+    # Start from today; fall back to yesterday before midnight resets the streak
+    _start = today_dt if today_dt in days_set else today_dt - timedelta(days=1)
+    streak_days = 0
+    _check = _start
+    while _check in days_set:
+        streak_days += 1
+        _check -= timedelta(days=1)
+
     # Fetch 7-day and 28-day weight slopes (simple linear regression on daily averages)
     weight_7d = await _weight_slope(db, str(user.id), 7)
     weight_28d = await _weight_slope(db, str(user.id), 28)
@@ -159,7 +179,7 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
             "trend_28d": weight_28d,
             "target_kg": float(goal.target_weight_kg) if goal and goal.target_weight_kg else None,
         },
-        "adherence_yesterday": {
+        "adherence_today": {
             "calories":         {"logged": logged_cal, "target": target_cal, "pct": cal_pct},
             "sat_fat_g":        {"logged": logged_sat, "target": target_sat, "pct": sat_pct},
             "soluble_fiber_g":  {"logged": logged_sol, "target": target_sol, "pct": sol_pct},
@@ -184,11 +204,12 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
                 "custom_name": s.custom_name,
                 "notes": s.notes,
                 "recipe_id": str(s.recipe_id) if s.recipe_id else None,
-                "logged": str(s.slot).lower() in logged_slots,
+                "logged": str(s.id) in logged_plan_slot_ids,
             }
             for s in slots_today
         ],
         "recent_meals": recent_meals,
+        "streak_days": streak_days,
         "active_insight": None,
     }
 

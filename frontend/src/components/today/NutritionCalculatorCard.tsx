@@ -5,16 +5,21 @@ export type QuickFood = {
   id: string
   name: string
   caloriesPer100g: number
+  proteinPer100g: number
+  fatPer100g: number
   satFatPer100g: number
+  carbsPer100g: number
+  fiberPer100g: number
   solubleFiberPer100g: number
+  sodiumMgPer100g: number
 }
 
 export const QUICK_FOODS: QuickFood[] = [
-  { id: 'oats', name: 'Steel cut oats', caloriesPer100g: 71, satFatPer100g: 0.2, solubleFiberPer100g: 1.1 },
-  { id: 'beans', name: 'Black beans', caloriesPer100g: 132, satFatPer100g: 0.1, solubleFiberPer100g: 1.8 },
-  { id: 'salmon', name: 'Salmon', caloriesPer100g: 206, satFatPer100g: 3.1, solubleFiberPer100g: 0 },
-  { id: 'avocado', name: 'Avocado', caloriesPer100g: 160, satFatPer100g: 2.1, solubleFiberPer100g: 1.7 },
-  { id: 'lentils', name: 'Cooked lentils', caloriesPer100g: 116, satFatPer100g: 0.1, solubleFiberPer100g: 1.4 },
+  { id: 'oats',    name: 'Steel cut oats',  caloriesPer100g: 71,  proteinPer100g: 2.5, fatPer100g: 1.4,  satFatPer100g: 0.2, carbsPer100g: 12.0, fiberPer100g: 1.7, solubleFiberPer100g: 1.1, sodiumMgPer100g: 0 },
+  { id: 'beans',   name: 'Black beans',      caloriesPer100g: 132, proteinPer100g: 8.7, fatPer100g: 0.5,  satFatPer100g: 0.1, carbsPer100g: 24.0, fiberPer100g: 8.7, solubleFiberPer100g: 1.8, sodiumMgPer100g: 238 },
+  { id: 'salmon',  name: 'Salmon',           caloriesPer100g: 206, proteinPer100g: 20.0, fatPer100g: 13.0, satFatPer100g: 3.1, carbsPer100g: 0.0,  fiberPer100g: 0.0, solubleFiberPer100g: 0.0, sodiumMgPer100g: 59 },
+  { id: 'avocado', name: 'Avocado',          caloriesPer100g: 160, proteinPer100g: 2.0, fatPer100g: 15.0, satFatPer100g: 2.1, carbsPer100g: 9.0,  fiberPer100g: 6.7, solubleFiberPer100g: 1.7, sodiumMgPer100g: 7 },
+  { id: 'lentils', name: 'Cooked lentils',   caloriesPer100g: 116, proteinPer100g: 9.0, fatPer100g: 0.4,  satFatPer100g: 0.1, carbsPer100g: 20.0, fiberPer100g: 7.9, solubleFiberPer100g: 1.4, sodiumMgPer100g: 238 },
 ]
 
 export function round1(value: number) {
@@ -63,7 +68,7 @@ export function NutritionCalculatorCard({
   isAdding,
   compact,
 }: {
-  adherence: TodayData['adherence_yesterday']
+  adherence: TodayData['adherence_today']
   selectedFoodId: string
   servingG: string
   onFoodChange: (foodId: string) => void

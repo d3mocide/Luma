@@ -17,7 +17,7 @@ export function createMockTodayData(): TodayData {
       trend_28d: -1.8,
       target_kg: 79.5,
     },
-    adherence_yesterday: {
+    adherence_today: {
       calories: { logged: 1980, target: 2100, pct: 94 },
       sat_fat_g: { logged: 14, target: 18, pct: 78 },
       soluble_fiber_g: { logged: 11.8, target: 10, pct: 118 },
@@ -40,6 +40,7 @@ export function createMockTodayData(): TodayData {
       { id: 'mock-plan-snack', plan_id: 'mock-plan-id', slot: 'snack', custom_name: 'Apple + walnuts', notes: null, recipe_id: null, logged: false },
       { id: 'mock-plan-dinner', plan_id: 'mock-plan-id', slot: 'dinner', custom_name: 'Chickpea pasta + greens', notes: null, recipe_id: null, logged: false },
     ],
+    streak_days: 5,
     recent_meals: [
       {
         id: 'mock-meal-1',
@@ -66,9 +67,9 @@ export function isTodaySparseData(data: TodayData): boolean {
   const noBio = Object.values(data.biometrics_latest).every((v) => v == null)
   const noPlan = data.plan_today.length === 0
   const noAdherence = [
-    data.adherence_yesterday.calories,
-    data.adherence_yesterday.sat_fat_g,
-    data.adherence_yesterday.soluble_fiber_g,
+    data.adherence_today.calories,
+    data.adherence_today.sat_fat_g,
+    data.adherence_today.soluble_fiber_g,
   ].every((m) => m.logged == null && m.target == null)
 
   return noWeight && noBio && noPlan && noAdherence

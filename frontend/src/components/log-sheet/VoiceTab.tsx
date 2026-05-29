@@ -77,7 +77,7 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
           name: item.name,
           quantity: item.quantity,
           unit: item.unit,
-          estimated_weight_g: (item as unknown as Record<string, number>).estimated_weight_g || 100.0,
+          estimated_weight_g: item.estimated_weight_g ?? 100.0,
           nutrients: item.nutrients,
         }))
         onAddItems(mapped)
@@ -91,29 +91,29 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
     }
   }
 
-  const handleMockVoice = async (text: string) => {
+  const handleTextLog = async (text: string) => {
     setIsProcessing(true)
+    setTranscription('')
     try {
-      const mapped: DraftItem[] = [
-        {
-          name: text.includes('oats') ? 'Steel Cut Oats' : 'Wild Salmon Fillet',
-          quantity: 1,
-          unit: 'portion',
-          estimated_weight_g: text.includes('oats') ? 40 : 150,
-          nutrients: text.includes('oats') ? {
-            calories: 150, saturated_fat_g: 0.5, soluble_fiber_g: 2.0, protein_g: 5.0,
-            carbohydrates_g: 27.0, fat_g: 2.5, fiber_g: 4.0, sodium_mg: 0.0,
-          } : {
-            calories: 280, saturated_fat_g: 1.5, soluble_fiber_g: 0.0, protein_g: 30.0,
-            carbohydrates_g: 0.0, fat_g: 15.0, fiber_g: 0.0, sodium_mg: 70.0,
-          },
-        },
-      ]
-      setTranscription(`[Mock Transcription] "${text}"`)
-      onAddItems(mapped)
-      onSwitchToPlate()
-    } catch (e) {
-      console.error(e)
+      const data = await api.post<{ raw_input: string; items: DraftItem[]; nutrition: unknown; confidence: number }>(
+        '/log/meal/text',
+        { text },
+      )
+      setTranscription(data.raw_input)
+      if (data.items && data.items.length > 0) {
+        const mapped = data.items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          estimated_weight_g: item.estimated_weight_g ?? 100.0,
+          nutrients: item.nutrients,
+        }))
+        onAddItems(mapped)
+        onSwitchToPlate()
+      }
+    } catch (err) {
+      console.error(err)
+      alert('Error processing text. Please try again or use manual search!')
     } finally {
       setIsProcessing(false)
     }
@@ -174,14 +174,14 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
         <span className="eyebrow block mb-3" style={{ color: 'var(--fg-quiet)' }}>Voice presets</span>
         <div className="grid grid-cols-1 gap-2">
           <button
-            onClick={() => handleMockVoice('One cup of cooked steel cut oatmeal with blueberries and ground flaxseeds')}
+            onClick={() => handleTextLog('One cup of cooked steel cut oatmeal with blueberries and ground flaxseeds')}
             className="p-3 text-left rounded-lg border transition-colors"
             style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)' }}
           >
             Steel cut oatmeal with blueberries and flax
           </button>
           <button
-            onClick={() => handleMockVoice('Grilled salmon fillet with two tablespoons of olive oil and steamed broccoli')}
+            onClick={() => handleTextLog('Grilled salmon fillet with two tablespoons of olive oil and steamed broccoli')}
             className="p-3 text-left rounded-lg border transition-colors"
             style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)' }}
           >
