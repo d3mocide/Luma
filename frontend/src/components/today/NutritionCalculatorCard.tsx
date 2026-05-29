@@ -97,7 +97,7 @@ export function NutritionCalculatorCard({
   const solProjected = round1(solRemain - addSolFiber)
 
   return (
-    <div className="glass" style={{ padding: compact ? 18 : 24, marginTop: compact ? 14 : 0 }}>
+    <div className="glass" style={{ padding: compact ? 18 : 24, marginTop: compact ? 14 : 0, marginBottom: compact ? 14 : 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
           <div className="eyebrow">Remaining today</div>

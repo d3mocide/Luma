@@ -45,18 +45,18 @@ export function PlanDayCard({ dateStr, slots, dayTotals, isToday, onSlotClick }:
       </div>
 
       {dayTotals && (
-        <div style={{ borderTop: '1px solid var(--glass-edge)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <div style={{ borderTop: '1px solid var(--glass-edge)', paddingTop: 8, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 9, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>cal</span>
-            <span className="num" style={{ fontSize: 9, color: 'var(--fg-secondary)' }}>{Math.round(dayTotals.calories ?? 0)}</span>
+            <span className="num" style={{ fontSize: 11, color: 'var(--fg-secondary)' }}>{Math.round(dayTotals.calories ?? 0)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 9, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>sat fat</span>
-            <span className="num" style={{ fontSize: 9, color: 'var(--bad)' }}>{(dayTotals.saturated_fat_g ?? 0).toFixed(1)}g</span>
+            <span className="num" style={{ fontSize: 11, color: 'var(--bad)' }}>{(dayTotals.saturated_fat_g ?? 0).toFixed(1)}g</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 9, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>sol fib</span>
-            <span className="num" style={{ fontSize: 9, color: 'var(--good)' }}>{(dayTotals.soluble_fiber_g ?? 0).toFixed(1)}g</span>
+            <span className="num" style={{ fontSize: 11, color: 'var(--good)' }}>{(dayTotals.soluble_fiber_g ?? 0).toFixed(1)}g</span>
           </div>
         </div>
       )}

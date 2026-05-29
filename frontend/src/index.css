@@ -580,7 +580,7 @@
 .mobile-header-inner {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   padding: 8px 16px 10px;
 }
 
@@ -1022,8 +1022,8 @@
   align-items: center;
   gap: 4px;
   padding: 4px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
   border-radius: 999px;
 }
 

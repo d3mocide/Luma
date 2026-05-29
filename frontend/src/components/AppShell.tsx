@@ -4,7 +4,7 @@ import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CircleDot, Utensils, Activity, Sparkles, Settings, Plus, Moon, Sun, Loader2, ChevronDown,
 } from 'lucide-react'
-import { api, User } from '../lib/api'
+import { api, TodayData, User } from '../lib/api'
 import { useUIStore } from '../stores'
 import { LumaWordmark } from './ui/LumaLogo'
 import LogSheet from './LogSheet'
@@ -285,6 +285,15 @@ function MobileHeader({ initials }: { initials: string }) {
   const [isOpen, setIsOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement | null>(null)
 
+  const { data: today } = useQuery<TodayData>({
+    queryKey: ['today'],
+    queryFn: () => api.get('/today'),
+    staleTime: 60_000,
+  })
+
+  const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  const cal = today?.adherence_yesterday?.calories
+
   useEffect(() => {
     setIsOpen(false)
   }, [location.pathname])
@@ -322,6 +331,17 @@ function MobileHeader({ initials }: { initials: string }) {
   return (
     <div ref={panelRef} className="mobile-header md:hidden">
       <div className="mobile-header-inner">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, pointerEvents: 'none', userSelect: 'none' }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)', letterSpacing: '-0.01em', lineHeight: 1 }}>
+            {dateLabel}
+          </span>
+          {cal != null && (
+            <span style={{ fontSize: 11, color: 'var(--fg-tertiary)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
+              {cal.logged ?? '—'} / {cal.target ?? '—'} kcal
+            </span>
+          )}
+        </div>
+
         <div style={{ position: 'relative' }}>
           <button
             type="button"

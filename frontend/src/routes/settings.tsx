@@ -130,6 +130,8 @@ export default function SettingsRoute() {
             )}
           </div>
 
+          <MeasurementsCard />
+
           <GoalsCard
             goalForm={goalForm}
             onFieldChange={handleGoalChange}
@@ -157,7 +159,6 @@ export default function SettingsRoute() {
         </div>
 
         <div className="settings-stack settings-secondary">
-          <MeasurementsCard />
           <HaeImportCard />
           <HaeMetricsCard />
           <LlmMetricsCard />
