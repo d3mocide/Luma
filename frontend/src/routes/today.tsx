@@ -207,7 +207,7 @@ export default function TodayRoute() {
                 </div>
               </div>
             </div>
-            <StreakStrip days={0} ofMax={14}/>
+            <StreakStrip days={data.streak_days ?? 0} ofMax={14}/>
           </div>
         </div>
 
@@ -346,7 +346,7 @@ export default function TodayRoute() {
               </div>
             </div>
           </div>
-          <StreakStrip days={0} ofMax={14}/>
+          <StreakStrip days={data.streak_days ?? 0} ofMax={14}/>
         </div>
 
         {/* Biometrics */}

@@ -342,6 +342,28 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     return product
   }
 
+  if (method === 'POST' && pathname === '/log/meal/text') {
+    requireAuth()
+    const text = (body?.text as string) ?? ''
+    const isOats = text.toLowerCase().includes('oat') || text.toLowerCase().includes('flax')
+    return {
+      raw_input: text,
+      confidence: 0.90,
+      items: isOats ? [
+        { name: 'Steel cut oats', quantity: 1, unit: 'cup cooked', estimated_weight_g: 234, nutrients: { calories: 166, protein_g: 5.9, carbohydrates_g: 28, fat_g: 3.6, fiber_g: 4, saturated_fat_g: 0.7, soluble_fiber_g: 2, sodium_mg: 9 } },
+        { name: 'Blueberries', quantity: 0.5, unit: 'cup', estimated_weight_g: 74, nutrients: { calories: 42, protein_g: 0.5, carbohydrates_g: 11, fat_g: 0.2, fiber_g: 1.8, saturated_fat_g: 0, soluble_fiber_g: 0.8, sodium_mg: 1 } },
+        { name: 'Ground flaxseeds', quantity: 1, unit: 'tbsp', estimated_weight_g: 10, nutrients: { calories: 55, protein_g: 1.9, carbohydrates_g: 3, fat_g: 4.3, fiber_g: 2.8, saturated_fat_g: 0.4, soluble_fiber_g: 1.1, sodium_mg: 3 } },
+      ] : [
+        { name: 'Grilled salmon fillet', quantity: 1, unit: 'fillet', estimated_weight_g: 150, nutrients: { calories: 280, protein_g: 30, carbohydrates_g: 0, fat_g: 15, fiber_g: 0, saturated_fat_g: 2.5, soluble_fiber_g: 0, sodium_mg: 85 } },
+        { name: 'Olive oil', quantity: 2, unit: 'tbsp', estimated_weight_g: 27, nutrients: { calories: 239, protein_g: 0, carbohydrates_g: 0, fat_g: 27, fiber_g: 0, saturated_fat_g: 3.7, soluble_fiber_g: 0, sodium_mg: 0 } },
+        { name: 'Steamed broccoli', quantity: 1, unit: 'cup', estimated_weight_g: 156, nutrients: { calories: 54, protein_g: 3.7, carbohydrates_g: 11, fat_g: 0.6, fiber_g: 5.1, saturated_fat_g: 0.1, soluble_fiber_g: 1.5, sodium_mg: 64 } },
+      ],
+      nutrition: isOats
+        ? { calories: 263, protein_g: 8.3, carbohydrates_g: 42, fat_g: 8.1, fiber_g: 8.6, saturated_fat_g: 1.1, soluble_fiber_g: 3.9, sodium_mg: 13 }
+        : { calories: 573, protein_g: 33.7, carbohydrates_g: 11, fat_g: 42.6, fiber_g: 5.1, saturated_fat_g: 6.3, soluble_fiber_g: 1.5, sodium_mg: 149 },
+    }
+  }
+
   if (method === 'POST' && pathname === '/log/meal/voice') {
     requireAuth()
     return {

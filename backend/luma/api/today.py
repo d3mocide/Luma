@@ -147,6 +147,26 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     for row in cumulative_rows:
         latest[row.metric] = row.value
 
+    # Streak: consecutive days (UTC) where at least one meal was logged
+    streak_rows = await db.execute(
+        text("""
+            SELECT DISTINCT DATE(ts AT TIME ZONE 'UTC') AS day
+            FROM meal_events
+            WHERE user_id = :user_id
+              AND ts >= NOW() - INTERVAL '365 days'
+            ORDER BY day DESC
+        """),
+        {"user_id": str(user.id)},
+    )
+    days_set = {row.day for row in streak_rows}
+    # Start from today; fall back to yesterday before midnight resets the streak
+    _start = today_dt if today_dt in days_set else today_dt - timedelta(days=1)
+    streak_days = 0
+    _check = _start
+    while _check in days_set:
+        streak_days += 1
+        _check -= timedelta(days=1)
+
     # Fetch 7-day and 28-day weight slopes (simple linear regression on daily averages)
     weight_7d = await _weight_slope(db, str(user.id), 7)
     weight_28d = await _weight_slope(db, str(user.id), 28)
@@ -189,6 +209,7 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
             for s in slots_today
         ],
         "recent_meals": recent_meals,
+        "streak_days": streak_days,
         "active_insight": None,
     }
 

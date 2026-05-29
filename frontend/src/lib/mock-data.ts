@@ -40,6 +40,7 @@ export function createMockTodayData(): TodayData {
       { id: 'mock-plan-snack', plan_id: 'mock-plan-id', slot: 'snack', custom_name: 'Apple + walnuts', notes: null, recipe_id: null, logged: false },
       { id: 'mock-plan-dinner', plan_id: 'mock-plan-id', slot: 'dinner', custom_name: 'Chickpea pasta + greens', notes: null, recipe_id: null, logged: false },
     ],
+    streak_days: 5,
     recent_meals: [
       {
         id: 'mock-meal-1',

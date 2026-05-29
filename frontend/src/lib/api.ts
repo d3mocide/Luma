@@ -78,6 +78,7 @@ export interface TodayData {
     recipe_id: string | null
     logged: boolean
   }>
+  streak_days: number | null
   recent_meals: Array<{
     id: string
     ts: string
