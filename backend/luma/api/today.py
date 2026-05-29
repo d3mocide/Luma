@@ -58,7 +58,7 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     logged_cal = 0.0
     logged_sat = 0.0
     logged_sol = 0.0
-    for e in events:
+    for e in today_events:
         nutr = e.nutrition or {}
         logged_cal += float(nutr.get("calories") or 0.0)
         logged_sat += float(nutr.get("saturated_fat_g") or 0.0)
@@ -82,7 +82,7 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     res_plan = await db.execute(stmt_plan)
     slots_today = res_plan.scalars().all()
 
-    logged_slots = {str(e.slot).lower() for e in today_events if e.slot}
+    logged_plan_slot_ids = {str(e.plan_slot_id) for e in today_events if e.plan_slot_id}
 
     recent_meals = []
     for event in today_events[:6]:
@@ -159,7 +159,7 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
             "trend_28d": weight_28d,
             "target_kg": float(goal.target_weight_kg) if goal and goal.target_weight_kg else None,
         },
-        "adherence_yesterday": {
+        "adherence_today": {
             "calories":         {"logged": logged_cal, "target": target_cal, "pct": cal_pct},
             "sat_fat_g":        {"logged": logged_sat, "target": target_sat, "pct": sat_pct},
             "soluble_fiber_g":  {"logged": logged_sol, "target": target_sol, "pct": sol_pct},
@@ -184,7 +184,7 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
                 "custom_name": s.custom_name,
                 "notes": s.notes,
                 "recipe_id": str(s.recipe_id) if s.recipe_id else None,
-                "logged": str(s.slot).lower() in logged_slots,
+                "logged": str(s.id) in logged_plan_slot_ids,
             }
             for s in slots_today
         ],

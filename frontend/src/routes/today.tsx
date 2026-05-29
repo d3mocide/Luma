@@ -21,6 +21,7 @@ export default function TodayRoute() {
   const measurementSystem = useMeasurementSystem()
   const queryClient = useQueryClient()
   const [loggingMealId, setLoggingMealId] = useState<string | null>(null)
+  const [deletingMealId, setDeletingMealId] = useState<string | null>(null)
   const [selectedFoodId, setSelectedFoodId] = useState<string>(QUICK_FOODS[0].id)
   const [servingG, setServingG] = useState<string>('150')
 
@@ -52,6 +53,22 @@ export default function TodayRoute() {
     },
   })
 
+  const deleteMealMutation = useMutation({
+    mutationFn: async (mealId: string) => {
+      setDeletingMealId(mealId)
+      return api.delete(`/log/meal/${mealId}`)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['today'] })
+    },
+    onError: (err: Error) => {
+      alert(err.message || 'Failed to delete meal.')
+    },
+    onSettled: () => {
+      setDeletingMealId(null)
+    },
+  })
+
   const quickAddMutation = useMutation({
     mutationFn: async () => {
       const food = QUICK_FOODS.find((f) => f.id === selectedFoodId) ?? QUICK_FOODS[0]
@@ -59,8 +76,13 @@ export default function TodayRoute() {
       const factor = grams / 100
       const nutrition = {
         calories: round1(food.caloriesPer100g * factor),
+        protein_g: round1(food.proteinPer100g * factor),
+        fat_g: round1(food.fatPer100g * factor),
         saturated_fat_g: round1(food.satFatPer100g * factor),
+        carbohydrates_g: round1(food.carbsPer100g * factor),
+        fiber_g: round1(food.fiberPer100g * factor),
         soluble_fiber_g: round1(food.solubleFiberPer100g * factor),
+        sodium_mg: round1(food.sodiumMgPer100g * factor),
       }
       return api.post('/log/meal', {
         slot: 'snack', source: 'manual',
@@ -84,7 +106,7 @@ export default function TodayRoute() {
   const useMockData = forceMockData || isTodaySparseData(todayApiData as TodayData)
   const data = useMockData ? createMockTodayData() : (todayApiData as TodayData)
 
-  const adherence = data.adherence_yesterday
+  const adherence = data.adherence_today
   const bio = data.biometrics_latest
   const rings: [number, number, number] = [
     (adherence?.calories?.pct ?? 0) / 100,
@@ -163,7 +185,7 @@ export default function TodayRoute() {
               <div style={{ marginTop: 8, fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="eyebrow">Yesterday</div>
+              <div className="eyebrow">Today</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
                 <RingLegend color="var(--sky-400)" label="Calories" value={`${adherence?.calories?.logged ?? '—'} / ${adherence?.calories?.target ?? '—'}`} pct={adherence?.calories?.pct ?? 0}/>
                 <RingLegend color="var(--sun-400)" label="Sat fat" value={`${adherence?.sat_fat_g?.logged ?? '—'}g / ${adherence?.sat_fat_g?.target ?? '—'}g`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
@@ -204,7 +226,7 @@ export default function TodayRoute() {
           </div>
         </div>
 
-        <NutritionCalculatorCard adherence={data.adherence_yesterday} selectedFoodId={selectedFoodId} servingG={servingG} onFoodChange={setSelectedFoodId} onServingChange={setServingG} onAdd={() => quickAddMutation.mutate()} isAdding={quickAddMutation.isPending} compact={false}/>
+        <NutritionCalculatorCard adherence={data.adherence_today} selectedFoodId={selectedFoodId} servingG={servingG} onFoodChange={setSelectedFoodId} onServingChange={setServingG} onAdd={() => quickAddMutation.mutate()} isAdding={quickAddMutation.isPending} compact={false}/>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 20 }}>
           {/* Insight */}
@@ -255,7 +277,7 @@ export default function TodayRoute() {
           </div>
         </div>
 
-        <RecentMealsCard meals={data.recent_meals ?? []} compact={false} />
+        <RecentMealsCard meals={data.recent_meals ?? []} compact={false} onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} />
       </div>
 
       {/* Mobile layout */}
@@ -340,7 +362,7 @@ export default function TodayRoute() {
           </div>
         </div>
 
-        <NutritionCalculatorCard adherence={data.adherence_yesterday} selectedFoodId={selectedFoodId} servingG={servingG} onFoodChange={setSelectedFoodId} onServingChange={setServingG} onAdd={() => quickAddMutation.mutate()} isAdding={quickAddMutation.isPending} compact/>
+        <NutritionCalculatorCard adherence={data.adherence_today} selectedFoodId={selectedFoodId} servingG={servingG} onFoodChange={setSelectedFoodId} onServingChange={setServingG} onAdd={() => quickAddMutation.mutate()} isAdding={quickAddMutation.isPending} compact/>
 
         {/* Insight */}
         {data.active_insight ? (
@@ -385,7 +407,7 @@ export default function TodayRoute() {
           )}
         </div>
 
-        <RecentMealsCard meals={data.recent_meals ?? []} compact />
+        <RecentMealsCard meals={data.recent_meals ?? []} compact onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} />
       </div>
 
     </TodayShell>

@@ -242,7 +242,7 @@ async def log_as_eaten(plan_id: str, slot_id: str, db: DbDep, current_user: Curr
     event = MealEvent(
         id=uuid.uuid4(),
         user_id=current_user.id,
-        ts=datetime.combine(slot.slot_date, datetime.now().time()).replace(tzinfo=timezone.utc),
+        ts=datetime.now(timezone.utc),
         slot=slot.slot,
         source="plan",
         items=[{"name": slot.custom_name, "quantity": 1.0, "unit": "portion", "nutrients": nutrition}],

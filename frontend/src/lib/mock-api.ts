@@ -330,6 +330,18 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     return { message: 'Reminders exported to your mock inbox.' }
   }
 
+  if (method === 'POST' && pathname === '/log/meal/barcode') {
+    requireAuth()
+    const barcode = body?.barcode ?? '028400070566'
+    const mockProducts: Record<string, object> = {
+      '028400070566': { id: 'mock-barcode-1', name: 'Quaker Old Fashioned Oats', brand: 'Quaker', serving_size_g: 40, nutrients_per_100g: { calories: 375, protein_g: 12.5, fat_g: 7.5, saturated_fat_g: 1.5, carbohydrates_g: 67.5, fiber_g: 10.0, soluble_fiber_g: 5.0, sodium_mg: 0 } },
+      '5411188110825': { id: 'mock-barcode-2', name: 'Alpro Soy Drink Original', brand: 'Alpro', serving_size_g: 250, nutrients_per_100g: { calories: 33, protein_g: 3.3, fat_g: 1.8, saturated_fat_g: 0.3, carbohydrates_g: 0.5, fiber_g: 0.5, soluble_fiber_g: 0.0, sodium_mg: 120 } },
+    }
+    const product = mockProducts[barcode as string]
+    if (!product) throw new MockApiError(404, `Barcode ${barcode} not found`)
+    return product
+  }
+
   if (method === 'POST' && pathname === '/log/meal/voice') {
     requireAuth()
     return {

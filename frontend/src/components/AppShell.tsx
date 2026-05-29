@@ -292,7 +292,7 @@ function MobileHeader({ initials }: { initials: string }) {
   })
 
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-  const cal = today?.adherence_yesterday?.calories
+  const cal = today?.adherence_today?.calories
 
   useEffect(() => {
     setIsOpen(false)
