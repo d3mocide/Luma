@@ -580,7 +580,7 @@
 .mobile-header-inner {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   padding: 8px 16px 10px;
 }
 
