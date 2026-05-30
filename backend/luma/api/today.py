@@ -223,7 +223,7 @@ async def _get_active_insight(db, user_id: str) -> dict | None:
             WHERE user_id = :uid AND status = 'open' AND narrative IS NOT NULL
             ORDER BY ts DESC LIMIT 1
         """),
-        {"user_id": user_id},
+        {"uid": user_id},
     )
     r = row.fetchone()
     if not r:
