@@ -125,3 +125,52 @@ export function formatMetricsDate(value: string | null) {
   if (Number.isNaN(date.getTime())) return '—'
   return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
+
+// ── HAE Diagnostic ────────────────────────────────────────────────────────────
+
+export type HaeDiagnosticStoredMetric = {
+  internal_metric: string
+  hae_metric: string | null
+  data_points: number
+  earliest_ts: string | null
+  latest_ts: string | null
+  latest_value: number | null
+}
+
+export type HaeDiagnostic = {
+  schema: {
+    standard_metrics: Record<string, string>
+    aggregate_metrics: Record<string, {
+      internal_name: string
+      field_extracted: string
+      other_fields_available: string[]
+    }>
+    sleep_sub_types: Record<string, string>
+    sleep_v4_fields: Record<string, { internal_name: string | null; stored: boolean }>
+  }
+  stored_metrics: HaeDiagnosticStoredMetric[]
+  known_internal_metrics_with_no_data: string[]
+  unrecognised_internal_metrics_in_db: string[]
+}
+
+export type HaeAnalysisEntry = {
+  hae_name: string
+  units: string
+  data_point_count: number
+  fields_in_data: string[]
+  status: 'mapped' | 'unmapped' | 'sleep_v4_partial' | 'sleep_legacy'
+  internal_names: string[]
+  fields_not_extracted: string[]
+  field_extracted?: string
+  likely_misalignment?: string
+  misalignment_reason?: string
+  suggestions?: string[]
+}
+
+export type HaeAnalysis = {
+  metrics_in_payload: number
+  metrics_mapped: number
+  metrics_unmapped: number
+  metrics_with_unextracted_fields: number
+  analysis: HaeAnalysisEntry[]
+}

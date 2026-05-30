@@ -10,9 +10,28 @@ import { MeasurementsCard } from '../components/settings/MeasurementsCard'
 import { LlmMetricsCard } from '../components/settings/LlmMetricsCard'
 import { HaeMetricsCard } from '../components/settings/HaeMetricsCard'
 import { HaeImportCard } from '../components/settings/HaeImportCard'
+import { HaeDiagnosticCard } from '../components/settings/HaeDiagnosticCard'
+import { HaeAnalyzeCard } from '../components/settings/HaeAnalyzeCard'
 import { useMeasurementSystem, convertWeightToKg } from '../lib/measurements'
 
 const KG_TO_LB = 2.2046226218
+
+type SettingsTab = 'account' | 'health-import' | 'ai-routing'
+
+const TAB_META: Record<SettingsTab, { label: string; minRole?: string }> = {
+  'account':        { label: 'Settings' },
+  'health-import':  { label: 'Health Import' },
+  'ai-routing':     { label: 'AI Routing', minRole: 'operator' },
+}
+
+function hasRole(user: User | undefined, minRole: string | undefined): boolean {
+  if (!minRole) return true
+  // Simple linear hierarchy: user < operator < admin
+  const ladder = ['user', 'operator', 'admin']
+  const userIdx = ladder.indexOf(user?.role ?? '')
+  const reqIdx  = ladder.indexOf(minRole)
+  return userIdx >= reqIdx
+}
 
 function Row({ label, value, last }: { label: string; value: string; last?: boolean }) {
   return (
@@ -23,9 +42,136 @@ function Row({ label, value, last }: { label: string; value: string; last?: bool
   )
 }
 
+function AccessDenied() {
+  return (
+    <div style={{ padding: '48px 0', textAlign: 'center' }}>
+      <div style={{ fontSize: 13, color: 'var(--fg-quiet)' }}>You don't have permission to view this section.</div>
+    </div>
+  )
+}
+
+// ── Tab panels ─────────────────────────────────────────────────────────────────
+
+function AccountTab({
+  user,
+  goalForm,
+  onFieldChange,
+  goalSaveError,
+  goalSaveSuccess,
+  onSubmit,
+  isPending,
+  measurementSystem,
+  loggingOut,
+  logoutError,
+  onLogout,
+}: {
+  user: User | undefined
+  goalForm: GoalFormState
+  onFieldChange: (field: keyof GoalFormState, value: string) => void
+  goalSaveError: string | null
+  goalSaveSuccess: string | null
+  onSubmit: () => void
+  isPending: boolean
+  measurementSystem: 'metric' | 'imperial'
+  loggingOut: boolean
+  logoutError: string | null
+  onLogout: () => void
+}) {
+  return (
+    <div className="settings-stack" style={{ maxWidth: 620 }}>
+      <div className="glass settings-card" style={{ padding: 24 }}>
+        <div className="eyebrow" style={{ marginBottom: 16 }}>Account</div>
+        {user ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <Row label="Name"  value={user.display_name} />
+            <Row label="Email" value={user.email} />
+            <Row label="Role"  value={user.role} last />
+          </div>
+        ) : (
+          <p style={{ color: 'var(--fg-quiet)', fontSize: 14, margin: 0 }}>Not signed in</p>
+        )}
+      </div>
+
+      <MeasurementsCard />
+
+      <GoalsCard
+        goalForm={goalForm}
+        onFieldChange={onFieldChange}
+        goalSaveError={goalSaveError}
+        goalSaveSuccess={goalSaveSuccess}
+        onSubmit={onSubmit}
+        isPending={isPending}
+        measurementSystem={measurementSystem}
+      />
+
+      <div className="glass settings-card" style={{ padding: 24 }}>
+        <div className="eyebrow" style={{ marginBottom: 12 }}>Session</div>
+        <p style={{ color: 'var(--fg-tertiary)', fontSize: 14, margin: '0 0 16px' }}>
+          End your current session on this device.
+        </p>
+        {logoutError && (
+          <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(251,113,133,0.10)', border: '1px solid rgba(251,113,133,0.25)', borderRadius: 12, fontSize: 13, color: 'var(--bad)' }}>
+            {logoutError}
+          </div>
+        )}
+        <button
+          type="button"
+          className="btn"
+          onClick={onLogout}
+          disabled={loggingOut}
+          style={{ width: '100%', opacity: loggingOut ? 0.7 : 1 }}
+        >
+          {loggingOut ? 'Signing out…' : 'Sign out'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function HealthImportTab({ isOperator }: { isOperator: boolean }) {
+  return (
+    <div className="settings-grid">
+      {/* Left: config + live metrics */}
+      <div className="settings-stack settings-primary">
+        <HaeImportCard />
+        <HaeMetricsCard />
+      </div>
+
+      {/* Right: diagnostic tools (operator only) */}
+      <div className="settings-stack settings-secondary">
+        {isOperator ? (
+          <>
+            <HaeDiagnosticCard />
+            <HaeAnalyzeCard />
+          </>
+        ) : (
+          <div className="glass settings-card" style={{ padding: 24 }}>
+            <div className="eyebrow" style={{ marginBottom: 8 }}>Diagnostics</div>
+            <p style={{ color: 'var(--fg-quiet)', fontSize: 14, margin: 0 }}>
+              Operator role required to view data coverage and the payload analyzer.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function AiRoutingTab({ isOperator }: { isOperator: boolean }) {
+  if (!isOperator) return <AccessDenied />
+  return (
+    <div className="settings-stack" style={{ maxWidth: 680 }}>
+      <LlmMetricsCard />
+    </div>
+  )
+}
+
+// ── Page ───────────────────────────────────────────────────────────────────────
+
 export default function SettingsRoute() {
   const queryClient = useQueryClient()
   const measurementSystem = useMeasurementSystem()
+  const [activeTab, setActiveTab] = useState<SettingsTab>('account')
   const [loggingOut, setLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState<string | null>(null)
   const [goalSaveError, setGoalSaveError] = useState<string | null>(null)
@@ -101,69 +247,67 @@ export default function SettingsRoute() {
     })
   }
 
+  const isOperator = hasRole(user, 'operator')
+  const tabs: SettingsTab[] = ['account', 'health-import', 'ai-routing']
+
   return (
     <div className="thin-scroll settings-page" style={{ height: '100%', overflowY: 'auto', padding: '32px 40px 40px' }}>
-      <header className="mobile-hero settings-hero" style={{ marginBottom: 28 }}>
+      <header className="mobile-hero settings-hero" style={{ marginBottom: 20 }}>
         <div className="mobile-hero-content">
           <div className="eyebrow" style={{ marginBottom: 8 }}>Settings</div>
           <h1 className="mobile-hero-title" style={{ margin: 0, fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
             Your account
           </h1>
           <p className="mobile-hero-subcopy settings-hero-subcopy" style={{ margin: '8px 0 0', color: 'var(--fg-tertiary)', fontSize: 14 }}>
-            Manage your profile, units, and process health from one place.
+            Manage your profile, units, and health data from one place.
           </p>
         </div>
       </header>
 
-      <div className="settings-grid">
-        <div className="settings-stack settings-primary">
-          <div className="glass settings-card" style={{ padding: 24 }}>
-            <div className="eyebrow" style={{ marginBottom: 16 }}>Account</div>
-            {user ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <Row label="Name" value={user.display_name}/>
-                <Row label="Email" value={user.email}/>
-                <Row label="Role" value={user.role} last/>
-              </div>
-            ) : (
-              <p style={{ color: 'var(--fg-quiet)', fontSize: 14, margin: 0 }}>Not signed in</p>
-            )}
-          </div>
-
-          <MeasurementsCard />
-
-          <GoalsCard
-            goalForm={goalForm}
-            onFieldChange={handleGoalChange}
-            goalSaveError={goalSaveError}
-            goalSaveSuccess={goalSaveSuccess}
-            onSubmit={handleGoalSubmit}
-            isPending={goalMutation.isPending}
-            measurementSystem={measurementSystem}
-          />
-
-          <div className="glass settings-card" style={{ padding: 24 }}>
-            <div className="eyebrow" style={{ marginBottom: 12 }}>Session</div>
-            <p style={{ color: 'var(--fg-tertiary)', fontSize: 14, margin: '0 0 16px' }}>
-              End your current session on this device.
-            </p>
-            {logoutError && (
-              <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(251,113,133,0.10)', border: '1px solid rgba(251,113,133,0.25)', borderRadius: 12, fontSize: 13, color: 'var(--bad)' }}>
-                {logoutError}
-              </div>
-            )}
-            <button type="button" className="btn" onClick={handleLogout} disabled={loggingOut} style={{ width: '100%', opacity: loggingOut ? 0.7 : 1 }}>
-              {loggingOut ? 'Signing out...' : 'Sign out'}
+      {/* Tab strip */}
+      <div className="settings-tabs" role="tablist">
+        {tabs.map((id) => {
+          const { label, minRole } = TAB_META[id]
+          const allowed = hasRole(user, minRole)
+          return (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={activeTab === id}
+              className={`settings-tab${!allowed ? ' settings-tab-locked' : ''}`}
+              onClick={() => allowed && setActiveTab(id)}
+              title={!allowed ? `Requires ${minRole} role` : undefined}
+            >
+              {label}
             </button>
-          </div>
-        </div>
-
-        <div className="settings-stack settings-secondary">
-          <HaeImportCard />
-          <HaeMetricsCard />
-          <LlmMetricsCard />
-        </div>
+          )
+        })}
       </div>
+
+      {/* Tab panels */}
+      {activeTab === 'account' && (
+        <AccountTab
+          user={user}
+          goalForm={goalForm}
+          onFieldChange={handleGoalChange}
+          goalSaveError={goalSaveError}
+          goalSaveSuccess={goalSaveSuccess}
+          onSubmit={handleGoalSubmit}
+          isPending={goalMutation.isPending}
+          measurementSystem={measurementSystem}
+          loggingOut={loggingOut}
+          logoutError={logoutError}
+          onLogout={handleLogout}
+        />
+      )}
+
+      {activeTab === 'health-import' && (
+        <HealthImportTab isOperator={isOperator} />
+      )}
+
+      {activeTab === 'ai-routing' && (
+        <AiRoutingTab isOperator={isOperator} />
+      )}
     </div>
   )
 }

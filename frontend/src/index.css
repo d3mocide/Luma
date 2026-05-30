@@ -1172,6 +1172,53 @@
   position: relative;
 }
 
+/* Tab strip */
+.settings-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--glass-edge);
+  margin-bottom: 28px;
+  max-width: 1180px;
+}
+
+.settings-tab {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 10px 18px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-quiet);
+  cursor: pointer;
+  transition: color 140ms;
+  white-space: nowrap;
+}
+
+.settings-tab:hover {
+  color: var(--fg-secondary);
+}
+
+.settings-tab[aria-selected='true'] {
+  color: var(--fg-primary);
+}
+
+.settings-tab[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sky-400), var(--sky-300));
+  border-radius: 1px 1px 0 0;
+}
+
+.settings-tab-locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .settings-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
