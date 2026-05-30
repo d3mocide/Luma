@@ -356,12 +356,13 @@ async def coach_stream(
     # Compress thread history if needed
     messages = await _compress_thread_if_needed(thread_id, messages, db)
 
-    # Inject user context snapshot into system prompt
+    # Inject user context snapshot + rolling case file into system prompt
     system_content = _SYSTEM_BASE
     try:
-        from luma.services.coach_context import get_coach_context, format_context_for_prompt
+        from luma.services.coach_context import get_coach_context, get_case_file, format_context_for_prompt
         ctx = await get_coach_context(user_id, db)
-        context_block = format_context_for_prompt(ctx)
+        case_file = await get_case_file(user_id, db)
+        context_block = format_context_for_prompt(ctx, case_file)
         if context_block:
             system_content = _SYSTEM_BASE + "\n\n" + context_block
     except Exception:

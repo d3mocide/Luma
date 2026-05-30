@@ -1,4 +1,4 @@
-"""Build and cache a structured user context blob for the coach agent."""
+"""Build and cache a structured user context blob + rolling case file for the coach agent."""
 from __future__ import annotations
 
 import json
@@ -10,9 +10,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
+# Case file LLM prompt — kept tight to produce a bounded output
+_CASE_FILE_SYSTEM = (
+    "You are a health coach's clinical note-taker. "
+    "You will receive the coach's existing case notes and a transcript of recent conversations. "
+    "Produce updated case notes that incorporate new information. "
+    "Rules: max 350 words; use short bullet points grouped under these headings only: "
+    "Goals, Patterns Identified, Conclusions & Plans, Open Questions. "
+    "Drop outdated or superseded points. Never include dates — just facts and decisions. "
+    "Output plain text only, no markdown headers."
+)
+
+_CASE_FILE_EMPTY_NOTE = "(No prior conversations.)"
+
 
 async def get_coach_context(user_id: str, db: AsyncSession) -> dict:
-    """Return the cached context blob, or build it fresh if stale/missing."""
+    """Return the cached context blob, refreshing if stale (>2h)."""
     row = await db.execute(
         text("SELECT context, updated_at FROM coach_context WHERE user_id = :uid"),
         {"uid": user_id},
@@ -25,23 +38,136 @@ async def get_coach_context(user_id: str, db: AsyncSession) -> dict:
             return cached.context
 
     fresh = await _build_context(user_id, db)
-
-    await db.execute(
-        text("""
-            INSERT INTO coach_context (user_id, context, updated_at)
-            VALUES (:uid, :ctx::jsonb, now())
-            ON CONFLICT (user_id) DO UPDATE
-            SET context = EXCLUDED.context, updated_at = now()
-        """),
-        {"uid": user_id, "ctx": json.dumps(fresh)},
-    )
+    await _upsert_context(user_id, fresh, db)
     await db.commit()
     return fresh
 
 
+async def get_case_file(user_id: str, db: AsyncSession) -> str:
+    """Return the current rolling case file text (may be empty)."""
+    row = await db.execute(
+        text("SELECT case_file FROM coach_context WHERE user_id = :uid"),
+        {"uid": user_id},
+    )
+    r = row.fetchone()
+    if r and r.case_file:
+        return r.case_file
+    return ""
+
+
 async def refresh_coach_context(user_id: str, db: AsyncSession) -> None:
-    """Force-refresh the context blob (called by worker)."""
+    """Force-refresh the structured context blob (called by worker)."""
     fresh = await _build_context(user_id, db)
+    await _upsert_context(user_id, fresh, db)
+    await db.commit()
+
+
+async def update_case_file(user_id: str, db: AsyncSession) -> None:
+    """
+    Pull any coach messages newer than case_file_updated_at, run them through
+    the LLM summarizer, and persist the updated case file.
+
+    Called by the worker every 2 hours and on new-thread creation.
+    """
+    # Fetch current case file and the watermark
+    row = await db.execute(
+        text("SELECT case_file, case_file_updated_at FROM coach_context WHERE user_id = :uid"),
+        {"uid": user_id},
+    )
+    cached = row.fetchone()
+    existing_notes = (cached.case_file if cached and cached.case_file else _CASE_FILE_EMPTY_NOTE)
+    watermark = cached.case_file_updated_at if cached else None
+
+    # Fetch new non-summary user/assistant messages since the watermark
+    if watermark:
+        new_rows = await db.execute(
+            text("""
+                SELECT cm.role, cm.content, cm.created_at, ct.title
+                FROM coach_messages cm
+                JOIN coach_threads ct ON ct.id = cm.thread_id
+                WHERE ct.user_id = :uid
+                  AND cm.is_summary = FALSE
+                  AND cm.role IN ('user', 'assistant')
+                  AND cm.created_at > :watermark
+                ORDER BY cm.created_at
+                LIMIT 200
+            """),
+            {"uid": user_id, "watermark": watermark},
+        )
+    else:
+        new_rows = await db.execute(
+            text("""
+                SELECT cm.role, cm.content, cm.created_at, ct.title
+                FROM coach_messages cm
+                JOIN coach_threads ct ON ct.id = cm.thread_id
+                WHERE ct.user_id = :uid
+                  AND cm.is_summary = FALSE
+                  AND cm.role IN ('user', 'assistant')
+                ORDER BY cm.created_at
+                LIMIT 200
+            """),
+            {"uid": user_id},
+        )
+
+    messages = new_rows.fetchall()
+    if not messages:
+        logger.debug("No new messages for case file update, user %s", user_id)
+        return
+
+    # Format the transcript
+    transcript = "\n\n".join(
+        f"[{m.role.upper()}]: {m.content[:600]}"  # cap each message to avoid blowout
+        for m in messages
+    )
+
+    # Call the LLM to update the case file
+    from luma.config import settings
+    from luma.services.llm_client import call_llm
+
+    try:
+        resp = await call_llm(
+            primary_model=settings.coach_model,
+            fallback_model=settings.coach_fallback_model,
+            messages=[
+                {"role": "system", "content": _CASE_FILE_SYSTEM},
+                {
+                    "role": "user",
+                    "content": (
+                        f"## Existing case notes\n{existing_notes}\n\n"
+                        f"## New conversation transcript\n{transcript}\n\n"
+                        "Update the case notes."
+                    ),
+                },
+            ],
+            temperature=0.2,
+            timeout=45.0,
+        )
+        updated_notes = resp["choices"][0]["message"]["content"].strip()
+    except Exception:
+        logger.exception("Case file LLM call failed for user %s", user_id)
+        return
+
+    # Persist — upsert ensures coach_context row exists first
+    await db.execute(
+        text("""
+            INSERT INTO coach_context (user_id, context, case_file, case_file_updated_at, updated_at)
+            VALUES (:uid, '{}'::jsonb, :notes, now(), now())
+            ON CONFLICT (user_id) DO UPDATE
+            SET case_file = EXCLUDED.case_file,
+                case_file_updated_at = EXCLUDED.case_file_updated_at
+        """),
+        {"uid": user_id, "notes": updated_notes},
+    )
+    await db.commit()
+    logger.info(
+        "Case file updated for user %s (%d new messages, %d chars)",
+        user_id, len(messages), len(updated_notes),
+    )
+
+
+# ── Internal helpers ──────────────────────────────────────────────────────────
+
+async def _upsert_context(user_id: str, ctx: dict, db: AsyncSession) -> None:
     await db.execute(
         text("""
             INSERT INTO coach_context (user_id, context, updated_at)
@@ -49,9 +175,8 @@ async def refresh_coach_context(user_id: str, db: AsyncSession) -> None:
             ON CONFLICT (user_id) DO UPDATE
             SET context = EXCLUDED.context, updated_at = now()
         """),
-        {"uid": user_id, "ctx": json.dumps(fresh)},
+        {"uid": user_id, "ctx": json.dumps(ctx)},
     )
-    await db.commit()
 
 
 async def _build_context(user_id: str, db: AsyncSession) -> dict:
@@ -83,7 +208,7 @@ async def _build_context(user_id: str, db: AsyncSession) -> dict:
     nutr_row = await db.execute(
         text("""
             SELECT
-                AVG((nutrition->>'calories')::float)       AS avg_cal,
+                AVG((nutrition->>'calories')::float)        AS avg_cal,
                 AVG((nutrition->>'saturated_fat_g')::float) AS avg_sat,
                 AVG((nutrition->>'soluble_fiber_g')::float) AS avg_fiber,
                 AVG((nutrition->>'protein_g')::float)       AS avg_protein
@@ -104,7 +229,7 @@ async def _build_context(user_id: str, db: AsyncSession) -> dict:
     # Latest biometrics
     bio_row = await db.execute(
         text("""
-            SELECT DISTINCT ON (metric) metric, value, ts
+            SELECT DISTINCT ON (metric) metric, value
             FROM biometrics
             WHERE user_id = :uid
               AND metric IN ('weight_kg','hrv_ms','rhr_bpm','sleep_score','sleep_duration_min')
@@ -129,20 +254,19 @@ async def _build_context(user_id: str, db: AsyncSession) -> dict:
     if sr and sr.slope is not None:
         ctx["weight_trend_kg_per_week"] = round(sr.slope, 3)
 
-    # Logging streak
+    # Logging consistency
     streak_row = await db.execute(
         text("""
-            SELECT COUNT(DISTINCT DATE(ts AT TIME ZONE 'UTC')) AS streak
-            FROM meal_events
-            WHERE user_id = :uid AND ts >= now() - INTERVAL '30 days'
+            SELECT COUNT(DISTINCT DATE(ts AT TIME ZONE 'UTC')) AS days
+            FROM meal_events WHERE user_id = :uid AND ts >= now() - INTERVAL '30 days'
         """),
         {"uid": user_id},
     )
     sr2 = streak_row.fetchone()
     if sr2:
-        ctx["recent_logging_days_30d"] = sr2.streak
+        ctx["recent_logging_days_30d"] = sr2.days
 
-    # Last 3 alerts with narratives
+    # Last 3 alerts
     alert_rows = await db.execute(
         text("""
             SELECT rule_id, severity, narrative, ts
@@ -155,7 +279,7 @@ async def _build_context(user_id: str, db: AsyncSession) -> dict:
     alerts = []
     for r in alert_rows:
         try:
-            narr = json.loads(r.narrative) if isinstance(r.narrative, str) else r.narrative
+            narr = json.loads(r.narrative) if isinstance(r.narrative, str) else (r.narrative or {})
         except (TypeError, json.JSONDecodeError):
             narr = {}
         alerts.append({
@@ -170,11 +294,8 @@ async def _build_context(user_id: str, db: AsyncSession) -> dict:
     return ctx
 
 
-def format_context_for_prompt(ctx: dict) -> str:
-    """Render the context blob as a concise system prompt addendum."""
-    if not ctx:
-        return ""
-
+def format_context_for_prompt(ctx: dict, case_file: str = "") -> str:
+    """Render context blob + case file as a system prompt addendum."""
     lines = ["## User snapshot (auto-updated every 2 hours)"]
 
     if goals := ctx.get("goals"):
@@ -222,8 +343,13 @@ def format_context_for_prompt(ctx: dict) -> str:
         lines.append(f"**Logging consistency:** {ctx['recent_logging_days_30d']}/30 days logged")
 
     if alerts := ctx.get("recent_alerts"):
-        lines.append("**Recent Luma alerts:**")
-        for a in alerts:
-            lines.append(f"  - [{a['severity']}] {a['headline']} ({a['ts'][:10]})")
+        lines.append("**Recent alerts:** " + "; ".join(
+            f"[{a['severity']}] {a['headline']}" for a in alerts
+        ))
+
+    # Rolling case file — injected as a separate section
+    if case_file and case_file != _CASE_FILE_EMPTY_NOTE:
+        lines.append("\n## Coaching history (rolling summary)")
+        lines.append(case_file)
 
     return "\n".join(lines)

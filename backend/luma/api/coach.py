@@ -38,6 +38,17 @@ async def create_thread(
     db.add(thread)
     await db.commit()
     await db.refresh(thread)
+
+    # Enqueue a case file update — the previous thread just "closed"
+    try:
+        from arq import create_pool
+        from luma.worker.settings import WorkerSettings
+        pool = await create_pool(WorkerSettings.redis_settings)
+        await pool.enqueue_job("update_case_file_task", str(user.id))
+        await pool.close()
+    except Exception:
+        pass  # non-critical — worker cron will catch it anyway
+
     return {"id": str(thread.id), "title": thread.title, "created_at": thread.created_at.isoformat()}
 
 
