@@ -73,7 +73,6 @@ export default function CoachRoute() {
     setMessages((prev) => [...prev, { role: 'user', content: text }])
     setStreaming(true)
 
-    const assistantIndex = messages.length + 1
     setMessages((prev) => [...prev, { role: 'assistant', content: '', streaming: true, toolCalls: [] }])
 
     try {
@@ -214,7 +213,7 @@ export default function CoachRoute() {
                       onClick={() => loadThread(t.id)}
                       style={{
                         display: 'block', width: '100%', textAlign: 'left',
-                        padding: '8px 12px', borderRadius: 8, background: 'none', border: 'none', cursor: 'pointer',
+                        padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
                         color: t.id === activeThreadId ? 'var(--fg-primary)' : 'var(--fg-secondary)',
                         fontSize: 13,
                         background: t.id === activeThreadId ? 'rgba(255,255,255,0.06)' : 'none',
