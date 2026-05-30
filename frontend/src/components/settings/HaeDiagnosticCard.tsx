@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import { type HaeDiagnostic, type HaeDiagnosticStoredMetric, formatMetricsDate } from './types'
+import { type HaeDiagnostic, type HaeDiagnosticStoredMetric } from './types'
 
 function MetricRow({ row }: { row: HaeDiagnosticStoredMetric }) {
   const latestVal = row.latest_value != null
