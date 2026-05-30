@@ -189,9 +189,35 @@ class CoachMessage(Base):
     role = Column(Text, nullable=False)
     content = Column(Text, nullable=False)
     tool_calls = Column(JSONB)
+    is_summary = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     thread = relationship("CoachThread", back_populates="messages")
+
+
+class CoachContext(Base):
+    __tablename__ = "coach_context"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    context = Column(JSONB, nullable=False, default=dict)
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User")
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    ts = Column(DateTime(timezone=True), primary_key=True, server_default=func.now())
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    rule_id = Column(Text, nullable=False)
+    severity = Column(Text, nullable=False)
+    payload = Column(JSONB, nullable=False, default=dict)
+    narrative = Column(Text)
+    status = Column(Text, nullable=False, server_default=text("'open'"))
+
+    user = relationship("User")
 
 
 class MealEvent(Base):

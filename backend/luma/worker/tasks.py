@@ -15,5 +15,60 @@ async def ingest_hae_task(ctx: dict, payload: dict[str, Any], user_id: str | Non
 
 
 async def run_alerts(ctx: dict) -> None:
-    """Scheduled task: run alert engine. Phase 2."""
-    logger.info("Alert engine run skipped — Phase 2 not yet implemented")
+    """Scheduled task: run alert engine every 30 minutes."""
+    from luma.alerts.engine import run_alert_engine
+    logger.info("Alert engine starting")
+    await run_alert_engine()
+    logger.info("Alert engine complete")
+
+
+async def update_case_file_task(ctx: dict, user_id: str) -> None:
+    """On-demand case file update triggered when a user starts a new thread."""
+    from luma.db.session import AsyncSessionLocal
+    from luma.services.coach_context import update_case_file
+
+    logger.info("Case file update triggered for user %s", user_id)
+    async with AsyncSessionLocal() as db:
+        await update_case_file(user_id, db)
+
+
+async def update_all_case_files(ctx: dict) -> None:
+    """Scheduled task: update rolling case files for all users every 2 hours."""
+    from sqlalchemy import text
+    from luma.db.session import AsyncSessionLocal
+    from luma.services.coach_context import update_case_file
+
+    logger.info("Case file refresh starting")
+    async with AsyncSessionLocal() as db:
+        user_rows = await db.execute(text("SELECT id FROM users"))
+        user_ids = [str(r.id) for r in user_rows]
+
+    for user_id in user_ids:
+        try:
+            async with AsyncSessionLocal() as db:
+                await update_case_file(user_id, db)
+        except Exception:
+            logger.exception("Case file update failed for user %s", user_id)
+
+    logger.info("Case file refresh complete (%d users)", len(user_ids))
+
+
+async def refresh_all_coach_contexts(ctx: dict) -> None:
+    """Scheduled task: refresh coach context blobs for all users every 2 hours."""
+    from sqlalchemy import text
+    from luma.db.session import AsyncSessionLocal
+    from luma.services.coach_context import refresh_coach_context
+
+    logger.info("Coach context refresh starting")
+    async with AsyncSessionLocal() as db:
+        user_rows = await db.execute(text("SELECT id FROM users"))
+        user_ids = [str(r.id) for r in user_rows]
+
+    for user_id in user_ids:
+        try:
+            async with AsyncSessionLocal() as db:
+                await refresh_coach_context(user_id, db)
+        except Exception:
+            logger.exception("Coach context refresh failed for user %s", user_id)
+
+    logger.info("Coach context refresh complete (%d users)", len(user_ids))

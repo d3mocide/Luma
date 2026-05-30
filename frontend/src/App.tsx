@@ -8,6 +8,7 @@ import TrendsRoute from './routes/trends'
 import CoachRoute from './routes/coach'
 import SettingsRoute from './routes/settings'
 import LogRoute from './routes/log'
+import { OfflineBanner, InstallPrompt } from './components/PwaPrompts'
 
 export default function App() {
   const theme = useUIStore((s) => s.theme)
@@ -18,6 +19,8 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <OfflineBanner/>
+      <InstallPrompt/>
       <Routes>
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/today" replace />} />

@@ -260,6 +260,75 @@ async def delete_meal(
     return {"status": "ok", "message": "Meal log deleted successfully"}
 
 
+@router.post("/meal/photo")
+async def log_meal_photo(
+    current_user: CurrentUser,
+    file: UploadFile = File(...),
+) -> dict:
+    image_bytes = await file.read()
+    if not image_bytes:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty image file")
+
+    import base64
+    from luma.config import settings
+    from luma.services.llm_client import call_llm
+
+    b64 = base64.b64encode(image_bytes).decode()
+    content_type = file.content_type or "image/jpeg"
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{content_type};base64,{b64}"},
+                },
+                {
+                    "type": "text",
+                    "text": (
+                        "Identify all food items visible in this image. "
+                        "Return a minified JSON array of food items with the same schema as a meal log: "
+                        '[{"name":"...","quantity":1.0,"unit":"serving","estimated_weight_g":200.0,'
+                        '"nutrients":{"calories":0,"saturated_fat_g":0,"soluble_fiber_g":0,"protein_g":0,'
+                        '"carbohydrates_g":0,"fat_g":0,"fiber_g":0,"sodium_mg":0}}]. '
+                        "No markdown, no preamble."
+                    ),
+                },
+            ],
+        }
+    ]
+
+    import re
+    try:
+        resp = await call_llm(
+            primary_model=settings.vision_classifier_model,
+            fallback_model=settings.vision_classifier_fallback_model,
+            messages=messages,
+            temperature=0.1,
+            timeout=60.0,
+        )
+        content = resp["choices"][0]["message"]["content"].strip()
+        content = re.sub(r"^```(?:json)?\n?", "", content)
+        content = re.sub(r"\n?```$", "", content).strip()
+        import json
+        extracted_items = json.loads(content)
+        if not isinstance(extracted_items, list):
+            extracted_items = []
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Vision food extraction failed")
+        extracted_items = []
+
+    from luma.services.nutrition import aggregate_items
+    return {
+        "raw_input": f"[photo: {file.filename}]",
+        "items": extracted_items,
+        "nutrition": aggregate_items(extracted_items),
+        "confidence": 0.75,
+    }
+
+
 @router.get("/meals")
 async def list_meals(
     db: DbDep,
