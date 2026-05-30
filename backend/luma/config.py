@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     vision_classifier_model: str = "gemini/gemini-2.5-flash"
     meal_planner_model: str = "anthropic/claude-sonnet-4-5"
     coach_model: str = "gemini/gemini-2.5-flash"
-    insight_narrator_model: str = "anthropic/claude-sonnet-4-5"
+    insight_narrator_model: str = "gemini/gemini-2.5-flash"
 
     # Optional fallback routes — used if the primary call fails (e.g. local model down).
     # Leave blank to disable fallback for that role.

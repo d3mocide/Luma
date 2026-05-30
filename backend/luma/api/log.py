@@ -278,6 +278,14 @@ async def log_meal_photo(
 
     messages = [
         {
+            "role": "system",
+            "content": (
+                "You are Luma's food vision classifier. "
+                "Identify food items in the image and return structured nutrition data. "
+                "Always respond with a valid JSON array only — no markdown, no commentary."
+            ),
+        },
+        {
             "role": "user",
             "content": [
                 {
@@ -288,18 +296,31 @@ async def log_meal_photo(
                     "type": "text",
                     "text": (
                         "Identify all food items visible in this image. "
-                        "Return a minified JSON array of food items with the same schema as a meal log: "
+                        "Return a JSON array of food items with this schema: "
                         '[{"name":"...","quantity":1.0,"unit":"serving","estimated_weight_g":200.0,'
-                        '"nutrients":{"calories":0,"saturated_fat_g":0,"soluble_fiber_g":0,"protein_g":0,'
-                        '"carbohydrates_g":0,"fat_g":0,"fiber_g":0,"sodium_mg":0}}]. '
-                        "No markdown, no preamble."
+                        '"nutrients":{"calories":300,"saturated_fat_g":2.0,"soluble_fiber_g":1.0,'
+                        '"protein_g":10.0,"carbohydrates_g":40.0,"fat_g":8.0,"fiber_g":3.0,"sodium_mg":400}}]. '
+                        "Fill in all nutrient values — do not leave them as 0. No markdown, no preamble."
                     ),
                 },
             ],
-        }
+        },
     ]
 
     import re
+    import json as _json
+    import logging as _logging
+    _logger = _logging.getLogger(__name__)
+
+    def _parse_vision_json(raw: str) -> list | None:
+        raw = re.sub(r"^```(?:json)?\n?", "", raw)
+        raw = re.sub(r"\n?```$", "", raw).strip()
+        try:
+            parsed = _json.loads(raw)
+            return parsed if isinstance(parsed, list) else None
+        except _json.JSONDecodeError:
+            return None
+
     try:
         resp = await call_llm(
             primary_model=settings.vision_classifier_model,
@@ -309,15 +330,29 @@ async def log_meal_photo(
             timeout=60.0,
         )
         content = resp["choices"][0]["message"]["content"].strip()
-        content = re.sub(r"^```(?:json)?\n?", "", content)
-        content = re.sub(r"\n?```$", "", content).strip()
-        import json
-        extracted_items = json.loads(content)
-        if not isinstance(extracted_items, list):
-            extracted_items = []
+        extracted_items = _parse_vision_json(content)
+
+        if extracted_items is None:
+            _logger.warning("Vision classifier returned invalid JSON; attempting correction retry")
+            correction_messages = messages + [
+                {"role": "assistant", "content": content},
+                {"role": "user", "content": "That response was not valid JSON. Return only the JSON array, no other text."},
+            ]
+            retry_resp = await call_llm(
+                primary_model=settings.vision_classifier_model,
+                fallback_model=settings.vision_classifier_fallback_model,
+                messages=correction_messages,
+                temperature=0.1,
+                timeout=30.0,
+            )
+            retry_content = retry_resp["choices"][0]["message"]["content"].strip()
+            extracted_items = _parse_vision_json(retry_content)
+            if extracted_items is None:
+                _logger.error("Vision classifier could not produce valid JSON after retry: %s", content[:200])
+                extracted_items = []
+
     except Exception:
-        import logging
-        logging.getLogger(__name__).exception("Vision food extraction failed")
+        _logger.exception("Vision food extraction failed")
         extracted_items = []
 
     from luma.services.nutrition import aggregate_items

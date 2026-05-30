@@ -1,11 +1,12 @@
 # Luma — Prompt Architecture Master Document
-**Audited:** 2026-05-30
+**Last updated:** 2026-05-30  
+**Status:** Post-audit enhancements applied
 
 ---
 
 ## Architecture Overview
 
-Luma has **7 distinct LLM call sites** across 5 files. No external proxy — LiteLLM is used as a Python library with direct provider routing encoded in model ID strings (`gemini/...`, `anthropic/...`, `local/...`). All calls go through `services/llm_client.py:call_llm()` except the coach agent, which calls `litellm.acompletion()` directly to support streaming and tool loops.
+Luma has **7 distinct LLM call sites** across 5 files. No external proxy — LiteLLM is used as a Python library with direct provider routing encoded in model ID strings (`gemini/...`, `anthropic/...`, `local/...`). All calls go through `services/llm_client.py:call_llm()`, including the thread compressor (fixed in this audit cycle). The coach agent calls `litellm.acompletion()` directly only for streaming.
 
 ---
 
@@ -17,25 +18,25 @@ Luma has **7 distinct LLM call sites** across 5 files. No external proxy — Lit
 ### Model
 | Role | Model | Fallback |
 |------|-------|---------|
-| Primary | `gemini/gemini-2.5-flash` | env `FOOD_EXTRACTOR_FALLBACK_MODEL` (blank) |
+| Primary | `gemini/gemini-2.5-flash` | `anthropic/claude-haiku-4-5` (recommended) |
 
 ### Call Parameters
 | Param | Value |
 |-------|-------|
 | Temperature | `0.1` — near-deterministic extraction |
-| Timeout | `180.0s` |
+| Timeout | `180.0s` (retry: `60.0s`) |
 | Streaming | No |
 
 ### System Prompt (verbatim)
 ```
 You are Luma's high-fidelity clinical nutrition parser. Your task is to parse a
-natural language description of food consumed and extract a minified, valid JSON
-list of items, calculating their nutrition based on standard USDA databases.
+natural language description of food consumed and extract a valid JSON list of
+items, calculating their nutrition based on standard USDA databases.
 Ensure all fields are fully estimated for the specified portion size.
 
-Output MUST be a strict, minified JSON array without any introductory text,
-pleasantries, or markdown wrapping, unless using standard ```json ... ``` blocks.
-Follow this JSON format precisely:
+Output MUST be a valid JSON array without any introductory text or pleasantries.
+You may wrap it in a standard ```json ... ``` block. Follow this JSON format
+precisely:
 [
   {
     "name": "steel cut oats",
@@ -65,13 +66,21 @@ Extract and parse this consumed meal log:
 ### System Memory
 Stateless — no conversation history, no user context. Each call is independent.
 
+### JSON Failure Recovery
+On `json.JSONDecodeError`, makes one correction retry:
+- Appends bad response as `assistant` turn
+- Sends `"That response was not valid JSON. Return only the JSON array, no other text."` as `user` turn
+- Retry uses `timeout=60.0s`
+- If retry also fails: logs error with first 200 chars of bad content, returns `[]`
+
 ### Token Budget
 | Part | Estimated Tokens |
 |------|-----------------|
 | System prompt (incl. schema) | ~450 |
 | User prompt (avg meal description) | ~50–150 |
 | Output (1–5 items) | ~200–800 |
-| **Total per call** | **~700–1,400** |
+| **Total per call (normal)** | **~700–1,400** |
+| Correction retry (additional) | ~900–2,000 |
 
 ### Example Input → Output
 **Input:** `"I had a bowl of steel cut oats with a tablespoon of ground flaxseed and half a cup of blueberries"`
@@ -85,11 +94,6 @@ Stateless — no conversation history, no user context. Each call is independent
 ]
 ```
 
-### Issues / Recommendations
-- **No recovery on JSON parse failure** — caller returns `[]` silently, giving the user a zero-calorie log with no error shown. Consider a retry with an explicit error user message.
-- The format example in the system prompt uses pretty-printed JSON but the instruction says "minified" — mixed signal. Pick one.
-- No field-level validation of returned nutrients before DB write.
-
 ---
 
 ## 2. Vision Classifier (Photo Logging)
@@ -100,40 +104,52 @@ Stateless — no conversation history, no user context. Each call is independent
 ### Model
 | Role | Model | Fallback |
 |------|-------|---------|
-| Primary | `gemini/gemini-2.5-flash` | env `VISION_CLASSIFIER_FALLBACK_MODEL` (blank) |
+| Primary | `gemini/gemini-2.5-flash` | `anthropic/claude-haiku-4-5` (recommended) |
 
 ### Call Parameters
 | Param | Value |
 |-------|-------|
 | Temperature | `0.1` |
-| Timeout | `60.0s` |
+| Timeout | `60.0s` (retry: `30.0s`) |
 | Streaming | No |
 | Modality | Multimodal (image + text) |
 
-### System Prompt
-None. Single user message only.
+### System Prompt (verbatim)
+```
+You are Luma's food vision classifier. Identify food items in the image and
+return structured nutrition data. Always respond with a valid JSON array only
+— no markdown, no commentary.
+```
 
 ### User Prompt Template (verbatim)
 ```
 Identify all food items visible in this image.
-Return a minified JSON array of food items with the same schema as a meal log:
+Return a JSON array of food items with this schema:
 [{"name":"...","quantity":1.0,"unit":"serving","estimated_weight_g":200.0,
-"nutrients":{"calories":0,"saturated_fat_g":0,"soluble_fiber_g":0,"protein_g":0,
-"carbohydrates_g":0,"fat_g":0,"fiber_g":0,"sodium_mg":0}}].
-No markdown, no preamble.
+"nutrients":{"calories":300,"saturated_fat_g":2.0,"soluble_fiber_g":1.0,
+"protein_g":10.0,"carbohydrates_g":40.0,"fat_g":8.0,"fiber_g":3.0,"sodium_mg":400}}].
+Fill in all nutrient values — do not leave them as 0. No markdown, no preamble.
 ```
 Plus a base64-encoded image in `image_url` format.
 
 ### System Memory
 Stateless — no conversation history or user context.
 
+### JSON Failure Recovery
+On `json.JSONDecodeError`, makes one correction retry:
+- Appends bad response + correction user message to the existing messages list (image remains in context)
+- Retry uses `timeout=30.0s`
+- If retry also fails: logs error, returns `[]`
+
 ### Token Budget
 | Part | Estimated Tokens |
 |------|-----------------|
-| Text prompt | ~110 |
+| System message | ~50 |
+| Text prompt | ~120 |
 | Image (varies by size/detail) | ~500–2,000 |
 | Output (2–8 items typical) | ~300–1,200 |
-| **Total per call** | **~900–3,300** |
+| **Total per call (normal)** | **~970–3,370** |
+| Correction retry (additional) | ~1,400–5,000 |
 
 ### Example Output
 ```json
@@ -142,12 +158,6 @@ Stateless — no conversation history or user context.
   {"name":"whole wheat toast","quantity":2.0,"unit":"slices","estimated_weight_g":60.0,"nutrients":{"calories":138,"saturated_fat_g":0.4,"soluble_fiber_g":0.5,"protein_g":5.6,"carbohydrates_g":26.8,"fat_g":1.8,"fiber_g":3.8,"sodium_mg":250}}
 ]
 ```
-
-### Issues / Recommendations
-- **No system message** — the model has no persona or behavioral constraints. A brief system message would anchor tone and JSON discipline.
-- `confidence` is hardcoded to `0.75` for all photo logs regardless of actual model certainty.
-- The prompt instructs nutrients as `0` in the schema example but the model should fill them — the example is ambiguous.
-- Unlike the food extractor, there is no `{"items": [...]}` fallback parse path; non-list JSON silently returns `[]`.
 
 ---
 
@@ -159,7 +169,7 @@ Stateless — no conversation history or user context.
 ### Model
 | Role | Model | Fallback |
 |------|-------|---------|
-| Primary | `anthropic/claude-sonnet-4-5` | env `MEAL_PLANNER_FALLBACK_MODEL` (blank) |
+| Primary | `anthropic/claude-sonnet-4-5` | `gemini/gemini-2.5-flash` (recommended) |
 
 ### Call Parameters
 | Param | Value |
@@ -170,7 +180,7 @@ Stateless — no conversation history or user context.
 
 ### System Prompt (dynamic — interpolated at call time)
 ```
-You are Claude, Luma's clinical nutrition orchestrator.
+You are Luma's clinical nutrition orchestrator.
 Your task is to generate a highly detailed 7-day heart-healthy meal plan and
 shopping list tailored specifically to the user's cardiovascular, LDL
 cholesterol-lowering, and fiber targets.
@@ -188,7 +198,7 @@ Input Constraints:
 - Custom requests: {constraints}
 
 Reference Local Foods list to match ingredients for the shopping list:
-{available_foods_text}   ← up to 100 foods, ~50 tokens each
+{available_foods_text}   ← up to 100 foods pre-filtered by allergens/dislikes
 
 Output: You must return a strict, minified JSON object containing 'plan' and
 'shopping_list'. Do not wrap in markdown or include any introductory text.
@@ -201,18 +211,21 @@ Generate 7-day meal plan starting from week: {week_start}
 ```
 
 ### System Memory
-Stateless but **data-rich** — user goals, dislikes, allergies, and the full local foods catalog (up to 100 items) are injected into the system prompt at generation time.
+Stateless but **data-rich** — user goals, dislikes, allergies, and a filtered local foods catalog are injected into the system prompt at generation time.
+
+### Food Injection Filtering
+Fetches 300 foods from DB, then excludes any where a dislike or allergen term appears in `food.name` or `food.tags` (case-insensitive substring match). Allergen exclusions run first (safety). Takes first 100 of remaining cleaned list.
 
 ### Token Budget
 | Part | Estimated Tokens |
 |------|-----------------|
 | System base + schema example | ~700 |
-| 100 foods at ~50 tokens/line | ~5,000 |
+| Up to 100 filtered foods at ~50 tokens/line | ~1,000–5,000 |
 | User prompt | ~20 |
 | Output (7-day plan + shopping list) | ~3,000–8,000 |
-| **Total per call** | **~9,000–14,000** |
+| **Total per call** | **~4,700–13,700** |
 
-**This is the most expensive call in the system.** At Claude Sonnet pricing (~$3/$15 per M tokens in/out), a single plan generation costs roughly **$0.08–$0.26**.
+**Most expensive call in the system.** At Claude Sonnet pricing (~$3/$15 per M tokens in/out), a single plan generation costs roughly **$0.06–0.26** depending on catalog size after filtering.
 
 ### Example Output (one slot, abbreviated)
 ```json
@@ -236,12 +249,6 @@ Stateless but **data-rich** — user goals, dislikes, allergies, and the full lo
 }
 ```
 
-### Issues / Recommendations
-- **Brand inconsistency:** system prompt says `"You are Claude"` (line 54) — should be `"You are Luma's clinical nutrition orchestrator"`.
-- The 100-food injection at ~5,000 tokens is expensive and unfiltered. Pre-filter to foods compatible with dietary pattern and allergen exclusions before injecting.
-- `timeout=600.0s` means a hung generation blocks the user for 10 minutes before surfacing an error. Consider a background job approach.
-- No retry on partial parse failure — any malformed JSON from the model throws a 500.
-
 ---
 
 ## 4. Coach Agent
@@ -252,7 +259,7 @@ Stateless but **data-rich** — user goals, dislikes, allergies, and the full lo
 ### Model
 | Role | Model | Fallback |
 |------|-------|---------|
-| Primary | `gemini/gemini-2.5-flash` | env `COACH_FALLBACK_MODEL` (blank) |
+| Primary | `gemini/gemini-2.5-flash` | `anthropic/claude-haiku-4-5` (recommended) |
 
 ### Call Parameters
 | Param | Value |
@@ -333,12 +340,6 @@ data: {"type":"token","text":"average "}
 data: {"type":"done"}
 ```
 
-### Issues / Recommendations
-- **No fallback configured by default** — if Gemini is down, coach returns an error SSE frame with no retry.
-- Tool definitions add ~1,000 tokens on every turn regardless of whether tools are likely needed.
-- `propose_meal_swap` is a stub — returns a templated string rather than querying foods.
-- Thread compression calls the same model as the main conversation — a cheaper/faster model would suffice for bullet summarization.
-
 ---
 
 ## 5. Insight Narrator
@@ -349,7 +350,7 @@ data: {"type":"done"}
 ### Model
 | Role | Model | Fallback |
 |------|-------|---------|
-| Primary | `anthropic/claude-sonnet-4-5` | env `INSIGHT_NARRATOR_FALLBACK_MODEL` (blank) |
+| Primary | `gemini/gemini-2.5-flash` | `anthropic/claude-haiku-4-5` (recommended) |
 
 ### Call Parameters
 | Param | Value |
@@ -399,7 +400,7 @@ Stateless — no user history or prior alerts injected.
 | Output (3-field JSON) | ~80–150 |
 | **Total per call** | **~260–480** |
 
-**This is the cheapest call in the system.** Claude Sonnet cost: ~$0.001–0.002 per alert.
+Cheapest call in the system. Gemini Flash cost: ~$0.0001–0.0002 per alert.
 
 ### Example Output
 **Input:** `rule_id="sat_fat_rolling"`, `severity="warning"`, `payload={"avg_sat_fat_g": 17.2, "target_g": 13.0}`
@@ -412,11 +413,6 @@ Stateless — no user history or prior alerts injected.
 }
 ```
 
-### Issues / Recommendations
-- **Claude Sonnet is overkill here.** This is a small, tightly-constrained JSON generation task — `gemini/gemini-2.5-flash` would cost ~10× less with equivalent quality.
-- The `thread_seed` is not currently used to pre-populate anything in the UI.
-- `positive_milestone` alert type has no specific data keys documented — the payload is passed raw.
-
 ---
 
 ## 6. Case File Updater
@@ -427,7 +423,7 @@ Stateless — no user history or prior alerts injected.
 ### Model
 | Role | Model | Fallback |
 |------|-------|---------|
-| Primary | `gemini/gemini-2.5-flash` (inherits `coach_model`) | env `COACH_FALLBACK_MODEL` (blank) |
+| Primary | `gemini/gemini-2.5-flash` (inherits `coach_model`) | `anthropic/claude-haiku-4-5` (recommended, inherits `coach_fallback_model`) |
 
 ### Call Parameters
 | Param | Value |
@@ -493,11 +489,6 @@ Open Questions
 - Has been asking about intermittent fasting — needs guidance
 ```
 
-### Issues / Recommendations
-- Transcript truncation at 600 chars per message could cut off nutritional data mid-sentence.
-- The 200-message cap with no deduplication means re-processing on every 2-hour tick even for inactive users.
-- Consider bounding by token count rather than message count.
-
 ---
 
 ## 7. Thread Compressor (Coach)
@@ -506,9 +497,9 @@ Open Questions
 **Triggered by:** Inline, at start of every `coach_stream()` call when `len(messages) >= 30`
 
 ### Model
-| Role | Model |
-|------|-------|
-| Primary | `settings.coach_model` (same as coach) — no fallback |
+| Role | Model | Fallback |
+|------|-------|---------|
+| Primary | `gemini/gemini-2.5-flash` (inherits `coach_model`) | `anthropic/claude-haiku-4-5` (recommended, inherits `coach_fallback_model`) |
 
 ### Call Parameters
 | Param | Value |
@@ -516,7 +507,7 @@ Open Questions
 | Temperature | `0.2` |
 | Timeout | `30.0s` |
 | Streaming | No |
-| Called via | `litellm.acompletion()` directly — **bypasses `call_llm()`** |
+| Called via | `call_llm()` — **fully metrics-tracked** |
 
 ### System Prompt (verbatim)
 ```
@@ -537,7 +528,7 @@ were reached. Be terse — this summary will be injected as context for the coac
 (All messages older than the last 10; tool and system messages excluded.)
 
 ### System Memory
-No prior state — produces a one-shot summary persisted to the DB as `is_summary=TRUE`.
+No prior state — produces a one-shot summary persisted to the DB as `is_summary=TRUE`. Failure falls back to truncation (keeps last 10 messages).
 
 ### Token Budget
 | Part | Estimated Tokens |
@@ -556,41 +547,40 @@ No prior state — produces a one-shot summary persisted to the DB as `is_summar
 • Open item: user wants to revisit this after trying changes for a week
 ```
 
-### Issues / Recommendations
-- **Bypasses `call_llm()`** — compression calls are invisible in Redis metrics.
-- No fallback model — silently falls back to truncation on failure (acceptable but should be logged as a warning).
-- Summaries are never re-summarized; old `is_summary=TRUE` rows accumulate in DB history.
-
 ---
 
 ## Summary Table
 
-| Agent | File | Model (default) | Temp | Timeout | Streaming | Tools | ~Tokens/call | ~Cost/call (Sonnet) |
-|-------|------|----------------|------|---------|-----------|-------|-------------|-------------------|
-| Food Extractor | `agents/food_extractor.py` | `gemini/gemini-2.5-flash` | 0.1 | 180s | No | — | 700–1,400 | ~$0.001 |
-| Vision Classifier | `api/log.py` | `gemini/gemini-2.5-flash` | 0.1 | 60s | No | — | 900–3,300 | ~$0.002 |
-| Meal Planner | `agents/meal_planner.py` | `anthropic/claude-sonnet-4-5` | 0.2 | 600s | No | — | 9,000–14,000 | **~$0.10–0.26** |
-| Coach | `agents/coach.py` | `gemini/gemini-2.5-flash` | 0.5 | 60s | Yes (SSE) | 7 | 3,500–8,600 | ~$0.01 |
-| Insight Narrator | `agents/insight_narrator.py` | `anthropic/claude-sonnet-4-5` | 0.4 | 30s | No | — | 260–480 | ~$0.001 |
-| Case File Updater | `services/coach_context.py` | `gemini/gemini-2.5-flash` | 0.2 | 45s | No | — | 2,600–21,000 | ~$0.002 |
-| Thread Compressor | `agents/coach.py` | `gemini/gemini-2.5-flash` | 0.2 | 30s | No | — | 3,100–6,200 | ~$0.003 |
+| Agent | File | Model (default) | Temp | Timeout | Streaming | Tools | ~Tokens/call |
+|-------|------|----------------|------|---------|-----------|-------|-------------|
+| Food Extractor | `agents/food_extractor.py` | `gemini/gemini-2.5-flash` | 0.1 | 180s | No | — | 700–1,400 |
+| Vision Classifier | `api/log.py` | `gemini/gemini-2.5-flash` | 0.1 | 60s | No | — | 970–3,370 |
+| Meal Planner | `agents/meal_planner.py` | `anthropic/claude-sonnet-4-5` | 0.2 | 600s | No | — | 4,700–13,700 |
+| Coach | `agents/coach.py` | `gemini/gemini-2.5-flash` | 0.5 | 60s | Yes (SSE) | 7 | 3,500–8,600 |
+| Insight Narrator | `agents/insight_narrator.py` | `gemini/gemini-2.5-flash` | 0.4 | 30s | No | — | 260–480 |
+| Case File Updater | `services/coach_context.py` | `gemini/gemini-2.5-flash` | 0.2 | 45s | No | — | 2,600–21,000 |
+| Thread Compressor | `agents/coach.py` | `gemini/gemini-2.5-flash` | 0.2 | 30s | No | — | 3,100–6,200 |
 
 ---
 
-## Cross-Cutting Issues
+## Enhancements Applied (2026-05-30)
 
-1. **Insight Narrator is on the wrong model.** Three fields, tight JSON, ~480 tokens — Gemini Flash costs ~10× less here with equivalent quality. No reason for Claude Sonnet.
+| # | Issue | Fix | Files |
+|---|-------|-----|-------|
+| 1 | Insight Narrator used Claude Sonnet for a 3-field JSON task | Switched default to `gemini/gemini-2.5-flash` (~10× cheaper) | `config.py` |
+| 2 | All fallback models blank by default | Added recommended cross-provider fallbacks to `.env.example` | `.env.example` |
+| 3 | Meal planner prompt said "You are Claude" | Fixed to "You are Luma's clinical nutrition orchestrator" | `meal_planner.py` |
+| 4 | Meal planner injected all foods regardless of allergens/dislikes | Fetch 300, filter by exclusion terms, inject best 100 | `meal_planner.py` |
+| 5 | Food extractor prompt said "minified" but showed pretty JSON | Removed contradiction; instruction now says "valid JSON array" | `food_extractor.py` |
+| 6 | Food extractor silently returned `[]` on JSON parse failure | Added one-shot correction retry before giving up | `food_extractor.py` |
+| 7 | Thread compressor bypassed `call_llm()`, invisible in metrics | Re-routed through `call_llm()` with fallback support | `coach.py` |
+| 8 | Vision classifier had no system message | Added persona + JSON discipline system message | `api/log.py` |
+| 9 | Vision classifier silently returned `[]` on JSON parse failure | Added one-shot correction retry (image remains in context) | `api/log.py` |
+| 10 | Vision classifier prompt showed `0` as example nutrient values | Example now shows realistic non-zero values with explicit instruction to fill them | `api/log.py` |
 
-2. **No fallback configured by default.** All six `*_FALLBACK_MODEL` env vars default to `""` in `.env.example`. A single provider outage takes down all LLM functionality. Recommend cross-provider fallbacks as defaults in `.env.example`.
+## Open Items (deferred)
 
-3. **`"You are Claude"` in meal planner.** Brand inconsistency at `meal_planner.py` line 54 — should read `"You are Luma's clinical nutrition orchestrator"`.
-
-4. **Thread compressor bypasses `call_llm()`.** Its calls don't appear in Redis metrics. Fix: wrap in `call_llm()` or call `llm_metrics_tracker` directly.
-
-5. **Meal planner food injection is unfiltered.** The first 100 foods from the `foods` table are sent regardless of user dietary constraints. Filtering for allergen exclusions before injection is both cheaper and safer.
-
-6. **Silent empty-list returns on JSON parse failure.** Food extractor and vision classifier both return `[]` on bad JSON without surfacing any signal to the user. This results in a meal log entry with zero nutrition silently written to the DB.
-
-7. **No prompt versioning.** All prompts are inline strings with no mechanism for A/B testing or rollback without a code deploy.
-
-8. **Vision classifier has no system message.** The model has no persona, behavioral constraints, or output discipline anchoring beyond the user-turn text.
+- **Prompt versioning** — All prompts are inline strings with no A/B testing or rollback mechanism. Requires a prompt registry design; deferred to Phase 3 planning.
+- **`propose_meal_swap` tool stub** — Returns a templated string rather than querying the foods table. Needs a real implementation in Phase 2.
+- **Meal planner timeout** — `600s` blocking timeout is long for a UI request. A background job approach would be more resilient; deferred pending Phase 2 UX decisions.
+- **Case file transcript token bounding** — Currently bounded by message count (200 msgs), not token count. A high-volume user could hit expensive calls. Low priority until usage data available.

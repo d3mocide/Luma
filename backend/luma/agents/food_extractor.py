@@ -16,10 +16,10 @@ async def extract_foods_from_text(text: str) -> List[Dict[str, Any]]:
     system_prompt = (
         "You are Luma's high-fidelity clinical nutrition parser. "
         "Your task is to parse a natural language description of food consumed and extract "
-        "a minified, valid JSON list of items, calculating their nutrition based on standard USDA databases. "
+        "a valid JSON list of items, calculating their nutrition based on standard USDA databases. "
         "Ensure all fields are fully estimated for the specified portion size.\n\n"
-        "Output MUST be a strict, minified JSON array without any introductory text, pleasantries, "
-        "or markdown wrapping, unless using standard ```json ... ``` blocks. Follow this JSON format precisely:\n"
+        "Output MUST be a valid JSON array without any introductory text or pleasantries. "
+        "You may wrap it in a standard ```json ... ``` block. Follow this JSON format precisely:\n"
         "[\n"
         "  {\n"
         "    \"name\": \"steel cut oats\",\n"
@@ -65,18 +65,47 @@ async def extract_foods_from_text(text: str) -> List[Dict[str, Any]]:
             content = re.sub(r"\n```$", "", content)
             content = content.strip()
             
-        try:
-            parsed = json.loads(content)
+        def _parse_items(raw: str) -> list | None:
+            try:
+                parsed = json.loads(raw)
+            except json.JSONDecodeError:
+                return None
             if isinstance(parsed, list):
                 return parsed
-            elif isinstance(parsed, dict) and "items" in parsed:
+            if isinstance(parsed, dict) and "items" in parsed:
                 return parsed["items"]
-            else:
-                logger.error(f"Unexpected JSON format returned by extractor: {content}")
-                return []
-        except json.JSONDecodeError:
-            logger.error(f"Failed to parse LLM response as JSON: {content}")
-            return []
+            return None
+
+        items = _parse_items(content)
+        if items is not None:
+            return items
+
+        # One correction retry — send the bad response back and ask the model to fix it
+        logger.warning("Food extractor returned invalid JSON; attempting correction retry")
+        correction_messages = messages + [
+            {"role": "assistant", "content": content},
+            {"role": "user", "content": "That response was not valid JSON. Return only the JSON array, no other text."},
+        ]
+        try:
+            retry_resp = await call_llm(
+                primary_model=settings.food_extractor_model,
+                fallback_model=settings.food_extractor_fallback_model,
+                messages=correction_messages,
+                temperature=0.1,
+                timeout=60.0,
+            )
+            retry_content = retry_resp["choices"][0]["message"]["content"].strip()
+            if retry_content.startswith("```"):
+                retry_content = re.sub(r"^```(?:json)?\n", "", retry_content)
+                retry_content = re.sub(r"\n```$", "", retry_content).strip()
+            items = _parse_items(retry_content)
+            if items is not None:
+                return items
+        except Exception:
+            logger.exception("Food extractor correction retry failed")
+
+        logger.error("Food extractor could not produce valid JSON after retry: %s", content[:200])
+        return []
                 
     except Exception as e:
         logger.exception(f"Error calling local AI food-extractor: {e}")
