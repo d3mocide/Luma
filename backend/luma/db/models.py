@@ -189,9 +189,20 @@ class CoachMessage(Base):
     role = Column(Text, nullable=False)
     content = Column(Text, nullable=False)
     tool_calls = Column(JSONB)
+    is_summary = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     thread = relationship("CoachThread", back_populates="messages")
+
+
+class CoachContext(Base):
+    __tablename__ = "coach_context"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    context = Column(JSONB, nullable=False, default=dict)
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User")
 
 
 class Alert(Base):

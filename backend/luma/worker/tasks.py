@@ -20,3 +20,24 @@ async def run_alerts(ctx: dict) -> None:
     logger.info("Alert engine starting")
     await run_alert_engine()
     logger.info("Alert engine complete")
+
+
+async def refresh_all_coach_contexts(ctx: dict) -> None:
+    """Scheduled task: refresh coach context blobs for all users every 2 hours."""
+    from sqlalchemy import text
+    from luma.db.session import AsyncSessionLocal
+    from luma.services.coach_context import refresh_coach_context
+
+    logger.info("Coach context refresh starting")
+    async with AsyncSessionLocal() as db:
+        user_rows = await db.execute(text("SELECT id FROM users"))
+        user_ids = [str(r.id) for r in user_rows]
+
+    for user_id in user_ids:
+        try:
+            async with AsyncSessionLocal() as db:
+                await refresh_coach_context(user_id, db)
+        except Exception:
+            logger.exception("Coach context refresh failed for user %s", user_id)
+
+    logger.info("Coach context refresh complete (%d users)", len(user_ids))

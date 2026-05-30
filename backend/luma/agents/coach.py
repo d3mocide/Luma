@@ -1,8 +1,9 @@
-"""Coach agent — Claude with tool calls, streaming SSE."""
+"""Coach agent — Claude with tool calls, streaming SSE, context injection, thread compression."""
 from __future__ import annotations
 
 import json
 import logging
+import uuid
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -13,13 +14,17 @@ from luma.services.llm_client import build_litellm_target
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM = (
+_SYSTEM_BASE = (
     "You are Luma, a personal nutrition and health coach. "
     "You have access to the user's biometric trends, meal history, and nutrition data via tools. "
     "Use tools to ground your answers in real data before responding. "
     "Be concise, warm, and clinically grounded. Never diagnose — always frame as patterns and options. "
     "When you've gathered enough data, respond directly to the user."
 )
+
+# Compress oldest N messages in a thread when count exceeds this
+_COMPRESS_THRESHOLD = 30
+_COMPRESS_KEEP = 10  # keep the most recent N messages uncompressed
 
 TOOLS: list[dict[str, Any]] = [
     {
@@ -99,6 +104,28 @@ TOOLS: list[dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_user_goals",
+            "description": "Retrieve the user's current nutrition and health goals.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_recent_alerts",
+            "description": "Retrieve recent Luma health alerts generated for this user.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer", "description": "Number of recent alerts to return (1-10)", "default": 5},
+                },
+                "required": [],
+            },
+        },
+    },
 ]
 
 
@@ -150,8 +177,7 @@ async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
         rows = await db.execute(
             text("""
                 SELECT id, ts, slot, source, items, nutrition
-                FROM meal_events
-                WHERE user_id = :uid
+                FROM meal_events WHERE user_id = :uid
                 ORDER BY ts DESC LIMIT :limit
             """),
             {"uid": user_id, "limit": limit},
@@ -199,16 +225,149 @@ async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
         await db.commit()
         return json.dumps({"status": "updated", "slot_id": args["slot_id"]})
 
+    if name == "get_user_goals":
+        row = await db.execute(
+            text("""
+                SELECT target_weight_kg, target_ldl_mg_dl, current_ldl_mg_dl,
+                       daily_calorie_target, daily_sat_fat_g_max, daily_soluble_fiber_g,
+                       daily_protein_g_min, dietary_pattern, updated_at
+                FROM goals WHERE user_id = :uid
+            """),
+            {"uid": user_id},
+        )
+        g = row.fetchone()
+        if not g:
+            return json.dumps({"error": "no goals set"})
+        return json.dumps({
+            "target_weight_kg": float(g.target_weight_kg) if g.target_weight_kg else None,
+            "target_ldl_mg_dl": g.target_ldl_mg_dl,
+            "current_ldl_mg_dl": g.current_ldl_mg_dl,
+            "daily_calorie_target": g.daily_calorie_target,
+            "daily_sat_fat_g_max": float(g.daily_sat_fat_g_max) if g.daily_sat_fat_g_max else None,
+            "daily_soluble_fiber_g": float(g.daily_soluble_fiber_g) if g.daily_soluble_fiber_g else None,
+            "daily_protein_g_min": float(g.daily_protein_g_min) if g.daily_protein_g_min else None,
+            "dietary_pattern": g.dietary_pattern,
+        })
+
+    if name == "get_recent_alerts":
+        limit = min(int(args.get("limit", 5)), 10)
+        rows = await db.execute(
+            text("""
+                SELECT rule_id, severity, payload, narrative, status, ts
+                FROM alerts
+                WHERE user_id = :uid
+                ORDER BY ts DESC LIMIT :limit
+            """),
+            {"uid": user_id, "limit": limit},
+        )
+        alerts = []
+        for r in rows:
+            try:
+                narr = json.loads(r.narrative) if isinstance(r.narrative, str) else (r.narrative or {})
+            except (TypeError, json.JSONDecodeError):
+                narr = {}
+            alerts.append({
+                "rule_id": r.rule_id,
+                "severity": r.severity,
+                "headline": narr.get("headline", ""),
+                "body": narr.get("body", ""),
+                "thread_seed": narr.get("thread_seed", ""),
+                "status": r.status,
+                "ts": r.ts.isoformat(),
+            })
+        return json.dumps(alerts)
+
     return json.dumps({"error": f"unknown tool: {name}"})
+
+
+async def _compress_thread_if_needed(thread_id: str, messages: list[dict], db) -> list[dict]:
+    """
+    If the thread has too many messages, summarize the oldest ones into a
+    single summary message stored in the DB, then return the compressed history.
+
+    Returns the (possibly compressed) message list to use for LLM context.
+    """
+    if len(messages) < _COMPRESS_THRESHOLD:
+        return messages
+
+    # Separate messages to compress vs keep
+    to_compress = messages[:-_COMPRESS_KEEP]
+    to_keep = messages[-_COMPRESS_KEEP:]
+
+    # Ask the model to produce a concise summary of the compressed messages
+    target = build_litellm_target(settings.coach_model)
+    compression_prompt = [
+        {
+            "role": "system",
+            "content": (
+                "Summarize the following conversation excerpt in 3-5 bullet points. "
+                "Focus on what the user asked, what data was retrieved, and what conclusions were reached. "
+                "Be terse — this summary will be injected as context for the coach."
+            ),
+        },
+        {
+            "role": "user",
+            "content": "\n\n".join(
+                f"[{m['role'].upper()}]: {m['content']}"
+                for m in to_compress
+                if m.get("role") in ("user", "assistant") and m.get("content")
+            ),
+        },
+    ]
+
+    try:
+        resp = await litellm.acompletion(**target, messages=compression_prompt, temperature=0.2, timeout=30.0)
+        summary_text = resp.choices[0].message.content or ""
+    except Exception:
+        logger.exception("Thread compression failed, falling back to truncation")
+        return to_keep
+
+    # Persist the summary as a special CoachMessage so future loads use it
+    from sqlalchemy import text
+    summary_id = str(uuid.uuid4())
+    await db.execute(
+        text("""
+            INSERT INTO coach_messages (id, thread_id, role, content, is_summary, created_at)
+            SELECT :id, :tid, 'system', :content, TRUE,
+                   COALESCE(MIN(created_at), now()) - INTERVAL '1 microsecond'
+            FROM coach_messages
+            WHERE thread_id = :tid AND is_summary = FALSE
+              AND id NOT IN (
+                  SELECT id FROM coach_messages
+                  WHERE thread_id = :tid AND is_summary = FALSE
+                  ORDER BY created_at DESC LIMIT :keep
+              )
+        """),
+        {"id": summary_id, "tid": thread_id, "content": f"[Summary of earlier conversation]\n{summary_text}", "keep": _COMPRESS_KEEP},
+    )
+    await db.commit()
+    logger.info("Compressed thread %s: %d messages → summary", thread_id, len(to_compress))
+
+    return [{"role": "system", "content": f"[Summary of earlier conversation]\n{summary_text}"}] + to_keep
 
 
 async def coach_stream(
     user_id: str,
+    thread_id: str,
     messages: list[dict],
     db,
 ) -> AsyncGenerator[str, None]:
     """Yield SSE-formatted data lines from the coach agent."""
-    full_messages = [{"role": "system", "content": _SYSTEM}, *messages]
+    # Compress thread history if needed
+    messages = await _compress_thread_if_needed(thread_id, messages, db)
+
+    # Inject user context snapshot into system prompt
+    system_content = _SYSTEM_BASE
+    try:
+        from luma.services.coach_context import get_coach_context, format_context_for_prompt
+        ctx = await get_coach_context(user_id, db)
+        context_block = format_context_for_prompt(ctx)
+        if context_block:
+            system_content = _SYSTEM_BASE + "\n\n" + context_block
+    except Exception:
+        logger.exception("Failed to load coach context for user %s", user_id)
+
+    full_messages = [{"role": "system", "content": system_content}, *messages]
     target = build_litellm_target(settings.coach_model)
 
     for _ in range(6):
@@ -255,7 +414,6 @@ async def coach_stream(
             continue
 
         final_text = msg.content or ""
-        # Stream the final response
         try:
             stream = await litellm.acompletion(
                 **target,

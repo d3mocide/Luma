@@ -65,7 +65,9 @@ async def get_thread(thread_id: str, user: CurrentUser, db: DbDep) -> dict[str, 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
 
     msg_rows = await db.execute(
-        select(CoachMessage).where(CoachMessage.thread_id == thread.id).order_by(CoachMessage.created_at)
+        select(CoachMessage)
+        .where(CoachMessage.thread_id == thread.id, CoachMessage.is_summary == False)  # noqa: E712
+        .order_by(CoachMessage.created_at)
     )
     return {
         "id": str(thread.id),
@@ -96,12 +98,25 @@ async def post_message(
     db.add(user_msg)
     await db.commit()
 
-    hist_rows = await db.execute(
-        select(CoachMessage)
-        .where(CoachMessage.thread_id == thread.id)
-        .order_by(CoachMessage.created_at)
-        .limit(40)
+    # Load history: start from the latest summary (if any), then all messages after it.
+    # This implements the compression contract — summaries replace older messages in context.
+    from sqlalchemy import text as sqlt
+    latest_summary = await db.execute(
+        sqlt("""
+            SELECT created_at FROM coach_messages
+            WHERE thread_id = :tid AND is_summary = TRUE
+            ORDER BY created_at DESC LIMIT 1
+        """),
+        {"tid": str(thread.id)},
     )
+    summary_ts = latest_summary.scalar()
+
+    hist_query = select(CoachMessage).where(CoachMessage.thread_id == thread.id)
+    if summary_ts:
+        hist_query = hist_query.where(CoachMessage.created_at >= summary_ts)
+    hist_query = hist_query.order_by(CoachMessage.created_at).limit(50)
+
+    hist_rows = await db.execute(hist_query)
     history = [{"role": m.role, "content": m.content} for m in hist_rows.scalars().all()]
 
     from luma.agents.coach import coach_stream
@@ -110,7 +125,7 @@ async def post_message(
     async def _event_stream():
         collected: list[str] = []
         async with AsyncSessionLocal() as agent_db:
-            async for chunk in coach_stream(user_id=str(user.id), messages=history, db=agent_db):
+            async for chunk in coach_stream(user_id=str(user.id), thread_id=thread_id, messages=history, db=agent_db):
                 yield chunk
                 try:
                     data = json.loads(chunk.removeprefix("data: ").strip())
