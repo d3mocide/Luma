@@ -8,7 +8,7 @@ interface SparkProps {
 export default function Spark({ data, w = 120, h = 36, color = '#38bdf8' }: SparkProps) {
   if (!data || !data.length) return null
 
-  const xs = data.map((_, i) => (i / (data.length - 1)) * w)
+  const xs = data.map((_, i) => (data.length === 1 ? w / 2 : (i / (data.length - 1)) * w))
   const rawY = data.map((d) => (typeof d === 'number' ? d : d.last))
   const lo = Math.min(...rawY)
   const hi = Math.max(...rawY)

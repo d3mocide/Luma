@@ -255,7 +255,7 @@ async def _weight_slope(db, user_id: str, days: int) -> float | None:
         """),
         {"user_id": user_id, "days": days},
     )
-    rows = result.fetchall()
+    rows = [r for r in result.fetchall() if r.y is not None]
     if len(rows) < 2:
         return None
 
