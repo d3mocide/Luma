@@ -10,7 +10,7 @@ from typing import Any
 import litellm
 
 from luma.config import settings
-from luma.services.llm_client import build_litellm_target
+from luma.services.llm_client import build_litellm_target, call_llm
 
 logger = logging.getLogger(__name__)
 
@@ -295,7 +295,6 @@ async def _compress_thread_if_needed(thread_id: str, messages: list[dict], db) -
     to_keep = messages[-_COMPRESS_KEEP:]
 
     # Ask the model to produce a concise summary of the compressed messages
-    target = build_litellm_target(settings.coach_model)
     compression_prompt = [
         {
             "role": "system",
@@ -316,8 +315,14 @@ async def _compress_thread_if_needed(thread_id: str, messages: list[dict], db) -
     ]
 
     try:
-        resp = await litellm.acompletion(**target, messages=compression_prompt, temperature=0.2, timeout=30.0)
-        summary_text = resp.choices[0].message.content or ""
+        resp = await call_llm(
+            primary_model=settings.coach_model,
+            fallback_model=settings.coach_fallback_model,
+            messages=compression_prompt,
+            temperature=0.2,
+            timeout=30.0,
+        )
+        summary_text = resp["choices"][0]["message"]["content"] or ""
     except Exception:
         logger.exception("Thread compression failed, falling back to truncation")
         return to_keep

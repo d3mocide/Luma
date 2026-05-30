@@ -28,21 +28,29 @@ async def generate_meal_plan(
     stmt_pref = select(Preference).where(Preference.user_id == user_id)
     res_pref = await db.execute(stmt_pref)
     prefs = res_pref.scalars().all()
-    
-    # 3. Fetch premium local foods (first 100) to recommend matching items
-    stmt_foods = select(Food).limit(100)
+    dislikes = [p.value for p in prefs if p.kind == "dislike"]
+    allergies = [p.value for p in prefs if p.kind == "allergy"]
+
+    # 3. Fetch local foods, then filter against allergens/dislikes before injecting
+    stmt_foods = select(Food).limit(300)
     res_foods = await db.execute(stmt_foods)
-    foods = res_foods.scalars().all()
-    
-    # Format goals and preferences into prompt
+    all_foods = res_foods.scalars().all()
+
+    exclusion_terms = {t.lower() for t in dislikes + allergies}
+
+    def _is_excluded(food: Food) -> bool:
+        name = food.name.lower()
+        tags = [t.lower() for t in (food.tags or [])]
+        return any(term in name or term in tags for term in exclusion_terms)
+
+    foods = [f for f in all_foods if not _is_excluded(f)][:100]
+
+    # Format goals into prompt variables
     ldl_target = goal.target_ldl_mg_dl if goal else 100
     calorie_target = goal.daily_calorie_target if goal else 2000
     sat_fat_max = float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else 13.0
     soluble_fiber_target = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else 10.0
     dietary_pattern = goal.dietary_pattern if goal else "heart-healthy"
-    
-    dislikes = [p.value for p in prefs if p.kind == "dislike"]
-    allergies = [p.value for p in prefs if p.kind == "allergy"]
     
     available_foods_text = "\n".join([
         f"- ID: {f.id} | Name: {f.name} | Brand: {f.brand or 'Generic'} | Serving: {f.serving_size_g}g | Nutrients/100g: {json.dumps(f.nutrients_per_100g)}"
@@ -50,7 +58,7 @@ async def generate_meal_plan(
     ])
     
     system_prompt = (
-        "You are Claude, Luma's clinical nutrition orchestrator. "
+        "You are Luma's clinical nutrition orchestrator. "
         "Your task is to generate a highly detailed 7-day heart-healthy meal plan and shopping list "
         "tailored specifically to the user's cardiovascular, LDL cholesterol-lowering, and fiber targets.\n\n"
         "Core Objectives:\n"
