@@ -110,6 +110,17 @@ export interface TrendSeries {
   }>
 }
 
+export interface Insight {
+  id: string
+  ts: string
+  rule_id: string
+  severity: string
+  headline: string
+  body: string
+  thread_seed: string
+  status: string
+}
+
 export interface User {
   id: string
   email: string

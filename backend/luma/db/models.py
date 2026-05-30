@@ -194,6 +194,21 @@ class CoachMessage(Base):
     thread = relationship("CoachThread", back_populates="messages")
 
 
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    ts = Column(DateTime(timezone=True), primary_key=True, server_default=func.now())
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    rule_id = Column(Text, nullable=False)
+    severity = Column(Text, nullable=False)
+    payload = Column(JSONB, nullable=False, default=dict)
+    narrative = Column(Text)
+    status = Column(Text, nullable=False, server_default=text("'open'"))
+
+    user = relationship("User")
+
+
 class MealEvent(Base):
     __tablename__ = "meal_events"
 

@@ -210,7 +210,34 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         ],
         "recent_meals": recent_meals,
         "streak_days": streak_days,
-        "active_insight": None,
+        "active_insight": await _get_active_insight(db, str(user.id)),
+    }
+
+
+async def _get_active_insight(db, user_id: str) -> dict | None:
+    import json as _json
+    row = await db.execute(
+        text("""
+            SELECT id, rule_id, severity, payload, narrative
+            FROM alerts
+            WHERE user_id = :uid AND status = 'open' AND narrative IS NOT NULL
+            ORDER BY ts DESC LIMIT 1
+        """),
+        {"user_id": user_id},
+    )
+    r = row.fetchone()
+    if not r:
+        return None
+    try:
+        narrative = _json.loads(r.narrative) if isinstance(r.narrative, str) else r.narrative
+    except (TypeError, _json.JSONDecodeError):
+        narrative = {}
+    return {
+        "id": str(r.id),
+        "severity": r.severity,
+        "headline": narrative.get("headline", ""),
+        "cta": narrative.get("body", ""),
+        "thread_seed": narrative.get("thread_seed", ""),
     }
 
 

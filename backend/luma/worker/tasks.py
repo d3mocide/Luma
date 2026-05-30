@@ -15,5 +15,8 @@ async def ingest_hae_task(ctx: dict, payload: dict[str, Any], user_id: str | Non
 
 
 async def run_alerts(ctx: dict) -> None:
-    """Scheduled task: run alert engine. Phase 2."""
-    logger.info("Alert engine run skipped — Phase 2 not yet implemented")
+    """Scheduled task: run alert engine every 30 minutes."""
+    from luma.alerts.engine import run_alert_engine
+    logger.info("Alert engine starting")
+    await run_alert_engine()
+    logger.info("Alert engine complete")
