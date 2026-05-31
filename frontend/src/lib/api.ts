@@ -105,6 +105,7 @@ export interface TrendSeries {
     avg: number | null
     min: number | null
     max: number | null
+    sum: number | null
     last: number | null
     sample_count: number
   }>

@@ -52,6 +52,7 @@ async def get_trend(
                 avg_value,
                 min_value,
                 max_value,
+                sum_value,
                 last_value,
                 sample_count
             FROM biometrics_daily
@@ -73,6 +74,7 @@ async def get_trend(
                 "avg":         r.avg_value,
                 "min":         r.min_value,
                 "max":         r.max_value,
+                "sum":         r.sum_value,
                 "last":        r.last_value,
                 "sample_count": r.sample_count,
             }

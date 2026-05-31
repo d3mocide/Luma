@@ -166,6 +166,7 @@ function buildTrendSeries(metric: string, range: string) {
       avg: last,
       min: Number((last - Math.abs(wave) * 0.35).toFixed(1)),
       max: Number((last + Math.abs(wave) * 0.35).toFixed(1)),
+      sum: last,
       last,
       sample_count: 1,
     }

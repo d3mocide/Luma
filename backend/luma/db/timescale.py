@@ -52,6 +52,7 @@ def create_continuous_aggregates() -> None:
             avg(value)        AS avg_value,
             min(value)        AS min_value,
             max(value)        AS max_value,
+            sum(value)        AS sum_value,
             last(value, ts)   AS last_value,
             count(*)          AS sample_count
         FROM biometrics

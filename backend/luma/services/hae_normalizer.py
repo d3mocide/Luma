@@ -95,6 +95,23 @@ def _convert(value: float, hae_unit: str, internal_metric: str) -> float:
     return value
 
 
+def _source_priority(source: str) -> int:
+    """Rank an HAE source so overlapping multi-device readings collapse to one.
+
+    Mirrors the SQL biometric_source_priority() function (migration 0007):
+    Apple Watch outranks iPhone, which outranks anything else. Apple Health
+    reports the same instant from several devices; summing all of them
+    double-counts energy, so we keep only the highest-ranked source per
+    (ts, metric).
+    """
+    s = (source or "").lower()
+    if "watch" in s:
+        return 3
+    if "phone" in s:
+        return 2
+    return 1
+
+
 def _parse_hae_ts(date_str: str) -> datetime:
     """Parse HAE date strings like '2026-05-22 07:14:00 -0700'."""
     # fromisoformat doesn't handle the ' -0700' offset format; use dateutil.
@@ -223,7 +240,25 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
     if not rows:
         return 0
 
-    # Upsert — idempotent on (user_id, ts, metric, source).
+    # Collapse overlapping multi-device readings to one row per (ts, metric),
+    # keeping the highest-priority source. Required before the upsert: the DB
+    # key is now (user_id, ts, metric), and ON CONFLICT DO UPDATE rejects a
+    # statement that touches the same key twice. Tie-break on the smaller source
+    # string to match migration 0007's backfill.
+    deduped: dict[tuple[datetime, str], dict] = {}
+    for row in rows:
+        key = (row["ts"], row["metric"])
+        existing = deduped.get(key)
+        if existing is None:
+            deduped[key] = row
+            continue
+        new_p, old_p = _source_priority(row["source"]), _source_priority(existing["source"])
+        if new_p > old_p or (new_p == old_p and row["source"] < existing["source"]):
+            deduped[key] = row
+    rows = list(deduped.values())
+
+    # Upsert — idempotent on (user_id, ts, metric). A later-arriving
+    # higher-priority source replaces a previously stored lower-priority one.
     # NB: bind param is wrapped in CAST(...) so SQLAlchemy's text() regex doesn't
     # see `:rows::jsonb` (negative-lookahead on `::` would clip the param name).
     await db.execute(
@@ -237,7 +272,12 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                 r->>'source',
                 (r->>'source_meta')::jsonb
             FROM jsonb_array_elements(CAST(:rows AS jsonb)) AS r
-            ON CONFLICT (user_id, ts, metric, source) DO NOTHING
+            ON CONFLICT (user_id, ts, metric) DO UPDATE
+                SET value       = EXCLUDED.value,
+                    source      = EXCLUDED.source,
+                    source_meta = EXCLUDED.source_meta
+                WHERE biometric_source_priority(EXCLUDED.source)
+                      > biometric_source_priority(biometrics.source)
         """),
         {"rows": __import__("orjson").dumps(rows).decode()},
     )
