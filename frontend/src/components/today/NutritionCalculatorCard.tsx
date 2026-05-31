@@ -151,7 +151,13 @@ export function NutritionCalculatorCard({
   }
 
   return (
-    <div className="glass" style={{ padding: compact ? 18 : 24, marginTop: compact ? 14 : 0, marginBottom: compact ? 14 : 0 }}>
+    <div className="glass" style={{
+      padding: compact ? 18 : 24,
+      marginTop: compact ? 14 : 0,
+      marginBottom: compact ? 14 : 0,
+      position: 'relative',
+      zIndex: 5,
+    }}>
       <div style={{ marginBottom: 12 }}>
         <div className="eyebrow">Budget check</div>
         <div style={{ fontSize: compact ? 12 : 13, color: 'var(--fg-tertiary)', marginTop: 4 }}>
