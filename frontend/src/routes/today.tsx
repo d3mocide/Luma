@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Sparkles, Flame, Heart, Activity, Moon } from 'lucide-react'
-import { api, TodayData, User } from '../lib/api'
+import { api, TodayData, TrendSeries, User } from '../lib/api'
 import { createMockTodayData, createMockWeightSeries, isTodaySparseData } from '../lib/mock-data'
 import { fmtMinutes, fmt } from '../lib/format'
 import { convertWeight, convertWeightSlope, measurementSlopeUnit, measurementWeightUnit, useMeasurementSystem } from '../lib/measurements'
@@ -32,6 +32,12 @@ export default function TodayRoute() {
   const { data: todayApiData, isLoading, error } = useQuery<TodayData>({
     queryKey: ['today'],
     queryFn: () => api.get('/today'),
+    enabled: !forceMockData,
+  })
+
+  const { data: weightTrendData } = useQuery<TrendSeries>({
+    queryKey: ['trends', 'weight_kg', '30d'],
+    queryFn: () => api.get('/trends/weight_kg?range=30d'),
     enabled: !forceMockData,
   })
 
@@ -102,10 +108,16 @@ export default function TodayRoute() {
   const targetWeight = convertWeight(data.weight.target_kg, measurementSystem)
   const trend7d = convertWeightSlope(data.weight.trend_7d, measurementSystem)
   const trend28d = convertWeightSlope(data.weight.trend_28d, measurementSystem)
-  const weightSeries = (useMockData ? createMockWeightSeries(data.weight.latest_kg) : []).map((point) => ({
-    ...point,
-    last: convertWeight(point.last, measurementSystem) ?? point.last,
-  }))
+  const rawWeightSeries = useMockData || !weightTrendData?.series?.length
+    ? createMockWeightSeries(data.weight.latest_kg)
+    : weightTrendData.series
+
+  const weightSeries = rawWeightSeries
+    .map((point) => ({
+      date: point.date,
+      last: convertWeight(point.last, measurementSystem) ?? point.last,
+    }))
+    .filter((point): point is { date: string; last: number } => point.last != null)
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -313,6 +325,9 @@ export default function TodayRoute() {
               <SlopeChip label="7d" value={trend7d} unit={slopeUnit}/>
               <SlopeChip label="28d" value={trend28d} unit={slopeUnit}/>
             </div>
+          </div>
+          <div style={{ marginTop: 12, marginLeft: -6, marginRight: -6 }}>
+            <WeightChart data={weightSeries} width={340} height={70} showAxis={false}/>
           </div>
         </div>
 
