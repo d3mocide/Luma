@@ -250,7 +250,7 @@ export default function CoachRoute() {
       <div className="thin-scroll coach-messages" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '32px 40px', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-          {messages.length === 0 && <CoachIntro />}
+          {messages.length === 0 && <CoachIntro onSuggest={send} />}
 
           {messages.map((msg, i) => (
             msg.role === 'user' ? (
@@ -365,7 +365,16 @@ function _toolLabel(name: string): string {
   return labels[name] ?? `Running ${name}…`
 }
 
-function CoachIntro() {
+const SUGGESTIONS = [
+  'Why did my weight spike this week?',
+  'How is my LDL trending?',
+  'Am I hitting my fiber targets?',
+  'What meals are hurting my sat fat budget?',
+  'How does my sleep affect my weight?',
+  'What should I eat more of?',
+]
+
+function CoachIntro({ onSuggest }: { onSuggest: (s: string) => void }) {
   return (
     <div style={{ textAlign: 'center', padding: '20px 0 4px' }}>
       <div style={{ display: 'inline-flex', marginBottom: 18 }}>
@@ -380,6 +389,39 @@ function CoachIntro() {
       <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--fg-tertiary)' }}>
         I see your weight, sleep, biometrics, and meals. Privacy stays here — nothing leaves your server.
       </p>
+      <div style={{ marginTop: 28, display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 560, marginInline: 'auto' }}>
+        {SUGGESTIONS.map((s) => (
+          <button
+            key={s}
+            onClick={() => onSuggest(s)}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 20,
+              border: '1px solid rgba(56,189,248,0.25)',
+              background: 'rgba(56,189,248,0.07)',
+              color: 'var(--fg-secondary)',
+              fontSize: 13,
+              cursor: 'pointer',
+              transition: 'border-color 0.15s, background 0.15s, color 0.15s',
+              fontFamily: 'inherit',
+              lineHeight: 1.4,
+              textAlign: 'left',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(56,189,248,0.55)'
+              e.currentTarget.style.background = 'rgba(56,189,248,0.14)'
+              e.currentTarget.style.color = 'var(--fg-primary)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(56,189,248,0.25)'
+              e.currentTarget.style.background = 'rgba(56,189,248,0.07)'
+              e.currentTarget.style.color = 'var(--fg-secondary)'
+            }}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
