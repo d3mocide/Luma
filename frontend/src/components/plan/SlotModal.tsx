@@ -72,6 +72,40 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="glass" style={{ maxWidth: 520, width: '100%', padding: 28, borderRadius: 24, position: 'relative', maxHeight: '80vh', overflowY: 'auto' }}>
+        <style dangerouslySetInnerHTML={{ __html: `
+          .field-input-focus {
+            transition: all 0.2s ease-in-out !important;
+          }
+          .field-input-focus:focus {
+            border-color: var(--sky-400) !important;
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
+            background: rgba(0,0,0,0.4) !important;
+          }
+          .food-result-row {
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          }
+          .food-result-row:hover {
+            transform: translateY(-1px);
+            background: var(--glass-2) !important;
+            border-color: var(--glass-edge-strong) !important;
+          }
+          .serving-chip {
+            transition: all 0.15s ease !important;
+            cursor: pointer;
+            border: 1px solid var(--glass-edge) !important;
+          }
+          .serving-chip:hover {
+            background: var(--glass-3) !important;
+            color: var(--fg-primary) !important;
+          }
+          .serving-chip.active {
+            background: linear-gradient(180deg, var(--sky-300), var(--sky-500)) !important;
+            color: var(--bg-1) !important;
+            font-weight: 600 !important;
+            border-color: transparent !important;
+            box-shadow: 0 4px 12px -3px rgba(14,165,233,0.4) !important;
+          }
+        `}} />
         <button onClick={onClose} style={{
           position: 'absolute', right: 16, top: 16,
           width: 28, height: 28, borderRadius: '50%',
@@ -158,6 +192,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
                 value={foodQuery}
                 onChange={(e) => { setFoodQuery(e.target.value); setDebouncedQuery(e.target.value); setSelectedFood(null) }}
                 placeholder="Search foods…"
+                className="field-input-focus"
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   paddingLeft: 36, paddingRight: 14, paddingTop: 10, paddingBottom: 10,
@@ -176,14 +211,27 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
                 {!foodSearching && foodResults?.map((food) => (
                   <button key={food.id}
                     onClick={() => { setSelectedFood(food); setServingG(String(food.serving_size_g ?? 100)) }}
-                    className="glass-inset"
-                    style={{ padding: '10px 14px', borderRadius: 10, border: 'none', textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    className="glass-inset food-result-row"
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: 12,
+                      border: '1px solid var(--glass-edge)',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      background: 'var(--glass-1)',
+                      marginBottom: 8,
+                      width: '100%',
+                    }}>
                     <div>
                       <div style={{ fontSize: 13, color: 'var(--fg-primary)', fontWeight: 500 }}>{food.name}</div>
-                      {food.brand && <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{food.brand}</div>}
+                      {food.brand && <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 2 }}>{food.brand}</div>}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--fg-tertiary)', fontFamily: 'var(--font-mono)', textAlign: 'right', flexShrink: 0 }}>
-                      {Math.round(food.nutrients_per_100g.calories ?? 0)} cal<br/>per 100g
+                    <div style={{ fontSize: 12, color: 'var(--sky-400)', fontFamily: 'var(--font-mono)', fontWeight: 500, textAlign: 'right', flexShrink: 0 }}>
+                      {Math.round(food.nutrients_per_100g.calories ?? 0)} <span style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>cal</span>
+                      <div style={{ fontSize: 9, color: 'var(--fg-quiet)', fontWeight: 400, marginTop: 2 }}>per 100g</div>
                     </div>
                   </button>
                 ))}
@@ -197,32 +245,69 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
 
             {selectedFood && (
               <>
-                <div className="glass-inset" style={{ padding: 14, marginBottom: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                <div className="glass-inset" style={{ padding: 16, borderRadius: 16, border: '1px solid var(--glass-edge-strong)', marginBottom: 16, background: 'var(--glass-2)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg-primary)' }}>{selectedFood.name}</div>
-                      {selectedFood.brand && <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{selectedFood.brand}</div>}
+                      <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--fg-primary)' }}>{selectedFood.name}</div>
+                      {selectedFood.brand && <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 2 }}>{selectedFood.brand}</div>}
                     </div>
                     <button onClick={() => setSelectedFood(null)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', padding: 4 }}>
                       <X size={14}/>
                     </button>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                    <label style={{ fontSize: 12, color: 'var(--fg-quiet)', whiteSpace: 'nowrap' }}>Serving size:</label>
-                    <input type="number" value={servingG} onChange={(e) => setServingG(e.target.value)} min={1}
-                      style={{ width: 80, padding: '6px 10px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-edge)', borderRadius: 8, color: 'var(--fg-primary)', fontFamily: 'var(--font-mono)', fontSize: 13, outline: 'none', textAlign: 'right' }}
-                    />
-                    <span style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>g</span>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <label style={{ fontSize: 12, color: 'var(--fg-secondary)', fontWeight: 500 }}>Serving size:</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input type="number" value={servingG} onChange={(e) => setServingG(e.target.value)} min={1}
+                          className="field-input-focus"
+                          style={{ width: 70, padding: '6px 10px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-edge)', borderRadius: 8, color: 'var(--fg-primary)', fontFamily: 'var(--font-mono)', fontSize: 13, outline: 'none', textAlign: 'right' }}
+                        />
+                        <span style={{ fontSize: 12, color: 'var(--fg-secondary)' }}>g</span>
+                      </div>
+                    </div>
+                    
+                    {/* Preset Chips */}
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {['50', '100', '150', '200', '300'].map((preset) => {
+                        const active = servingG === preset
+                        return (
+                          <button
+                            key={preset}
+                            onClick={() => setServingG(preset)}
+                            className={`serving-chip ${active ? 'active' : ''}`}
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: 999,
+                              background: 'var(--glass-1)',
+                              border: '1px solid var(--glass-edge)',
+                              color: 'var(--fg-secondary)',
+                              fontSize: 11,
+                              fontFamily: 'var(--font-mono)',
+                            }}
+                          >
+                            {preset}g
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
+
                   {previewNutrition && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                      {KEY_NUTRIENTS.map(({ key, label, unit, color }) => (
-                        <div key={key} style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: 9, color: 'var(--fg-quiet)', marginBottom: 2 }}>{label}</div>
-                          <div className="num" style={{ fontSize: 13, color }}>{fmtNutr(previewNutrition[key], unit)}</div>
-                        </div>
-                      ))}
+                    <div style={{ borderTop: '1px solid var(--glass-edge)', paddingTop: 14 }}>
+                      <div className="eyebrow" style={{ marginBottom: 10 }}>Preview Nutrition</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        {KEY_NUTRIENTS.map(({ key, label, unit, color }) => (
+                          <div key={key} className="glass-inset" style={{ padding: '8px 10px', textAlign: 'center', background: 'rgba(0,0,0,0.1)' }}>
+                            <div style={{ fontSize: 9, color: 'var(--fg-quiet)', marginBottom: 4 }}>{label}</div>
+                            <div className="num" style={{ fontSize: 13, fontWeight: 600, color }}>
+                              {fmtNutr(previewNutrition[key], unit)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
