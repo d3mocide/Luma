@@ -212,10 +212,20 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
                 },
             ],
             temperature=0.3,
-            max_tokens=180,
+            max_tokens=320,
             timeout=20.0,
         )
-        rationale = resp.choices[0].message.content.strip()
+        rationale = (resp.choices[0].message.content or "").strip() or None
+        # If the model hit the token ceiling it stops mid-sentence (e.g.
+        # "…A daily target of 4,1"). Rendering that dangling fragment is the
+        # actual user-visible defect, so drop the trailing incomplete sentence
+        # rather than show a clipped clause.
+        if rationale and (
+            getattr(resp.choices[0], "finish_reason", None) == "length"
+            or rationale[-1] not in ".!?"
+        ):
+            cutoff = max(rationale.rfind(c) for c in ".!?")
+            rationale = rationale[: cutoff + 1].strip() if cutoff != -1 else None
     except Exception:
         logger.warning("Goal recommendation rationale LLM call failed — omitting rationale")
 
