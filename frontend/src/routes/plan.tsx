@@ -37,6 +37,72 @@ export default function PlanRoute() {
 
   return (
     <div className="thin-scroll plan-page">
+      {generateMutation.isPending && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(9, 11, 16, 0.72)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 24,
+        }}>
+          <style>{`
+            @keyframes progress-slide {
+              0% { transform: translateX(-100%); }
+              100% { transform: translateX(250%); }
+            }
+            @keyframes pulse-opacity {
+              0%, 100% { opacity: 0.65; }
+              50% { opacity: 1; }
+            }
+          `}</style>
+          <div className="glass" style={{
+            maxWidth: 420,
+            width: '100%',
+            padding: 32,
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 20,
+            boxShadow: '0 24px 48px -12px rgba(0, 0, 0, 0.5)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+          }}>
+            <div style={{ fontSize: 44, animation: 'pulse-opacity 2s infinite ease-in-out' }}>🥗</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 400, color: 'var(--fg-primary)' }}>Orchestrating Weekly Plan</h3>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-tertiary)', lineHeight: 1.5 }}>
+                Luma is calculating optimal macronutrient boundaries and selecting cholesterol-lowering meals.
+              </p>
+            </div>
+            
+            <div style={{ width: '100%', height: 4, background: 'rgba(255, 255, 255, 0.06)', borderRadius: 2, overflow: 'hidden', position: 'relative', border: '1px solid rgba(255, 255, 255, 0.02)' }}>
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: 0,
+                background: 'linear-gradient(90deg, transparent, var(--sky-400), var(--sun-400), transparent)',
+                animation: 'progress-slide 1.6s infinite linear',
+                width: '40%',
+              }} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 13, color: 'var(--sky-300)', fontWeight: 400, animation: 'pulse-opacity 2.5s infinite ease-in-out' }}>
+                This may take up to 30 seconds...
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--sun-300)', opacity: 0.9, fontWeight: 500, letterSpacing: '0.02em' }}>
+                ⚠️ Do not leave or refresh this page.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <header className="plan-header">
@@ -91,6 +157,7 @@ export default function PlanRoute() {
                   onChange={(e) => setCustomConstraints(e.target.value)}
                   placeholder="e.g. Include salmon twice, vegetarian lunches, no dairy…"
                   rows={3}
+                  disabled={generateMutation.isPending}
                   style={{ width: '100%', resize: 'none', border: '1px solid var(--glass-edge)', borderRadius: 14, padding: '12px 14px', color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)', fontSize: 14, outline: 'none' }}
                 />
               </div>
