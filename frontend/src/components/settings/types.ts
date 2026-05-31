@@ -40,6 +40,23 @@ export const emptyGoalForm: GoalFormState = {
   dietary_pattern: '',
 }
 
+export type GoalRecommendation = {
+  daily_calorie_target: number
+  daily_sat_fat_g_max: number
+  daily_soluble_fiber_g: number
+  daily_protein_g_min: number | null
+  basis: {
+    tdee_kcal: number | null
+    bmr_7d_avg: number | null
+    active_7d_avg: number | null
+    current_weight_kg: number | null
+    avg_steps_7d: number | null
+    data_days: number
+    mode: 'deficit' | 'maintenance' | 'insufficient_data'
+  }
+  rationale: string | null
+}
+
 export type HaeImportSettings = {
   token: string
   app_secret: string
