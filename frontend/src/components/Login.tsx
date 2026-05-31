@@ -35,8 +35,8 @@ export default function Login() {
       await queryClient.invalidateQueries({ queryKey: ['me'] })
       await queryClient.invalidateQueries({ queryKey: ['today'] })
       await queryClient.invalidateQueries({ queryKey: ['setupStatus'] })
-    } catch (err: any) {
-      setError(err?.message ?? (isSetup ? 'Failed to complete setup.' : 'Invalid email or password.'))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (isSetup ? 'Failed to complete setup.' : 'Invalid email or password.'))
     } finally {
       setLoading(false)
     }

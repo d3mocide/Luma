@@ -151,7 +151,7 @@ export default function CoachRoute() {
           }
         }
       }
-    } catch (err) {
+    } catch {
       setMessages((prev) => {
         const next = [...prev]
         const last = next[next.length - 1]
@@ -163,7 +163,7 @@ export default function CoachRoute() {
     } finally {
       setStreaming(false)
     }
-  }, [streaming, activeThreadId, messages.length, createThread])
+  }, [streaming, activeThreadId, createThread])
 
   const startNewThread = () => {
     setActiveThreadId(null)
@@ -250,7 +250,7 @@ export default function CoachRoute() {
       <div className="thin-scroll coach-messages" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '32px 40px', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-          {messages.length === 0 && <CoachIntro onSuggest={send}/>}
+          {messages.length === 0 && <CoachIntro />}
 
           {messages.map((msg, i) => (
             msg.role === 'user' ? (
@@ -365,7 +365,7 @@ function _toolLabel(name: string): string {
   return labels[name] ?? `Running ${name}…`
 }
 
-function CoachIntro({ onSuggest: _onSuggest }: { onSuggest: (s: string) => void }) {
+function CoachIntro() {
   return (
     <div style={{ textAlign: 'center', padding: '20px 0 4px' }}>
       <div style={{ display: 'inline-flex', marginBottom: 18 }}>

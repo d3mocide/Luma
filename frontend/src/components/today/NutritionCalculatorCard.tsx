@@ -26,7 +26,6 @@ function BudgetStat({
   remaining,
   projected,
   unit,
-  lowerIsBetter: _lowerIsBetter,
   showProjected,
   noTarget,
 }: {
@@ -34,7 +33,6 @@ function BudgetStat({
   remaining: number
   projected: number
   unit: string
-  lowerIsBetter: boolean
   showProjected: boolean
   noTarget: boolean
 }) {
@@ -162,9 +160,9 @@ export function NutritionCalculatorCard({
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(3, 1fr)', gap: 10, marginBottom: 12 }}>
-        <BudgetStat label="Calories" remaining={calRemain} projected={calProjected} unit="kcal" lowerIsBetter={false} showProjected={hasFood} noTarget={calTarget === 0} />
-        <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    lowerIsBetter        showProjected={hasFood} noTarget={satTarget === 0} />
-        <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   lowerIsBetter={false} showProjected={hasFood} noTarget={solTarget === 0} />
+        <BudgetStat label="Calories" remaining={calRemain} projected={calProjected} unit="kcal" showProjected={hasFood} noTarget={calTarget === 0} />
+        <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    showProjected={hasFood} noTarget={satTarget === 0} />
+        <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   showProjected={hasFood} noTarget={solTarget === 0} />
       </div>
 
       <div className="glass-inset" style={{ padding: compact ? 10 : 12, display: 'grid', gap: 10 }}>
