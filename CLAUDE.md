@@ -105,6 +105,16 @@ Follow §12 of the design doc exactly. Do not create files outside the tree defi
 - All LLM calls must have timeout + retry with exponential backoff
 - Log model alias + input/output token counts for cost tracking (not content)
 
+## Pre-Commit Checks (REQUIRED)
+
+Before every `git commit` that touches frontend files, run:
+
+```bash
+cd frontend && pnpm type-check && pnpm lint
+```
+
+Fix all errors before committing. Do not use `--no-verify` to bypass hooks. Do not commit code that fails type-check or lint.
+
 ## What Claude Code Should NOT Do
 
 - Do not add features beyond the current phase

@@ -182,7 +182,7 @@ function getQueryParam(path: string, key: string): string | null {
   return params.get(key)
 }
 
-function parseBody(init: RequestLike): any {
+function parseBody(init: RequestLike): Record<string, unknown> {
   if (!init?.body || typeof init.body !== 'string') return {}
   try {
     return JSON.parse(init.body)
@@ -316,8 +316,9 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     const foodId = parts[4]
     const body = parseBody(init)
     const item = MOCK_SHOPPING_LIST.find((i) => i.food_id === foodId)
-    if (item) item.purchased = body?.purchased ?? item.purchased
-    return { food_id: foodId, purchased: body?.purchased }
+    const purchased = typeof body.purchased === 'boolean' ? body.purchased : item?.purchased ?? false
+    if (item) item.purchased = purchased
+    return { food_id: foodId, purchased }
   }
 
   if (method === 'POST' && /^\/plan\/[^/]+\/log-as-eaten\/[^/]+$/.test(pathname)) {

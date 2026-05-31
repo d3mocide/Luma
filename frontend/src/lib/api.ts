@@ -6,8 +6,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (isMockApiEnabled()) {
     try {
       return await handleMockApiRequest(path, init) as T
-    } catch (err: any) {
-      if (err instanceof MockApiError) throw new Error(err.message)
+    } catch (err) {
+      if (err instanceof MockApiError) throw new Error(err.message, { cause: err })
       throw err
     }
   }
