@@ -1895,3 +1895,31 @@
     padding: 16px 16px 24px !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * TRENDS TABS MOBILE OVERRIDES
+ * ══════════════════════════════════════════════════════════════════════════ */
+.trends-tabs-container {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE/Edge */
+  -webkit-overflow-scrolling: touch !important; /* Smooth inertial scroll */
+}
+.trends-tabs-container::-webkit-scrollbar {
+  display: none !important; /* Safari/Chrome/Opera */
+}
+
+@media (max-width: 640px) {
+  .trends-tabs-container {
+    padding: 3px !important;
+    gap: 4px !important;
+    border-radius: 12px !important;
+    margin-top: 16px !important;
+    margin-bottom: 16px !important;
+  }
+  .trends-tabs-container button {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    gap: 6px !important;
+    border-radius: 9px !important;
+  }
+}
