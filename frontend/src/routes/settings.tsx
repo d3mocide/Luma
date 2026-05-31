@@ -81,53 +81,59 @@ function AccountTab({
   onApplyRecommendations: (rec: GoalRecommendation) => void
 }) {
   return (
-    <div className="settings-stack" style={{ maxWidth: 620 }}>
-      <div className="glass settings-card" style={{ padding: 24 }}>
-        <div className="eyebrow" style={{ marginBottom: 16 }}>Account</div>
-        {user ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <Row label="Name"  value={user.display_name} />
-            <Row label="Email" value={user.email} />
-            <Row label="Role"  value={user.role} last />
-          </div>
-        ) : (
-          <p style={{ color: 'var(--fg-quiet)', fontSize: 14, margin: 0 }}>Not signed in</p>
-        )}
+    <div className="settings-grid">
+      {/* Left: identity + device settings */}
+      <div className="settings-stack">
+        <div className="glass settings-card" style={{ padding: 24 }}>
+          <div className="eyebrow" style={{ marginBottom: 16 }}>Account</div>
+          {user ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <Row label="Name"  value={user.display_name} />
+              <Row label="Email" value={user.email} />
+              <Row label="Role"  value={user.role} last />
+            </div>
+          ) : (
+            <p style={{ color: 'var(--fg-quiet)', fontSize: 14, margin: 0 }}>Not signed in</p>
+          )}
+        </div>
+
+        <MeasurementsCard />
+
+        <div className="glass settings-card" style={{ padding: 24 }}>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Session</div>
+          <p style={{ color: 'var(--fg-tertiary)', fontSize: 14, margin: '0 0 16px' }}>
+            End your current session on this device.
+          </p>
+          {logoutError && (
+            <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(251,113,133,0.10)', border: '1px solid rgba(251,113,133,0.25)', borderRadius: 12, fontSize: 13, color: 'var(--bad)' }}>
+              {logoutError}
+            </div>
+          )}
+          <button
+            type="button"
+            className="btn"
+            onClick={onLogout}
+            disabled={loggingOut}
+            style={{ width: '100%', opacity: loggingOut ? 0.7 : 1 }}
+          >
+            {loggingOut ? 'Signing out…' : 'Sign out'}
+          </button>
+        </div>
       </div>
 
-      <MeasurementsCard />
+      {/* Right: goals + suggestions */}
+      <div className="settings-stack">
+        <RecommendGoalsCard onApply={onApplyRecommendations} />
 
-      <RecommendGoalsCard onApply={onApplyRecommendations} />
-
-      <GoalsCard
-        goalForm={goalForm}
-        onFieldChange={onFieldChange}
-        goalSaveError={goalSaveError}
-        goalSaveSuccess={goalSaveSuccess}
-        onSubmit={onSubmit}
-        isPending={isPending}
-        measurementSystem={measurementSystem}
-      />
-
-      <div className="glass settings-card" style={{ padding: 24 }}>
-        <div className="eyebrow" style={{ marginBottom: 12 }}>Session</div>
-        <p style={{ color: 'var(--fg-tertiary)', fontSize: 14, margin: '0 0 16px' }}>
-          End your current session on this device.
-        </p>
-        {logoutError && (
-          <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(251,113,133,0.10)', border: '1px solid rgba(251,113,133,0.25)', borderRadius: 12, fontSize: 13, color: 'var(--bad)' }}>
-            {logoutError}
-          </div>
-        )}
-        <button
-          type="button"
-          className="btn"
-          onClick={onLogout}
-          disabled={loggingOut}
-          style={{ width: '100%', opacity: loggingOut ? 0.7 : 1 }}
-        >
-          {loggingOut ? 'Signing out…' : 'Sign out'}
-        </button>
+        <GoalsCard
+          goalForm={goalForm}
+          onFieldChange={onFieldChange}
+          goalSaveError={goalSaveError}
+          goalSaveSuccess={goalSaveSuccess}
+          onSubmit={onSubmit}
+          isPending={isPending}
+          measurementSystem={measurementSystem}
+        />
       </div>
     </div>
   )
