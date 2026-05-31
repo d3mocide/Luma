@@ -322,7 +322,7 @@ async def _compress_thread_if_needed(thread_id: str, messages: list[dict], db) -
             temperature=0.2,
             timeout=30.0,
         )
-        summary_text = resp["choices"][0]["message"]["content"] or ""
+        summary_text = resp.choices[0].message.content or ""
     except Exception:
         logger.exception("Thread compression failed, falling back to truncation")
         return to_keep
