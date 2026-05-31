@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
-import { Heart, Activity, Moon, Flame, TrendingUp, TrendingDown, X } from 'lucide-react'
+import { Heart, Activity, Moon, Flame, TrendingUp, TrendingDown, X, Timer, Wind } from 'lucide-react'
 import { api, TrendSeries } from '../lib/api'
 import { convertWeight, measurementWeightUnit, type MeasurementSystem, useMeasurementSystem } from '../lib/measurements'
 import Spark from '../components/ui/Spark'
@@ -22,6 +22,10 @@ const METRICS = [
     insight: 'More 7+ hour nights than not. Hold steady.' },
   { id: 'active_kcal',        label: 'Active Calories', unit: 'kcal', color: 'var(--sun-400)', Icon: Flame,
     insight: 'Consistency over intensity builds lasting metabolic health.' },
+  { id: 'exercise_min',       label: 'Exercise',        unit: 'min', color: 'var(--good)', Icon: Timer,
+    insight: 'Regular active minutes support glucose control and cardiovascular adaptation.' },
+  { id: 'respiratory_rate_bpm', label: 'Respiratory Rate', unit: 'bpm', color: 'var(--sky-300)', Icon: Wind,
+    insight: 'Consistent sleeping respiratory rate signals stable respiratory and autonomic health.' },
 ]
 
 interface Insight {
@@ -119,6 +123,7 @@ export default function TrendsRoute() {
             insight={m.insight}
             invert={m.invert}
             onDrillDown={setDrillDate}
+            Icon={m.Icon}
           />
         ))}
       </div>
@@ -131,11 +136,12 @@ export default function TrendsRoute() {
 }
 
 function MetricChart({
-  metricId, label, unit, color, range, large, insight, invert, measurementSystem, alerts, onDrillDown,
+  metricId, label, unit, color, range, large, insight, invert, measurementSystem, alerts, onDrillDown, Icon = Activity,
 }: {
   metricId: string; label: string; unit: string; color: string
   range: Range; large?: boolean; insight?: string; invert?: boolean; measurementSystem: MeasurementSystem
   alerts: Insight[]; onDrillDown: (date: string) => void
+  Icon?: any
 }) {
   const { data, isLoading } = useQuery<TrendSeries>({
     queryKey: ['trend', metricId, range],
@@ -217,7 +223,7 @@ function MetricChart({
                 background: `${color}1f`, border: `1px solid ${color}40`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', color,
               }}>
-                <Activity size={14}/>
+                <Icon size={14}/>
               </div>
               <span style={{ fontSize: 14, color: 'var(--fg-secondary)' }}>{label}</span>
             </div>
