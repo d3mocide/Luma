@@ -363,7 +363,7 @@ function MetricChart({
           <ResponsiveContainer width="100%" height={280}>
             <AreaChart
               data={series}
-              margin={{ top: 4, right: 4, bottom: 4, left: -20 }}
+              margin={{ top: 4, right: 4, bottom: 4, left: -10 }}
               onClick={(e) => {
                 if (e?.activePayload?.[0]?.payload?.date) {
                   onDrillDown(e.activePayload[0].payload.date.slice(0, 10))
@@ -381,7 +381,14 @@ function MetricChart({
               <XAxis
                 dataKey="date"
                 tick={{ fontSize: 10, fill: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}
-                tickFormatter={(v: string) => v.slice(5)}
+                tickFormatter={(v: string) => {
+                  if (!v) return ''
+                  const datePart = v.split(' ')[0]
+                  const parts = datePart.split('-')
+                  if (parts.length < 3) return v
+                  return `${parts[1]}/${parts[2]}`
+                }}
+                minTickGap={28}
                 axisLine={false} tickLine={false}
               />
               <YAxis
@@ -390,6 +397,17 @@ function MetricChart({
                 axisLine={false} tickLine={false}
               />
               <Tooltip
+                labelFormatter={(label: string) => {
+                  if (!label) return ''
+                  const datePart = label.split(' ')[0]
+                  const parts = datePart.split('-')
+                  if (parts.length < 3) return label
+                  const [year, month, day] = parts
+                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                  const mIdx = parseInt(month, 10) - 1
+                  const mName = months[mIdx] || month
+                  return `${mName} ${parseInt(day, 10)}, ${year}`
+                }}
                 contentStyle={{
                   background: 'rgba(8,13,26,0.95)', border: '1px solid rgba(255,255,255,0.12)',
                   borderRadius: 12, backdropFilter: 'blur(12px)',
@@ -470,7 +488,17 @@ function DrillDownSheet({ date, onClose }: { date: string; onClose: () => void }
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
             <div className="eyebrow">Meals logged</div>
-            <h3 style={{ margin: '4px 0 0', fontSize: 20, fontWeight: 400, color: 'var(--fg-primary)' }}>{date}</h3>
+            <h3 style={{ margin: '4px 0 0', fontSize: 20, fontWeight: 400, color: 'var(--fg-primary)' }}>
+              {(() => {
+                const parts = date.split('-')
+                if (parts.length < 3) return date
+                const [year, month, day] = parts
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                const mIdx = parseInt(month, 10) - 1
+                const mName = months[mIdx] || month
+                return `${mName} ${parseInt(day, 10)}, ${year}`
+              })()}
+            </h3>
           </div>
           <button className="btn btn-ghost" style={{ padding: 8 }} onClick={onClose}><X size={16}/></button>
         </div>
