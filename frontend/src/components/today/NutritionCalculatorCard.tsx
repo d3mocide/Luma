@@ -288,6 +288,33 @@ export function NutritionCalculatorCard({
                 color: 'var(--fg-primary)', fontSize: 13,
               }}
             />
+            {/* Preset Chips */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+              {['50', '100', '150', '200', '300'].map((preset) => {
+                const active = servingG === preset
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setServingG(preset)}
+                    className={`serving-chip ${active ? 'active' : ''}`}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: 999,
+                      background: active ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
+                      border: active ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--glass-edge)',
+                      color: active ? 'var(--sky-300)' : 'var(--fg-secondary)',
+                      fontSize: 10,
+                      fontFamily: 'var(--font-mono)',
+                      cursor: 'pointer',
+                      transition: 'all 150ms',
+                    }}
+                  >
+                    {preset}g
+                  </button>
+                )
+              })}
+            </div>
           </label>
         </div>
 
