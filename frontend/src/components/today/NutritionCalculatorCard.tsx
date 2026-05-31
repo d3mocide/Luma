@@ -26,7 +26,7 @@ function BudgetStat({
   remaining,
   projected,
   unit,
-  lowerIsBetter,
+  lowerIsBetter: _lowerIsBetter,
   showProjected,
   noTarget,
 }: {
