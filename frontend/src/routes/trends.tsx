@@ -202,7 +202,7 @@ export default function TrendsRoute() {
         })}
       </div>
 
-      <div className="trends-metric-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+      <div className="trends-metric-grid">
         {METRICS.filter(m => m.tab === activeTab).map((m) => (
           <MetricChart
             key={m.id}
