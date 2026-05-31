@@ -12,10 +12,10 @@ const RANGES = ['7d', '30d', '90d', '1y'] as const
 type Range = typeof RANGES[number]
 
 const TABS = [
+  { id: 'vitals',   label: 'Vitals & Composition', Icon: Heart },
   { id: 'recovery', label: 'Recovery & Sleep', Icon: Moon },
   { id: 'activity', label: 'Activity & Energy', Icon: Flame },
   { id: 'gait',     label: 'Gait & Posture',   Icon: TrendingUp },
-  { id: 'vitals',   label: 'Vitals & Composition', Icon: Heart },
 ] as const
 
 type TabId = typeof TABS[number]['id']
@@ -96,7 +96,7 @@ interface MealSummary {
 
 export default function TrendsRoute() {
   const [range, setRange] = useState<Range>('90d')
-  const [activeTab, setActiveTab] = useState<TabId>('recovery')
+  const [activeTab, setActiveTab] = useState<TabId>('vitals')
   const [drillDate, setDrillDate] = useState<string | null>(null)
   const measurementSystem = useMeasurementSystem()
 
