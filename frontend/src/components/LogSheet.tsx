@@ -121,7 +121,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
         <div className="log-sheet-atmo" aria-hidden="true" />
 
         {/* Header */}
-        <header className="log-sheet-header" style={{ padding: isPageMode ? 'calc(env(safe-area-inset-top) + 18px) 20px 16px' : '18px 20px 16px', borderBottom: '1px solid var(--glass-edge)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, position: 'relative', zIndex: 1 }}>
+        <header className="log-sheet-header" style={{ padding: 'calc(env(safe-area-inset-top) + 18px) 20px 16px', borderBottom: '1px solid var(--glass-edge)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, position: 'relative', zIndex: 1 }}>
           <div style={{ minWidth: 0 }}>
             <div className="eyebrow" style={{ marginBottom: 8 }}>Meal logging</div>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>Add a food item</h2>
@@ -158,7 +158,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
         </div>
 
         {/* Tab content */}
-        <div className="thin-scroll log-sheet-body" style={{ flex: 1, overflowY: 'auto', padding: isPageMode ? `18px 20px calc(env(safe-area-inset-bottom) + 20px)` : '18px 20px 20px', position: 'relative', zIndex: 1 }}>
+        <div className="thin-scroll log-sheet-body" style={{ flex: 1, overflowY: 'auto', padding: '18px 20px calc(env(safe-area-inset-bottom) + 20px)', position: 'relative', zIndex: 1 }}>
           {activeTab === 'voice' && (
             <VoiceTab
               onAddItems={addItems}
@@ -183,7 +183,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
 
         {/* Footer / save */}
         {draftItems.length > 0 && (
-          <div className="log-sheet-footer" style={{ padding: isPageMode ? `16px 20px calc(env(safe-area-inset-bottom) + 16px)` : '16px 20px', borderTop: '1px solid var(--glass-edge)', background: 'linear-gradient(180deg, rgba(8,13,26,0.98), rgba(5,8,17,0.98))', display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', zIndex: 1 }}>
+          <div className="log-sheet-footer" style={{ padding: '16px 20px calc(env(safe-area-inset-bottom) + 16px)', borderTop: '1px solid var(--glass-edge)', background: 'linear-gradient(180deg, rgba(8,13,26,0.98), rgba(5,8,17,0.98))', display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', zIndex: 1 }}>
             <div className="eyebrow">Cumulative nutrition</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
               {[
