@@ -3,7 +3,7 @@ SHELL := /bin/bash
 COMPOSE := docker compose
 CORE_SERVICES := api postgres redis whisper worker
 
-.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed ai-smoke ai-smoke-full clean nuke
+.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed seed-mock ai-smoke ai-smoke-full clean nuke
 
 help:
 	@echo "Luma quick commands"
@@ -22,6 +22,7 @@ help:
 	@echo "  make logs-web - alias for logs-frontend"
 	@echo "  make migrate  - run alembic migrations"
 	@echo "  make seed     - optional operator bootstrap / recovery"
+	@echo "  make seed-mock - seed high-fidelity mock data (weight, ldl, meals) for any user UUID"
 	@echo "  make ai-smoke    - run API E2E smoke tests (skips LLM + plan generation)"
 	@echo "  make ai-smoke-full - run API E2E smoke tests including LLM agents"
 	@echo "  make clean    - remove stopped containers"
@@ -70,6 +71,13 @@ migrate:
 
 seed:
 	$(COMPOSE) exec api python -m luma.scripts.seed_admin
+
+seed-mock:
+	$(COMPOSE) cp backend/luma/scripts/seed_mock_data.py api:/app/luma/scripts/seed_mock_data.py
+	@read -p "Enter User UUID to seed: " uid; \
+	$(COMPOSE) exec api python -m luma.scripts.seed_mock_data $$uid; \
+	$(COMPOSE) exec postgres psql -U sh -d luma -c "CALL refresh_continuous_aggregate('biometrics_daily', NULL, NULL);"
+
 
 SMOKE_ARGS ?=
 ai-smoke:

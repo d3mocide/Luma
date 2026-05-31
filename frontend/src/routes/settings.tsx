@@ -43,6 +43,39 @@ function Row({ label, value, last }: { label: string; value: string; last?: bool
   )
 }
 
+function CopyRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(value)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: last ? 'none' : '1px solid var(--glass-edge)' }}>
+      <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono, monospace)', color: 'var(--fg-secondary, #94a3b8)' }}>{value}</span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          style={{
+            background: 'var(--glass-2, rgba(255, 255, 255, 0.05))',
+            border: '1px solid var(--glass-edge, rgba(255, 255, 255, 0.1))',
+            fontSize: 11,
+            color: copied ? '#10b981' : 'var(--fg-tertiary)',
+            cursor: 'pointer',
+            padding: '3px 8px',
+            borderRadius: 6,
+            transition: 'all 0.2s',
+          }}
+        >
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function AccessDenied() {
   return (
     <div style={{ padding: '48px 0', textAlign: 'center' }}>
@@ -90,7 +123,8 @@ function AccountTab({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <Row label="Name"  value={user.display_name} />
               <Row label="Email" value={user.email} />
-              <Row label="Role"  value={user.role} last />
+              <Row label="Role"  value={user.role} />
+              <CopyRow label="User ID" value={user.id} last />
             </div>
           ) : (
             <p style={{ color: 'var(--fg-quiet)', fontSize: 14, margin: 0 }}>Not signed in</p>

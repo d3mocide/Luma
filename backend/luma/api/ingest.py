@@ -24,7 +24,7 @@ def _get_redis():
     return _redis
 
 
-def _verify_app_secret(request: Request) -> None:
+def _verify_app_secret(request: Request, body: bytes) -> None:
     """Validate X-HAE-Signature header against the app-level shared secret.
 
     Skipped when hae_shared_secret is not configured (dev / legacy setups).
@@ -33,7 +33,8 @@ def _verify_app_secret(request: Request) -> None:
     if not settings.hae_shared_secret:
         return
     header_value = request.headers.get("X-HAE-Signature", "")
-    if not hmac.compare_digest(header_value, settings.hae_shared_secret):
+    expected = hmac.new(settings.hae_shared_secret.encode(), body, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(header_value, expected):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid app secret")
 
 
@@ -62,9 +63,8 @@ async def ingest_hae_authenticated(
     db: DbDep,
 ) -> dict:
     """Accept HAE data from an authenticated session (no per-user import token required)."""
-    _verify_app_secret(request)
-
     body = await request.body()
+    _verify_app_secret(request, body)
     replay_key = f"{user.id}:{hashlib.sha256(body).hexdigest()}"
     await _check_replay(replay_key)
 
@@ -90,7 +90,8 @@ async def ingest_hae(
     request: Request,
     db: DbDep,
 ) -> dict:
-    _verify_app_secret(request)
+    body = await request.body()
+    _verify_app_secret(request, body)
 
     from luma.db.models import User
     from sqlalchemy import select
@@ -99,8 +100,6 @@ async def ingest_hae(
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid import token")
-
-    body = await request.body()
     replay_key = f"{import_token}:{hashlib.sha256(body).hexdigest()}"
     await _check_replay(replay_key)
 

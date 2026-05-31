@@ -48,7 +48,7 @@ async def get_trend(
     result = await db.execute(
         text("""
             SELECT
-                day::text AS date,
+                CAST(day AS text) AS date,
                 avg_value,
                 min_value,
                 max_value,

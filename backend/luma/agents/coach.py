@@ -135,7 +135,7 @@ async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
     if name == "query_biometric_trend":
         rows = await db.execute(
             text("""
-                SELECT day::text, avg_value, last_value
+                SELECT CAST(day AS text) AS day, avg_value, last_value
                 FROM biometrics_daily
                 WHERE user_id = :uid AND metric = :metric
                   AND day BETWEEN :start AND :end
@@ -150,13 +150,13 @@ async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
             text("""
                 SELECT
                     DATE(ts AT TIME ZONE 'UTC') AS day,
-                    SUM((nutrition->>'calories')::float) AS calories,
-                    SUM((nutrition->>'saturated_fat_g')::float) AS sat_fat_g,
-                    SUM((nutrition->>'soluble_fiber_g')::float) AS fiber_g,
-                    SUM((nutrition->>'protein_g')::float) AS protein_g
+                    SUM(CAST(nutrition->>'calories' AS float)) AS calories,
+                    SUM(CAST(nutrition->>'saturated_fat_g' AS float)) AS sat_fat_g,
+                    SUM(CAST(nutrition->>'soluble_fiber_g' AS float)) AS fiber_g,
+                    SUM(CAST(nutrition->>'protein_g' AS float)) AS protein_g
                 FROM meal_events
                 WHERE user_id = :uid
-                  AND ts::date BETWEEN :start AND :end
+                  AND CAST(ts AS date) BETWEEN :start AND :end
                 GROUP BY DATE(ts AT TIME ZONE 'UTC')
                 ORDER BY day
             """),
