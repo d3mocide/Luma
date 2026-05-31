@@ -172,7 +172,7 @@ export function NutritionCalculatorCard({
       </div>
 
       <div className="glass-inset" style={{ padding: compact ? 10 : 12, display: 'grid', gap: 10 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1.3fr 0.7fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr auto', gap: 12, alignItems: 'start' }}>
 
           {/* Food search */}
           <label style={{ display: 'grid', gap: 6 }}>
@@ -273,7 +273,7 @@ export function NutritionCalculatorCard({
           </label>
 
           {/* Serving */}
-          <div style={{ display: 'grid', gap: 6 }}>
+          <div style={{ display: 'grid', gap: 6, width: compact ? '100%' : '260px' }}>
             <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
               Serving (g)
             </span>
