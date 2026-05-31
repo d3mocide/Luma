@@ -142,6 +142,33 @@ export function PlateTab({ draftItems, onAddItem, onRemoveItem, onUpdateWeight }
                     <span className="eyebrow" style={{ fontSize: 10 }}>g</span>
                   </div>
                 </div>
+
+                {/* Preset Chips */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4, justifyContent: 'flex-end' }}>
+                  {['50', '100', '150', '200', '300'].map((preset) => {
+                    const active = Math.round(item.estimated_weight_g) === parseInt(preset, 10)
+                    return (
+                      <button
+                        key={preset}
+                        onClick={() => onUpdateWeight(idx, parseInt(preset, 10))}
+                        className={`serving-chip ${active ? 'active' : ''}`}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 999,
+                          background: active ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
+                          border: active ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--glass-edge)',
+                          color: active ? 'var(--sky-300)' : 'var(--fg-secondary)',
+                          fontSize: 10,
+                          fontFamily: 'var(--font-mono)',
+                          cursor: 'pointer',
+                          transition: 'all 150ms',
+                        }}
+                      >
+                        {preset}g
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             ))}
           </div>
