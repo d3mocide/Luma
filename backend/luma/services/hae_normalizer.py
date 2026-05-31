@@ -60,6 +60,8 @@ SLEEP_MAP: dict[str, str] = {
 # set is unexpected and logged as a warning so silent data corruption is
 # caught in production logs rather than discovered later.
 _KNOWN_UNITS: dict[str, frozenset[str]] = {
+    "active_kcal":          frozenset({"kcal", "kJ"}),
+    "bmr_kcal":             frozenset({"kcal", "kJ"}),
     "distance_km":          frozenset({"mi", "km"}),
     "walking_speed_kmh":    frozenset({"mi/hr", "km/hr", "km/h"}),
     "step_length_cm":       frozenset({"in", "cm"}),
@@ -72,6 +74,8 @@ _KNOWN_UNITS: dict[str, frozenset[str]] = {
 def _convert(value: float, hae_unit: str, internal_metric: str) -> float:
     if internal_metric in ("sleep_duration_min", "sleep_asleep_min") and hae_unit in ("hr", "hours"):
         return value * 60
+    if internal_metric in ("active_kcal", "bmr_kcal") and hae_unit == "kJ":
+        return value / 4.184
     if hae_unit == "mi":
         return value * 1.60934
     if hae_unit == "mi/hr":
