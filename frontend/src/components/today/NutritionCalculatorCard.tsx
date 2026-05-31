@@ -273,7 +273,7 @@ export function NutritionCalculatorCard({
           </label>
 
           {/* Serving */}
-          <label style={{ display: 'grid', gap: 6 }}>
+          <div style={{ display: 'grid', gap: 6 }}>
             <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
               Serving (g)
             </span>
@@ -286,7 +286,10 @@ export function NutritionCalculatorCard({
                 width: '100%', padding: '10px 12px', borderRadius: 10,
                 border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
                 color: 'var(--fg-primary)', fontSize: 13,
+                outline: 'none', transition: 'border-color 150ms',
               }}
+              onFocus={(e) => (e.target.style.borderColor = 'rgba(56,189,248,0.5)')}
+              onBlur={(e) => (e.target.style.borderColor = 'var(--glass-edge)')}
             />
             {/* Preset Chips */}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
@@ -300,14 +303,30 @@ export function NutritionCalculatorCard({
                     className={`serving-chip ${active ? 'active' : ''}`}
                     style={{
                       padding: '4px 10px',
-                      borderRadius: 999,
+                      borderRadius: 8,
                       background: active ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
-                      border: active ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--glass-edge)',
+                      border: active ? '1px solid rgba(56,189,248,0.45)' : '1px solid var(--glass-edge)',
                       color: active ? 'var(--sky-300)' : 'var(--fg-secondary)',
                       fontSize: 10,
+                      fontWeight: active ? 600 : 400,
                       fontFamily: 'var(--font-mono)',
                       cursor: 'pointer',
-                      transition: 'all 150ms',
+                      transition: 'all 120ms ease-out',
+                      outline: 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+                        e.currentTarget.style.color = 'var(--fg-primary)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.background = 'var(--glass-1)'
+                        e.currentTarget.style.borderColor = 'var(--glass-edge)'
+                        e.currentTarget.style.color = 'var(--fg-secondary)'
+                      }
                     }}
                   >
                     {preset}g
@@ -315,7 +334,7 @@ export function NutritionCalculatorCard({
                 )
               })}
             </div>
-          </label>
+          </div>
         </div>
 
         {/* Footer */}
