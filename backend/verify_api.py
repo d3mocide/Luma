@@ -1,4 +1,5 @@
 import argparse
+import getpass
 import hashlib
 import hmac
 import json
@@ -139,6 +140,27 @@ class SmokeRunner:
             if resp is not None and resp.status_code == 200:
                 logged_in = True
                 break
+
+        if not logged_in and sys.stdin.isatty():
+            print("\nNo preconfigured login succeeded. Enter credentials to continue.")
+            try:
+                email = input("  Email: ").strip()
+                password = getpass.getpass("  Password: ")
+            except (EOFError, KeyboardInterrupt):
+                print()
+                email, password = "", ""
+
+            if email and password:
+                resp = self._request(
+                    f"POST /api/v1/auth/login ({email})",
+                    "POST",
+                    f"{self.api}/auth/login",
+                    expected={200, 401, 422},
+                    json={"email": email, "password": password},
+                )
+                if resp is not None and resp.status_code == 200:
+                    logged_in = True
+                    self.password = password
 
         if not logged_in:
             self.results.append(
