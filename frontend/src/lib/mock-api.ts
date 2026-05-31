@@ -39,7 +39,7 @@ type PlanData = {
 
 let signedIn = true
 let measurementSystem: 'metric' | 'imperial' = 'metric'
-let aiPricingOverrides: Record<string, any> = {}
+let aiPricingOverrides: Record<string, { input: number; output: number }> = {}
 
 const MOCK_SHOPPING_LIST = [
   { food_id: 'f-1', name: 'Rolled oats', brand: null, aisle: 'Breakfast', quantity: 1, unit: 'bag', purchased: false },
@@ -293,7 +293,7 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
   if (method === 'PUT' && pathname === '/settings/ai-pricing-overrides') {
     requireAuth()
     const body = parseBody(init)
-    aiPricingOverrides = body || {}
+    aiPricingOverrides = (body as Record<string, { input: number; output: number }>) ?? {}
     return aiPricingOverrides
   }
 

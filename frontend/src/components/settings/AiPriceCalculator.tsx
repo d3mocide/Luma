@@ -70,8 +70,8 @@ export function AiPriceCalculator() {
 
         const lower = modelStr.toLowerCase()
         let provider: 'gemini' | 'anthropic' | 'local' = 'local'
-        let inputCost = 0.00
-        let outputCost = 0.00
+        let inputCost: number
+        let outputCost: number
         let cleanName = modelStr
 
         // Clean up provider prefixes for standard display

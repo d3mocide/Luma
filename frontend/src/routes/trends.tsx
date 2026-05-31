@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
-import { Heart, Activity, Moon, Flame, TrendingUp, TrendingDown, X, Timer, Wind, Sun } from 'lucide-react'
+import { Heart, Activity, Moon, Flame, TrendingUp, TrendingDown, X, Timer, Wind, Sun, type LucideIcon } from 'lucide-react'
 import { api, TrendSeries } from '../lib/api'
 import { convertWeight, measurementWeightUnit, type MeasurementSystem, useMeasurementSystem } from '../lib/measurements'
 import Spark from '../components/ui/Spark'
@@ -241,7 +241,7 @@ function MetricChart({
   metricId: string; label: string; unit: string; color: string
   range: Range; large?: boolean; insight?: string; invert?: boolean; measurementSystem: MeasurementSystem
   alerts: Insight[]; onDrillDown: (date: string) => void
-  Icon?: any
+  Icon?: LucideIcon
 }) {
   const { data, isLoading } = useQuery<TrendSeries>({
     queryKey: ['trend', metricId, range],
