@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, User } from '../lib/api'
 import {
-  type GoalSettings, type GoalFormState,
+  type GoalSettings, type GoalFormState, type GoalRecommendation,
   emptyGoalForm, toGoalFormState, parseOptionalNumber, parseOptionalInteger,
 } from '../components/settings/types'
 import { GoalsCard } from '../components/settings/GoalsCard'
+import { RecommendGoalsCard } from '../components/settings/RecommendGoalsCard'
 import { MeasurementsCard } from '../components/settings/MeasurementsCard'
 import { LlmMetricsCard } from '../components/settings/LlmMetricsCard'
 import { HaeMetricsCard } from '../components/settings/HaeMetricsCard'
@@ -64,6 +65,7 @@ function AccountTab({
   loggingOut,
   logoutError,
   onLogout,
+  onApplyRecommendations,
 }: {
   user: User | undefined
   goalForm: GoalFormState
@@ -76,6 +78,7 @@ function AccountTab({
   loggingOut: boolean
   logoutError: string | null
   onLogout: () => void
+  onApplyRecommendations: (rec: GoalRecommendation) => void
 }) {
   return (
     <div className="settings-stack" style={{ maxWidth: 620 }}>
@@ -93,6 +96,8 @@ function AccountTab({
       </div>
 
       <MeasurementsCard />
+
+      <RecommendGoalsCard onApply={onApplyRecommendations} />
 
       <GoalsCard
         goalForm={goalForm}
@@ -231,6 +236,18 @@ export default function SettingsRoute() {
     setGoalForm((current) => ({ ...current, [field]: value }))
   }
 
+  const handleApplyRecommendations = (rec: GoalRecommendation) => {
+    setGoalSaveError(null)
+    setGoalSaveSuccess(null)
+    setGoalForm((current) => ({
+      ...current,
+      daily_calorie_target: String(rec.daily_calorie_target),
+      daily_sat_fat_g_max: String(rec.daily_sat_fat_g_max),
+      daily_soluble_fiber_g: String(rec.daily_soluble_fiber_g),
+      ...(rec.daily_protein_g_min != null ? { daily_protein_g_min: String(rec.daily_protein_g_min) } : {}),
+    }))
+  }
+
   const handleGoalSubmit = () => {
     setGoalSaveError(null)
     setGoalSaveSuccess(null)
@@ -298,6 +315,7 @@ export default function SettingsRoute() {
           loggingOut={loggingOut}
           logoutError={logoutError}
           onLogout={handleLogout}
+          onApplyRecommendations={handleApplyRecommendations}
         />
       )}
 

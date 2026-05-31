@@ -1,10 +1,11 @@
 import logging
 import uuid
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal
 
 from fastapi import APIRouter
 from pydantic import BaseModel
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 
 from luma.config import settings
@@ -61,6 +62,157 @@ async def put_goals(body: GoalIn, user: CurrentUser, db: DbDep) -> dict[str, Any
     await db.execute(stmt)
     await db.commit()
     return await get_goals(user, db)
+
+
+@router.get("/goals/recommend")
+async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
+    today_dt = date.today()
+    start_ts = datetime.combine(today_dt - timedelta(days=7), datetime.min.time()).replace(tzinfo=timezone.utc)
+    end_ts = datetime.combine(today_dt, datetime.min.time()).replace(tzinfo=timezone.utc)
+
+    # 7-day daily totals averaged across days (energy and steps are cumulative per day)
+    energy_result = await db.execute(
+        text("""
+            SELECT metric, AVG(daily_total) AS avg_daily
+            FROM (
+                SELECT metric,
+                       date_trunc('day', ts AT TIME ZONE 'UTC') AS day,
+                       SUM(value) AS daily_total
+                FROM biometrics
+                WHERE user_id = :uid
+                  AND metric IN ('bmr_kcal', 'active_kcal', 'steps')
+                  AND ts >= :start AND ts < :end
+                GROUP BY metric, day
+            ) s
+            GROUP BY metric
+        """),
+        {"uid": str(user.id), "start": start_ts, "end": end_ts},
+    )
+    energy_avgs: dict[str, float] = {row.metric: float(row.avg_daily) for row in energy_result}
+
+    data_days_result = await db.execute(
+        text("""
+            SELECT COUNT(DISTINCT date_trunc('day', ts AT TIME ZONE 'UTC'))
+            FROM biometrics
+            WHERE user_id = :uid AND metric = 'bmr_kcal'
+              AND ts >= :start AND ts < :end
+        """),
+        {"uid": str(user.id), "start": start_ts, "end": end_ts},
+    )
+    data_days = int(data_days_result.scalar() or 0)
+
+    weight_result = await db.execute(
+        text("SELECT value FROM biometrics WHERE user_id = :uid AND metric = 'weight_kg' ORDER BY ts DESC LIMIT 1"),
+        {"uid": str(user.id)},
+    )
+    weight_row = weight_result.first()
+    current_weight_kg: float | None = float(weight_row[0]) if weight_row else None
+
+    goal_result = await db.execute(select(Goal).where(Goal.user_id == user.id))
+    goal = goal_result.scalar_one_or_none()
+    target_weight_kg: float | None = float(goal.target_weight_kg) if goal and goal.target_weight_kg else None
+    target_ldl: int | None = goal.target_ldl_mg_dl if goal else None
+    dietary_pattern: str | None = goal.dietary_pattern if goal else None
+
+    bmr_avg = energy_avgs.get("bmr_kcal", 0.0)
+    active_avg = energy_avgs.get("active_kcal", 0.0)
+    steps_avg = energy_avgs.get("steps", 0.0)
+    tdee = bmr_avg + active_avg
+
+    # Calorie target
+    if tdee < 500 or data_days < 2:
+        cal_target = 2000.0
+        mode = "insufficient_data"
+    elif target_weight_kg and current_weight_kg and target_weight_kg < current_weight_kg - 1.0:
+        cal_target = round((tdee - 400) / 50) * 50  # ~0.5 kg/week deficit
+        mode = "deficit"
+    else:
+        cal_target = round(tdee / 50) * 50
+        mode = "maintenance"
+
+    # Sat fat: ACC/AHA <6% of calories for LDL reduction, <7% general
+    sat_fat_pct = 0.06 if target_ldl else 0.07
+    sat_fat_max = round((cal_target * sat_fat_pct / 9) * 2) / 2  # nearest 0.5 g
+
+    # Soluble fiber: 20g for LDL management, 12g general health
+    sol_fiber = 20.0 if target_ldl else 12.0
+
+    # Protein floor based on weight and activity
+    protein_g: int | None = None
+    if current_weight_kg:
+        if mode == "deficit":
+            protein_g = round(current_weight_kg * 1.4)
+        elif steps_avg > 7500:
+            protein_g = round(current_weight_kg * 1.2)
+        else:
+            protein_g = round(current_weight_kg * 0.8)
+
+    basis = {
+        "tdee_kcal": round(tdee) if tdee >= 500 else None,
+        "bmr_7d_avg": round(bmr_avg) if bmr_avg > 0 else None,
+        "active_7d_avg": round(active_avg) if active_avg > 0 else None,
+        "current_weight_kg": round(current_weight_kg, 1) if current_weight_kg else None,
+        "avg_steps_7d": round(steps_avg) if steps_avg > 0 else None,
+        "data_days": data_days,
+        "mode": mode,
+    }
+
+    # LLM rationale — non-fatal, best-effort
+    rationale: str | None = None
+    try:
+        from luma.services.llm_client import call_llm
+
+        parts = []
+        if tdee >= 500:
+            parts.append(f"7-day average TDEE {round(tdee)} kcal (BMR {round(bmr_avg)} + active {round(active_avg)})")
+        if current_weight_kg and target_weight_kg:
+            parts.append(f"current weight {current_weight_kg:.1f} kg, target {target_weight_kg:.1f} kg → {mode} mode")
+        if target_ldl:
+            parts.append(f"LDL goal {target_ldl} mg/dL")
+        if dietary_pattern:
+            parts.append(f"dietary pattern: {dietary_pattern}")
+        context_str = "; ".join(parts) if parts else "limited biometric data available"
+
+        rec_str = (
+            f"{int(cal_target)} kcal/day, {sat_fat_max}g sat fat max, "
+            f"{sol_fiber}g soluble fiber"
+            + (f", {protein_g}g protein floor" if protein_g else "")
+        )
+
+        resp = await call_llm(
+            primary_model=settings.meal_planner_model,
+            fallback_model=settings.meal_planner_fallback_model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a registered dietitian assistant. Given a user's biometric data and "
+                        "the nutrition targets calculated from it, write exactly 2-3 sentences explaining "
+                        "why these specific targets make sense for this person. Be precise — cite actual "
+                        "numbers. No markdown, no bullet points, no medical disclaimers."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": f"Context: {context_str}\nRecommended targets: {rec_str}",
+                },
+            ],
+            temperature=0.3,
+            max_tokens=180,
+            timeout=20.0,
+        )
+        rationale = resp.choices[0].message.content.strip()
+    except Exception:
+        logger.warning("Goal recommendation rationale LLM call failed — omitting rationale")
+
+    return {
+        "daily_calorie_target": int(cal_target),
+        "daily_sat_fat_g_max": sat_fat_max,
+        "daily_soluble_fiber_g": sol_fiber,
+        "daily_protein_g_min": protein_g,
+        "basis": basis,
+        "rationale": rationale,
+    }
 
 
 class PrefIn(BaseModel):
