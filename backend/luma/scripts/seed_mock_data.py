@@ -108,7 +108,11 @@ async def seed_data(user_id_str: str) -> None:
             hrv = 55.0 + random.uniform(-10.0, 15.0)
             # Resting HR: around 55-65 bpm
             rhr = 60.0 + random.uniform(-5.0, 5.0)
-
+            # Exercise: around 20-50 min
+            exercise = 35.0 + random.uniform(-15.0, 25.0)
+            # Sleep respiratory rate: around 14-18 breaths per min
+            resp_rate = 15.5 + random.uniform(-1.5, 1.5)
+ 
             biometrics_to_add.extend([
                 Biometric(user_id=user_uuid, ts=day_ts, metric="weight_kg", value=round(weight, 2), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="ldl_cholesterol", value=round(ldl, 1), source="lab_corp"),
@@ -118,6 +122,8 @@ async def seed_data(user_id_str: str) -> None:
                 Biometric(user_id=user_uuid, ts=day_ts, metric="steps", value=float(steps), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="hrv_ms", value=round(hrv, 0), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="rhr_bpm", value=round(rhr, 0), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="exercise_min", value=round(exercise, 0), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="respiratory_rate_bpm", value=round(resp_rate, 1), source="apple_health"),
             ])
 
         db.add_all(biometrics_to_add)
