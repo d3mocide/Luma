@@ -303,6 +303,46 @@ async def put_measurement_settings(
     return MeasurementSettingsOut(system=body.system)
 
 
+LLM_PRICING_PREF_KIND = "llm_pricing_override"
+
+
+@router.get("/settings/ai-pricing-overrides")
+async def get_ai_pricing_overrides(user: CurrentUser, db: DbDep) -> dict[str, Any]:
+    result = await db.execute(
+        select(Preference.value).where(
+            Preference.user_id == user.id,
+            Preference.kind == LLM_PRICING_PREF_KIND,
+        )
+    )
+    val = result.scalar_one_or_none()
+    if not val:
+        return {}
+    try:
+        import json
+        return json.loads(val)
+    except Exception:
+        return {}
+
+
+@router.put("/settings/ai-pricing-overrides")
+async def put_ai_pricing_overrides(
+    body: dict[str, Any],
+    user: CurrentUser,
+    db: DbDep,
+) -> dict[str, Any]:
+    import json
+    await db.execute(
+        delete(Preference).where(
+            Preference.user_id == user.id,
+            Preference.kind == LLM_PRICING_PREF_KIND,
+        )
+    )
+    if body:
+        db.add(Preference(user_id=user.id, kind=LLM_PRICING_PREF_KIND, value=json.dumps(body)))
+    await db.commit()
+    return body
+
+
 @router.get("/settings/hae-metrics")
 async def get_hae_metrics(user: CurrentUser) -> dict[str, Any]:
     return await hae_metrics_tracker.snapshot()
@@ -311,6 +351,39 @@ async def get_hae_metrics(user: CurrentUser) -> dict[str, Any]:
 @router.get("/settings/llm-metrics")
 async def get_llm_metrics(user: CurrentUser) -> dict[str, Any]:
     return await llm_metrics_tracker.snapshot()
+
+
+@router.get("/settings/ai-config")
+async def get_ai_config(user: CurrentUser) -> dict[str, Any]:
+    return {
+        "models": {
+            "meal_planner": {
+                "primary": settings.meal_planner_model,
+                "fallback": settings.meal_planner_fallback_model or None,
+            },
+            "coach_agent": {
+                "primary": settings.coach_model,
+                "fallback": settings.coach_fallback_model or None,
+            },
+            "food_extractor": {
+                "primary": settings.food_extractor_model,
+                "fallback": settings.food_extractor_fallback_model or None,
+            },
+            "vision_classifier": {
+                "primary": settings.vision_classifier_model,
+                "fallback": settings.vision_classifier_fallback_model or None,
+            },
+            "insight_narrator": {
+                "primary": settings.insight_narrator_model,
+                "fallback": settings.insight_narrator_fallback_model or None,
+            },
+        },
+        "endpoints": {
+            "local_ai_api_base": settings.local_ai_api_base or None,
+            "whisper_url": settings.whisper_url or None,
+        }
+    }
+
 
 
 class HaeImportOut(BaseModel):

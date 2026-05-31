@@ -1178,7 +1178,7 @@
   gap: 2px;
   border-bottom: 1px solid var(--glass-edge);
   margin-bottom: 28px;
-  max-width: 1180px;
+  max-width: 100%;
 }
 
 .settings-tab {
@@ -1224,7 +1224,7 @@
   grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
   gap: 20px;
   align-items: start;
-  max-width: 1180px;
+  max-width: 100%;
 }
 
 .settings-stack {
@@ -1259,7 +1259,7 @@
 }
 
 .settings-hero {
-  max-width: 1180px;
+  max-width: 100%;
 }
 
 .settings-hero-subcopy {

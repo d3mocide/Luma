@@ -9,6 +9,9 @@ import { GoalsCard } from '../components/settings/GoalsCard'
 import { RecommendGoalsCard } from '../components/settings/RecommendGoalsCard'
 import { MeasurementsCard } from '../components/settings/MeasurementsCard'
 import { LlmMetricsCard } from '../components/settings/LlmMetricsCard'
+import { AiConfigCard } from '../components/settings/AiConfigCard'
+import { AiPerformanceCard } from '../components/settings/AiPerformanceCard'
+import { AiPriceCalculator } from '../components/settings/AiPriceCalculator'
 import { HaeMetricsCard } from '../components/settings/HaeMetricsCard'
 import { HaeImportCard } from '../components/settings/HaeImportCard'
 import { HaeDiagnosticCard } from '../components/settings/HaeDiagnosticCard'
@@ -205,8 +208,18 @@ function HealthImportTab({ isOperator }: { isOperator: boolean }) {
 function AiRoutingTab({ isOperator }: { isOperator: boolean }) {
   if (!isOperator) return <AccessDenied />
   return (
-    <div className="settings-stack" style={{ maxWidth: 680 }}>
-      <LlmMetricsCard />
+    <div className="settings-grid">
+      {/* Left: active LLM events & activity metrics */}
+      <div className="settings-stack settings-primary">
+        <LlmMetricsCard />
+        <AiPriceCalculator />
+      </div>
+
+      {/* Right: AI model configurations & provider performance stats */}
+      <div className="settings-stack settings-secondary">
+        <AiPerformanceCard />
+        <AiConfigCard />
+      </div>
     </div>
   )
 }

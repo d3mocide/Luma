@@ -192,3 +192,18 @@ export type HaeAnalysis = {
   metrics_with_unextracted_fields: number
   analysis: HaeAnalysisEntry[]
 }
+
+export type AiConfig = {
+  models: {
+    meal_planner: { primary: string; fallback: string | null }
+    coach_agent: { primary: string; fallback: string | null }
+    food_extractor: { primary: string; fallback: string | null }
+    vision_classifier: { primary: string; fallback: string | null }
+    insight_narrator: { primary: string; fallback: string | null }
+  }
+  endpoints: {
+    local_ai_api_base: string | null
+    whisper_url: string | null
+  }
+}
+

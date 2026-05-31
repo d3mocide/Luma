@@ -39,6 +39,7 @@ type PlanData = {
 
 let signedIn = true
 let measurementSystem: 'metric' | 'imperial' = 'metric'
+let aiPricingOverrides: Record<string, any> = {}
 
 const MOCK_SHOPPING_LIST = [
   { food_id: 'f-1', name: 'Rolled oats', brand: null, aisle: 'Breakfast', quantity: 1, unit: 'bag', purchased: false },
@@ -229,6 +230,49 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     return { system: measurementSystem }
   }
 
+  if (method === 'GET' && pathname === '/settings/llm-metrics') {
+    requireAuth()
+    return {
+      scope: 'redis',
+      resets_on_restart: false,
+      source: 'redis',
+      totals: {
+        attempts: 14,
+        successes: 14,
+        failures: 0,
+        fallback_retries: 0,
+      },
+      last_success_at: new Date(Date.now() - 1000 * 60).toISOString(),
+      last_failure_at: null,
+      recent_events: [
+        { ts: new Date(Date.now() - 1000 * 60 * 1).toISOString(), event: 'success', model: 'gemini-3.5-flash', provider: 'gemini', attempt: 'native - primary', elapsed_ms: 1944.9, total_tokens: 342 },
+        { ts: new Date(Date.now() - 1000 * 60 * 3).toISOString(), event: 'success', model: 'gemini-3.1-flash-lite', provider: 'gemini', attempt: 'native - primary', elapsed_ms: 2751.1, total_tokens: 559 },
+        { ts: new Date(Date.now() - 1000 * 60 * 5).toISOString(), event: 'success', model: 'claude-sonnet-4-5', provider: 'anthropic', attempt: 'native - primary', elapsed_ms: 3569.2, total_tokens: 266 },
+        { ts: new Date(Date.now() - 1000 * 60 * 8).toISOString(), event: 'success', model: 'gemini-3.5-flash', provider: 'gemini', attempt: 'native - primary', elapsed_ms: 1811.6, total_tokens: 1542 },
+        { ts: new Date(Date.now() - 1000 * 60 * 12).toISOString(), event: 'success', model: 'claude-sonnet-4-5', provider: 'anthropic', attempt: 'native - primary', elapsed_ms: 4316.7, total_tokens: 1795 },
+        { ts: new Date(Date.now() - 1000 * 60 * 16).toISOString(), event: 'success', model: 'llama-3.1-8b-instruct', provider: 'local', attempt: 'native - primary', elapsed_ms: 950.4, total_tokens: 180 },
+        { ts: new Date(Date.now() - 1000 * 60 * 20).toISOString(), event: 'success', model: 'llama-3.1-8b-instruct', provider: 'local', attempt: 'native - primary', elapsed_ms: 1102.1, total_tokens: 220 }
+      ],
+    }
+  }
+
+  if (method === 'GET' && pathname === '/settings/ai-config') {
+    requireAuth()
+    return {
+      models: {
+        meal_planner: { primary: 'anthropic/claude-sonnet-4-5', fallback: null },
+        coach_agent: { primary: 'gemini/gemini-3.5-flash', fallback: null },
+        food_extractor: { primary: 'gemini/gemini-3.5-flash', fallback: 'local/llama-3.1-8b-instruct' },
+        vision_classifier: { primary: 'gemini/gemini-3.5-flash', fallback: null },
+        insight_narrator: { primary: 'gemini/gemini-3.5-flash', fallback: null },
+      },
+      endpoints: {
+        local_ai_api_base: 'http://localhost:11434/v1',
+        whisper_url: 'http://whisper:9000',
+      }
+    }
+  }
+
   if (method === 'PUT' && pathname === '/settings/measurements') {
     requireAuth()
     const body = parseBody(init)
@@ -238,6 +282,18 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     }
     measurementSystem = requested
     return { system: measurementSystem }
+  }
+
+  if (method === 'GET' && pathname === '/settings/ai-pricing-overrides') {
+    requireAuth()
+    return aiPricingOverrides
+  }
+
+  if (method === 'PUT' && pathname === '/settings/ai-pricing-overrides') {
+    requireAuth()
+    const body = parseBody(init)
+    aiPricingOverrides = body || {}
+    return aiPricingOverrides
   }
 
   if (method === 'GET' && pathname === '/today') {
