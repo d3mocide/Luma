@@ -112,6 +112,23 @@ async def seed_data(user_id_str: str) -> None:
             exercise = 35.0 + random.uniform(-15.0, 25.0)
             # Sleep respiratory rate: around 14-18 breaths per min
             resp_rate = 15.5 + random.uniform(-1.5, 1.5)
+
+            # --- Extended Longevity & Gait Metrics ---
+            bmi = weight / (1.78 ** 2)
+            body_fat_pct = 22.0 - (2.5 * (i / 30.0)) + random.uniform(-0.15, 0.15)
+            avg_hr = 72.0 + random.uniform(-4.0, 5.0)
+            walking_hr = 92.0 + random.uniform(-5.0, 6.0)
+            distance = (steps * 0.00078) + random.uniform(-0.2, 0.3)
+            stand_hours = 12 + random.randint(-2, 3)
+            daylight = 35.0 + random.uniform(-10.0, 20.0)
+            wrist_temp = 36.4 + random.uniform(-0.25, 0.3)
+            breathing_dist = max(0.0, round(2.5 + random.uniform(-1.5, 2.5), 1))
+            walking_speed = 4.6 + random.uniform(-0.3, 0.4)
+            step_length = 72.0 + random.uniform(-2.5, 3.0)
+            walking_asymmetry = 0.4 + random.uniform(-0.15, 0.25)
+            double_support = 28.5 + random.uniform(-1.0, 1.5)
+            stair_up = 0.75 + random.uniform(-0.08, 0.12)
+            stair_down = 0.90 + random.uniform(-0.10, 0.15)
  
             biometrics_to_add.extend([
                 Biometric(user_id=user_uuid, ts=day_ts, metric="weight_kg", value=round(weight, 2), source="apple_health"),
@@ -124,6 +141,23 @@ async def seed_data(user_id_str: str) -> None:
                 Biometric(user_id=user_uuid, ts=day_ts, metric="rhr_bpm", value=round(rhr, 0), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="exercise_min", value=round(exercise, 0), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="respiratory_rate_bpm", value=round(resp_rate, 1), source="apple_health"),
+                
+                # Longevity & Vitals
+                Biometric(user_id=user_uuid, ts=day_ts, metric="bmi", value=round(bmi, 2), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="body_fat_pct", value=round(body_fat_pct, 2), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="heart_rate_avg_bpm", value=round(avg_hr, 0), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="walking_hr_bpm", value=round(walking_hr, 0), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="distance_km", value=round(distance, 2), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="stand_hours", value=float(stand_hours), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="daylight_min", value=round(daylight, 1), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="wrist_temp_c", value=round(wrist_temp, 2), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="breathing_disturbances", value=float(breathing_dist), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="walking_speed_kmh", value=round(walking_speed, 2), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="step_length_cm", value=round(step_length, 1), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="walking_asymmetry_pct", value=round(walking_asymmetry, 3), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="double_support_pct", value=round(double_support, 2), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="stair_speed_up_mps", value=round(stair_up, 3), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="stair_speed_down_mps", value=round(stair_down, 3), source="apple_health"),
             ])
 
         db.add_all(biometrics_to_add)
@@ -212,10 +246,13 @@ async def seed_data(user_id_str: str) -> None:
 
         # 6. Refresh continuous aggregates
         print("Refreshing TimescaleDB continuous aggregates (biometrics_daily)...")
+        from luma.db.session import engine
         try:
             # We call TimescaleDB's refresh function to aggregate raw biometric data
-            await db.execute(text("CALL refresh_continuous_aggregate('biometrics_daily', NULL, NULL)"))
-            await db.commit()
+            # This requires autocommit mode to run outside a transaction block
+            async with engine.connect() as conn:
+                conn = await conn.execution_options(isolation_level="AUTOCOMMIT")
+                await conn.execute(text("CALL refresh_continuous_aggregate('biometrics_daily', NULL, NULL)"))
             print("Successfully refreshed continuous aggregate.")
         except Exception as exc:
             # Fallback/soft warning if not running in TimescaleDB or under a test setup where it fails
@@ -224,8 +261,10 @@ async def seed_data(user_id_str: str) -> None:
     print("\n🎉 Done! High-fidelity mock data successfully generated!")
     print(f"  - 31 days of weight logs (~81.5 kg -> ~76.2 kg)")
     print(f"  - 31 days of LDL logs (~145 mg/dL -> ~108 mg/dL)")
+    print(f"  - 31 days of 17+ longevity & gait metrics (walking speed, asymmetry, step length, breathing, etc.)")
     print(f"  - 15 days of breakfasts, lunches, and dinners")
     print(f"  - Calorie, fat, and fiber goals properly wired.")
+    print(f"  - Four categorized hubs: Recovery, Activity, Gait & Posture, Vitals")
 
 
 if __name__ == "__main__":

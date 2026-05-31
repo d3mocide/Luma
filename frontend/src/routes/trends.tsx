@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
-import { Heart, Activity, Moon, Flame, TrendingUp, TrendingDown, X, Timer, Wind } from 'lucide-react'
+import { Heart, Activity, Moon, Flame, TrendingUp, TrendingDown, X, Timer, Wind, Sun } from 'lucide-react'
 import { api, TrendSeries } from '../lib/api'
 import { convertWeight, measurementWeightUnit, type MeasurementSystem, useMeasurementSystem } from '../lib/measurements'
 import Spark from '../components/ui/Spark'
@@ -11,21 +11,69 @@ import Spark from '../components/ui/Spark'
 const RANGES = ['7d', '30d', '90d', '1y'] as const
 type Range = typeof RANGES[number]
 
+const TABS = [
+  { id: 'recovery', label: 'Recovery & Sleep', Icon: Moon },
+  { id: 'activity', label: 'Activity & Energy', Icon: Flame },
+  { id: 'gait',     label: 'Gait & Posture',   Icon: TrendingUp },
+  { id: 'vitals',   label: 'Vitals & Composition', Icon: Heart },
+] as const
+
+type TabId = typeof TABS[number]['id']
+
 const METRICS = [
-  { id: 'weight_kg',          label: 'Weight',          unit: 'kg',  color: 'var(--sky-400)', Icon: Activity,
-    insight: 'Keep tracking daily — the trend line is what matters, not single readings.' },
-  { id: 'hrv_ms',             label: 'HRV',             unit: 'ms',  color: 'var(--bad)', Icon: Heart,
+  // Recovery & Sleep
+  { id: 'hrv_ms', label: 'HRV', unit: 'ms', color: 'var(--bad)', Icon: Heart, tab: 'recovery',
     insight: 'HRV responds to sleep and recovery. Trending up means adaptation.' },
-  { id: 'rhr_bpm',            label: 'Resting HR',      unit: 'bpm', color: 'var(--sky-400)', Icon: Activity, invert: true,
+  { id: 'rhr_bpm', label: 'Resting HR', unit: 'bpm', color: 'var(--sky-400)', Icon: Activity, invert: true, tab: 'recovery',
     insight: 'Lower resting HR over time signals improving aerobic fitness.' },
-  { id: 'sleep_duration_min', label: 'Sleep',           unit: 'h',   color: 'var(--aurora-violet)', Icon: Moon,
+  { id: 'sleep_duration_min', label: 'Sleep Duration', unit: 'h', color: 'var(--aurora-violet)', Icon: Moon, tab: 'recovery',
     insight: 'More 7+ hour nights than not. Hold steady.' },
-  { id: 'active_kcal',        label: 'Active Calories', unit: 'kcal', color: 'var(--sun-400)', Icon: Flame,
+  { id: 'sleep_score', label: 'Sleep Score', unit: '/100', color: 'var(--sun-400)', Icon: Moon, tab: 'recovery',
+    insight: 'Consistent, restorative sleep is your metabolic superpower.' },
+  { id: 'respiratory_rate_bpm', label: 'Respiratory Rate', unit: 'bpm', color: 'var(--sky-300)', Icon: Wind, tab: 'recovery',
+    insight: 'Sleeping respiratory rate is highly stable. Small shifts signal autonomic load.' },
+  { id: 'wrist_temp_c', label: 'Wrist Temp Deviation', unit: '°C', color: 'var(--good)', Icon: Activity, tab: 'recovery',
+    insight: 'Tracks nocturnal skin temperature deviation from your baseline.' },
+  { id: 'breathing_disturbances', label: 'Breathing Disturbances', unit: '/hr', color: 'var(--bad)', Icon: Wind, invert: true, tab: 'recovery',
+    insight: 'Fewer breathing disturbances correlate with higher deep sleep ratios.' },
+
+  // Activity & Energy
+  { id: 'active_kcal', label: 'Active Calories', unit: 'kcal', color: 'var(--sun-400)', Icon: Flame, tab: 'activity',
     insight: 'Consistency over intensity builds lasting metabolic health.' },
-  { id: 'exercise_min',       label: 'Exercise',        unit: 'min', color: 'var(--good)', Icon: Timer,
+  { id: 'steps', label: 'Steps', unit: 'steps', color: 'var(--sky-400)', Icon: Activity, tab: 'activity',
+    insight: 'Daily steps build vascular health and insulin sensitivity.' },
+  { id: 'exercise_min', label: 'Exercise', unit: 'min', color: 'var(--good)', Icon: Timer, tab: 'activity',
     insight: 'Regular active minutes support glucose control and cardiovascular adaptation.' },
-  { id: 'respiratory_rate_bpm', label: 'Respiratory Rate', unit: 'bpm', color: 'var(--sky-300)', Icon: Wind,
-    insight: 'Consistent sleeping respiratory rate signals stable respiratory and autonomic health.' },
+  { id: 'distance_km', label: 'Distance', unit: 'km', color: 'var(--sky-300)', Icon: Activity, tab: 'activity',
+    insight: 'Aerobic volume aids systemic recovery and lipid clearance.' },
+  { id: 'stand_hours', label: 'Stand Hours', unit: 'h', color: 'var(--aurora-violet)', Icon: Activity, tab: 'activity',
+    insight: 'Frequent posture breaks support healthy endothelial function.' },
+  { id: 'daylight_min', label: 'Daylight Exposure', unit: 'min', color: 'var(--sun-400)', Icon: Sun, tab: 'activity',
+    insight: 'Morning daylight exposure regulates circadian rhythms and sleep quality.' },
+
+  // Gait & Posture
+  { id: 'walking_speed_kmh', label: 'Walking Speed', unit: 'km/h', color: 'var(--good)', Icon: Activity, tab: 'gait',
+    insight: 'Walking speed is an integrated marker of neuromuscular health.' },
+  { id: 'walking_asymmetry_pct', label: 'Walking Asymmetry', unit: '%', color: 'var(--bad)', Icon: TrendingDown, invert: true, tab: 'gait',
+    insight: 'Lower asymmetry represents balanced symmetry and healthy gait patterns.' },
+  { id: 'step_length_cm', label: 'Step Length', unit: 'cm', color: 'var(--sky-400)', Icon: Activity, tab: 'gait',
+    insight: 'Longer stride length indicates healthy pelvic mobility and lower-body power.' },
+  { id: 'double_support_pct', label: 'Double Support Time', unit: '%', color: 'var(--sky-300)', Icon: Activity, invert: true, tab: 'gait',
+    insight: 'Time spent with both feet on the ground. Lower % means greater dynamic balance.' },
+  { id: 'stair_speed_up_mps', label: 'Stair Speed Up', unit: 'm/s', color: 'var(--good)', Icon: TrendingUp, tab: 'gait',
+    insight: 'Ascending speed reflects explosive lower-body power and joint function.' },
+  { id: 'stair_speed_down_mps', label: 'Stair Speed Down', unit: 'm/s', color: 'var(--good)', Icon: TrendingDown, tab: 'gait',
+    insight: 'Descending speed evaluates eccentric control, knee health, and stability.' },
+
+  // Vitals & Composition
+  { id: 'bmi', label: 'BMI', unit: 'index', color: 'var(--sky-300)', Icon: Activity, tab: 'vitals',
+    insight: 'Calculated body mass index based on weight and height.' },
+  { id: 'body_fat_pct', label: 'Body Fat', unit: '%', color: 'var(--aurora-violet)', Icon: Activity, tab: 'vitals',
+    insight: 'Body fat ratio. Gradual decrease signals high-quality body recomposition.' },
+  { id: 'heart_rate_avg_bpm', label: 'Avg Heart Rate', unit: 'bpm', color: 'var(--bad)', Icon: Heart, tab: 'vitals',
+    insight: 'A general vitals indicator of cardiac performance and circulatory load.' },
+  { id: 'walking_hr_bpm', label: 'Walking Heart Rate', unit: 'bpm', color: 'var(--bad)', Icon: Heart, invert: true, tab: 'vitals',
+    insight: 'Cardiovascular response to light effort. Lower means higher efficiency.' },
 ]
 
 interface Insight {
@@ -48,6 +96,7 @@ interface MealSummary {
 
 export default function TrendsRoute() {
   const [range, setRange] = useState<Range>('90d')
+  const [activeTab, setActiveTab] = useState<TabId>('recovery')
   const [drillDate, setDrillDate] = useState<string | null>(null)
   const measurementSystem = useMeasurementSystem()
 
@@ -96,6 +145,7 @@ export default function TrendsRoute() {
         </div>
       </header>
 
+      {/* Primary Goal Persistent Hero Card */}
       <MetricChart
         metricId="weight_kg"
         label="Weight"
@@ -109,8 +159,51 @@ export default function TrendsRoute() {
         onDrillDown={setDrillDate}
       />
 
-      <div className="trends-metric-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginTop: 20 }}>
-        {METRICS.slice(1).map((m) => (
+      {/* Premium Tab Selector */}
+      <div className="trends-tabs-container" style={{
+        display: 'flex',
+        gap: 8,
+        padding: 4,
+        background: 'var(--glass-1)',
+        border: '1px solid var(--glass-edge)',
+        borderRadius: 16,
+        marginTop: 24,
+        marginBottom: 20,
+        overflowX: 'auto',
+        whiteSpace: 'nowrap',
+      }}>
+        {TABS.map((t) => {
+          const active = t.id === activeTab
+          const TabIcon = t.Icon
+          return (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 18px',
+                borderRadius: 12,
+                background: active ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                border: active ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: active ? 600 : 500,
+                color: active ? 'var(--fg-primary)' : 'var(--fg-tertiary)',
+                transition: 'all 150ms ease-out',
+                flexShrink: 0,
+              }}
+            >
+              <TabIcon size={14} style={{ color: active ? 'var(--sky-400)' : 'var(--fg-quiet)' }} />
+              {t.label}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="trends-metric-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+        {METRICS.filter(m => m.tab === activeTab).map((m) => (
           <MetricChart
             key={m.id}
             metricId={m.id}
@@ -166,6 +259,14 @@ function MetricChart({
   const delta = lastVal != null && firstVal != null ? lastVal - firstVal : null
   const good = delta != null ? (invert ? delta < 0 : delta > 0) : null
 
+  // Format value dynamically based on biometric type
+  const formatValue = (val: number) => {
+    if (metricId === 'sleep_duration_min') return (val / 60).toFixed(1)
+    if (metricId === 'walking_asymmetry_pct') return val.toFixed(2)
+    if (unit === 'm/s') return val.toFixed(2)
+    return val.toFixed(1)
+  }
+
   // Alert pins: filter to date range
   const seriesDates = new Set(series.map((s) => s.date.slice(0, 10)))
   const alertPins = alerts.filter((a) => seriesDates.has(a.ts.slice(0, 10)))
@@ -194,7 +295,7 @@ function MetricChart({
               {lastVal != null && (
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginTop: 8 }}>
                   <span className="num" style={{ fontSize: 56, fontWeight: 300, letterSpacing: '-0.04em', lineHeight: 1, color: 'var(--fg-primary)' }}>
-                    {metricId === 'sleep_duration_min' ? (lastVal / 60).toFixed(1) : lastVal.toFixed(1)}
+                    {formatValue(lastVal)}
                   </span>
                   <span style={{ fontSize: 18, color: 'var(--fg-tertiary)' }}>{displayUnit}</span>
                   {delta != null && (
@@ -206,9 +307,9 @@ function MetricChart({
                       border: good ? '1px solid rgba(52,211,153,0.25)' : '1px solid rgba(251,113,133,0.25)',
                       borderRadius: 999, marginLeft: 8,
                     }}>
-                      {good ? <TrendingDown size={12}/> : <TrendingUp size={12}/>}
+                      {delta > 0 ? <TrendingUp size={12}/> : <TrendingDown size={12}/>}
                       <span className="num">
-                        {delta > 0 ? '+' : ''}{metricId === 'sleep_duration_min' ? (delta / 60).toFixed(1) : delta.toFixed(1)}
+                        {delta > 0 ? '+' : ''}{formatValue(delta)}
                       </span>
                       {' '}in {range}
                     </span>
@@ -238,8 +339,8 @@ function MetricChart({
             background: good ? 'rgba(52,211,153,0.10)' : 'rgba(251,113,133,0.10)',
             borderRadius: 999,
           }}>
-            {good ? <TrendingUp size={10}/> : <TrendingDown size={10}/>}
-            {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+            {delta > 0 ? <TrendingUp size={10}/> : <TrendingDown size={10}/>}
+            {delta > 0 ? '+' : ''}{formatValue(delta)}
           </span>
         )}
       </div>
@@ -247,7 +348,7 @@ function MetricChart({
       {!large && lastVal != null && (
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
           <span className="num" style={{ fontSize: 32, fontWeight: 300, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
-            {metricId === 'sleep_duration_min' ? (lastVal / 60).toFixed(1) : lastVal.toFixed(1)}
+            {formatValue(lastVal)}
           </span>
           <span style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>{displayUnit}</span>
         </div>
