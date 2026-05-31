@@ -73,14 +73,71 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
     >
       <div className="glass" style={{ maxWidth: 520, width: '100%', padding: 28, borderRadius: 24, position: 'relative', maxHeight: '80vh', overflowY: 'auto' }}>
         <style dangerouslySetInnerHTML={{ __html: `
-          .field-input-focus {
-            transition: all 0.2s ease-in-out !important;
+          .luma-browser-input {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--glass-edge);
+            border-radius: 12px;
+            color: var(--fg-primary);
+            font-family: var(--font-sans);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease-in-out;
           }
-          .field-input-focus:focus {
+          .luma-browser-input:focus {
             border-color: var(--sky-400) !important;
-            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
-            background: rgba(0,0,0,0.4) !important;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+            background: rgba(0, 0, 0, 0.35) !important;
           }
+          .luma-browser-input::placeholder {
+            color: var(--fg-quiet) !important;
+          }
+
+          [data-theme="light"] .luma-browser-input {
+            background: rgba(255, 255, 255, 0.82) !important;
+            border-color: rgba(15, 23, 42, 0.12) !important;
+            color: var(--fg-primary) !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+          }
+          [data-theme="light"] .luma-browser-input:focus {
+            border-color: var(--sky-500) !important;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12) !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+          }
+          [data-theme="light"] .luma-browser-input::placeholder {
+            color: rgba(12, 20, 38, 0.36) !important;
+          }
+
+          .luma-serving-input {
+            width: 70px;
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--glass-edge);
+            border-radius: 8px;
+            color: var(--fg-primary);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            outline: none;
+            text-align: right;
+            transition: all 0.2s ease-in-out;
+          }
+          .luma-serving-input:focus {
+            border-color: var(--sky-400) !important;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+            background: rgba(0, 0, 0, 0.35) !important;
+          }
+          [data-theme="light"] .luma-serving-input {
+            background: rgba(255, 255, 255, 0.82) !important;
+            border-color: rgba(15, 23, 42, 0.12) !important;
+            color: var(--fg-primary) !important;
+          }
+          [data-theme="light"] .luma-serving-input:focus {
+            border-color: var(--sky-500) !important;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12) !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+          }
+
           .food-result-row {
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
           }
@@ -89,21 +146,24 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
             background: var(--glass-2) !important;
             border-color: var(--glass-edge-strong) !important;
           }
+          
           .serving-chip {
             transition: all 0.15s ease !important;
-            cursor: pointer;
+            cursor: pointer !important;
+            background: var(--glass-1) !important;
             border: 1px solid var(--glass-edge) !important;
+            color: var(--fg-secondary) !important;
           }
           .serving-chip:hover {
-            background: var(--glass-3) !important;
+            background: var(--glass-2) !important;
             color: var(--fg-primary) !important;
           }
           .serving-chip.active {
-            background: linear-gradient(180deg, var(--sky-300), var(--sky-500)) !important;
-            color: var(--bg-1) !important;
+            background: linear-gradient(180deg, var(--sky-400), var(--sky-500)) !important;
+            color: #ffffff !important;
             font-weight: 600 !important;
             border-color: transparent !important;
-            box-shadow: 0 4px 12px -3px rgba(14,165,233,0.4) !important;
+            box-shadow: 0 4px 10px -2px rgba(14, 165, 233, 0.35) !important;
           }
         `}} />
         <button onClick={onClose} style={{
@@ -192,12 +252,9 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
                 value={foodQuery}
                 onChange={(e) => { setFoodQuery(e.target.value); setDebouncedQuery(e.target.value); setSelectedFood(null) }}
                 placeholder="Search foods…"
-                className="field-input-focus"
+                className="luma-browser-input"
                 style={{
-                  width: '100%', boxSizing: 'border-box',
                   paddingLeft: 36, paddingRight: 14, paddingTop: 10, paddingBottom: 10,
-                  background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-edge)',
-                  borderRadius: 12, color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)', fontSize: 14, outline: 'none',
                 }}
               />
             </div>
@@ -262,8 +319,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
                       <label style={{ fontSize: 12, color: 'var(--fg-secondary)', fontWeight: 500 }}>Serving size:</label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <input type="number" value={servingG} onChange={(e) => setServingG(e.target.value)} min={1}
-                          className="field-input-focus"
-                          style={{ width: 70, padding: '6px 10px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-edge)', borderRadius: 8, color: 'var(--fg-primary)', fontFamily: 'var(--font-mono)', fontSize: 13, outline: 'none', textAlign: 'right' }}
+                          className="luma-serving-input"
                         />
                         <span style={{ fontSize: 12, color: 'var(--fg-secondary)' }}>g</span>
                       </div>
