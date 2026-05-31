@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Request, status
 
 from luma.config import settings
-from luma.deps import DbDep
+from luma.deps import CurrentUser, DbDep
 from luma.services.hae_metrics import tracker as hae_metrics_tracker
 from luma.services.hae_normalizer import normalize_hae_payload
 
@@ -53,6 +53,35 @@ async def _check_replay(replay_key: str) -> None:
         raise
     except Exception as exc:
         logger.warning("Redis replay check unavailable, proceeding: %s", exc)
+
+
+@router.post("/hae")
+async def ingest_hae_authenticated(
+    request: Request,
+    user: CurrentUser,
+    db: DbDep,
+) -> dict:
+    """Accept HAE data from an authenticated session (no per-user import token required)."""
+    _verify_app_secret(request)
+
+    body = await request.body()
+    replay_key = f"{user.id}:{hashlib.sha256(body).hexdigest()}"
+    await _check_replay(replay_key)
+
+    import orjson
+    try:
+        payload = orjson.loads(body)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid JSON")
+
+    try:
+        rows_inserted = await normalize_hae_payload(payload, db, user.id)
+    except Exception as exc:
+        await hae_metrics_tracker.record_ingest(rows_inserted=0, error=str(exc))
+        raise
+
+    await hae_metrics_tracker.record_ingest(rows_inserted=rows_inserted)
+    return {"status": "ok", "rows_inserted": rows_inserted}
 
 
 @router.post("/hae/{import_token}")

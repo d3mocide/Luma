@@ -5,7 +5,7 @@ import json
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Body, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -26,14 +26,14 @@ class NewMessageRequest(BaseModel):
 
 @router.post("/threads")
 async def create_thread(
-    req: NewThreadRequest,
     user: CurrentUser,
     db: DbDep,
+    req: NewThreadRequest | None = Body(default=None),
 ) -> dict[str, Any]:
     thread = CoachThread(
         id=uuid.uuid4(),
         user_id=user.id,
-        title=req.title or "New conversation",
+        title=(req.title if req and req.title else None) or "New conversation",
     )
     db.add(thread)
     await db.commit()
