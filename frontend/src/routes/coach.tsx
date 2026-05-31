@@ -22,12 +22,7 @@ interface Message {
   toolCalls?: string[]
 }
 
-const SUGGESTION_CHIPS = [
-  "Explain last night's HRV",
-  "Plan for a long run tomorrow",
-  "What's driving my LDL?",
-  "Lower-sodium swaps",
-]
+
 
 export default function CoachRoute() {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
@@ -325,15 +320,7 @@ export default function CoachRoute() {
       {/* Composer */}
       <div className="coach-composer" style={{ padding: '20px 40px 28px', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: 760, margin: '0 auto' }}>
-          {messages.length === 0 && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-              {SUGGESTION_CHIPS.map((s, i) => (
-                <button key={i} className="btn" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => send(s)}>
-                  <Sparkles size={11} color="var(--sun-300)"/> {s}
-                </button>
-              ))}
-            </div>
-          )}
+
           <div className="glass-bright" style={{
             padding: '4px 4px 4px 18px',
             display: 'flex', alignItems: 'center', gap: 8, borderRadius: 18,

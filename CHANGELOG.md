@@ -22,6 +22,7 @@ All notable changes to the Luma health tracking and meal-planning PWA will be do
 - **USDA FoodData Central Fallback**: `/foods/search` now falls back to the live USDA FDC API when local results are sparse (< 5 hits), caches new foods into the local database, and returns a unified ranked result set.
 
 ### Changed
+- **Streamlined Coach Chat Onboarding**: Removed the redundant lower suggestion chips (`SUGGESTION_CHIPS`) hovering above the chat input field on the Coach page, keeping the user interface clean and focusing attention on the primary central prompt suggestion grid when starting a new thread.
 - **iOS Standalone PWA Notch & Safe Area Support**: Replaced mobile floating navigation with a fixed frosted-glass `MobileHeader` utilizing native safe-area inset environment variables (`env(safe-area-inset-top)`). Shifted the viewport layouts of all five route pages to prevent top system bars, notches, or Dynamic Islands from obscuring app titles and navigation controls.
 - **Fidelity-Correct Shopping List References**: Refactored shopping list item mapping and lookup APIs to cleanly associate items by unique database Food IDs rather than loose title text, ensuring perfect correlation between plan slots, recipe ingredients, and shopping checks.
 - **Responsive Calendar Column Compression**: Tuned mobile and tablet layout grid breakpoints inside `index.css` to allow calendar day column text and slot layouts to compress gracefully without horizontal breaks.
