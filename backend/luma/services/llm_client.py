@@ -22,6 +22,15 @@ def _local_openai_route(model: str) -> dict[str, Any]:
     }
 
 
+def _get_provider(model_alias: str, target: dict[str, Any]) -> str:
+    """Infer the normalized provider identifier ('gemini', 'anthropic', 'local', etc.) from the model alias or target config."""
+    if "/" in model_alias:
+        return model_alias.split("/", 1)[0]
+    if target.get("api_base") == settings.local_ai_api_base:
+        return "local"
+    return target.get("custom_llm_provider") or "native"
+
+
 def build_litellm_target(model_name: str) -> dict[str, Any]:
     """Return LiteLLM kwargs for a model alias string.
 
@@ -87,10 +96,11 @@ async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str
         response = await litellm.acompletion(**target, **kwargs)
         elapsed_ms = round((perf_counter() - started) * 1000, 1)
         usage = _usage_fields(response)
+        provider = _get_provider(model_alias, target)
         await llm_metrics_tracker.record_event(
             event="success",
             model=model_alias,
-            provider=target.get("custom_llm_provider") or "native",
+            provider=provider,
             attempt=attempt,
             elapsed_ms=elapsed_ms,
             prompt_tokens=usage["prompt_tokens"],
@@ -103,7 +113,7 @@ async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str
                 "llm_event": "success",
                 "llm_attempt": attempt,
                 "llm_model": model_alias,
-                "llm_provider": target.get("custom_llm_provider") or "native",
+                "llm_provider": provider,
                 "llm_elapsed_ms": elapsed_ms,
                 **_usage_snapshot(response),
             },
@@ -111,10 +121,11 @@ async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str
         return response
     except Exception as exc:
         elapsed_ms = round((perf_counter() - started) * 1000, 1)
+        provider = _get_provider(model_alias, target)
         await llm_metrics_tracker.record_event(
             event="failure",
             model=model_alias,
-            provider=target.get("custom_llm_provider") or "native",
+            provider=provider,
             attempt=attempt,
             elapsed_ms=elapsed_ms,
             error_type=type(exc).__name__,
@@ -125,7 +136,7 @@ async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str
                 "llm_event": "failure",
                 "llm_attempt": attempt,
                 "llm_model": model_alias,
-                "llm_provider": target.get("custom_llm_provider") or "native",
+                "llm_provider": provider,
                 "llm_elapsed_ms": elapsed_ms,
             },
         )
@@ -161,7 +172,7 @@ async def call_llm(
             await llm_metrics_tracker.record_event(
                 event="fallback_retry",
                 model=primary_model,
-                provider=primary.get("custom_llm_provider") or "native",
+                provider=_get_provider(primary_model, primary),
                 attempt="primary",
                 fallback_model=fallback_model,
             )

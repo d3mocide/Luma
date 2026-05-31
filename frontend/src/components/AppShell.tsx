@@ -17,6 +17,13 @@ const NAV_ITEMS = [
   { to: '/coach',  label: 'Coach',  Icon: Sparkles  },
 ]
 
+const DESKTOP_NAV_ITEMS = [
+  { to: '/today',  label: 'Today',  Icon: CircleDot },
+  { to: '/plan',   label: 'Plan',   Icon: Utensils  },
+  { to: '/trends', label: 'Trends', Icon: Activity  },
+  { to: '/coach',  label: 'Coach',  Icon: Sparkles  },
+]
+
 export default function AppShell() {
   const location = useLocation()
   const todayFetchCount = useIsFetching({ queryKey: ['today'] })
@@ -174,7 +181,7 @@ function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: 
       </div>
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {NAV_ITEMS.map((item) => (
+        {DESKTOP_NAV_ITEMS.map((item) => (
           <SideLink key={item.to} {...item} showLoading={isTodayLoading && item.to === '/today'} />
         ))}
       </nav>
