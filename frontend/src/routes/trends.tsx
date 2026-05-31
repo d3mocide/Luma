@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
-import { Heart, Activity, Moon, Flame, TrendingUp, TrendingDown, X, Timer, Wind, Sun } from 'lucide-react'
+import { Heart, Activity, Moon, Flame, TrendingUp, TrendingDown, X, Timer, Wind, Sun, type LucideIcon } from 'lucide-react'
 import { api, TrendSeries } from '../lib/api'
 import { convertWeight, measurementWeightUnit, type MeasurementSystem, useMeasurementSystem } from '../lib/measurements'
 import Spark from '../components/ui/Spark'
@@ -75,6 +75,13 @@ const METRICS = [
   { id: 'walking_hr_bpm', label: 'Walking Heart Rate', unit: 'bpm', color: 'var(--bad)', Icon: Heart, invert: true, tab: 'vitals',
     insight: 'Cardiovascular response to light effort. Lower means higher efficiency.' },
 ]
+
+// Cumulative metrics arrive as many interval samples; the daily figure that
+// matters is the total, so chart their daily sum rather than a per-sample avg.
+const CUMULATIVE_METRICS = new Set([
+  'active_kcal', 'steps', 'exercise_min', 'distance_km',
+  'stand_hours', 'stand_min', 'flights_climbed', 'daylight_min',
+])
 
 interface Insight {
   id: string
@@ -234,14 +241,20 @@ function MetricChart({
   metricId: string; label: string; unit: string; color: string
   range: Range; large?: boolean; insight?: string; invert?: boolean; measurementSystem: MeasurementSystem
   alerts: Insight[]; onDrillDown: (date: string) => void
-  Icon?: any
+  Icon?: LucideIcon
 }) {
   const { data, isLoading } = useQuery<TrendSeries>({
     queryKey: ['trend', metricId, range],
     queryFn: () => api.get(`/trends/${metricId}?range=${range}`),
   })
 
+  const isCumulative = CUMULATIVE_METRICS.has(metricId)
   const series = (data?.series ?? []).map((entry) => {
+    if (isCumulative) {
+      // The daily total is the meaningful value; mirror it onto the fields the
+      // chart/headline/delta read so they all show the day's sum.
+      return { ...entry, avg: entry.sum, min: entry.sum, max: entry.sum, last: entry.sum }
+    }
     if (metricId !== 'weight_kg') return entry
     return {
       ...entry,

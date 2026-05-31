@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Plus, X, Search } from 'lucide-react'
 import { api, TodayData } from '../../lib/api'
 
-export function round1(value: number) {
+function round1(value: number) {
   return Math.round(value * 10) / 10
 }
 
