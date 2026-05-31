@@ -21,7 +21,7 @@ export default function Spark({ data, w = 120, h = 36, color = '#38bdf8' }: Spar
   const gid = `spark-${color.replace(/[^a-z0-9]/gi, '')}-${w}`
 
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ display: 'block' }}>
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.4"/>
