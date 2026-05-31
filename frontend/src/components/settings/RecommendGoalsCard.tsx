@@ -84,6 +84,12 @@ export function RecommendGoalsCard({ onApply }: Props) {
             )}
           </div>
 
+          {rec.basis.data_quality_warning && (
+            <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--sun-400)', lineHeight: 1.5 }}>
+              Biometric data quality issue detected — possibly from a bulk historical export creating duplicate readings. Targets were clamped to a safe range. Clear and re-sync your health data for a more accurate result.
+            </p>
+          )}
+
           {rec.rationale && (
             <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--fg-tertiary)', lineHeight: 1.6 }}>
               {rec.rationale}

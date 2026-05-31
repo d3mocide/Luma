@@ -53,6 +53,7 @@ export type GoalRecommendation = {
     avg_steps_7d: number | null
     data_days: number
     mode: 'deficit' | 'maintenance' | 'insufficient_data'
+    data_quality_warning: true | null
   }
   rationale: string | null
 }

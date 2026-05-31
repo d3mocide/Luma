@@ -70,10 +70,15 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     start_ts = datetime.combine(today_dt - timedelta(days=7), datetime.min.time()).replace(tzinfo=timezone.utc)
     end_ts = datetime.combine(today_dt, datetime.min.time()).replace(tzinfo=timezone.utc)
 
-    # 7-day daily totals averaged across days (energy and steps are cumulative per day)
+    # 7-day daily totals — use MEDIAN (percentile_cont 0.5) instead of mean so
+    # outlier days from bulk HAE historical exports don't skew the result.
+    # Apple Health bulk exports often include readings from multiple simultaneous
+    # sources (Watch + iPhone) which inflate daily sums on affected days; the
+    # median is robust to those outlier days in a way the mean is not.
     energy_result = await db.execute(
         text("""
-            SELECT metric, AVG(daily_total) AS avg_daily
+            SELECT metric,
+                   PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY daily_total) AS median_daily
             FROM (
                 SELECT metric,
                        date_trunc('day', ts AT TIME ZONE 'UTC') AS day,
@@ -88,7 +93,7 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         """),
         {"uid": str(user.id), "start": start_ts, "end": end_ts},
     )
-    energy_avgs: dict[str, float] = {row.metric: float(row.avg_daily) for row in energy_result}
+    energy_avgs: dict[str, float] = {row.metric: float(row.median_daily) for row in energy_result}
 
     data_days_result = await db.execute(
         text("""
@@ -118,6 +123,14 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     active_avg = energy_avgs.get("active_kcal", 0.0)
     steps_avg = energy_avgs.get("steps", 0.0)
     tdee = bmr_avg + active_avg
+
+    # Physiological sanity bounds — anything outside 1,200–4,500 kcal indicates
+    # bad data (e.g. bulk export duplication). Flag it and fall back to defaults.
+    _TDEE_MIN, _TDEE_MAX = 1_200.0, 4_500.0
+    tdee_clamped = not (_TDEE_MIN <= tdee <= _TDEE_MAX)
+    if tdee_clamped:
+        logger.warning("TDEE %s out of physiological range for user %s — clamping", round(tdee), user.id)
+        tdee = max(_TDEE_MIN, min(_TDEE_MAX, tdee))
 
     # Calorie target
     if tdee < 500 or data_days < 2:
@@ -155,6 +168,7 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         "avg_steps_7d": round(steps_avg) if steps_avg > 0 else None,
         "data_days": data_days,
         "mode": mode,
+        "data_quality_warning": tdee_clamped or None,
     }
 
     # LLM rationale — non-fatal, best-effort
