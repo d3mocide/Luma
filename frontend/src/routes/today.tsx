@@ -14,7 +14,7 @@ import { RingLegend } from '../components/today/RingLegend'
 import { BioTile } from '../components/today/BioTile'
 import { PlanRow } from '../components/today/PlanRow'
 import { RecentMealsCard } from '../components/today/RecentMealsCard'
-import { NutritionCalculatorCard, QUICK_FOODS, round1 } from '../components/today/NutritionCalculatorCard'
+import { NutritionCalculatorCard, type FoodAddPayload } from '../components/today/NutritionCalculatorCard'
 
 export default function TodayRoute() {
   const forceMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === '1'
@@ -22,8 +22,6 @@ export default function TodayRoute() {
   const queryClient = useQueryClient()
   const [loggingMealId, setLoggingMealId] = useState<string | null>(null)
   const [deletingMealId, setDeletingMealId] = useState<string | null>(null)
-  const [selectedFoodId, setSelectedFoodId] = useState<string>(QUICK_FOODS[0].id)
-  const [servingG, setServingG] = useState<string>('150')
 
   const { data: user } = useQuery<User>({
     queryKey: ['me'],
@@ -70,26 +68,11 @@ export default function TodayRoute() {
   })
 
   const quickAddMutation = useMutation({
-    mutationFn: async () => {
-      const food = QUICK_FOODS.find((f) => f.id === selectedFoodId) ?? QUICK_FOODS[0]
-      const grams = Math.max(1, Number(servingG) || 0)
-      const factor = grams / 100
-      const nutrition = {
-        calories: round1(food.caloriesPer100g * factor),
-        protein_g: round1(food.proteinPer100g * factor),
-        fat_g: round1(food.fatPer100g * factor),
-        saturated_fat_g: round1(food.satFatPer100g * factor),
-        carbohydrates_g: round1(food.carbsPer100g * factor),
-        fiber_g: round1(food.fiberPer100g * factor),
-        soluble_fiber_g: round1(food.solubleFiberPer100g * factor),
-        sodium_mg: round1(food.sodiumMgPer100g * factor),
-      }
-      return api.post('/log/meal', {
-        slot: 'snack', source: 'manual',
-        items: [{ name: food.name, quantity: grams, unit: 'g', nutrients: nutrition }],
-        nutrition,
-      })
-    },
+    mutationFn: (payload: FoodAddPayload) => api.post('/log/meal', {
+      slot: 'snack', source: 'manual',
+      items: [{ name: payload.name, quantity: payload.serving_g, unit: 'g', nutrients: payload.nutrition }],
+      nutrition: payload.nutrition,
+    }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['today'] })
     },
@@ -226,7 +209,7 @@ export default function TodayRoute() {
           </div>
         </div>
 
-        <NutritionCalculatorCard adherence={data.adherence_today} selectedFoodId={selectedFoodId} servingG={servingG} onFoodChange={setSelectedFoodId} onServingChange={setServingG} onAdd={() => quickAddMutation.mutate()} isAdding={quickAddMutation.isPending} compact={false}/>
+        <NutritionCalculatorCard adherence={data.adherence_today} onAdd={(p) => quickAddMutation.mutate(p)} isAdding={quickAddMutation.isPending} compact={false}/>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 20 }}>
           {/* Insight */}
@@ -362,7 +345,7 @@ export default function TodayRoute() {
           </div>
         </div>
 
-        <NutritionCalculatorCard adherence={data.adherence_today} selectedFoodId={selectedFoodId} servingG={servingG} onFoodChange={setSelectedFoodId} onServingChange={setServingG} onAdd={() => quickAddMutation.mutate()} isAdding={quickAddMutation.isPending} compact/>
+        <NutritionCalculatorCard adherence={data.adherence_today} onAdd={(p) => quickAddMutation.mutate(p)} isAdding={quickAddMutation.isPending} compact/>
 
         {/* Insight */}
         {data.active_insight ? (

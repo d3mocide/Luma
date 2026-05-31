@@ -1,29 +1,24 @@
-import { Plus } from 'lucide-react'
-import { TodayData } from '../../lib/api'
-
-export type QuickFood = {
-  id: string
-  name: string
-  caloriesPer100g: number
-  proteinPer100g: number
-  fatPer100g: number
-  satFatPer100g: number
-  carbsPer100g: number
-  fiberPer100g: number
-  solubleFiberPer100g: number
-  sodiumMgPer100g: number
-}
-
-export const QUICK_FOODS: QuickFood[] = [
-  { id: 'oats',    name: 'Steel cut oats',  caloriesPer100g: 71,  proteinPer100g: 2.5, fatPer100g: 1.4,  satFatPer100g: 0.2, carbsPer100g: 12.0, fiberPer100g: 1.7, solubleFiberPer100g: 1.1, sodiumMgPer100g: 0 },
-  { id: 'beans',   name: 'Black beans',      caloriesPer100g: 132, proteinPer100g: 8.7, fatPer100g: 0.5,  satFatPer100g: 0.1, carbsPer100g: 24.0, fiberPer100g: 8.7, solubleFiberPer100g: 1.8, sodiumMgPer100g: 238 },
-  { id: 'salmon',  name: 'Salmon',           caloriesPer100g: 206, proteinPer100g: 20.0, fatPer100g: 13.0, satFatPer100g: 3.1, carbsPer100g: 0.0,  fiberPer100g: 0.0, solubleFiberPer100g: 0.0, sodiumMgPer100g: 59 },
-  { id: 'avocado', name: 'Avocado',          caloriesPer100g: 160, proteinPer100g: 2.0, fatPer100g: 15.0, satFatPer100g: 2.1, carbsPer100g: 9.0,  fiberPer100g: 6.7, solubleFiberPer100g: 1.7, sodiumMgPer100g: 7 },
-  { id: 'lentils', name: 'Cooked lentils',   caloriesPer100g: 116, proteinPer100g: 9.0, fatPer100g: 0.4,  satFatPer100g: 0.1, carbsPer100g: 20.0, fiberPer100g: 7.9, solubleFiberPer100g: 1.4, sodiumMgPer100g: 238 },
-]
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Plus, X, Search } from 'lucide-react'
+import { api, TodayData } from '../../lib/api'
 
 export function round1(value: number) {
   return Math.round(value * 10) / 10
+}
+
+type FoodResult = {
+  id: string
+  name: string
+  brand: string | null
+  serving_size_g: number | null
+  nutrients_per_100g: Record<string, number>
+}
+
+export type FoodAddPayload = {
+  name: string
+  serving_g: number
+  nutrition: Record<string, number>
 }
 
 function BudgetStat({
@@ -32,27 +27,35 @@ function BudgetStat({
   projected,
   unit,
   lowerIsBetter,
+  showProjected,
+  noTarget,
 }: {
   label: string
   remaining: number
   projected: number
   unit: string
   lowerIsBetter: boolean
+  showProjected: boolean
+  noTarget: boolean
 }) {
-  const bad = lowerIsBetter ? projected < 0 : projected < 0
+  const over = showProjected && projected < 0
   return (
     <div className="glass-inset" style={{ padding: '10px 12px' }}>
       <div style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
         {label}
       </div>
       <div style={{ marginTop: 6, display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span className="num" style={{ fontSize: 20, color: bad ? 'var(--bad)' : 'var(--fg-primary)' }}>
-          {remaining}
+        <span className="num" style={{ fontSize: 20, color: over ? 'var(--bad)' : noTarget ? 'var(--fg-quiet)' : 'var(--fg-primary)' }}>
+          {noTarget ? '—' : remaining}
         </span>
-        <span style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>{unit}</span>
+        {!noTarget && <span style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>{unit}</span>}
       </div>
-      <div style={{ marginTop: 2, fontSize: 11, color: bad ? 'var(--bad)' : 'var(--fg-quiet)' }}>
-        after add: <span className="num">{projected}</span> {unit}
+      <div style={{ marginTop: 2, fontSize: 11, color: over ? 'var(--bad)' : 'var(--fg-quiet)' }}>
+        {noTarget
+          ? 'no target set'
+          : showProjected
+            ? <>after add: <span className="num">{projected}</span> {unit}</>
+            : 'remaining'}
       </div>
     </div>
   )
@@ -60,96 +63,192 @@ function BudgetStat({
 
 export function NutritionCalculatorCard({
   adherence,
-  selectedFoodId,
-  servingG,
-  onFoodChange,
-  onServingChange,
   onAdd,
   isAdding,
   compact,
 }: {
   adherence: TodayData['adherence_today']
-  selectedFoodId: string
-  servingG: string
-  onFoodChange: (foodId: string) => void
-  onServingChange: (grams: string) => void
-  onAdd: () => void
+  onAdd: (payload: FoodAddPayload) => void
   isAdding?: boolean
   compact?: boolean
 }) {
-  const food = QUICK_FOODS.find((f) => f.id === selectedFoodId) ?? QUICK_FOODS[0]
+  const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [selectedFood, setSelectedFood] = useState<FoodResult | null>(null)
+  const [servingG, setServingG] = useState('150')
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 350)
+    return () => clearTimeout(t)
+  }, [query])
+
+  const { data: results = [], isFetching } = useQuery<FoodResult[]>({
+    queryKey: ['foods', 'search', debouncedQuery],
+    queryFn: () => api.get(`/foods/search?q=${encodeURIComponent(debouncedQuery)}`),
+    enabled: debouncedQuery.length >= 2 && !selectedFood,
+    staleTime: 60_000,
+  })
+
   const grams = Math.max(1, Number(servingG) || 0)
   const factor = grams / 100
+  const n = selectedFood?.nutrients_per_100g ?? {}
 
-  const addCalories = round1(food.caloriesPer100g * factor)
-  const addSatFat = round1(food.satFatPer100g * factor)
-  const addSolFiber = round1(food.solubleFiberPer100g * factor)
+  const addCalories  = round1((n.calories         ?? 0) * factor)
+  const addSatFat    = round1((n.saturated_fat_g   ?? 0) * factor)
+  const addSolFiber  = round1((n.soluble_fiber_g   ?? 0) * factor)
 
-  const calTarget = adherence.calories.target ?? 0
-  const satTarget = adherence.sat_fat_g.target ?? 0
-  const solTarget = adherence.soluble_fiber_g.target ?? 0
-
-  const calLogged = adherence.calories.logged ?? 0
-  const satLogged = adherence.sat_fat_g.logged ?? 0
-  const solLogged = adherence.soluble_fiber_g.logged ?? 0
-
-  const calRemain = round1(calTarget - calLogged)
-  const satRemain = round1(satTarget - satLogged)
-  const solRemain = round1(solTarget - solLogged)
-
+  const calTarget  = adherence.calories.target ?? 0
+  const calLogged  = adherence.calories.logged ?? 0
+  const calRemain  = round1(calTarget - calLogged)
   const calProjected = round1(calRemain - addCalories)
+
+  const satTarget  = adherence.sat_fat_g.target ?? 0
+  const satLogged  = adherence.sat_fat_g.logged ?? 0
+  const satRemain  = round1(satTarget - satLogged)
   const satProjected = round1(satRemain - addSatFat)
+
+  const solTarget  = adherence.soluble_fiber_g.target ?? 0
+  const solLogged  = adherence.soluble_fiber_g.logged ?? 0
+  const solRemain  = round1(solTarget - solLogged)
   const solProjected = round1(solRemain - addSolFiber)
+
+  const hasFood = selectedFood !== null
+  const showResults = !selectedFood && debouncedQuery.length >= 2
+
+  // Fit signal — only meaningful when goals are set and food is selected
+  type FitSignal = 'fits' | 'tight' | 'over'
+  let fitSignal: FitSignal | null = null
+  if (hasFood && calTarget > 0) {
+    if (calProjected < 0 || (satTarget > 0 && satProjected < 0)) {
+      fitSignal = 'over'
+    } else if (calProjected < calTarget * 0.08 || (satTarget > 0 && satProjected < satTarget * 0.08)) {
+      fitSignal = 'tight'
+    } else {
+      fitSignal = 'fits'
+    }
+  }
+
+  const fitColor = fitSignal === 'fits' ? 'var(--aurora-mint)' : fitSignal === 'tight' ? 'var(--sun-400)' : 'var(--bad)'
+  const fitLabel = fitSignal === 'fits' ? '✓ Fits your budget' : fitSignal === 'tight' ? '⚠ Tight — close to limit' : '✗ Exceeds budget'
+
+  const handleSelect = (food: FoodResult) => {
+    setSelectedFood(food)
+    setQuery(food.name)
+    if (food.serving_size_g) setServingG(String(Math.round(food.serving_size_g)))
+  }
+
+  const handleClear = () => {
+    setSelectedFood(null)
+    setQuery('')
+    setDebouncedQuery('')
+  }
+
+  const handleAdd = () => {
+    if (!selectedFood) return
+    const nutrition: Record<string, number> = {}
+    for (const [k, v] of Object.entries(selectedFood.nutrients_per_100g)) {
+      if (typeof v === 'number') nutrition[k] = round1(v * factor)
+    }
+    onAdd({ name: selectedFood.name, serving_g: grams, nutrition })
+  }
 
   return (
     <div className="glass" style={{ padding: compact ? 18 : 24, marginTop: compact ? 14 : 0, marginBottom: compact ? 14 : 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div>
-          <div className="eyebrow">Remaining today</div>
-          <div style={{ fontSize: compact ? 12 : 13, color: 'var(--fg-tertiary)', marginTop: 4 }}>
-            Quick estimate before you log.
-          </div>
+      <div style={{ marginBottom: 12 }}>
+        <div className="eyebrow">Budget check</div>
+        <div style={{ fontSize: compact ? 12 : 13, color: 'var(--fg-tertiary)', marginTop: 4 }}>
+          Will this fit?
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(3, 1fr)', gap: 10, marginBottom: 12 }}>
-        <BudgetStat label="Calories" remaining={calRemain} projected={calProjected} unit="kcal" lowerIsBetter={false} />
-        <BudgetStat label="Sat fat" remaining={satRemain} projected={satProjected} unit="g" lowerIsBetter />
-        <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g" lowerIsBetter={false} />
+        <BudgetStat label="Calories" remaining={calRemain} projected={calProjected} unit="kcal" lowerIsBetter={false} showProjected={hasFood} noTarget={calTarget === 0} />
+        <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    lowerIsBetter        showProjected={hasFood} noTarget={satTarget === 0} />
+        <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   lowerIsBetter={false} showProjected={hasFood} noTarget={solTarget === 0} />
       </div>
 
       <div className="glass-inset" style={{ padding: compact ? 10 : 12, display: 'grid', gap: 10 }}>
         <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1.3fr 0.7fr', gap: 10 }}>
+
+          {/* Food search */}
           <label style={{ display: 'grid', gap: 6 }}>
             <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
               Food
             </span>
-            <div style={{
-              display: 'flex', flexWrap: 'wrap', gap: 8, padding: '8px',
-              borderRadius: 10, border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
-            }}>
-              {QUICK_FOODS.map((item) => {
-                const active = item.id === selectedFoodId
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => onFoodChange(item.id)}
-                    className="btn"
-                    style={{
-                      padding: '6px 10px', fontSize: 12, borderRadius: 999,
-                      border: active ? '1px solid var(--sky-400)' : '1px solid var(--glass-edge)',
-                      background: active ? 'rgba(56,189,248,0.16)' : 'var(--glass-2)',
-                      color: active ? 'var(--fg-primary)' : 'var(--fg-secondary)',
-                    }}
-                  >
-                    {item.name}
+            <div style={{ position: 'relative' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '10px 12px', borderRadius: 10,
+                border: `1px solid ${selectedFood ? 'var(--sky-400)' : 'var(--glass-edge)'}`,
+                background: 'var(--glass-1)',
+              }}>
+                <Search size={13} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
+                <input
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value)
+                    if (selectedFood) setSelectedFood(null)
+                  }}
+                  placeholder="Search foods…"
+                  style={{
+                    flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                    color: 'var(--fg-primary)', fontSize: 13, minWidth: 0,
+                  }}
+                />
+                {selectedFood && (
+                  <button type="button" onClick={handleClear} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', alignItems: 'center' }}>
+                    <X size={13} />
                   </button>
-                )
-              })}
+                )}
+                {isFetching && !selectedFood && (
+                  <span style={{ fontSize: 10, color: 'var(--fg-quiet)', flexShrink: 0 }}>…</span>
+                )}
+              </div>
+
+              {/* Results list */}
+              {showResults && results.length > 0 && (
+                <div style={{
+                  marginTop: 4, borderRadius: 10,
+                  border: '1px solid var(--glass-edge)', background: 'var(--glass-2)',
+                  overflow: 'hidden',
+                }}>
+                  {results.slice(0, 6).map((food) => (
+                    <button
+                      key={food.id}
+                      type="button"
+                      onClick={() => handleSelect(food)}
+                      style={{
+                        width: '100%', textAlign: 'left', background: 'none', border: 'none',
+                        borderBottom: '1px solid var(--glass-edge)', padding: '9px 12px',
+                        cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--glass-1)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {food.name}
+                        </div>
+                        {food.brand && (
+                          <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 1 }}>{food.brand}</div>
+                        )}
+                      </div>
+                      <span style={{ fontSize: 11, color: 'var(--fg-quiet)', flexShrink: 0, fontFamily: 'var(--font-mono)' }}>
+                        {Math.round(food.nutrients_per_100g.calories ?? 0)} kcal
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {showResults && results.length === 0 && !isFetching && (
+                <div style={{ marginTop: 4, padding: '8px 12px', fontSize: 12, color: 'var(--fg-quiet)' }}>
+                  No results found.
+                </div>
+              )}
             </div>
           </label>
 
+          {/* Serving */}
           <label style={{ display: 'grid', gap: 6 }}>
             <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
               Serving (g)
@@ -158,7 +257,7 @@ export function NutritionCalculatorCard({
               type="number"
               min={1}
               value={servingG}
-              onChange={(e) => onServingChange(e.target.value)}
+              onChange={(e) => setServingG(e.target.value)}
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 10,
                 border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
@@ -168,11 +267,32 @@ export function NutritionCalculatorCard({
           </label>
         </div>
 
+        {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>
-            Adds <span className="num">{addCalories}</span> kcal · <span className="num">{addSatFat}</span>g sat fat · <span className="num">{addSolFiber}</span>g soluble fiber
+          <div>
+            {hasFood ? (
+              <>
+                <div style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>
+                  Adds <span className="num">{addCalories}</span> kcal · <span className="num">{addSatFat}</span>g sat fat · <span className="num">{addSolFiber}</span>g soluble fiber
+                </div>
+                {fitSignal && (
+                  <div style={{ marginTop: 4, fontSize: 12, fontWeight: 500, color: fitColor }}>
+                    {fitLabel}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>
+                Search for a food to check your budget.
+              </div>
+            )}
           </div>
-          <button className="btn" onClick={onAdd} disabled={!!isAdding} style={{ padding: '8px 12px', fontSize: 12 }}>
+          <button
+            className="btn"
+            onClick={handleAdd}
+            disabled={!hasFood || !!isAdding}
+            style={{ padding: '8px 12px', fontSize: 12, flexShrink: 0 }}
+          >
             <Plus size={12} strokeWidth={2} /> {isAdding ? 'Adding…' : 'Add to log'}
           </button>
         </div>
