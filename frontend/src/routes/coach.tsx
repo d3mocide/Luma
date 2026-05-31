@@ -122,12 +122,26 @@ export default function CoachRoute() {
                 }
                 return next
               })
+            } else if (event.type === 'error') {
+              setMessages((prev) => {
+                const next = [...prev]
+                const last = next[next.length - 1]
+                if (last?.role === 'assistant') {
+                  next[next.length - 1] = { ...last, content: event.text || 'Coach temporarily unavailable.', streaming: false, toolCalls: [] }
+                }
+                return next
+              })
             } else if (event.type === 'done') {
               setMessages((prev) => {
                 const next = [...prev]
                 const last = next[next.length - 1]
                 if (last?.role === 'assistant') {
-                  next[next.length - 1] = { ...last, streaming: false, toolCalls: [] }
+                  next[next.length - 1] = {
+                    ...last,
+                    content: last.content || 'No response — please try again.',
+                    streaming: false,
+                    toolCalls: [],
+                  }
                 }
                 return next
               })
@@ -345,6 +359,8 @@ function _toolLabel(name: string): string {
     get_recent_meals: 'Loading recent meals…',
     propose_meal_swap: 'Proposing meal swap…',
     modify_plan: 'Updating meal plan…',
+    get_user_goals: 'Checking your goals…',
+    get_recent_alerts: 'Reviewing recent alerts…',
   }
   return labels[name] ?? `Running ${name}…`
 }
