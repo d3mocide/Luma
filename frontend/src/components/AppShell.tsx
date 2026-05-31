@@ -71,7 +71,6 @@ export default function AppShell() {
             overflowY: 'auto',
             overscrollBehavior: 'contain',
             position: 'relative',
-            zIndex: 1,
           }}
         >
           <Outlet />
