@@ -27,11 +27,11 @@ class Settings(BaseSettings):
     #   local/<id>     → LOCAL_AI_API_BASE (Ollama / LocalAI)
     #   gemini/<id>    → Gemini via GEMINI_API_KEY
     #   anthropic/<id> → Anthropic API
-    food_extractor_model: str = "gemini/gemini-2.5-flash"
-    vision_classifier_model: str = "gemini/gemini-2.5-flash"
+    food_extractor_model: str = "gemini/gemini-3.5-flash"
+    vision_classifier_model: str = "gemini/gemini-3.5-flash"
     meal_planner_model: str = "anthropic/claude-sonnet-4-5"
-    coach_model: str = "gemini/gemini-2.5-flash"
-    insight_narrator_model: str = "gemini/gemini-2.5-flash"
+    coach_model: str = "gemini/gemini-3.5-flash"
+    insight_narrator_model: str = "gemini/gemini-3.5-flash"
 
     # Optional fallback routes — used if the primary call fails (e.g. local model down).
     # Leave blank to disable fallback for that role.

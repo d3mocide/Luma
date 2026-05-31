@@ -34,6 +34,8 @@ class SmokeRunner:
         hae_secret: str,
         run_plan_generation: bool,
         plan_timeout: int,
+        run_llm_agents: bool,
+        llm_timeout: int,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api = f"{self.base_url}/api/v1"
@@ -43,6 +45,8 @@ class SmokeRunner:
         self.hae_secret = hae_secret
         self.run_plan_generation = run_plan_generation
         self.plan_timeout = plan_timeout
+        self.run_llm_agents = run_llm_agents
+        self.llm_timeout = llm_timeout
         self.session = requests.Session()
         self.results: list[CheckResult] = []
 
@@ -55,6 +59,7 @@ class SmokeRunner:
         self._check_goals_and_preferences()
         self._check_foods_and_log_crud()
         self._check_plan_endpoints()
+        self._check_llm_agents()
         self._check_stub_endpoints()
         return self._report()
 
@@ -330,6 +335,134 @@ class SmokeRunner:
             json={"constraints": {"notes": "smoke-e2e"}},
         )
 
+    def _check_llm_agents(self) -> None:
+        """Round-trip the LLM-backed agents so a broken model route surfaces here.
+
+        Unlike a plain 200 check, these assert the model actually produced
+        output (extracted items / streamed tokens) — that is what distinguishes
+        a working route from one that silently falls back to an empty result.
+        """
+        if not self.run_llm_agents:
+            self.results.append(
+                CheckResult(
+                    name="LLM AGENTS (skipped)",
+                    ok=True,
+                    status=None,
+                    elapsed_s=0.0,
+                    detail="Skipped by flag",
+                )
+            )
+            return
+
+        self._check_food_extractor()
+        self._check_coach_stream()
+        # Insight narrator has no direct endpoint — it runs in the worker when an
+        # alert fires. We can only confirm the read path + surface any narratives.
+        self._request(
+            "GET /api/v1/insights (insight-narrator read path)",
+            "GET",
+            f"{self.api}/insights",
+            expected={200},
+        )
+
+    def _check_food_extractor(self) -> None:
+        resp = self._request(
+            "POST /api/v1/log/meal/text (food-extractor LLM)",
+            "POST",
+            f"{self.api}/log/meal/text",
+            expected={200},
+            timeout=self.llm_timeout,
+            json={"text": "two scrambled eggs, a slice of whole wheat toast, and a cup of black coffee"},
+        )
+        if resp is None or resp.status_code != 200:
+            return
+
+        items: list[Any] = []
+        try:
+            items = resp.json().get("items") or []
+        except Exception:
+            items = []
+        ok = len(items) > 0
+        self.results.append(
+            CheckResult(
+                name="  food-extractor produced items",
+                ok=ok,
+                status=resp.status_code,
+                elapsed_s=0.0,
+                detail="" if ok else "LLM returned 0 items — model route likely failing",
+            )
+        )
+
+    def _check_coach_stream(self) -> None:
+        thread_resp = self._request(
+            "POST /api/v1/coach/threads (coach thread)",
+            "POST",
+            f"{self.api}/coach/threads",
+            expected={200},
+            json={"title": "smoke-e2e"},
+        )
+        thread_id: str | None = None
+        if thread_resp is not None and thread_resp.status_code == 200:
+            try:
+                thread_id = thread_resp.json().get("id")
+            except Exception:
+                thread_id = None
+        if not thread_id:
+            self.results.append(
+                CheckResult(
+                    name="POST /api/v1/coach/threads/{id}/messages (coach LLM)",
+                    ok=False,
+                    status=None,
+                    elapsed_s=0.0,
+                    detail="Could not create a coach thread to stream into",
+                )
+            )
+            return
+
+        name = "POST /api/v1/coach/threads/{id}/messages (coach LLM stream)"
+        t0 = time.monotonic()
+        tokens = 0
+        detail = ""
+        status_code: int | None = None
+        ok = False
+        try:
+            with self.session.post(
+                f"{self.api}/coach/threads/{thread_id}/messages",
+                json={"content": "In one short sentence, what should I focus on today?"},
+                stream=True,
+                timeout=self.llm_timeout,
+                verify=self.verify_tls,
+            ) as r:
+                status_code = r.status_code
+                if r.status_code != 200:
+                    detail = (r.text or "")[:260]
+                else:
+                    for line in r.iter_lines(decode_unicode=True):
+                        if not line or not line.startswith("data:"):
+                            continue
+                        try:
+                            data = json.loads(line[len("data:"):].strip())
+                        except json.JSONDecodeError:
+                            continue
+                        event_type = data.get("type")
+                        if event_type == "token":
+                            tokens += 1
+                        elif event_type == "error":
+                            detail = str(data.get("message") or data.get("detail") or data)[:260]
+                            break
+                        elif event_type == "done":
+                            break
+                    ok = tokens > 0 and not detail
+                    if not ok and not detail:
+                        detail = "Stream produced 0 tokens — coach model route likely failing"
+        except Exception as exc:
+            detail = str(exc)
+
+        elapsed = time.monotonic() - t0
+        self.results.append(
+            CheckResult(name=name, ok=ok, status=status_code, elapsed_s=elapsed, detail=detail)
+        )
+
     def _check_stub_endpoints(self) -> None:
         self._request(
             "GET /api/v1/recipes",
@@ -376,6 +509,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--skip-plan-generation", action="store_true")
     parser.add_argument("--plan-timeout", type=int, default=720, help="Timeout seconds for /plan/generate")
+    parser.add_argument(
+        "--skip-llm-agents",
+        action="store_true",
+        help="Skip the food-extractor / coach LLM round-trip checks (they spend tokens)",
+    )
+    parser.add_argument("--llm-timeout", type=int, default=120, help="Timeout seconds for LLM agent calls")
     return parser.parse_args()
 
 
@@ -394,6 +533,8 @@ def main() -> int:
         hae_secret=args.hae_shared_secret,
         run_plan_generation=not args.skip_plan_generation,
         plan_timeout=args.plan_timeout,
+        run_llm_agents=not args.skip_llm_agents,
+        llm_timeout=args.llm_timeout,
     )
     return runner.run()
 
