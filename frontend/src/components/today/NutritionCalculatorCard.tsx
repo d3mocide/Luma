@@ -205,11 +205,18 @@ export function NutritionCalculatorCard({
 
               {/* Results list */}
               {showResults && results.length > 0 && (
-                <div style={{
-                  marginTop: 4, borderRadius: 10,
-                  border: '1px solid var(--glass-edge)', background: 'var(--glass-2)',
-                  overflow: 'hidden',
-                }}>
+                <div
+                  className="glass-bright"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    zIndex: 10,
+                    marginTop: 4,
+                    overflow: 'hidden',
+                  }}
+                >
                   {results.slice(0, 6).map((food) => (
                     <button
                       key={food.id}
@@ -239,7 +246,20 @@ export function NutritionCalculatorCard({
                 </div>
               )}
               {showResults && results.length === 0 && !isFetching && (
-                <div style={{ marginTop: 4, padding: '8px 12px', fontSize: 12, color: 'var(--fg-quiet)' }}>
+                <div
+                  className="glass-bright"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    zIndex: 10,
+                    marginTop: 4,
+                    padding: '8px 12px',
+                    fontSize: 12,
+                    color: 'var(--fg-quiet)',
+                  }}
+                >
                   No results found.
                 </div>
               )}
