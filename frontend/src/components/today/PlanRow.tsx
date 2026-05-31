@@ -1,7 +1,7 @@
 import { Check, Plus, Sunrise, Fish, Apple, Leaf } from 'lucide-react'
 import { TodayData } from '../../lib/api'
 
-export const SLOT_COLORS: Record<string, string> = {
+const SLOT_COLORS: Record<string, string> = {
   breakfast: 'var(--sun-400)',
   lunch: 'var(--sky-400)',
   snack: 'var(--good)',
