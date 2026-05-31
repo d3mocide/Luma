@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Sparkles, Send, Plus, ChevronDown } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { LumaLogo } from '../components/ui/LumaLogo'
 import { api } from '../lib/api'
 
@@ -289,11 +291,28 @@ export default function CoachRoute() {
                       ))}
                     </div>
                   )}
-                  <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: 'var(--fg-primary)', whiteSpace: 'pre-wrap' }}>
-                    {msg.content}
-                    {msg.streaming && !msg.content && <span style={{ opacity: 0.4 }}>…</span>}
+                  <div className="coach-prose">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ children }) => <p style={{ margin: '0 0 0.6em', fontSize: 15, lineHeight: 1.6, color: 'var(--fg-primary)' }}>{children}</p>,
+                        h1: ({ children }) => <h1 style={{ margin: '0.8em 0 0.3em', fontSize: 17, fontWeight: 600, letterSpacing: '-0.025em', lineHeight: 1.2, color: 'var(--fg-primary)' }}>{children}</h1>,
+                        h2: ({ children }) => <h2 style={{ margin: '0.8em 0 0.3em', fontSize: 16, fontWeight: 600, letterSpacing: '-0.025em', lineHeight: 1.2, color: 'var(--fg-primary)' }}>{children}</h2>,
+                        h3: ({ children }) => <h3 style={{ margin: '0.6em 0 0.25em', fontSize: 15, fontWeight: 600, lineHeight: 1.2, color: 'var(--fg-primary)' }}>{children}</h3>,
+                        ul: ({ children }) => <ul style={{ margin: '0.4em 0 0.6em', paddingLeft: 20, color: 'var(--fg-primary)' }}>{children}</ul>,
+                        ol: ({ children }) => <ol style={{ margin: '0.4em 0 0.6em', paddingLeft: 20, color: 'var(--fg-primary)' }}>{children}</ol>,
+                        li: ({ children }) => <li style={{ fontSize: 15, lineHeight: 1.6, marginBottom: '0.2em' }}>{children}</li>,
+                        strong: ({ children }) => <strong style={{ fontWeight: 600, color: 'var(--fg-primary)' }}>{children}</strong>,
+                        em: ({ children }) => <em style={{ color: 'var(--fg-secondary)' }}>{children}</em>,
+                        code: ({ children }) => <code style={{ fontSize: 13, fontFamily: 'var(--font-mono)', background: 'var(--surface-2)', borderRadius: 4, padding: '1px 5px', color: 'var(--fg-secondary)' }}>{children}</code>,
+                        hr: () => <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '0.8em 0' }} />,
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                    {msg.streaming && !msg.content && <span style={{ opacity: 0.4, fontSize: 15 }}>…</span>}
                     {msg.streaming && msg.content && <span className="cursor-blink" style={{ marginLeft: 2, opacity: 0.6 }}>▌</span>}
-                  </p>
+                  </div>
                 </div>
               </div>
             )
