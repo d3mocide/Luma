@@ -1,4 +1,3 @@
-import hashlib
 import hmac
 import logging
 from uuid import UUID
@@ -33,8 +32,7 @@ def _verify_app_secret(request: Request, body: bytes) -> None:
     if not settings.hae_shared_secret:
         return
     header_value = request.headers.get("X-HAE-Signature", "")
-    expected = hmac.new(settings.hae_shared_secret.encode(), body, hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(header_value, expected):
+    if not hmac.compare_digest(header_value, settings.hae_shared_secret):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid app secret")
 
 
