@@ -3,7 +3,7 @@ SHELL := /bin/bash
 COMPOSE := docker compose
 CORE_SERVICES := api postgres redis whisper worker
 
-.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed smoke smoke-full clean nuke
+.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed ai-smoke ai-smoke-full clean nuke
 
 help:
 	@echo "Luma quick commands"
@@ -22,8 +22,8 @@ help:
 	@echo "  make logs-web - alias for logs-frontend"
 	@echo "  make migrate  - run alembic migrations"
 	@echo "  make seed     - optional operator bootstrap / recovery"
-	@echo "  make smoke    - run API E2E smoke tests (skips LLM + plan generation)"
-	@echo "  make smoke-full - run API E2E smoke tests including LLM agents"
+	@echo "  make ai-smoke    - run API E2E smoke tests (skips LLM + plan generation)"
+	@echo "  make ai-smoke-full - run API E2E smoke tests including LLM agents"
 	@echo "  make clean    - remove stopped containers"
 	@echo "  make nuke     - remove containers, volumes, and orphans"
 
@@ -72,10 +72,10 @@ seed:
 	$(COMPOSE) exec api python -m luma.scripts.seed_admin
 
 SMOKE_ARGS ?=
-smoke:
+ai-smoke:
 	cd backend && python verify_api.py --skip-plan-generation --skip-llm-agents $(SMOKE_ARGS)
 
-smoke-full:
+ai-smoke-full:
 	cd backend && python verify_api.py $(SMOKE_ARGS)
 
 clean:
