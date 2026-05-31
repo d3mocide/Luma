@@ -79,8 +79,8 @@ export default function PlanRoute() {
                 Luma is calculating optimal macronutrient boundaries and selecting cholesterol-lowering meals.
               </p>
             </div>
-            
-            <div style={{ width: '100%', height: 4, background: 'rgba(255, 255, 255, 0.06)', borderRadius: 2, overflow: 'hidden', position: 'relative', border: '1px solid rgba(255, 255, 255, 0.02)' }}>
+
+            <div style={{ width: '100%', height: 4, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden', position: 'relative', border: '1px solid var(--glass-edge)' }}>
               <div style={{
                 position: 'absolute',
                 top: 0,
@@ -93,10 +93,10 @@ export default function PlanRoute() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={{ fontSize: 13, color: 'var(--sky-300)', fontWeight: 400, animation: 'pulse-opacity 2.5s infinite ease-in-out' }}>
-                This may take up to 30 seconds...
+              <span style={{ fontSize: 13, color: 'var(--fg-secondary)', fontWeight: 400, animation: 'pulse-opacity 2.5s infinite ease-in-out' }}>
+                This may take a while...
               </span>
-              <span style={{ fontSize: 11, color: 'var(--sun-300)', opacity: 0.9, fontWeight: 500, letterSpacing: '0.02em' }}>
+              <span style={{ fontSize: 11, color: 'var(--warn)', opacity: 0.9, fontWeight: 500, letterSpacing: '0.02em' }}>
                 ⚠️ Do not leave or refresh this page.
               </span>
             </div>
@@ -123,7 +123,7 @@ export default function PlanRoute() {
             <button className="btn" style={{ padding: '10px 14px' }}
               onClick={() => generateMutation.mutate(customConstraints)}
               disabled={generateMutation.isPending}>
-              <Shuffle size={15}/> {generateMutation.isPending ? 'Generating…' : 'Regenerate'}
+              <Shuffle size={15} /> {generateMutation.isPending ? 'Generating…' : 'Regenerate'}
             </button>
             <div className="plan-view-toggle">
               {(['calendar', 'shopping'] as const).map((tab) => (
@@ -172,7 +172,7 @@ export default function PlanRoute() {
       {/* Loading */}
       {isLoading && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: 16 }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8', animation: 'spin 0.8s linear infinite' }}/>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8', animation: 'spin 0.8s linear infinite' }} />
           <p style={{ fontSize: 12, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Loading meal planner…</p>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
