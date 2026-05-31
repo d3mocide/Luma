@@ -162,7 +162,6 @@ function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: 
       flexDirection: 'column',
       background: 'linear-gradient(180deg, rgba(255,255,255,0.02), transparent)',
       position: 'relative',
-      zIndex: 2,
     }}
     className="hidden md:flex"
     >
