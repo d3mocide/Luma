@@ -20,24 +20,6 @@ Brand/UI reference: `refrence/BRAND-GUIDE.md` is the canonical source for visual
 
 **Do not skip ahead.** If asked to implement Phase 2+ features while Phase 1 is incomplete, refuse and explain.
 
-## Phase 3 Backlog
-
-Items approved for Phase 3 — do not implement until Phase 2 exit criteria are met.
-
-### Meal Plan Overhaul (continued)
-- **Slot lock/pin** — user can pin individual plan slots so they survive regeneration; locked slots are passed as constraints to the LLM
-- **Weekly nutrition summary bar** — aggregate avg calories / sat-fat / sol-fiber vs user goals shown above the calendar grid; data already available in `day_totals`
-- **Per-slot AI alternatives** — "Suggest 3 alternatives" action on any slot; calls a lightweight LLM completion with the slot context and user goals; returns swappable options without regenerating the whole plan
-- **Recipe / composite meal builder** — full `recipes` table (migration needed): user defines a named meal as an ingredient list with gram amounts; recipe can be placed into any plan slot or logged as a MealEvent; `meal_plan_slots.recipe_id` FK already exists in schema
-- **Drag slot to different day** — drag-and-drop reordering within the plan calendar grid
-
-### Logging
-- **Quick combo widget** *(shipped in Phase 2 as a bridge feature)* — multi-ingredient picker in log sheet; no new DB schema; logs combined nutrition as a single MealEvent with `source: combo`
-
-### Coach / Insights
-- **Proactive weekly recap** — end-of-week coach message summarising LDL-relevant wins and misses; triggered by arq worker on Sunday evening
-- **Trend-aware nudges** — if weight or LDL proxy metrics stall for 2+ weeks, surface a coach prompt suggesting plan adjustments
-
 ## Stack Conventions
 
 ### Backend

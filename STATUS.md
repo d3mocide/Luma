@@ -99,6 +99,9 @@ Fully implemented, verified, stabilized, and bug-fixed.
   - `modify_plan` — writes a new plan slot on behalf of user
 
 ### Frontend
+- [x] Weekly plan calendar navigation — WeekNav component, week-by-week browsing with prev/next arrows, status dots on weeks with plans, "Today" snap, end-of-week nudge banner, context-aware empty states
+- [x] Plan page week-driven queries — `GET /plan/weeks` + `GET /plan/week/{date}` endpoints; plan page selects week independently of current date; generate sends explicit `week_start`
+- [x] Quick combo log widget — "Combo" tab in log sheet; multi-ingredient picker with per-ingredient gram input, live kcal/protein preview, named combos; logs as single MealEvent with `source: combo`
 - [ ] Today screen `active_insight` slot wired to real alerts (currently returns `null`)
 - [ ] Trends screen — alert annotation pins on timeline (vertical markers at alert timestamps)
 - [ ] Drill-down sheet — tap any chart point → meals logged that day
@@ -118,6 +121,17 @@ Fully implemented, verified, stabilized, and bug-fixed.
 - [ ] Multi-user / family support — `role = family | viewer`, read-only sharing link
 - [ ] Web Bluetooth direct scale path — Bluefy integration as HAE alternative for weight
 - [ ] Push notifications — PWA push API for daily nudge at user-configured time
+
+### Meal plan overhaul backlog (approved for Phase 3)
+- [ ] Slot lock/pin — user pins individual plan slots so they survive regeneration; locked slots passed as constraints to LLM on next generate
+- [ ] Weekly nutrition summary bar — aggregate avg calories / sat-fat / sol-fiber vs goals shown above the calendar grid; data already in `day_totals`
+- [ ] Per-slot AI alternatives — "Suggest 3 alternatives" action on any slot; lightweight LLM call with slot context + user goals; returns swappable options without full plan regeneration
+- [ ] Recipe / composite meal builder — `recipes` table migration; user defines named meal as ingredient list with gram amounts; placeable in any plan slot or loggable as MealEvent; `meal_plan_slots.recipe_id` FK already exists
+- [ ] Drag slot between days — drag-and-drop reorder within plan calendar grid
+
+### Coach / insights backlog (approved for Phase 3)
+- [ ] Proactive weekly recap — end-of-week coach message summarising LDL-relevant wins and misses; triggered by arq worker on Sunday evening
+- [ ] Trend-aware nudges — if weight or LDL-proxy metrics stall for 2+ weeks, surface a coach prompt suggesting plan adjustments
 
 ### Future enhancement ideas (post-Phase 3)
 - **Wearable-native integrations** — Garmin Connect IQ data bridge, Oura Ring API (HRV, readiness score), Withings scale direct sync
