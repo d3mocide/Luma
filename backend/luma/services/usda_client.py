@@ -8,10 +8,12 @@ Nutrient IDs used (FDC canonical):
   1003 Protein
   1004 Total lipid (fat)
   1005 Carbohydrate
+  2000 Total sugars
   1079 Fiber
   1258 Fatty acids, total saturated
   1082 Fiber, soluble   (not always present — derived from insoluble if missing)
   1093 Sodium
+  1092 Potassium
 """
 from __future__ import annotations
 
@@ -32,10 +34,12 @@ _NUTRIENT_MAP: dict[int, str] = {
     1003: "protein_g",
     1004: "fat_g",
     1005: "carbohydrates_g",
+    2000: "sugars_g",
     1079: "fiber_g",
     1258: "saturated_fat_g",
     1082: "soluble_fiber_g",
     1093: "sodium_mg",
+    1092: "potassium_mg",
 }
 
 _EMPTY_NUTRIENTS: dict[str, float] = {k: 0.0 for k in _NUTRIENT_MAP.values()}

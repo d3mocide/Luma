@@ -290,6 +290,42 @@ async def check_positive_milestone(user_id: str, db: AsyncSession) -> AlertResul
     return None
 
 
+async def check_sodium_potassium_ratio(user_id: str, db: AsyncSession) -> AlertResult | None:
+    """Rolling 7-day Na:K ratio > 1.0 — unfavorable for cardiovascular risk.
+
+    A ratio above 1.0 (mg:mg) is associated with elevated blood pressure risk.
+    Requires potassium_mg to be logged; skips users without sufficient data.
+    """
+    row = await db.execute(
+        text("""
+            SELECT
+                SUM((nutrition->>'sodium_mg')::float)    AS total_sodium,
+                SUM((nutrition->>'potassium_mg')::float) AS total_potassium
+            FROM meal_events
+            WHERE user_id = :uid
+              AND ts >= now() - INTERVAL '7 days'
+              AND nutrition->>'potassium_mg' IS NOT NULL
+              AND (nutrition->>'potassium_mg')::float > 0
+        """),
+        {"uid": user_id},
+    )
+    r = row.fetchone()
+    if not r or r.total_sodium is None or r.total_potassium is None or r.total_potassium == 0:
+        return None
+    ratio = r.total_sodium / r.total_potassium
+    if ratio > 1.0:
+        return AlertResult(
+            rule_id="high_sodium_potassium_ratio",
+            severity="warning",
+            payload={
+                "ratio_7d": round(ratio, 2),
+                "total_sodium_mg": round(r.total_sodium, 0),
+                "total_potassium_mg": round(r.total_potassium, 0),
+            },
+        )
+    return None
+
+
 ALL_RULES = [
     check_sat_fat_rolling,
     check_soluble_fiber_rolling,
@@ -298,5 +334,6 @@ ALL_RULES = [
     check_logging_gap,
     check_calorie_deficit,
     check_ldl_risk_day,
+    check_sodium_potassium_ratio,
     check_positive_milestone,
 ]
