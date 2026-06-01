@@ -3,7 +3,7 @@ from uuid import UUID
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -46,22 +46,32 @@ async def search_foods(
     current_user: CurrentUser,
     q: Optional[str] = Query(None, min_length=1),
 ) -> List[Food]:
+    # USDA reference foods surface first — they are curated, normalised to 100g,
+    # and carry the full nutrient profile the agents depend on.
+    _usda_first = case((Food.source == "usda", 0), else_=1)
+
     if not q or not q.strip():
-        stmt = select(Food).order_by(Food.name).limit(30)
+        stmt = (
+            select(Food)
+            .order_by(_usda_first, Food.name)
+            .limit(30)
+        )
         res = await db.execute(stmt)
         return list(res.scalars().all())
 
     q_clean = q.strip()
+    _sim = func.similarity(Food.name, q_clean)
+    _usda_boost = case((Food.source == "usda", 0.1), else_=0.0)
     stmt = (
         select(Food)
         .where(
             or_(
-                func.similarity(Food.name, q_clean) > 0.15,
+                _sim > 0.15,
                 func.similarity(func.coalesce(Food.brand, ""), q_clean) > 0.15,
                 Food.name.ilike(f"%{q_clean}%"),
             )
         )
-        .order_by(func.similarity(Food.name, q_clean).desc())
+        .order_by((_sim + _usda_boost).desc())
         .limit(30)
     )
     res = await db.execute(stmt)
