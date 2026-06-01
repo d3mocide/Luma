@@ -372,6 +372,7 @@ async def coach_stream(
             system_content = _SYSTEM_BASE + "\n\n" + context_block
     except Exception:
         logger.exception("Failed to load coach context for user %s", user_id)
+        await db.rollback()
 
     full_messages = [{"role": "system", "content": system_content}, *messages]
     target = build_litellm_target(settings.coach_model)
@@ -383,7 +384,7 @@ async def coach_stream(
                 messages=full_messages,
                 tools=TOOLS,
                 tool_choice="auto",
-                temperature=0.5,
+                temperature=1.0,
                 timeout=60.0,
             )
         except Exception:
@@ -414,6 +415,7 @@ async def coach_stream(
                     result = await _execute_tool(fn_name, fn_args, user_id, db)
                 except Exception:
                     logger.exception("Tool %s failed", fn_name)
+                    await db.rollback()
                     result = json.dumps({"error": "tool execution failed"})
                 yield "data: " + json.dumps({"type": "tool_result", "name": fn_name}) + "\n\n"
                 full_messages.append({"role": "tool", "tool_call_id": tc.id, "content": result})
@@ -425,7 +427,7 @@ async def coach_stream(
                 **target,
                 messages=full_messages,
                 stream=True,
-                temperature=0.5,
+                temperature=1.0,
                 timeout=60.0,
             )
             async for chunk in stream:
