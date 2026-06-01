@@ -122,11 +122,11 @@ Fully implemented, verified, stabilized, and bug-fixed.
 - [ ] Push notifications — PWA push API for daily nudge at user-configured time
 
 ### Meal plan overhaul backlog (approved for Phase 3)
-- [ ] Slot lock/pin — user pins individual plan slots so they survive regeneration; locked slots passed as constraints to LLM on next generate
-- [ ] Weekly nutrition summary bar — aggregate avg calories / sat-fat / sol-fiber vs goals shown above the calendar grid; data already in `day_totals`
-- [ ] Per-slot AI alternatives — "Suggest 3 alternatives" action on any slot; lightweight LLM call with slot context + user goals; returns swappable options without full plan regeneration
-- [ ] Recipe / composite meal builder — `recipes` table migration; user defines named meal as ingredient list with gram amounts; placeable in any plan slot or loggable as MealEvent; `meal_plan_slots.recipe_id` FK already exists
-- [ ] Drag slot between days — drag-and-drop reorder within plan calendar grid
+- [x] Slot lock/pin — user pins individual plan slots so they survive regeneration; locked slots passed as constraints to LLM on next generate
+- [x] Weekly nutrition summary bar — aggregate avg calories / sat-fat / sol-fiber vs goals shown above the calendar grid; data already in `day_totals`
+- [x] Per-slot AI alternatives — "Suggest 3 alternatives" action on any slot; lightweight LLM call with slot context + user goals; returns swappable options without full plan regeneration
+- [x] Recipe / composite meal builder — `recipes` table migration; user defines named meal as ingredient list with gram amounts; placeable in any plan slot or loggable as MealEvent; `meal_plan_slots.recipe_id` FK already exists
+- [x] Drag slot between days — drag-and-drop reorder within plan calendar grid
 
 ### Coach / insights backlog (approved for Phase 3)
 - [ ] Proactive weekly recap — end-of-week coach message summarising LDL-relevant wins and misses; triggered by arq worker on Sunday evening
