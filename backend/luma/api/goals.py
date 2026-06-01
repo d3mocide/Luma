@@ -36,15 +36,18 @@ async def get_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     goal = result.scalar_one_or_none()
     if not goal:
         return {}
+    def _f(v: Any) -> float | None:
+        return float(v) if v is not None else None
+
     return {
-        "target_weight_kg": goal.target_weight_kg,
+        "target_weight_kg": _f(goal.target_weight_kg),
         "target_ldl_mg_dl": goal.target_ldl_mg_dl,
         "current_ldl_mg_dl": goal.current_ldl_mg_dl,
         "current_ldl_drawn_at": goal.current_ldl_drawn_at.isoformat() if goal.current_ldl_drawn_at else None,
         "daily_calorie_target": goal.daily_calorie_target,
-        "daily_sat_fat_g_max": goal.daily_sat_fat_g_max,
-        "daily_soluble_fiber_g": goal.daily_soluble_fiber_g,
-        "daily_protein_g_min": goal.daily_protein_g_min,
+        "daily_sat_fat_g_max": _f(goal.daily_sat_fat_g_max),
+        "daily_soluble_fiber_g": _f(goal.daily_soluble_fiber_g),
+        "daily_protein_g_min": _f(goal.daily_protein_g_min),
         "dietary_pattern": goal.dietary_pattern,
     }
 
