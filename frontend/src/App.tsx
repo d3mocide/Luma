@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useUIStore } from './stores'
 import AppShell from './components/AppShell'
 import TodayRoute from './routes/today'
