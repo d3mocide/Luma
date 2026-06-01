@@ -7,6 +7,30 @@ export interface MealSlot {
   recipe_id: string | null
   food_id: string | null
   nutrition: Record<string, number>
+  locked: boolean
+}
+
+export interface RecipeIngredient {
+  food_id: string | null
+  food_name: string | null
+  quantity: number
+  unit: string
+  notes: string | null
+  sort_order: number
+}
+
+export interface Recipe {
+  id: string
+  name: string
+  description: string | null
+  instructions: string[]
+  prep_minutes: number | null
+  cook_minutes: number | null
+  servings: number
+  tags: string[]
+  nutrition_per_serving: Record<string, number>
+  ingredients: RecipeIngredient[]
+  created_at: string
 }
 
 export interface PlanData {

@@ -2,24 +2,27 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 import uuid
+import json
+import logging
 
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select, update
 from pydantic import BaseModel
 
 from luma.deps import DbDep, CurrentUser
-from luma.db.models import MealPlan, MealPlanSlot, ShoppingListItem, MealEvent, Food
+from luma.db.models import MealPlan, MealPlanSlot, ShoppingListItem, MealEvent, Food, Goal, Preference
 from luma.agents.meal_planner import generate_meal_plan
 from luma.services.nutrition import ZERO_NUTRIENTS
 from luma.services.plan_helpers import _slot_dict, _sum_nutrition, _nutrition_from_food, _parse_uuid
+from luma.config import settings
+from luma.services.llm_client import call_llm
 
 router = APIRouter()
+logger = logging.getLogger("plan")
 
 
 def get_current_week_sunday() -> date:
     today = date.today()
-    # weekday(): 0=Mon … 6=Sun; isoweekday(): 1=Mon … 7=Sun
-    # Days since last Sunday = (weekday + 1) % 7
     return today - timedelta(days=(today.weekday() + 1) % 7)
 
 
@@ -33,11 +36,16 @@ class PlanGenerateRequest(BaseModel):
 class SlotPatchRequest(BaseModel):
     custom_name: Optional[str] = None
     notes: Optional[str] = None
+    locked: Optional[bool] = None
 
 
 class SlotReplaceRequest(BaseModel):
     food_id: UUID
     serving_g: float
+
+
+class SlotMoveRequest(BaseModel):
+    new_date: str  # YYYY-MM-DD
 
 
 class ShoppingToggleRequest(BaseModel):
@@ -66,7 +74,7 @@ async def get_plan_by_week(week_start_str: str, db: DbDep, current_user: Current
     plan = (await db.execute(
         select(MealPlan)
         .where(MealPlan.user_id == current_user.id, MealPlan.week_start == week_date)
-        .order_by(MealPlan.status)  # 'active' < 'archived' alphabetically
+        .order_by(MealPlan.status)
         .limit(1)
     )).scalar_one_or_none()
 
@@ -135,6 +143,35 @@ async def get_current_plan(db: DbDep, current_user: CurrentUser) -> dict:
 async def regenerate_weekly_plan(req: PlanGenerateRequest, db: DbDep, current_user: CurrentUser) -> dict:
     week_start = req.week_start or get_current_week_sunday()
 
+    # Preserve locked slots from any existing active plan for this week
+    existing_plan = (await db.execute(
+        select(MealPlan)
+        .where(MealPlan.user_id == current_user.id, MealPlan.week_start == week_start, MealPlan.status == "active")
+        .limit(1)
+    )).scalar_one_or_none()
+
+    locked_slots: list[MealPlanSlot] = []
+    if existing_plan:
+        locked_slots = list((await db.execute(
+            select(MealPlanSlot)
+            .where(MealPlanSlot.plan_id == existing_plan.id, MealPlanSlot.locked == True)
+        )).scalars().all())
+
+    # Build locked constraints for the LLM
+    locked_constraints: list[dict] = [
+        {
+            "date": s.slot_date.isoformat(),
+            "slot": s.slot,
+            "name": s.custom_name,
+            "nutrition": s.nutrition or {},
+        }
+        for s in locked_slots
+    ]
+
+    merged_constraints = dict(req.constraints or {})
+    if locked_constraints:
+        merged_constraints["locked_slots"] = locked_constraints
+
     await db.execute(
         update(MealPlan)
         .where(MealPlan.user_id == current_user.id, MealPlan.week_start == week_start)
@@ -145,7 +182,7 @@ async def regenerate_weekly_plan(req: PlanGenerateRequest, db: DbDep, current_us
         db=db,
         user_id=current_user.id,
         week_start=week_start.isoformat(),
-        constraints=req.constraints,
+        constraints=merged_constraints if merged_constraints else None,
     )
 
     plan = MealPlan(
@@ -157,18 +194,39 @@ async def regenerate_weekly_plan(req: PlanGenerateRequest, db: DbDep, current_us
     )
     db.add(plan)
 
+    # Index locked slots by (date, slot_type) for fast lookup
+    locked_index = {(s.slot_date.isoformat(), s.slot): s for s in locked_slots}
+
     for day in generated.get("plan", []):
-        slot_date = datetime.strptime(day["date"], "%Y-%m-%d").date()
+        slot_date_str = day["date"]
         for sl in day.get("slots", []):
-            db.add(MealPlanSlot(
-                id=uuid.uuid4(),
-                plan_id=plan.id,
-                slot_date=slot_date,
-                slot=sl["slot"],
-                custom_name=sl["custom_name"],
-                notes=sl.get("notes", ""),
-                nutrition=sl.get("nutrients"),
-            ))
+            key = (slot_date_str, sl["slot"])
+            if key in locked_index:
+                # Re-insert locked slot verbatim
+                orig = locked_index[key]
+                db.add(MealPlanSlot(
+                    id=uuid.uuid4(),
+                    plan_id=plan.id,
+                    slot_date=orig.slot_date,
+                    slot=orig.slot,
+                    custom_name=orig.custom_name,
+                    notes=orig.notes,
+                    nutrition=orig.nutrition,
+                    food_id=orig.food_id,
+                    recipe_id=orig.recipe_id,
+                    locked=True,
+                ))
+            else:
+                slot_date = datetime.strptime(slot_date_str, "%Y-%m-%d").date()
+                db.add(MealPlanSlot(
+                    id=uuid.uuid4(),
+                    plan_id=plan.id,
+                    slot_date=slot_date,
+                    slot=sl["slot"],
+                    custom_name=sl["custom_name"],
+                    notes=sl.get("notes", ""),
+                    nutrition=sl.get("nutrients"),
+                ))
 
     created_food_ids_by_name: dict[str, UUID] = {}
 
@@ -238,7 +296,31 @@ async def patch_slot(slot_id: str, req: SlotPatchRequest, db: DbDep, current_use
         slot.custom_name = req.custom_name
     if req.notes is not None:
         slot.notes = req.notes
+    if req.locked is not None:
+        slot.locked = req.locked
 
+    await db.commit()
+    await db.refresh(slot)
+    return _slot_dict(slot)
+
+
+@router.patch("/slot/{slot_id}/move")
+async def move_slot(slot_id: str, req: SlotMoveRequest, db: DbDep, current_user: CurrentUser) -> dict:
+    try:
+        new_date = date.fromisoformat(req.new_date)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid date format. Use YYYY-MM-DD.")
+
+    slot_uuid = _parse_uuid(slot_id, "slot UUID")
+    res = await db.execute(
+        select(MealPlanSlot).join(MealPlan)
+        .where(MealPlanSlot.id == slot_uuid, MealPlan.user_id == current_user.id)
+    )
+    slot = res.scalar_one_or_none()
+    if not slot:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found")
+
+    slot.slot_date = new_date
     await db.commit()
     await db.refresh(slot)
     return _slot_dict(slot)
@@ -269,6 +351,80 @@ async def replace_slot(slot_id: str, req: SlotReplaceRequest, db: DbDep, current
     await db.commit()
     await db.refresh(slot)
     return _slot_dict(slot)
+
+
+@router.post("/slot/{slot_id}/swap")
+async def swap_slot(slot_id: str, db: DbDep, current_user: CurrentUser) -> dict:
+    """Generate 3 AI-powered alternative meals for this slot."""
+    slot_uuid = _parse_uuid(slot_id, "slot UUID")
+
+    slot_res = await db.execute(
+        select(MealPlanSlot).join(MealPlan)
+        .where(MealPlanSlot.id == slot_uuid, MealPlan.user_id == current_user.id)
+    )
+    slot = slot_res.scalar_one_or_none()
+    if not slot:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found")
+
+    goal_res = await db.execute(select(Goal).where(Goal.user_id == current_user.id))
+    goal = goal_res.scalar_one_or_none()
+
+    pref_res = await db.execute(select(Preference).where(Preference.user_id == current_user.id))
+    prefs = pref_res.scalars().all()
+    dislikes = [p.value for p in prefs if p.kind == "dislike"]
+    allergies = [p.value for p in prefs if p.kind == "allergy"]
+
+    calorie_target = goal.daily_calorie_target if goal else 2000
+    sat_fat_max = float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else 13.0
+    soluble_fiber_target = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else 10.0
+
+    # Per-slot calorie budget (rough split)
+    slot_calorie_budgets = {"breakfast": 0.25, "lunch": 0.30, "dinner": 0.35, "snack": 0.10}
+    slot_calories = round(calorie_target * slot_calorie_budgets.get(slot.slot, 0.25))
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are Luma's clinical nutrition orchestrator. Generate exactly 3 alternative meal suggestions "
+                "for a single plan slot. Each must be heart-healthy, LDL-lowering, and nutritionally distinct. "
+                "Return ONLY a valid JSON array — no markdown, no commentary."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Current meal: {slot.custom_name} ({slot.slot} slot, {slot.slot_date})\n"
+                f"Goals: ~{slot_calories} kcal, sat fat <{sat_fat_max / 3:.1f}g, soluble fiber >{soluble_fiber_target / 4:.1f}g\n"
+                f"Dislikes: {', '.join(dislikes) or 'none'}\n"
+                f"Allergies: {', '.join(allergies) or 'none'}\n\n"
+                "Return a JSON array of exactly 3 alternatives:\n"
+                '[{"name":"...","notes":"...","nutrients":{"calories":0,"saturated_fat_g":0,"soluble_fiber_g":0,'
+                '"protein_g":0,"carbohydrates_g":0,"fat_g":0,"fiber_g":0,"sodium_mg":0}}]'
+            ),
+        },
+    ]
+
+    try:
+        resp = await call_llm(
+            primary_model=settings.meal_planner_model,
+            fallback_model=settings.meal_planner_fallback_model,
+            messages=messages,
+            temperature=0.6,
+            timeout=60.0,
+        )
+        content = resp["choices"][0]["message"]["content"].strip()
+        import re
+        content = re.sub(r"^```(?:json)?\n?", "", content)
+        content = re.sub(r"\n?```$", "", content).strip()
+        alternatives = json.loads(content)
+        if not isinstance(alternatives, list):
+            alternatives = []
+    except Exception:
+        logger.exception("swap_slot LLM call failed")
+        alternatives = []
+
+    return {"alternatives": alternatives[:3]}
 
 
 @router.post("/{plan_id}/log-as-eaten/{slot_id}")

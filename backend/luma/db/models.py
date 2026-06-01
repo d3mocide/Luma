@@ -146,6 +146,7 @@ class MealPlanSlot(Base):
     custom_name = Column(Text)
     notes = Column(Text)
     nutrition = Column(JSONB)
+    locked = Column(Boolean, nullable=False, default=False, server_default='false')
 
     plan = relationship("MealPlan", back_populates="slots")
     recipe = relationship("Recipe")

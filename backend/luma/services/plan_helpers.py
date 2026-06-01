@@ -18,6 +18,7 @@ def _slot_dict(s: MealPlanSlot) -> dict:
         "food_id":     str(s.food_id) if s.food_id else None,
         "recipe_id":   str(s.recipe_id) if s.recipe_id else None,
         "nutrition":   s.nutrition or {},
+        "locked":      bool(s.locked),
     }
 
 
