@@ -50,7 +50,7 @@ async def generate_meal_plan(
     calorie_target = goal.daily_calorie_target if goal else 2000
     sat_fat_max = float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else 13.0
     soluble_fiber_target = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else 10.0
-    dietary_pattern = goal.dietary_pattern if goal else "heart-healthy"
+    dietary_pattern = (goal.dietary_pattern if goal else None) or "heart-healthy"
     
     available_foods_text = "\n".join([
         f"- ID: {f.id} | Name: {f.name} | Brand: {f.brand or 'Generic'} | Serving: {f.serving_size_g}g | Nutrients/100g: {json.dumps(f.nutrients_per_100g)}"
