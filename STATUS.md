@@ -74,10 +74,10 @@ Fully implemented, verified, stabilized, and bug-fixed.
 
 ---
 
-## Phase 2 — Intelligence  🔓 CURRENT
+## Phase 2 — Intelligence  ✅ COMPLETED
 
 ### Backend
-- [ ] Alert engine — all 8 deterministic rules (`alerts/rules.py`, `alerts/engine.py`)
+- [x] Alert engine — all 8 deterministic rules (`alerts/rules.py`, `alerts/engine.py`)
   - Sat fat over 7-day rolling average
   - Soluble fiber consistently under target
   - Weight trend diverging from goal trajectory
@@ -86,33 +86,32 @@ Fully implemented, verified, stabilized, and bug-fixed.
   - Logging streak broken after 3+ days
   - LDL-risk foods (high sat fat + low fiber day)
   - Positive milestone (e.g. 7-day streak, target weight approach)
-- [ ] `alerts` scheduled worker task via arq (every 30 min)
-- [ ] Insight narrator agent (`agents/insight_narrator.py`) — Claude Sonnet; headline + body + thread_seed
-- [ ] `GET /insights` + `POST /insights/{id}/ack`
-- [ ] Coach agent with tool calls (`agents/coach.py`) — Claude Sonnet, streaming SSE
-- [ ] `POST /coach/threads` + `POST /coach/threads/{id}/messages` — SSE streaming
-- [ ] Coach tool implementations:
-  - `query_biometric_trend` — fetch trend series for a metric + date range
-  - `query_nutrition_rollup` — daily/weekly nutrition averages
-  - `get_recent_meals` — last N meal events with full nutrition
-  - `propose_meal_swap` — LLM swaps a slot respecting LDL goals
-  - `modify_plan` — writes a new plan slot on behalf of user
+- [x] `alerts` scheduled worker task via arq (every 30 min)
+- [x] Insight narrator agent (`agents/insight_narrator.py`) — Claude Sonnet; headline + body + thread_seed
+- [x] `GET /insights` + `POST /insights/{id}/ack`
+- [x] Coach agent with tool calls (`agents/coach.py`) — Claude Sonnet, streaming SSE
+- [x] `POST /coach/threads` + `POST /coach/threads/{id}/messages` — SSE streaming
+- [x] Coach tool implementations (7 tools):
+  - `query_biometric_trend`, `query_nutrition_rollup`, `get_recent_meals`
+  - `propose_meal_swap`, `modify_plan`, `get_user_goals`, `get_recent_alerts`
+- [x] `POST /log/meal/photo` — image upload → Claude vision → draft food items
 
 ### Frontend
 - [x] Weekly plan calendar navigation — WeekNav component, week-by-week browsing with prev/next arrows, status dots on weeks with plans, "Today" snap, end-of-week nudge banner, context-aware empty states
 - [x] Plan page week-driven queries — `GET /plan/weeks` + `GET /plan/week/{date}` endpoints; plan page selects week independently of current date; generate sends explicit `week_start`
 - [x] Quick combo log widget — "Combo" tab in log sheet; multi-ingredient picker with per-ingredient gram input, live kcal/protein preview, named combos; logs as single MealEvent with `source: combo`
-- [ ] Today screen `active_insight` slot wired to real alerts (currently returns `null`)
-- [ ] Trends screen — alert annotation pins on timeline (vertical markers at alert timestamps)
-- [ ] Drill-down sheet — tap any chart point → meals logged that day
-- [ ] Coach screen — full SSE streaming chat, tool-call progress indicators
-- [ ] Photo logging path — `POST /log/meal/photo` → Claude vision → same draft flow as voice
-- [ ] PWA offline — service worker caches last-known `/today` payload; shows stale banner
-- [ ] PWA install prompt — deferred install banner on mobile after 3rd visit
+- [x] Today screen `active_insight` "Ask Luma" button → navigates to Coach with `thread_seed` pre-filled
+- [x] Trends screen — alert annotation pins on timeline (vertical ReferenceLine markers per severity)
+- [x] Drill-down sheet — tap any chart point → meals logged that day
+- [x] Coach screen — full SSE streaming chat, tool-call progress badges, thread history
+- [x] Photo logging path — PhotoTab in log sheet → `POST /log/meal/photo` → draft items review flow
+- [x] PWA offline — service worker (NetworkFirst) caches `/today`; OfflineBanner shown when offline
+- [x] PWA install prompt — deferred InstallPrompt after 3rd visit on mobile
+- [x] Bug fix: week start aligned to Sunday (was Monday) in both frontend and backend; "Today" now correctly resolves to current plan
 
 ---
 
-## Phase 3 — Polish  🔒 LOCKED
+## Phase 3 — Polish  🔓 CURRENT
 
 ### Committed scope
 - [ ] Repeat-meal detection on Log sheet — "Usual breakfast?" one-tap re-log based on last 7-day frequency
