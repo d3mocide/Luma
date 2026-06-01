@@ -16,6 +16,7 @@ const MOCK_USER = {
   email: 'operator@luma.local',
   display_name: 'Jules',
   role: 'operator',
+  is_password_temp: false,
 }
 
 type MealSlot = {
@@ -219,6 +220,16 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
   if (method === 'POST' && pathname === '/auth/logout') {
     signedIn = false
     return { detail: 'logged out' }
+  }
+
+  if (method === 'POST' && pathname === '/auth/change-password') {
+    requireAuth()
+    const body = parseBody(init)
+    if (!body?.new_password || (body.new_password as string).length < 8) {
+      throw new MockApiError(422, 'New password must be at least 8 characters long.')
+    }
+    MOCK_USER.is_password_temp = false
+    return { detail: 'Password changed successfully.' }
   }
 
   if (method === 'GET' && pathname === '/auth/me') {

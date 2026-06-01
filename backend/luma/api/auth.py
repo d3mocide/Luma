@@ -61,6 +61,7 @@ class UserOut(BaseModel):
     email: str
     display_name: str
     role: str
+    is_password_temp: bool
 
     model_config = {"from_attributes": True}
 
@@ -204,3 +205,40 @@ async def setup(body: SetupRequest, response: Response, db: DbDep) -> UserOut:
 
     _set_auth_cookies(response, user.id)
     return UserOut.model_validate(user)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+async def change_password(
+    body: ChangePasswordRequest,
+    user: CurrentUser,
+    db: DbDep,
+) -> dict:
+    if len(body.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="New password must be at least 8 characters long."
+        )
+
+    try:
+        ph.verify(user.password_hash, body.current_password)
+    except VerifyMismatchError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid current password"
+        )
+
+    user.password_hash = ph.hash(body.new_password)
+    user.is_password_temp = False
+
+    try:
+        await db.commit()
+    except SQLAlchemyError as exc:
+        _raise_auth_db_http_error(exc)
+
+    return {"detail": "Password changed successfully."}
+

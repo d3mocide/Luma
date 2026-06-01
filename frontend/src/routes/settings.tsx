@@ -8,6 +8,7 @@ import {
 import { GoalsCard } from '../components/settings/GoalsCard'
 import { RecommendGoalsCard } from '../components/settings/RecommendGoalsCard'
 import { MeasurementsCard } from '../components/settings/MeasurementsCard'
+import { PasswordCard } from '../components/settings/PasswordCard'
 import { LlmMetricsCard } from '../components/settings/LlmMetricsCard'
 import { AiConfigCard } from '../components/settings/AiConfigCard'
 import { AiPerformanceCard } from '../components/settings/AiPerformanceCard'
@@ -136,6 +137,7 @@ function AccountTab({
         </div>
 
         <MeasurementsCard />
+        <PasswordCard />
 
         <div className="glass settings-card" style={{ padding: 24 }}>
           <div className="eyebrow" style={{ marginBottom: 12 }}>Session</div>
@@ -591,6 +593,15 @@ export default function SettingsRoute() {
     queryFn: () => api.get('/auth/me'),
   })
 
+  useEffect(() => {
+    if (user) {
+      const { minRole } = TAB_META[activeTab]
+      if (!hasRole(user, minRole)) {
+        setActiveTab('account')
+      }
+    }
+  }, [user, activeTab])
+
   const { data: goalSettings } = useQuery<Partial<GoalSettings>>({
     queryKey: ['settings', 'goals'],
     queryFn: () => api.get('/goals'),
@@ -686,22 +697,22 @@ export default function SettingsRoute() {
 
       {/* Tab strip */}
       <div className="settings-tabs" role="tablist">
-        {tabs.map((id) => {
-          const { label, minRole } = TAB_META[id]
-          const allowed = hasRole(user, minRole)
-          return (
-            <button
-              key={id}
-              role="tab"
-              aria-selected={activeTab === id}
-              className={`settings-tab${!allowed ? ' settings-tab-locked' : ''}`}
-              onClick={() => allowed && setActiveTab(id)}
-              title={!allowed ? `Requires ${minRole} role` : undefined}
-            >
-              {label}
-            </button>
-          )
-        })}
+        {tabs
+          .filter((id) => hasRole(user, TAB_META[id].minRole))
+          .map((id) => {
+            const { label } = TAB_META[id]
+            return (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={activeTab === id}
+                className="settings-tab"
+                onClick={() => setActiveTab(id)}
+              >
+                {label}
+              </button>
+            )
+          })}
       </div>
 
       {/* Tab panels */}

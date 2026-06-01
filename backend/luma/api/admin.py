@@ -80,6 +80,7 @@ async def create_user(body: CreateUserRequest, admin: AdminUser, db: DbDep) -> C
         password_hash=ph.hash(temp_pw),
         display_name=body.display_name,
         role=body.role,
+        is_password_temp=True,
     )
     try:
         db.add(user)
@@ -142,6 +143,7 @@ async def reset_password(user_id: UUID, admin: AdminUser, db: DbDep) -> ResetPas
 
     temp_pw = _temp_password()
     user.password_hash = ph.hash(temp_pw)
+    user.is_password_temp = True
     try:
         await db.commit()
     except SQLAlchemyError:

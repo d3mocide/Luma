@@ -3,10 +3,11 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CircleDot, Utensils, Activity, Sparkles, Settings, Plus, Moon, Sun, Loader2, ChevronDown,
+  Lock, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight,
 } from 'lucide-react'
 import { api, TodayData, User } from '../lib/api'
 import { useUIStore } from '../stores'
-import { LumaWordmark } from './ui/LumaLogo'
+import { LumaLogo, LumaWordmark } from './ui/LumaLogo'
 import LogSheet from './LogSheet'
 import Login from './Login'
 
@@ -53,6 +54,10 @@ export default function AppShell() {
 
   if (error || !user) {
     return <Login />
+  }
+
+  if (user.is_password_temp) {
+    return <TempPasswordPrompt />
   }
 
   const initials = getUserInitials(user.display_name)
@@ -533,5 +538,207 @@ function MobileNavItem({ to, label, Icon }: { to: string; label: string; Icon: R
       <Icon size={20} strokeWidth={1.5}/>
       <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.02em' }}>{label}</span>
     </NavLink>
+  )
+}
+
+function TempPasswordPrompt() {
+  const queryClient = useQueryClient()
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  
+  const [showCurrent, setShowCurrent] = useState(false)
+  const [showNew, setShowNew] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+
+    if (newPassword.length < 8) {
+      setError('New password must be at least 8 characters long.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError('New password and confirmation do not match.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await api.post('/auth/change-password', {
+        current_password: currentPassword,
+        new_password: newPassword,
+      })
+      await queryClient.invalidateQueries({ queryKey: ['me'] })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update password.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="luma-bg" style={{ position: 'fixed', inset: 0, display: 'flex', zIndex: 9999 }}>
+      {/* Aurora glow effect */}
+      <div className="login-side-atmo" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
+
+      <div className="glass login-glass" style={{
+        width: '100%', maxWidth: 420,
+        margin: 'auto',
+        padding: 36,
+        borderRadius: 28,
+        position: 'relative',
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ display: 'inline-flex' }}><LumaLogo size={44}/></div>
+          <h2 style={{
+            margin: '18px 0 6px',
+            fontSize: 24, fontWeight: 500,
+            letterSpacing: '-0.02em',
+            color: 'var(--fg-primary)',
+          }}>
+            Update your password
+          </h2>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-tertiary)', lineHeight: 1.4 }}>
+            You are logged in with a temporary password. Please set a secure password to access your space.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {error && (
+            <div style={{
+              padding: '12px 14px',
+              background: 'rgba(251,113,133,0.10)',
+              border: '1px solid rgba(251,113,133,0.25)',
+              borderRadius: 12,
+              fontSize: 13,
+              color: 'var(--bad)',
+              display: 'flex', gap: 8, alignItems: 'center',
+            }}>
+              <AlertCircle size={14} strokeWidth={1.5}/> {error}
+            </div>
+          )}
+
+          <div>
+            <div className="eyebrow" style={{ marginBottom: 8, fontSize: 10 }}>Current Password</div>
+            <div className="field-input" style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 14px',
+              border: '1px solid var(--glass-edge)',
+              borderRadius: 14,
+              background: 'var(--glass-1)',
+            }}>
+              <Lock size={16} color="var(--fg-quiet)"/>
+              <input
+                type={showCurrent ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Temporary password"
+                required
+                style={{
+                  flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                  color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)', fontSize: 14,
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrent(!showCurrent)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'var(--fg-quiet)' }}
+              >
+                {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div className="eyebrow" style={{ marginBottom: 8, fontSize: 10 }}>New Password</div>
+            <div className="field-input" style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 14px',
+              border: '1px solid var(--glass-edge)',
+              borderRadius: 14,
+              background: 'var(--glass-1)',
+            }}>
+              <ShieldCheck size={16} color="var(--fg-quiet)"/>
+              <input
+                type={showNew ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Min. 8 characters"
+                required
+                style={{
+                  flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                  color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)', fontSize: 14,
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNew(!showNew)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'var(--fg-quiet)' }}
+              >
+                {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div className="eyebrow" style={{ marginBottom: 8, fontSize: 10 }}>Confirm New Password</div>
+            <div className="field-input" style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 14px',
+              border: '1px solid var(--glass-edge)',
+              borderRadius: 14,
+              background: 'var(--glass-1)',
+            }}>
+              <ShieldCheck size={16} color="var(--fg-quiet)"/>
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+                required
+                style={{
+                  flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                  color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)', fontSize: 14,
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm(!showConfirm)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'var(--fg-quiet)' }}
+              >
+                {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn btn-primary"
+            style={{ marginTop: 8, padding: '14px 20px', fontSize: 14, width: '100%', opacity: loading ? 0.7 : 1, justifyContent: 'center' }}
+          >
+            {loading ? (
+              <span style={{
+                width: 18, height: 18, borderRadius: '50%',
+                border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'var(--fg-primary)',
+                display: 'inline-block',
+                animation: 'spin 0.8s linear infinite',
+              }}/>
+            ) : (
+              <>
+                Update Password
+                <ArrowRight size={15}/>
+              </>
+            )}
+          </button>
+        </form>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
   )
 }

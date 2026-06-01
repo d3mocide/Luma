@@ -127,4 +127,5 @@ export interface User {
   email: string
   display_name: string
   role: string
+  is_password_temp?: boolean
 }
