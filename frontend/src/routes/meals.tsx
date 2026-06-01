@@ -296,7 +296,7 @@ function FoodsTab() {
 
 // ── Main Foods route ──────────────────────────────────────────────────────────
 
-export default function FoodsRoute() {
+export default function MealsRoute() {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialTab = searchParams.get('tab') === 'plan' ? 'plan' : 'foods'
   const [activeTab, setActiveTab] = useState<'foods' | 'plan'>(initialTab)
@@ -314,7 +314,7 @@ export default function FoodsRoute() {
     <div style={{ padding: '24px 20px 80px', maxWidth: 960, margin: '0 auto' }}>
       {/* Page header */}
       <header style={{ marginBottom: 24 }}>
-        <div className="eyebrow" style={{ marginBottom: 6 }}>FOODS</div>
+        <div className="eyebrow" style={{ marginBottom: 6 }}>MEALS</div>
         <h1 style={{
           margin: '0 0 6px', fontSize: 32, fontWeight: 400,
           letterSpacing: '-0.02em', color: 'var(--fg-primary)',
@@ -324,7 +324,7 @@ export default function FoodsRoute() {
             className="serif-italic gradient-accent-text"
             style={{ background: 'var(--accent-gradient-hero)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}
           >
-            food database.
+            meal database.
           </span>
         </h1>
         <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-tertiary)' }}>

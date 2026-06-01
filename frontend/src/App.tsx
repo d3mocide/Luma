@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useUIStore } from './stores'
 import AppShell from './components/AppShell'
 import TodayRoute from './routes/today'
-import FoodsRoute from './routes/foods'
+import MealsRoute from './routes/meals'
 import TrendsRoute from './routes/trends'
 import CoachRoute from './routes/coach'
 import SettingsRoute from './routes/settings'
@@ -26,8 +26,9 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/today" replace />} />
           <Route path="/today" element={<TodayRoute />} />
-          <Route path="/foods" element={<FoodsRoute />} />
-          <Route path="/plan" element={<Navigate to="/foods?tab=plan" replace />} />
+          <Route path="/meals" element={<MealsRoute />} />
+          <Route path="/foods" element={<Navigate to="/meals" replace />} />
+          <Route path="/plan" element={<Navigate to="/meals?tab=plan" replace />} />
           <Route path="/trends" element={<TrendsRoute />} />
           <Route path="/coach" element={<CoachRoute />} />
           <Route path="/coach/:threadId" element={<CoachRoute />} />

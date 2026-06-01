@@ -13,14 +13,14 @@ import Login from './Login'
 
 const NAV_ITEMS = [
   { to: '/today',  label: 'Today',  Icon: CircleDot },
-  { to: '/foods',  label: 'Foods',  Icon: Utensils  },
+  { to: '/meals',  label: 'Meals',  Icon: Utensils  },
   { to: '/trends', label: 'Trends', Icon: Activity  },
   { to: '/coach',  label: 'Coach',  Icon: Sparkles  },
 ]
 
 const DESKTOP_NAV_ITEMS = [
   { to: '/today',  label: 'Today',  Icon: CircleDot },
-  { to: '/foods',  label: 'Foods',  Icon: Utensils  },
+  { to: '/meals',  label: 'Meals',  Icon: Utensils  },
   { to: '/trends', label: 'Trends', Icon: Activity  },
   { to: '/coach',  label: 'Coach',  Icon: Sparkles  },
 ]
