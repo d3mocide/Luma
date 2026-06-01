@@ -142,10 +142,40 @@ function FoodSearchResults({ results, isLoading }: { results: FoodResult[] | und
           >
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)', marginBottom: 2 }}>
-                  {food.name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>
+                    {food.name}
+                  </span>
+                  {food.brand === 'USDA Reference' ? (
+                    <span style={{
+                      fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                      background: 'rgba(56,189,248,0.15)', color: 'var(--sky-400)',
+                      border: '1px solid rgba(56,189,248,0.25)', fontWeight: 600,
+                      fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                    }}>
+                      USDA Reference
+                    </span>
+                  ) : food.source === 'user' ? (
+                    <span style={{
+                      fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                      background: 'rgba(167,139,250,0.15)', color: '#c084fc',
+                      border: '1px solid rgba(167,139,250,0.25)', fontWeight: 600,
+                      fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                    }}>
+                      Custom
+                    </span>
+                  ) : (
+                    <span style={{
+                      fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                      background: 'rgba(255,255,255,0.06)', color: 'var(--fg-tertiary)',
+                      border: '1px solid rgba(255,255,255,0.08)', fontWeight: 500,
+                      fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                    }}>
+                      {food.source === 'off' ? 'Open Food Facts' : 'USDA API'}
+                    </span>
+                  )}
                 </div>
-                {food.brand && (
+                {food.brand && food.brand !== 'USDA Reference' && (
                   <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{food.brand}</div>
                 )}
               </div>

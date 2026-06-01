@@ -13,6 +13,7 @@ type FoodResult = {
   brand: string | null
   serving_size_g: number | null
   nutrients_per_100g: Record<string, number>
+  source?: string
 }
 
 export type FoodAddPayload = {
@@ -237,10 +238,40 @@ export function NutritionCalculatorCard({
                       onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
                     >
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 13, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {food.name}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
+                          <span style={{ fontSize: 13, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {food.name}
+                          </span>
+                          {food.brand === 'USDA Reference' ? (
+                            <span style={{
+                              fontSize: 8, padding: '1px 6px', borderRadius: 20,
+                              background: 'rgba(56,189,248,0.15)', color: 'var(--sky-400)',
+                              border: '1px solid rgba(56,189,248,0.25)', fontWeight: 600,
+                              fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                            }}>
+                              USDA Reference
+                            </span>
+                          ) : food.source === 'user' ? (
+                            <span style={{
+                              fontSize: 8, padding: '1px 6px', borderRadius: 20,
+                              background: 'rgba(167,139,250,0.15)', color: '#c084fc',
+                              border: '1px solid rgba(167,139,250,0.25)', fontWeight: 600,
+                              fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                            }}>
+                              Custom
+                            </span>
+                          ) : (
+                            <span style={{
+                              fontSize: 8, padding: '1px 6px', borderRadius: 20,
+                              background: 'rgba(255,255,255,0.06)', color: 'var(--fg-tertiary)',
+                              border: '1px solid rgba(255,255,255,0.08)', fontWeight: 500,
+                              fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                            }}>
+                              {food.source === 'off' ? 'Open Food Facts' : 'USDA API'}
+                            </span>
+                          )}
                         </div>
-                        {food.brand && (
+                        {food.brand && food.brand !== 'USDA Reference' && (
                           <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 1 }}>{food.brand}</div>
                         )}
                       </div>

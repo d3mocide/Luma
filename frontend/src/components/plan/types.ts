@@ -47,6 +47,7 @@ export interface FoodResult {
   brand: string | null
   serving_size_g: number | null
   nutrients_per_100g: Record<string, number>
+  source?: string
 }
 
 export interface WeekSummary {

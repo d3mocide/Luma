@@ -288,8 +288,38 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
                     className="glass-inset food-result-row"
                     style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid var(--glass-edge)', textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-1)', marginBottom: 8, width: '100%' }}>
                     <div>
-                      <div style={{ fontSize: 13, color: 'var(--fg-primary)', fontWeight: 500 }}>{food.name}</div>
-                      {food.brand && <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 2 }}>{food.brand}</div>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, color: 'var(--fg-primary)', fontWeight: 500 }}>{food.name}</span>
+                        {food.brand === 'USDA Reference' ? (
+                          <span style={{
+                            fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                            background: 'rgba(56,189,248,0.15)', color: 'var(--sky-400)',
+                            border: '1px solid rgba(56,189,248,0.25)', fontWeight: 600,
+                            fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                          }}>
+                            USDA Reference
+                          </span>
+                        ) : food.source === 'user' ? (
+                          <span style={{
+                            fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                            background: 'rgba(167,139,250,0.15)', color: '#c084fc',
+                            border: '1px solid rgba(167,139,250,0.25)', fontWeight: 600,
+                            fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                          }}>
+                            Custom
+                          </span>
+                        ) : (
+                          <span style={{
+                            fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                            background: 'rgba(255,255,255,0.06)', color: 'var(--fg-tertiary)',
+                            border: '1px solid rgba(255,255,255,0.08)', fontWeight: 500,
+                            fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                          }}>
+                            {food.source === 'off' ? 'Open Food Facts' : 'USDA API'}
+                          </span>
+                        )}
+                      </div>
+                      {food.brand && food.brand !== 'USDA Reference' && <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 2 }}>{food.brand}</div>}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--sky-400)', fontFamily: 'var(--font-mono)', fontWeight: 500, textAlign: 'right', flexShrink: 0 }}>
                       {Math.round(food.nutrients_per_100g.calories ?? 0)} <span style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>cal</span>
@@ -308,8 +338,38 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
                 <div className="glass-inset" style={{ padding: 16, borderRadius: 16, border: '1px solid var(--glass-edge-strong)', marginBottom: 16, background: 'var(--glass-2)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
                     <div>
-                      <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--fg-primary)' }}>{selectedFood.name}</div>
-                      {selectedFood.brand && <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 2 }}>{selectedFood.brand}</div>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                        <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--fg-primary)' }}>{selectedFood.name}</span>
+                        {selectedFood.brand === 'USDA Reference' ? (
+                          <span style={{
+                            fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                            background: 'rgba(56,189,248,0.15)', color: 'var(--sky-400)',
+                            border: '1px solid rgba(56,189,248,0.25)', fontWeight: 600,
+                            fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                          }}>
+                            USDA Reference
+                          </span>
+                        ) : selectedFood.source === 'user' ? (
+                          <span style={{
+                            fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                            background: 'rgba(167,139,250,0.15)', color: '#c084fc',
+                            border: '1px solid rgba(167,139,250,0.25)', fontWeight: 600,
+                            fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                          }}>
+                            Custom
+                          </span>
+                        ) : (
+                          <span style={{
+                            fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                            background: 'rgba(255,255,255,0.06)', color: 'var(--fg-tertiary)',
+                            border: '1px solid rgba(255,255,255,0.08)', fontWeight: 500,
+                            fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                          }}>
+                            {selectedFood.source === 'off' ? 'Open Food Facts' : 'USDA API'}
+                          </span>
+                        )}
+                      </div>
+                      {selectedFood.brand && selectedFood.brand !== 'USDA Reference' && <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 2 }}>{selectedFood.brand}</div>}
                     </div>
                     <button onClick={() => setSelectedFood(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', padding: 4 }}>
                       <X size={14}/>
