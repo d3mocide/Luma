@@ -187,13 +187,13 @@ async def setup(body: SetupRequest, response: Response, db: DbDep) -> UserOut:
     if count > 0:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Setup has already been completed.")
 
-    # Create new operator user
+    # First user becomes the admin
     password_hash = ph.hash(body.password)
     user = User(
         email=body.email,
         password_hash=password_hash,
         display_name=body.display_name,
-        role="operator",
+        role="admin",
     )
     try:
         db.add(user)
