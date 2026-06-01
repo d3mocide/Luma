@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useLocation } from 'react-router-dom'
 import { Sparkles, Send, Plus, ChevronDown } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -25,6 +26,7 @@ interface Message {
 
 
 export default function CoachRoute() {
+  const location = useLocation()
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -32,10 +34,20 @@ export default function CoachRoute() {
   const [showThreads, setShowThreads] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
+  const seedSentRef = useRef(false)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages])
+
+  // Pre-populate and auto-send thread_seed from insight card navigation
+  useEffect(() => {
+    const seed = (location.state as { thread_seed?: string } | null)?.thread_seed
+    if (seed && !seedSentRef.current) {
+      seedSentRef.current = true
+      setInput(seed)
+    }
+  }, [location.state])
 
   const { data: threadsData } = useQuery<{ threads: Thread[] }>({
     queryKey: ['coach-threads'],

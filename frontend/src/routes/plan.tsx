@@ -10,7 +10,7 @@ import {
   groupByDate,
   formatWeek,
   formatWeekLabel,
-  getWeekMonday,
+  getWeekSunday,
   addWeeks,
 } from '../components/plan/types'
 import { PlanDayCard } from '../components/plan/PlanDayCard'
@@ -20,12 +20,12 @@ import { WeekNav } from '../components/plan/WeekNav'
 
 export default function PlanRoute() {
   const queryClient = useQueryClient()
-  const [selectedWeek, setSelectedWeek] = useState<string>(() => getWeekMonday())
+  const [selectedWeek, setSelectedWeek] = useState<string>(() => getWeekSunday())
   const [customConstraints, setCustomConstraints] = useState('')
   const [selectedSlot, setSelectedSlot] = useState<MealSlot | null>(null)
   const [activeTab, setActiveTab] = useState<'calendar' | 'shopping'>('calendar')
 
-  const currentWeek = getWeekMonday()
+  const currentWeek = getWeekSunday()
   const nextWeek = addWeeks(currentWeek, 1)
   const todayDow = new Date().getDay()
   const isPastWeek = selectedWeek < currentWeek
@@ -65,6 +65,24 @@ export default function PlanRoute() {
     enabled: !!plan?.id,
   })
 
+  const { data: goals } = useQuery<{
+    daily_calorie_target: number | null
+    daily_sat_fat_g_max: number | null
+    daily_soluble_fiber_g: number | null
+  }>({
+    queryKey: ['goals'],
+    queryFn: () => api.get('/goals'),
+    staleTime: 300_000,
+  })
+
+  const moveMutation = useMutation({
+    mutationFn: ({ slotId, newDate }: { slotId: string; newDate: string }) =>
+      api.patch(`/plan/slot/${slotId}/move`, { new_date: newDate }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plan'] })
+    },
+  })
+
   const generateMutation = useMutation({
     mutationFn: ({ week, text }: { week: string; text: string }) =>
       api.post('/plan/generate', {
@@ -85,6 +103,25 @@ export default function PlanRoute() {
     const n = new Date()
     return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
   })()
+
+  const weeklyAvg = useMemo(() => {
+    if (!plan?.day_totals) return null
+    const days = Object.values(plan.day_totals)
+    if (!days.length) return null
+    const sum = days.reduce(
+      (acc, d) => ({
+        calories: acc.calories + (d.calories ?? 0),
+        saturated_fat_g: acc.saturated_fat_g + (d.saturated_fat_g ?? 0),
+        soluble_fiber_g: acc.soluble_fiber_g + (d.soluble_fiber_g ?? 0),
+      }),
+      { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0 }
+    )
+    return {
+      calories: sum.calories / days.length,
+      saturated_fat_g: sum.saturated_fat_g / days.length,
+      soluble_fiber_g: sum.soluble_fiber_g / days.length,
+    }
+  }, [plan?.day_totals])
 
   function handleGenerate(week: string, text: string) {
     generateMutation.mutate({ week, text })
@@ -326,6 +363,64 @@ export default function PlanRoute() {
             </div>
           )}
 
+          {weeklyAvg && (
+            <div className="glass" style={{ padding: '14px 20px', marginBottom: 16, display: 'flex', gap: 0, alignItems: 'center' }}>
+              <div style={{ marginRight: 20, flexShrink: 0 }}>
+                <div className="eyebrow" style={{ marginBottom: 2 }}>Weekly avg</div>
+                <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>vs daily goal</div>
+              </div>
+              {[
+                {
+                  label: 'Calories', key: 'calories' as const,
+                  value: Math.round(weeklyAvg.calories),
+                  target: goals?.daily_calorie_target ?? null,
+                  unit: '', color: 'var(--fg-primary)',
+                  fmt: (v: number) => String(Math.round(v)),
+                },
+                {
+                  label: 'Sat Fat', key: 'saturated_fat_g' as const,
+                  value: weeklyAvg.saturated_fat_g,
+                  target: goals?.daily_sat_fat_g_max ?? null,
+                  unit: 'g', color: 'var(--bad)',
+                  fmt: (v: number) => v.toFixed(1) + 'g',
+                  lowerIsBetter: true,
+                },
+                {
+                  label: 'Sol Fiber', key: 'soluble_fiber_g' as const,
+                  value: weeklyAvg.soluble_fiber_g,
+                  target: goals?.daily_soluble_fiber_g ?? null,
+                  unit: 'g', color: 'var(--good)',
+                  fmt: (v: number) => v.toFixed(1) + 'g',
+                },
+              ].map(({ label, value, target, color, fmt, lowerIsBetter }) => {
+                const pct = target ? Math.min((value / target) * 100, 120) : null
+                const good = target
+                  ? lowerIsBetter ? value <= target : value >= target * 0.85
+                  : true
+                return (
+                  <div key={label} style={{ flex: 1, padding: '0 12px', borderLeft: '1px solid var(--glass-edge)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{label}</span>
+                      <span className="num" style={{ fontSize: 13, fontWeight: 600, color: good ? color : 'var(--warn)' }}>
+                        {fmt(value)}
+                        {target && <span style={{ fontSize: 10, color: 'var(--fg-quiet)', fontWeight: 400 }}> / {fmt(target)}</span>}
+                      </span>
+                    </div>
+                    {pct !== null && (
+                      <div style={{ height: 4, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', borderRadius: 2, transition: 'width 400ms ease',
+                          width: `${Math.min(pct, 100)}%`,
+                          background: good ? color : 'var(--warn)',
+                        }}/>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           <div className="plan-calendar-grid">
             {dates.map((dateStr) => (
               <PlanDayCard
@@ -335,6 +430,7 @@ export default function PlanRoute() {
                 dayTotals={plan.day_totals?.[dateStr]}
                 isToday={dateStr === todayStr}
                 onSlotClick={(slot) => setSelectedSlot(slot)}
+                onMoveSlot={(slotId, newDate) => moveMutation.mutate({ slotId, newDate })}
               />
             ))}
           </div>
