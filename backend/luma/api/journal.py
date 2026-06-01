@@ -114,7 +114,13 @@ async def get_pending(db: DbDep, current_user: CurrentUser) -> dict:
         if e.id in journalled_ids:
             continue
         items = e.items or []
-        headline = items[0].get("name", "your meal") if items else "your meal"
+        headline = "your meal"
+        if items:
+            first_item = items[0]
+            if isinstance(first_item, dict):
+                headline = first_item.get("name", "your meal")
+            else:
+                headline = str(first_item)
         pending.append({
             "meal_event_id": str(e.id),
             "meal_name": headline,
