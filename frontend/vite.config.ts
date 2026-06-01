@@ -36,6 +36,7 @@ export default defineConfig({
     watch: {
       usePolling: process.env.CHOKIDAR_USEPOLLING === '1',
       interval: Number(process.env.CHOKIDAR_INTERVAL ?? 200),
+      ignored: ['**/node_modules/**', '**/.pnpm-store/**', '**/dist/**'],
     },
     proxy: {
       '/api': {
