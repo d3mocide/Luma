@@ -28,6 +28,24 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Luma API starting (env=%s)", settings.environment)
+    
+    # Automatically seed the clinical core USDA Reference dataset on first startup if the database is empty
+    from luma.db.session import AsyncSessionLocal
+    from luma.db.models import Food
+    from sqlalchemy import func, select
+    
+    async with AsyncSessionLocal() as session:
+        try:
+            count_res = await session.execute(select(func.count(Food.id)))
+            count = count_res.scalar()
+            if count == 0:
+                logger.info("Database contains 0 foods. Automatically seeding clinical core USDA Reference dataset...")
+                from luma.scripts.ingest_usda import main as seed_usda_reference
+                await seed_usda_reference()
+                logger.info("Clinical core USDA Reference dataset successfully seeded.")
+        except Exception as exc:
+            logger.info("Reference database seeding check skipped (expected if migrations have not run yet: %s)", exc)
+
     yield
     logger.info("Luma API shutting down")
 

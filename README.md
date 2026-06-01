@@ -116,6 +116,9 @@ All services should show `healthy` or `running` within ~30 seconds. If Postgres 
 make migrate    # runs: alembic upgrade head
 ```
 
+> [!NOTE]
+> On the first startup after migrations are applied, the Luma API will automatically seed the clinical core **USDA Reference** food dataset (174 ingredients) into your database on its next hot reload or check. No manual execution is required!
+
 ---
 
 ### Step 4 — Open Luma and create the operator account
@@ -180,6 +183,7 @@ See **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** for migrations, testing, loca
 | `make rebuild` | Rebuild all images and restart the stack |
 | `make migrate` | Run `alembic upgrade head` inside the api container |
 | `make seed` | Optional: bootstrap an operator account for recovery or automation |
+| `make seed-reference` | Optional: manually force seed clinical core USDA Reference foods |
 | `make ps` | Show live service status |
 | `make logs` | Tail logs across all services |
 | `make logs-api` | Tail API service logs only |

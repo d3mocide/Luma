@@ -3,7 +3,7 @@ SHELL := /bin/bash
 COMPOSE := docker compose
 CORE_SERVICES := api postgres redis whisper worker
 
-.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed seed-mock clear-hae-data ai-smoke ai-smoke-full clean nuke
+.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed seed-reference seed-mock clear-hae-data ai-smoke ai-smoke-full clean nuke
 
 help:
 	@echo "Luma quick commands"
@@ -22,6 +22,7 @@ help:
 	@echo "  make logs-web - alias for logs-frontend"
 	@echo "  make migrate  - run alembic migrations"
 	@echo "  make seed     - optional operator bootstrap / recovery"
+	@echo "  make seed-reference - manually force seed clinical core USDA Reference foods"
 	@echo "  make seed-mock - seed high-fidelity mock data (weight, ldl, meals) for any user UUID"
 	@echo "  make clear-hae-data - delete all HAE biometric rows for a given user UUID"
 	@echo "  make ai-smoke    - run API E2E smoke tests (skips LLM + plan generation)"
@@ -72,6 +73,9 @@ migrate:
 
 seed:
 	$(COMPOSE) exec api python -m luma.scripts.seed_admin
+
+seed-reference:
+	$(COMPOSE) exec api python -m luma.scripts.ingest_usda
 
 seed-mock:
 	$(COMPOSE) cp backend/luma/scripts/seed_mock_data.py api:/app/luma/scripts/seed_mock_data.py
