@@ -68,6 +68,10 @@ _KNOWN_UNITS: dict[str, frozenset[str]] = {
     "wrist_temp_c":         frozenset({"degF", "degC"}),
     "stair_speed_up_mps":   frozenset({"ft/s", "m/s"}),
     "stair_speed_down_mps": frozenset({"ft/s", "m/s"}),
+    # HAE exports weight in whatever unit Apple Health uses natively on the
+    # device (controlled by iOS Language & Region, not the HAE metric toggle).
+    # US-locale iPhones send lb even when HAE is set to metric.
+    "weight_kg":            frozenset({"kg", "lb", "lbs"}),
 }
 
 
@@ -76,6 +80,10 @@ def _convert(value: float, hae_unit: str, internal_metric: str) -> float:
         return value * 60
     if internal_metric in ("active_kcal", "bmr_kcal") and hae_unit == "kJ":
         return value / 4.184
+    if internal_metric == "weight_kg" and hae_unit in ("lb", "lbs"):
+        # HAE uses the device's regional unit (iOS Language & Region), not the
+        # HAE metric toggle, for body mass. US-locale phones send lb.
+        return value / 2.20462262
     if hae_unit == "mi":
         return value * 1.60934
     if hae_unit == "mi/hr":
@@ -199,7 +207,7 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                                 "metric": iname,
                                 "value": _convert(float(raw), hae_unit, iname),
                                 "source": "hae",
-                                "source_meta": {"hae_source": source, "hae_metric": hae_name},
+                                "source_meta": {"hae_source": source, "hae_metric": hae_name, "hae_unit": hae_unit},
                             })
                         except (ValueError, TypeError) as exc:
                             logger.warning("Bad HAE sleep field %s=%s: %s", hae_field, raw, exc)
@@ -231,7 +239,7 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                 "metric": internal,
                 "value": value,
                 "source": "hae",
-                "source_meta": {"hae_source": source, "hae_metric": hae_name},
+                "source_meta": {"hae_source": source, "hae_metric": hae_name, "hae_unit": hae_unit},
             })
 
     # Derive sleep_score from any sleep metrics in this payload.
