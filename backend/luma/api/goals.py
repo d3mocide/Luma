@@ -414,4 +414,4 @@ async def regenerate_hae_import_token(user: CurrentUser, db: DbDep) -> HaeImport
     new_token = uuid.uuid4()
     await db.execute(update(User).where(User.id == user.id).values(hae_import_token=new_token))
     await db.commit()
-    return HaeImportOut(token=str(new_token))
+    return HaeImportOut(token=str(new_token), app_secret=settings.hae_shared_secret)

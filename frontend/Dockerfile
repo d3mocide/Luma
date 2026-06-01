@@ -21,7 +21,7 @@ RUN apk add --no-cache openssl
 
 COPY --from=builder /app/dist /var/www/html
 COPY nginx/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 EXPOSE 80 443
 

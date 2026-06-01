@@ -33,8 +33,13 @@ def _verify_app_secret(request: Request, body: bytes) -> None:
     if not settings.hae_shared_secret:
         return
     header_value = request.headers.get("X-HAE-Signature", "")
-    if not hmac.compare_digest(header_value, settings.hae_shared_secret):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid app secret")
+    computed = hmac.new(
+        settings.hae_shared_secret.encode("utf-8"),
+        body,
+        hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(header_value, computed):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid app secret signature")
 
 
 async def _check_replay(replay_key: str) -> None:
