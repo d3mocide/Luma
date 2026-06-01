@@ -50,7 +50,12 @@ async def search_foods(
 ) -> List[Food]:
     # USDA reference foods surface first — they are curated, normalised to 100g,
     # and carry the full nutrient profile the agents depend on.
-    _usda_first = case((Food.source == "usda", 0), else_=1)
+    _no_q_order = case(
+        (Food.brand == "USDA Reference", 0),
+        (Food.source == "user", 1),
+        (Food.source == "usda", 2),
+        else_=3
+    )
 
     flag_list = [f.strip() for f in flags.split(",") if f.strip()] if flags else []
 
@@ -61,13 +66,15 @@ async def search_foods(
 
     if not q or not q.strip():
         stmt = _apply_flag_filters(
-            select(Food).order_by(_usda_first, Food.name).limit(30)
+            select(Food).order_by(_no_q_order, Food.name).limit(30)
         )
         res = await db.execute(stmt)
         return list(res.scalars().all())
 
     q_clean = q.strip()
     _sim = func.similarity(Food.name, q_clean)
+    _ref_boost = case((Food.brand == "USDA Reference", 1.5), else_=0.0)
+    _user_boost = case((Food.source == "user", 0.5), else_=0.0)
     _usda_boost = case((Food.source == "usda", 0.1), else_=0.0)
     stmt = _apply_flag_filters(
         select(Food)
@@ -78,7 +85,7 @@ async def search_foods(
                 Food.name.ilike(f"%{q_clean}%"),
             )
         )
-        .order_by((_sim + _usda_boost).desc())
+        .order_by((_sim + _ref_boost + _user_boost + _usda_boost).desc())
         .limit(30)
     )
     res = await db.execute(stmt)
