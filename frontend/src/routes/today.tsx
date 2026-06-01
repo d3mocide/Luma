@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, Flame, Heart, Activity, Moon, Timer, Wind } from 'lucide-react'
+import { Sparkles, Flame, Heart, Activity, Moon, Timer, Wind, X } from 'lucide-react'
 import { api, TodayData, TrendSeries, User } from '../lib/api'
 import { createMockTodayData, createMockWeightSeries, isTodaySparseData } from '../lib/mock-data'
 import { fmtMinutes, fmt } from '../lib/format'
@@ -24,6 +24,7 @@ export default function TodayRoute() {
   const navigate = useNavigate()
   const [loggingMealId, setLoggingMealId] = useState<string | null>(null)
   const [deletingMealId, setDeletingMealId] = useState<string | null>(null)
+  const [nudgeDismissed, setNudgeDismissed] = useState(false)
 
   const { data: user } = useQuery<User>({
     queryKey: ['me'],
@@ -42,6 +43,14 @@ export default function TodayRoute() {
     queryFn: () => api.get('/trends/weight_kg?range=30d'),
     enabled: !forceMockData,
   })
+
+  const { data: pendingData } = useQuery<{ pending: Array<{ meal_event_id: string; meal_name: string; logged_at: string; slot: string }> }>({
+    queryKey: ['journal-pending'],
+    queryFn: () => api.get('/journal/pending'),
+    staleTime: 60_000,
+    enabled: !forceMockData,
+  })
+  const pendingMeal = pendingData?.pending?.[0] ?? null
 
   const logPlannedMealMutation = useMutation({
     mutationFn: async (meal: TodayData['plan_today'][number]) => {
@@ -126,8 +135,53 @@ export default function TodayRoute() {
   const userDisplayName = (user?.display_name ?? '').trim()
   const greetingName = userDisplayName || 'there'
 
+  function handleJournalNudge() {
+    if (!pendingMeal) return
+    const params = new URLSearchParams({
+      tab: 'journal',
+      mealId: pendingMeal.meal_event_id,
+      mealName: pendingMeal.meal_name,
+      loggedAt: pendingMeal.logged_at,
+      slot: pendingMeal.slot,
+    })
+    navigate(`/meals?${params.toString()}`)
+  }
+
   return (
     <TodayShell>
+
+      {/* Journal nudge banner */}
+      {pendingMeal && !nudgeDismissed && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '11px 20px',
+          background: 'linear-gradient(90deg, rgba(56,189,248,0.08), rgba(167,139,250,0.08))',
+          borderBottom: '1px solid var(--glass-edge)',
+        }}>
+          <span style={{ fontSize: 18, flexShrink: 0 }}>🌿</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 13, color: 'var(--fg-primary)' }}>
+              How did you feel after <strong>{pendingMeal.meal_name}</strong>?
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginLeft: 6 }}>
+              Logged {Math.round((Date.now() - new Date(pendingMeal.logged_at).getTime()) / 60000)}m ago
+            </span>
+          </div>
+          <button
+            className="btn"
+            style={{ fontSize: 12, padding: '6px 12px', flexShrink: 0 }}
+            onClick={handleJournalNudge}
+          >
+            Log it →
+          </button>
+          <button
+            onClick={() => setNudgeDismissed(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--fg-quiet)', flexShrink: 0 }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Desktop layout */}
       <div className="hidden md:flex md:flex-col" style={{ padding: '32px 40px 40px', gap: 20 }}>

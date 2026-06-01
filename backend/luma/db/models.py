@@ -238,6 +238,25 @@ class MealEvent(Base):
     confidence = Column(Numeric(3, 2))
 
 
+class MealJournalEntry(Base):
+    __tablename__ = "meal_journal_entries"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    meal_event_id = Column(UUID(as_uuid=True), nullable=True)  # soft ref to meal_events.id
+    meal_name = Column(Text, nullable=False)
+    logged_at = Column(DateTime(timezone=True), nullable=False)
+    energy = Column(Integer, nullable=False)      # 1–5
+    digestion = Column(Integer, nullable=False)   # 1–5
+    mood = Column(Integer, nullable=False)        # 1–5
+    satiety = Column(Integer, nullable=False)     # 1–5
+    symptoms = Column(ARRAY(Text), nullable=False, server_default='{}')
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    user = relationship("User")
+
+
 class Biometric(Base):
     __tablename__ = "biometrics"
 
