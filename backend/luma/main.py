@@ -11,6 +11,21 @@ logging.basicConfig(
     level=logging.INFO if settings.is_production else logging.DEBUG,
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
 )
+
+# SQLAlchemy logs every query+params at INFO by default — too noisy
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+# LiteLLM logs full request/response bodies at DEBUG — extremely noisy
+logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+logging.getLogger("litellm").setLevel(logging.WARNING)
+
+
+class _HealthCheckFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "GET /health" not in record.getMessage()
+
+
+logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
+
 logger = logging.getLogger(__name__)
 
 
