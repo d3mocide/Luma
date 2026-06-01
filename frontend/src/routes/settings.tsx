@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { type CSSProperties, useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, User } from '../lib/api'
 import {
@@ -20,12 +20,13 @@ import { useMeasurementSystem, convertWeightToKg } from '../lib/measurements'
 
 const KG_TO_LB = 2.2046226218
 
-type SettingsTab = 'account' | 'health-import' | 'ai-routing'
+type SettingsTab = 'account' | 'health-import' | 'ai-routing' | 'admin'
 
 const TAB_META: Record<SettingsTab, { label: string; minRole?: string }> = {
   'account':        { label: 'Settings' },
   'health-import':  { label: 'Health Import' },
   'ai-routing':     { label: 'AI Routing', minRole: 'operator' },
+  'admin':          { label: 'Users', minRole: 'admin' },
 }
 
 function hasRole(user: User | undefined, minRole: string | undefined): boolean {
@@ -224,6 +225,355 @@ function AiRoutingTab({ isOperator }: { isOperator: boolean }) {
   )
 }
 
+// ── Admin tab types ────────────────────────────────────────────────────────────
+
+interface AdminUserRecord {
+  id: string
+  email: string
+  display_name: string
+  role: string
+}
+
+interface AdminCreateUserResponse {
+  user: AdminUserRecord
+  temporary_password: string
+}
+
+interface AdminResetPasswordResponse {
+  temporary_password: string
+}
+
+interface TempPasswordAlert {
+  label: string
+  password: string
+}
+
+// ── Admin tab ──────────────────────────────────────────────────────────────────
+
+const ROLES = ['user', 'operator', 'admin']
+
+function AdminTab({ currentUserId }: { currentUserId: string }) {
+  const queryClient = useQueryClient()
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [tempAlert, setTempAlert] = useState<TempPasswordAlert | null>(null)
+  const [alertCopied, setAlertCopied] = useState(false)
+  const [createForm, setCreateForm] = useState({ email: '', display_name: '', role: 'user' })
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const { data: users, isLoading } = useQuery<AdminUserRecord[]>({
+    queryKey: ['admin', 'users'],
+    queryFn: () => api.get<AdminUserRecord[]>('/admin/users'),
+  })
+
+  const roleChangeMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
+      api.patch<AdminUserRecord>(`/admin/users/${userId}/role`, { role }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      setActionError(null)
+    },
+    onError: (err: Error) => setActionError(err.message),
+  })
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: (userId: string) =>
+      api.post<AdminResetPasswordResponse>(`/admin/users/${userId}/reset-password`),
+    onSuccess: (data, userId) => {
+      const u = users?.find(x => x.id === userId)
+      setTempAlert({ label: `Reset for ${u?.display_name ?? 'user'}`, password: data.temporary_password })
+      setActionError(null)
+    },
+    onError: (err: Error) => setActionError(err.message),
+  })
+
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) => api.delete<{ detail: string }>(`/admin/users/${userId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      setConfirmDeleteId(null)
+      setActionError(null)
+    },
+    onError: (err: Error) => {
+      setActionError(err.message)
+      setConfirmDeleteId(null)
+    },
+  })
+
+  const createUserMutation = useMutation({
+    mutationFn: (body: { email: string; display_name: string; role: string }) =>
+      api.post<AdminCreateUserResponse>('/admin/users', body),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      setTempAlert({ label: `New user: ${data.user.display_name}`, password: data.temporary_password })
+      setCreateForm({ email: '', display_name: '', role: 'user' })
+      setCreateError(null)
+    },
+    onError: (err: Error) => setCreateError(err.message),
+  })
+
+  const handleCopyAlert = async () => {
+    if (!tempAlert) return
+    await navigator.clipboard.writeText(tempAlert.password)
+    setAlertCopied(true)
+    window.setTimeout(() => setAlertCopied(false), 2000)
+  }
+
+  const inputStyle: CSSProperties = {
+    width: '100%',
+    background: 'var(--glass-2)',
+    border: '1px solid var(--glass-edge)',
+    borderRadius: 10,
+    padding: '8px 12px',
+    fontSize: 13,
+    color: 'var(--fg-primary)',
+    outline: 'none',
+    boxSizing: 'border-box',
+  }
+
+  const selectStyle: CSSProperties = {
+    ...inputStyle,
+    cursor: 'pointer',
+    color: 'var(--fg-secondary)',
+  }
+
+  const smallBtnBase: CSSProperties = {
+    background: 'var(--glass-2)',
+    border: '1px solid var(--glass-edge)',
+    color: 'var(--fg-tertiary)',
+    fontSize: 11,
+    padding: '4px 10px',
+    borderRadius: 8,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {tempAlert && (
+        <div style={{
+          padding: '14px 20px',
+          background: 'rgba(16, 185, 129, 0.08)',
+          border: '1px solid rgba(16, 185, 129, 0.25)',
+          borderRadius: 12,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          justifyContent: 'space-between',
+        }}>
+          <div>
+            <div style={{ fontSize: 12, color: '#10b981', fontWeight: 600, marginBottom: 4 }}>{tempAlert.label}</div>
+            <div style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>
+              Temporary password:{' '}
+              <span style={{ fontFamily: 'var(--font-mono, monospace)', color: 'var(--fg-primary)', letterSpacing: '0.05em' }}>
+                {tempAlert.password}
+              </span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button type="button" onClick={handleCopyAlert} style={{
+              background: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: alertCopied ? '#10b981' : 'var(--fg-secondary)',
+              fontSize: 12,
+              padding: '4px 12px',
+              borderRadius: 8,
+              cursor: 'pointer',
+            }}>
+              {alertCopied ? 'Copied!' : 'Copy'}
+            </button>
+            <button type="button" onClick={() => setTempAlert(null)} style={{
+              background: 'transparent',
+              border: '1px solid var(--glass-edge)',
+              color: 'var(--fg-tertiary)',
+              fontSize: 12,
+              padding: '4px 12px',
+              borderRadius: 8,
+              cursor: 'pointer',
+            }}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {actionError && (
+        <div style={{ padding: '10px 16px', background: 'rgba(251,113,133,0.10)', border: '1px solid rgba(251,113,133,0.25)', borderRadius: 12, fontSize: 13, color: 'var(--bad)' }}>
+          {actionError}
+        </div>
+      )}
+
+      <div className="settings-grid">
+        <div className="settings-stack settings-primary">
+          <div className="glass settings-card" style={{ padding: 24 }}>
+            <div className="eyebrow" style={{ marginBottom: 16 }}>All Users</div>
+            {isLoading ? (
+              <div style={{ color: 'var(--fg-quiet)', fontSize: 14, padding: '16px 0' }}>Loading…</div>
+            ) : !users?.length ? (
+              <div style={{ color: 'var(--fg-quiet)', fontSize: 14 }}>No users found.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {users.map((u, i) => (
+                  <div key={u.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '12px 0',
+                    borderBottom: i < users.length - 1 ? '1px solid var(--glass-edge)' : 'none',
+                    flexWrap: 'wrap',
+                  }}>
+                    <div style={{
+                      width: 34, height: 34, borderRadius: '50%',
+                      background: 'var(--glass-2)',
+                      border: '1px solid var(--glass-edge)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, fontWeight: 600, color: 'var(--fg-secondary)',
+                      flexShrink: 0,
+                    }}>
+                      {u.display_name.charAt(0).toUpperCase()}
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {u.display_name}
+                        {u.id === currentUserId && (
+                          <span style={{ fontSize: 10, color: 'var(--fg-tertiary)', background: 'var(--glass-2)', padding: '1px 6px', borderRadius: 4, border: '1px solid var(--glass-edge)' }}>you</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                    </div>
+
+                    <select
+                      value={u.role}
+                      disabled={u.id === currentUserId || roleChangeMutation.isPending}
+                      onChange={(e) => roleChangeMutation.mutate({ userId: u.id, role: e.target.value })}
+                      style={{
+                        background: 'var(--glass-2)',
+                        border: '1px solid var(--glass-edge)',
+                        color: 'var(--fg-secondary)',
+                        fontSize: 12,
+                        padding: '4px 8px',
+                        borderRadius: 8,
+                        cursor: u.id === currentUserId ? 'not-allowed' : 'pointer',
+                        opacity: u.id === currentUserId ? 0.5 : 1,
+                      }}
+                    >
+                      {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={() => resetPasswordMutation.mutate(u.id)}
+                      disabled={resetPasswordMutation.isPending}
+                      style={smallBtnBase}
+                    >
+                      Reset PW
+                    </button>
+
+                    {u.id !== currentUserId && (
+                      confirmDeleteId === u.id ? (
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button
+                            type="button"
+                            onClick={() => deleteUserMutation.mutate(u.id)}
+                            disabled={deleteUserMutation.isPending}
+                            style={{ ...smallBtnBase, background: 'rgba(251,113,133,0.15)', border: '1px solid rgba(251,113,133,0.3)', color: 'var(--bad)' }}
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(null)}
+                            style={{ ...smallBtnBase, background: 'transparent' }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(u.id)}
+                          style={{ ...smallBtnBase, background: 'transparent' }}
+                        >
+                          Delete
+                        </button>
+                      )
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="settings-stack settings-secondary">
+          <div className="glass settings-card" style={{ padding: 24 }}>
+            <div className="eyebrow" style={{ marginBottom: 16 }}>Add User</div>
+
+            {createError && (
+              <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(251,113,133,0.10)', border: '1px solid rgba(251,113,133,0.25)', borderRadius: 12, fontSize: 13, color: 'var(--bad)' }}>
+                {createError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--fg-tertiary)', marginBottom: 6 }}>Display name</label>
+                <input
+                  type="text"
+                  value={createForm.display_name}
+                  onChange={(e) => setCreateForm(f => ({ ...f, display_name: e.target.value }))}
+                  placeholder="Jane Smith"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--fg-tertiary)', marginBottom: 6 }}>Email</label>
+                <input
+                  type="email"
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="jane@example.com"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--fg-tertiary)', marginBottom: 6 }}>Role</label>
+                <select
+                  value={createForm.role}
+                  onChange={(e) => setCreateForm(f => ({ ...f, role: e.target.value }))}
+                  style={selectStyle}
+                >
+                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  if (!createForm.email.trim() || !createForm.display_name.trim()) {
+                    setCreateError('Name and email are required.')
+                    return
+                  }
+                  setCreateError(null)
+                  createUserMutation.mutate(createForm)
+                }}
+                disabled={createUserMutation.isPending}
+                style={{ width: '100%', marginTop: 4, opacity: createUserMutation.isPending ? 0.7 : 1 }}
+              >
+                {createUserMutation.isPending ? 'Creating…' : 'Create user'}
+              </button>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--fg-quiet)' }}>
+                A temporary password will be generated. Share it securely with the new user.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function SettingsRoute() {
@@ -318,7 +668,7 @@ export default function SettingsRoute() {
   }
 
   const isOperator = hasRole(user, 'operator')
-  const tabs: SettingsTab[] = ['account', 'health-import', 'ai-routing']
+  const tabs: SettingsTab[] = ['account', 'health-import', 'ai-routing', 'admin']
 
   return (
     <div className="thin-scroll settings-page" style={{ height: '100%', overflowY: 'auto', padding: '32px 40px 40px' }}>
@@ -378,6 +728,12 @@ export default function SettingsRoute() {
 
       {activeTab === 'ai-routing' && (
         <AiRoutingTab isOperator={isOperator} />
+      )}
+
+      {activeTab === 'admin' && (
+        hasRole(user, 'admin')
+          ? <AdminTab currentUserId={user?.id ?? ''} />
+          : <AccessDenied />
       )}
     </div>
   )
