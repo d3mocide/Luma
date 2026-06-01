@@ -130,7 +130,12 @@ TOOLS: list[dict[str, Any]] = [
 
 
 async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
+    from datetime import datetime
     from sqlalchemy import text
+
+    # Helper: convert ISO date string to Python date object
+    def parse_date(s: str):
+        return datetime.fromisoformat(s).date()
 
     if name == "query_biometric_trend":
         rows = await db.execute(
@@ -141,7 +146,7 @@ async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
                   AND day BETWEEN :start AND :end
                 ORDER BY day
             """),
-            {"uid": user_id, "metric": args["metric"], "start": args["start_date"], "end": args["end_date"]},
+            {"uid": user_id, "metric": args["metric"], "start": parse_date(args["start_date"]), "end": parse_date(args["end_date"])},
         )
         return json.dumps([{"date": r.day, "avg": r.avg_value, "last": r.last_value} for r in rows])
 
@@ -160,7 +165,7 @@ async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
                 GROUP BY DATE(ts AT TIME ZONE 'UTC')
                 ORDER BY day
             """),
-            {"uid": user_id, "start": args["start_date"], "end": args["end_date"]},
+            {"uid": user_id, "start": parse_date(args["start_date"]), "end": parse_date(args["end_date"])},
         )
         data = [
             {"day": str(r.day), "calories": r.calories, "sat_fat_g": r.sat_fat_g,
