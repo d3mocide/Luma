@@ -4,6 +4,8 @@ import httpx
 import logging
 from typing import Dict, Any, Optional
 
+from luma.services.food_flags import compute_threshold_flags
+
 logger = logging.getLogger("off_client")
 
 
@@ -63,7 +65,8 @@ async def lookup_barcode(barcode: str) -> Optional[Dict[str, Any]]:
                 "serving_size_g": serving_size,
                 "nutrients_per_100g": mapped_nutrients,
                 "tags": [t.replace("en:", "") for t in prod.get("categories_tags", [])[:5]],
-                "source_id": f"off_{barcode}"
+                "flags": compute_threshold_flags(mapped_nutrients),
+                "source_id": f"off_{barcode}",
             }
     except Exception as e:
         logger.exception(f"Error looking up barcode {barcode} from OFF: {e}")

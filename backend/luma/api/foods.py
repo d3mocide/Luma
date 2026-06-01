@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from luma.db.models import Food
 from luma.deps import DbDep, CurrentUser
 from luma.services import usda_client
+from luma.services.food_flags import merge_flags
 
 router = APIRouter()
 
@@ -34,10 +35,10 @@ class FoodResponse(BaseModel):
     serving_size_g: Optional[float] = None
     nutrients_per_100g: Dict[str, Any]
     tags: Optional[List[str]] = None
+    flags: List[str] = []
     created_by: Optional[UUID] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 @router.get("/search", response_model=List[FoodResponse])
@@ -45,16 +46,22 @@ async def search_foods(
     db: DbDep,
     current_user: CurrentUser,
     q: Optional[str] = Query(None, min_length=1),
+    flags: Optional[str] = Query(None, description="Comma-separated flag list (AND logic)"),
 ) -> List[Food]:
     # USDA reference foods surface first — they are curated, normalised to 100g,
     # and carry the full nutrient profile the agents depend on.
     _usda_first = case((Food.source == "usda", 0), else_=1)
 
+    flag_list = [f.strip() for f in flags.split(",") if f.strip()] if flags else []
+
+    def _apply_flag_filters(s):
+        for flag in flag_list:
+            s = s.where(Food.flags.contains([flag]))
+        return s
+
     if not q or not q.strip():
-        stmt = (
-            select(Food)
-            .order_by(_usda_first, Food.name)
-            .limit(30)
+        stmt = _apply_flag_filters(
+            select(Food).order_by(_usda_first, Food.name).limit(30)
         )
         res = await db.execute(stmt)
         return list(res.scalars().all())
@@ -62,7 +69,7 @@ async def search_foods(
     q_clean = q.strip()
     _sim = func.similarity(Food.name, q_clean)
     _usda_boost = case((Food.source == "usda", 0.1), else_=0.0)
-    stmt = (
+    stmt = _apply_flag_filters(
         select(Food)
         .where(
             or_(
@@ -88,7 +95,8 @@ async def search_foods(
         exists = await db.execute(select(Food).where(Food.source_id == item["source_id"]))
         if exists.scalar_one_or_none():
             continue
-        db.add(Food(id=uuid.uuid4(), **item))
+        new_flags = merge_flags(item.get("flags", []), item.get("nutrients_per_100g", {}))
+        db.add(Food(id=uuid.uuid4(), flags=new_flags, **{k: v for k, v in item.items() if k != "flags"}))
     if remote:
         await db.commit()
 

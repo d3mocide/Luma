@@ -9,6 +9,46 @@ type FoodResult = {
   brand?: string
   serving_size_g?: number
   nutrients_per_100g: Record<string, number>
+  flags?: string[]
+}
+
+const FLAG_BADGE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
+  'heart-healthy':     { bg: 'rgba(34,197,94,0.15)',   color: '#4ade80', label: '♥ Heart' },
+  'anti-inflammatory': { bg: 'rgba(20,184,166,0.15)',  color: '#2dd4bf', label: 'Anti-Inflam' },
+  'gluten-free':       { bg: 'rgba(139,92,246,0.15)',  color: '#a78bfa', label: 'GF' },
+  'keto-friendly':     { bg: 'rgba(249,115,22,0.15)',  color: '#fb923c', label: 'Keto' },
+  'high-protein':      { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8', label: 'Hi-Protein' },
+  'high-fiber':        { bg: 'rgba(132,204,22,0.15)',  color: '#a3e635', label: 'Hi-Fiber' },
+  'low-sodium':        { bg: 'rgba(34,197,94,0.10)',   color: '#86efac', label: 'Low-Na' },
+  'high-saturated-fat':{ bg: 'rgba(251,146,60,0.15)',  color: '#fb923c', label: '⚠ Sat-Fat' },
+  'high-sodium':       { bg: 'rgba(239,68,68,0.15)',   color: '#f87171', label: '⚠ Hi-Na' },
+  'high-sugar':        { bg: 'rgba(234,179,8,0.15)',   color: '#facc15', label: '⚠ Hi-Sugar' },
+  'inflammatory':      { bg: 'rgba(239,68,68,0.15)',   color: '#f87171', label: '⚠ Inflam' },
+  'processed':         { bg: 'rgba(161,161,170,0.15)', color: '#a1a1aa', label: 'Processed' },
+}
+
+const POSITIVE_FLAGS = new Set(['heart-healthy','anti-inflammatory','gluten-free','keto-friendly','high-protein','high-fiber','low-sodium'])
+
+function FlagBadges({ flags }: { flags?: string[] }) {
+  if (!flags?.length) return null
+  const sorted = [...flags].sort((a, b) => (POSITIVE_FLAGS.has(b) ? 1 : 0) - (POSITIVE_FLAGS.has(a) ? 1 : 0))
+  const visible = sorted.slice(0, 3)
+  return (
+    <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 3 }}>
+      {visible.map((f) => {
+        const style = FLAG_BADGE_STYLES[f]
+        if (!style) return null
+        return (
+          <span key={f} style={{
+            fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 999,
+            background: style.bg, color: style.color, letterSpacing: '0.02em',
+          }}>
+            {style.label}
+          </span>
+        )
+      })}
+    </div>
+  )
 }
 
 type Props = {
@@ -236,13 +276,14 @@ export function ComboTab({ draftItems, comboName, onComboNameChange, onAddItem, 
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
                 }}
               >
-                <div style={{ minWidth: 0 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {food.name}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
                     {food.brand || 'USDA reference'}
                   </div>
+                  <FlagBadges flags={food.flags} />
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sky-300)', background: 'rgba(56,189,248,0.10)', padding: '2px 8px', borderRadius: 999, flexShrink: 0 }}>
                   {Math.round(food.nutrients_per_100g.calories || 0)} /100g

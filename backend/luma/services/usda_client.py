@@ -23,6 +23,7 @@ from typing import Any
 import httpx
 
 from luma.config import settings
+from luma.services.food_flags import compute_threshold_flags
 
 logger = logging.getLogger(__name__)
 
@@ -64,14 +65,16 @@ def _to_luma_food(fdc_food: dict[str, Any]) -> dict[str, Any]:
     fdc_id = str(fdc_food.get("fdcId", ""))
     serving_size = float(fdc_food.get("servingSize") or 100.0)
 
+    nutrients = _extract_nutrients(fdc_food)
     return {
         "source": "usda",
         "source_id": f"fdc_{fdc_id}",
         "name": description,
         "brand": brand,
         "serving_size_g": serving_size,
-        "nutrients_per_100g": _extract_nutrients(fdc_food),
+        "nutrients_per_100g": nutrients,
         "tags": [],
+        "flags": compute_threshold_flags(nutrients),
     }
 
 

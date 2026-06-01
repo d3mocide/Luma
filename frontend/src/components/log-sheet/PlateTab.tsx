@@ -9,6 +9,7 @@ type FoodResult = {
   brand?: string
   serving_size_g?: number
   nutrients_per_100g: Record<string, number>
+  flags?: string[]
 }
 
 type Props = {
@@ -18,20 +19,78 @@ type Props = {
   onUpdateWeight: (index: number, newWeight: number) => void
 }
 
+const FILTER_CHIPS: { label: string; flag: string; color: string }[] = [
+  { label: 'Heart Healthy', flag: 'heart-healthy',    color: 'rgba(34,197,94,0.15)'  },
+  { label: 'Anti-Inflam',   flag: 'anti-inflammatory', color: 'rgba(20,184,166,0.15)' },
+  { label: 'Gluten Free',   flag: 'gluten-free',       color: 'rgba(139,92,246,0.15)' },
+  { label: 'High Protein',  flag: 'high-protein',      color: 'rgba(56,189,248,0.15)' },
+  { label: 'High Fiber',    flag: 'high-fiber',        color: 'rgba(132,204,22,0.15)' },
+  { label: 'Keto',          flag: 'keto-friendly',     color: 'rgba(249,115,22,0.15)' },
+]
+
+const FLAG_BADGE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
+  'heart-healthy':    { bg: 'rgba(34,197,94,0.15)',   color: '#4ade80', label: '♥ Heart' },
+  'anti-inflammatory':{ bg: 'rgba(20,184,166,0.15)',  color: '#2dd4bf', label: 'Anti-Inflam' },
+  'gluten-free':      { bg: 'rgba(139,92,246,0.15)',  color: '#a78bfa', label: 'GF' },
+  'keto-friendly':    { bg: 'rgba(249,115,22,0.15)',  color: '#fb923c', label: 'Keto' },
+  'high-protein':     { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8', label: 'Hi-Protein' },
+  'high-fiber':       { bg: 'rgba(132,204,22,0.15)',  color: '#a3e635', label: 'Hi-Fiber' },
+  'low-sodium':       { bg: 'rgba(34,197,94,0.10)',   color: '#86efac', label: 'Low-Na' },
+  'high-saturated-fat':{ bg: 'rgba(251,146,60,0.15)', color: '#fb923c', label: '⚠ Sat-Fat' },
+  'high-sodium':      { bg: 'rgba(239,68,68,0.15)',   color: '#f87171', label: '⚠ Hi-Na' },
+  'high-sugar':       { bg: 'rgba(234,179,8,0.15)',   color: '#facc15', label: '⚠ Hi-Sugar' },
+  'inflammatory':     { bg: 'rgba(239,68,68,0.15)',   color: '#f87171', label: '⚠ Inflam' },
+  'processed':        { bg: 'rgba(161,161,170,0.15)', color: '#a1a1aa', label: 'Processed' },
+}
+
+const POSITIVE_FLAGS = new Set(['heart-healthy','anti-inflammatory','gluten-free','keto-friendly','high-protein','high-fiber','low-sodium'])
+
+function FlagBadges({ flags }: { flags?: string[] }) {
+  if (!flags?.length) return null
+  const sorted = [...flags].sort((a, b) => (POSITIVE_FLAGS.has(b) ? 1 : 0) - (POSITIVE_FLAGS.has(a) ? 1 : 0))
+  const visible = sorted.slice(0, 3)
+  return (
+    <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 3 }}>
+      {visible.map((f) => {
+        const style = FLAG_BADGE_STYLES[f]
+        if (!style) return null
+        return (
+          <span key={f} style={{
+            fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 999,
+            background: style.bg, color: style.color, letterSpacing: '0.02em',
+          }}>
+            {style.label}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
 export function PlateTab({ draftItems, onAddItem, onRemoveItem, onUpdateWeight }: Props) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<FoodResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [selectedFlags, setSelectedFlags] = useState<string[]>([])
+
+  function toggleFlag(flag: string) {
+    setSelectedFlags((prev) =>
+      prev.includes(flag) ? prev.filter((f) => f !== flag) : [...prev, flag]
+    )
+  }
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    if (!searchQuery.trim() && selectedFlags.length === 0) {
       setSearchResults([])
       return
     }
     const delay = setTimeout(async () => {
       setIsSearching(true)
       try {
-        const res: unknown = await api.get(`/foods/search?q=${encodeURIComponent(searchQuery)}`)
+        const params = new URLSearchParams()
+        if (searchQuery.trim()) params.set('q', searchQuery.trim())
+        if (selectedFlags.length) params.set('flags', selectedFlags.join(','))
+        const res: unknown = await api.get(`/foods/search?${params.toString()}`)
         const foods = Array.isArray(res) ? res : ((res as Record<string, unknown>)?.results ?? []) as FoodResult[]
         setSearchResults(foods as FoodResult[])
       } catch (err) {
@@ -41,7 +100,7 @@ export function PlateTab({ draftItems, onAddItem, onRemoveItem, onUpdateWeight }
       }
     }, 300)
     return () => clearTimeout(delay)
-  }, [searchQuery])
+  }, [searchQuery, selectedFlags])
 
   const addSearchItem = (food: FoodResult) => {
     const defaultWeight = food.serving_size_g || 100.0
@@ -69,6 +128,30 @@ export function PlateTab({ draftItems, onAddItem, onRemoveItem, onUpdateWeight }
 
   return (
     <div className="space-y-4">
+      {/* ── Filter chips ── */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {FILTER_CHIPS.map(({ label, flag, color }) => {
+          const active = selectedFlags.includes(flag)
+          return (
+            <button
+              key={flag}
+              onClick={() => toggleFlag(flag)}
+              style={{
+                padding: '4px 10px', borderRadius: 999, fontSize: 10,
+                fontWeight: 600, cursor: 'pointer', transition: 'all 150ms',
+                background: active ? color : 'var(--glass-1)',
+                border: active ? `1px solid ${color.replace('0.15', '0.5')}` : '1px solid var(--glass-edge)',
+                color: active ? 'var(--fg-primary)' : 'var(--fg-secondary)',
+                letterSpacing: '0.02em',
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ── Search input ── */}
       <div className="relative">
         <input
           type="text"
@@ -93,11 +176,12 @@ export function PlateTab({ draftItems, onAddItem, onRemoveItem, onUpdateWeight }
               className="w-full p-2.5 text-left flex items-center justify-between transition-colors"
               style={{ color: 'var(--fg-secondary)' }}
             >
-              <div>
+              <div style={{ minWidth: 0, flex: 1, marginRight: 8 }}>
                 <span className="text-sm font-semibold block" style={{ color: 'var(--fg-primary)' }}>{food.name}</span>
                 <span className="text-xs" style={{ color: 'var(--fg-quiet)' }}>{food.brand || 'USDA reference'}</span>
+                <FlagBadges flags={food.flags} />
               </div>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: 'var(--sky-300)', background: 'rgba(56,189,248,0.10)' }}>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0" style={{ color: 'var(--sky-300)', background: 'rgba(56,189,248,0.10)' }}>
                 {Math.round(food.nutrients_per_100g.calories)} kcal
               </span>
             </button>
