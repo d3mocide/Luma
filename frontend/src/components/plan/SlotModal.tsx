@@ -21,7 +21,8 @@ interface Alternative {
 
 export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
   const queryClient = useQueryClient()
-  const [view, setView] = useState<View>('detail')
+  const isEmpty = !slot.custom_name && !slot.food_id && !slot.recipe_id
+  const [view, setView] = useState<View>(() => isEmpty ? 'browse' : 'detail')
   const [foodQuery, setFoodQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [selectedFood, setSelectedFood] = useState<FoodResult | null>(null)
