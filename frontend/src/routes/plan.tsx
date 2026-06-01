@@ -10,7 +10,7 @@ import {
   groupByDate,
   formatWeek,
   formatWeekLabel,
-  getWeekMonday,
+  getWeekSunday,
   addWeeks,
 } from '../components/plan/types'
 import { PlanDayCard } from '../components/plan/PlanDayCard'
@@ -20,12 +20,12 @@ import { WeekNav } from '../components/plan/WeekNav'
 
 export default function PlanRoute() {
   const queryClient = useQueryClient()
-  const [selectedWeek, setSelectedWeek] = useState<string>(() => getWeekMonday())
+  const [selectedWeek, setSelectedWeek] = useState<string>(() => getWeekSunday())
   const [customConstraints, setCustomConstraints] = useState('')
   const [selectedSlot, setSelectedSlot] = useState<MealSlot | null>(null)
   const [activeTab, setActiveTab] = useState<'calendar' | 'shopping'>('calendar')
 
-  const currentWeek = getWeekMonday()
+  const currentWeek = getWeekSunday()
   const nextWeek = addWeeks(currentWeek, 1)
   const todayDow = new Date().getDay()
   const isPastWeek = selectedWeek < currentWeek

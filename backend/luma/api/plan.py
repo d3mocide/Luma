@@ -16,9 +16,11 @@ from luma.services.plan_helpers import _slot_dict, _sum_nutrition, _nutrition_fr
 router = APIRouter()
 
 
-def get_current_week_monday() -> date:
+def get_current_week_sunday() -> date:
     today = date.today()
-    return today - timedelta(days=today.weekday())
+    # weekday(): 0=Mon … 6=Sun; isoweekday(): 1=Mon … 7=Sun
+    # Days since last Sunday = (weekday + 1) % 7
+    return today - timedelta(days=(today.weekday() + 1) % 7)
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
@@ -131,7 +133,7 @@ async def get_current_plan(db: DbDep, current_user: CurrentUser) -> dict:
 @router.post("/regenerate")
 @router.post("/generate")
 async def regenerate_weekly_plan(req: PlanGenerateRequest, db: DbDep, current_user: CurrentUser) -> dict:
-    week_start = req.week_start or get_current_week_monday()
+    week_start = req.week_start or get_current_week_sunday()
 
     await db.execute(
         update(MealPlan)

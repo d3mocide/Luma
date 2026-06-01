@@ -79,13 +79,11 @@ export function groupByDate(slots: MealSlot[]) {
   return out
 }
 
-/** Returns the ISO date (YYYY-MM-DD) of the Monday of the user's current local week. */
-export function getWeekMonday(): string {
+/** Returns the ISO date (YYYY-MM-DD) of the Sunday that starts the user's current local week. */
+export function getWeekSunday(): string {
   const now = new Date()
-  const day = now.getDay() // 0=Sun
-  const diff = day === 0 ? -6 : 1 - day
-  const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diff)
-  return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, '0')}-${String(mon.getDate()).padStart(2, '0')}`
+  const sun = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay())
+  return `${sun.getFullYear()}-${String(sun.getMonth() + 1).padStart(2, '0')}-${String(sun.getDate()).padStart(2, '0')}`
 }
 
 /** Add/subtract whole weeks from a YYYY-MM-DD week-start string. */

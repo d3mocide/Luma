@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Sparkles, Flame, Heart, Activity, Moon, Timer, Wind } from 'lucide-react'
 import { api, TodayData, TrendSeries, User } from '../lib/api'
 import { createMockTodayData, createMockWeightSeries, isTodaySparseData } from '../lib/mock-data'
@@ -20,6 +21,7 @@ export default function TodayRoute() {
   const forceMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === '1'
   const measurementSystem = useMeasurementSystem()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [loggingMealId, setLoggingMealId] = useState<string | null>(null)
   const [deletingMealId, setDeletingMealId] = useState<string | null>(null)
 
@@ -240,7 +242,11 @@ export default function TodayRoute() {
                 {data.active_insight.headline}
               </p>
               <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-                <button className="btn today-insight-cta" style={{ padding: '8px 14px', fontSize: 13, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}>
+                <button
+                  className="btn today-insight-cta"
+                  style={{ padding: '8px 14px', fontSize: 13, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}
+                  onClick={() => navigate('/coach', { state: { thread_seed: data.active_insight?.thread_seed } })}
+                >
                   <Sparkles size={13}/> Ask Luma
                 </button>
               </div>
@@ -376,7 +382,11 @@ export default function TodayRoute() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ margin: 0, fontSize: 14, lineHeight: 1.45, color: 'var(--fg-primary)' }}>{data.active_insight.headline}</p>
-                <button className="btn today-insight-cta" style={{ marginTop: 12, padding: '6px 12px', fontSize: 12, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}>
+                <button
+                  className="btn today-insight-cta"
+                  style={{ marginTop: 12, padding: '6px 12px', fontSize: 12, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}
+                  onClick={() => navigate('/coach', { state: { thread_seed: data.active_insight?.thread_seed } })}
+                >
                   <Sparkles size={11}/> Ask Luma
                 </button>
               </div>
