@@ -1,5 +1,6 @@
 from typing import List, Optional, Dict, Any
 from uuid import UUID
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -41,6 +42,31 @@ class FoodResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+def get_search_terms(q: str) -> List[str]:
+    q_clean = q.strip().lower()
+    terms = [q_clean]
+    # Simple singularization
+    if q_clean.endswith("s") and len(q_clean) > 3:
+        if q_clean.endswith("es") and len(q_clean) > 4:
+            terms.append(q_clean[:-2])
+            terms.append(q_clean[:-1])
+        else:
+            terms.append(q_clean[:-1])
+    
+    # Clean terms for safe regular expressions (alphanumeric, spaces, hyphens, and apostrophes)
+    cleaned_terms = []
+    for t in terms:
+        cleaned = re.sub(r"[^a-zA-Z0-9\s\-\']", "", t)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        if cleaned:
+            cleaned_terms.append(cleaned)
+            
+    if not cleaned_terms:
+        cleaned_terms = [q_clean]
+        
+    return list(dict.fromkeys(cleaned_terms))
+
+
 @router.get("/search", response_model=List[FoodResponse])
 async def search_foods(
     db: DbDep,
@@ -72,20 +98,34 @@ async def search_foods(
         return list(res.scalars().all())
 
     q_clean = q.strip()
+    terms = get_search_terms(q_clean)
     _sim = func.similarity(Food.name, q_clean)
+    
+    # Substring conditions to ensure high-fidelity hits are captured
+    where_conds = [
+        _sim > 0.15,
+        func.similarity(func.coalesce(Food.brand, ""), q_clean) > 0.15,
+    ]
+    for term in terms:
+        where_conds.append(Food.name.ilike(f"%{term}%"))
+
+    # Word boundary regex conditions for exact word matching
+    word_match_conds = [Food.name.op("~*")(f"\\y{term}\\y") for term in terms]
+    substring_match_conds = [Food.name.ilike(f"%{term}%") for term in terms]
+
+    _match_boost = case(
+        (or_(*word_match_conds), 2.0),
+        (or_(*substring_match_conds), 0.5),
+        else_=0.0
+    )
     _ref_boost = case((Food.brand == "USDA Reference", 1.5), else_=0.0)
     _user_boost = case((Food.source == "user", 0.5), else_=0.0)
     _usda_boost = case((Food.source == "usda", 0.1), else_=0.0)
+
     stmt = _apply_flag_filters(
         select(Food)
-        .where(
-            or_(
-                _sim > 0.15,
-                func.similarity(func.coalesce(Food.brand, ""), q_clean) > 0.15,
-                Food.name.ilike(f"%{q_clean}%"),
-            )
-        )
-        .order_by((_sim + _ref_boost + _user_boost + _usda_boost).desc())
+        .where(or_(*where_conds))
+        .order_by((_sim + _match_boost + _ref_boost + _user_boost + _usda_boost).desc())
         .limit(30)
     )
     res = await db.execute(stmt)
