@@ -1,15 +1,15 @@
 """add flags column to foods
 
-Revision ID: 0010_food_flags
-Revises: 0009_slot_locked
+Revision ID: 0011_food_flags
+Revises: 0010
 Create Date: 2026-06-01
 """
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import ARRAY
 
-revision = '0010_food_flags'
-down_revision = '0009_slot_locked'
+revision = '0011_food_flags'
+down_revision = '0010'
 branch_labels = None
 depends_on = None
 
