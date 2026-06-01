@@ -142,46 +142,84 @@ export function JournalDrawer({ prefill, onClose }: Props) {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 9000,
-        background: 'rgba(9,11,16,0.6)',
+        background: 'rgba(5,8,17,0.75)',
         backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-        padding: '0 0 0 0',
+        display: 'flex', justifyContent: 'flex-end', alignItems: 'stretch',
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
         className="glass"
         style={{
-          width: '100%', maxWidth: 520,
-          maxHeight: '90vh', overflowY: 'auto',
-          borderRadius: '20px 20px 0 0',
-          padding: '0 0 32px',
-          border: '1px solid var(--glass-edge)',
-          boxShadow: '0 -24px 48px -12px rgba(0,0,0,0.5)',
+          width: '100%', maxWidth: 480,
+          background: 'linear-gradient(180deg, rgba(13,20,37,0.98), rgba(8,13,26,0.98))',
+          borderLeft: '1px solid var(--glass-edge)',
+          display: 'flex', flexDirection: 'column', height: '100%',
+          boxShadow: '-20px 0 60px rgba(0,0,0,0.4)',
+          position: 'relative', overflow: 'hidden',
         }}
       >
-        {/* Handle + header */}
-        <div style={{ padding: '12px 20px 0', position: 'sticky', top: 0, background: 'inherit', zIndex: 1 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--glass-edge)', margin: '0 auto 16px' }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 400, color: 'var(--fg-primary)' }}>
-                How did you feel?
-              </h3>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--fg-tertiary)' }}>
-                Log how this meal made you feel
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: 'var(--fg-quiet)' }}
-            >
-              <X size={18} />
-            </button>
-          </div>
-        </div>
+        <div className="log-sheet-atmo" aria-hidden="true" />
 
-        <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Header */}
+        <header
+          style={{
+            padding: 'calc(env(safe-area-inset-top) + 18px) 20px 16px',
+            borderBottom: '1px solid var(--glass-edge)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: 16,
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div className="eyebrow" style={{ marginBottom: 8 }}>Journal logging</div>
+            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
+              How did you feel?
+            </h2>
+            <p style={{ margin: '6px 0 0', fontSize: 13, lineHeight: 1.45, color: 'var(--fg-tertiary)' }}>
+              Log how this meal made you feel
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="log-sheet-close btn btn-ghost"
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              background: 'rgba(251,113,133,0.08)',
+              border: '1px solid rgba(251,113,133,0.22)',
+              color: 'var(--bad)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'transform 160ms ease-out, background 160ms ease-out',
+            }}
+          >
+            <span className="log-sheet-close-icon" style={{ display: 'inline-flex', transition: 'transform 160ms ease-out' }}>
+              <X size={14} strokeWidth={2} />
+            </span>
+          </button>
+        </header>
+
+        {/* Scrollable Body */}
+        <div
+          className="thin-scroll"
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '18px 20px calc(env(safe-area-inset-bottom) + 20px)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 20,
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
           {/* Meal name */}
           <div>
             <div className="eyebrow" style={{ marginBottom: 8 }}>Meal</div>
@@ -255,13 +293,26 @@ export function JournalDrawer({ prefill, onClose }: Props) {
               }}
             />
           </div>
+        </div>
 
-          {/* Submit */}
+        {/* Fixed Footer */}
+        <div
+          style={{
+            padding: '16px 20px calc(env(safe-area-inset-bottom) + 16px)',
+            borderTop: '1px solid var(--glass-edge)',
+            background: 'linear-gradient(180deg, rgba(8,13,26,0.98), rgba(5,8,17,0.98))',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
           <button
             className="btn btn-primary"
             disabled={!canSubmit || mutation.isPending}
             onClick={() => mutation.mutate()}
-            style={{ padding: '13px 20px', fontSize: 14, opacity: canSubmit ? 1 : 0.4 }}
+            style={{ width: '100%', padding: '13px', fontSize: 14, opacity: canSubmit ? 1 : 0.4 }}
           >
             <Check size={15} />
             {mutation.isPending ? 'Saving…' : 'Save journal entry'}

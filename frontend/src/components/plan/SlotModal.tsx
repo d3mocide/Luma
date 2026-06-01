@@ -104,7 +104,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="glass" style={{ maxWidth: 520, width: '100%', padding: 28, borderRadius: 24, position: 'relative', maxHeight: '80vh', overflowY: 'auto' }}>
+      <div className="glass thin-scroll" style={{ maxWidth: 520, width: '100%', padding: 28, borderRadius: 24, position: 'relative', maxHeight: '80vh', overflowY: 'auto' }}>
         <style dangerouslySetInnerHTML={{ __html: `
           .luma-browser-input {
             width: 100%; box-sizing: border-box;

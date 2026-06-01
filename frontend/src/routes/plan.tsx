@@ -229,7 +229,7 @@ export default function PlanRoute() {
   }
 
   return (
-    <div className="thin-scroll plan-page">
+    <div className="plan-page">
       {/* Generation overlay */}
       {generateMutation.isPending && (
         <div style={{
@@ -281,23 +281,14 @@ export default function PlanRoute() {
 
       {/* Header */}
       <header className="plan-header">
-        <div className="plan-header-top">
-          <div className="eyebrow">
-            {isCurrentWeek
-              ? plan
-                ? `Week of ${formatWeek(plan.week_start)}`
-                : 'This Week'
-              : isPastWeek
-              ? `Past week — ${formatWeek(selectedWeek)}`
-              : `Planning ahead — ${formatWeek(selectedWeek)}`}
-          </div>
-          <h1 style={{ margin: '8px 0 6px', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
-            Your{' '}
-            <span className="serif-italic gradient-accent-text" style={{ background: 'var(--accent-gradient-hero)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>heart-healthy</span> week.
-          </h1>
-          <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-tertiary)' }}>
-            Targeting LDL reduction · <span className="num">18g</span> soluble fiber / day · <span className="num">&lt;12g</span> saturated fat / day
-          </p>
+        <div className="eyebrow" style={{ color: 'var(--fg-tertiary)', letterSpacing: '0.12em', fontSize: 10 }}>
+          {isCurrentWeek
+            ? plan
+              ? `Week of ${formatWeek(plan.week_start)}`
+              : 'This Week'
+            : isPastWeek
+            ? `Past week — ${formatWeek(selectedWeek)}`
+            : `Planning ahead — ${formatWeek(selectedWeek)}`}
         </div>
 
         {/* Week navigation */}

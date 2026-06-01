@@ -172,7 +172,7 @@ function WellbeingTab() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="trends-metric-grid" style={{ marginTop: 0 }}>
       {WELL_METRICS.map(({ key, label, color, insight }) => (
         <div key={key} className="glass" style={{ padding: 20, borderRadius: 16, border: '1px solid var(--glass-edge)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>

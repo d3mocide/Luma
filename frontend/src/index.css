@@ -743,6 +743,15 @@
   color: var(--fg-quiet);
 }
 
+/* Suppress browser-native search cancel (clear) and decoration buttons */
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .log-sheet-panel {
   backdrop-filter: blur(26px) saturate(145%);
   -webkit-backdrop-filter: blur(26px) saturate(145%);
@@ -1396,9 +1405,28 @@
  * PLAN ROUTE
  * ══════════════════════════════════════════════════════════════════════════ */
 .plan-page {
-  height: 100%;
-  overflow-y: auto;
-  padding: 32px 40px 40px;
+  height: auto;
+  overflow-y: visible;
+  padding: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * MEALS ROUTE
+ * ══════════════════════════════════════════════════════════════════════════ */
+.meals-page {
+  padding: 32px 40px 80px;
+}
+
+@media (max-width: 1024px) {
+  .meals-page {
+    padding: 26px 24px 80px;
+  }
+}
+
+@media (max-width: 900px) {
+  .meals-page {
+    padding: 16px 16px 80px;
+  }
 }
 
 .plan-header {
@@ -1578,9 +1606,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .plan-page {
-    padding: 26px 24px 24px;
-  }
+  /* .plan-page padding handled by parent .meals-page */
 
   .plan-week-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1588,9 +1614,7 @@
 }
 
 @media (max-width: 900px) {
-  .plan-page {
-    padding: 16px 16px 24px;
-  }
+  /* .plan-page padding handled by parent .meals-page */
 
   .plan-header {
     margin-bottom: 14px;
@@ -2105,3 +2129,45 @@
     border-radius: 9px !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * FOOD CATEGORY GRID (MEALS PAGE)
+ * ══════════════════════════════════════════════════════════════════════════ */
+.food-category-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .food-category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .food-category-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * DRAWER STICKY HEADER (FROSTED GLASS)
+ * ══════════════════════════════════════════════════════════════════════════ */
+.drawer-header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 14px 20px 10px;
+  background: rgba(13, 20, 37, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass-edge);
+  border-radius: 20px 20px 0 0;
+}
+
+[data-theme="light"] .drawer-header-sticky {
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+

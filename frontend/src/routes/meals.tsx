@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Search, X, Plus, BookOpen } from 'lucide-react'
+import { Search, X, Plus, BookOpen, ArrowLeft } from 'lucide-react'
 import { api } from '../lib/api'
 import { type FoodResult } from '../components/plan/types'
 import { FOOD_CATEGORIES, SAT_FAT_COLORS, type FoodCategory } from '../lib/food-categories'
@@ -20,10 +20,103 @@ function SatFatBadge({ level, range }: { level: FoodCategory['satFatLevel']; ran
       color, background: color + '18',
       border: `1px solid ${color}33`,
       fontWeight: 600,
+      whiteSpace: 'nowrap',
     }}>
       {range}
       <span style={{ fontSize: 9, opacity: 0.7, fontWeight: 400 }}>/ 100g</span>
     </span>
+  )
+}
+
+
+// ── Example food card (curated comparisons) ───────────────────────────────────
+
+function ExampleFoodCard({ name, onClick }: { name: string; onClick: () => void }) {
+  const { data: results, isLoading } = useQuery<FoodResult[]>({
+    queryKey: ['foods', 'example', name],
+    queryFn: () => api.get(`/foods/search?q=${encodeURIComponent(name)}`),
+    staleTime: 5 * 60_000,
+  })
+
+  const food = results?.[0]
+
+  if (isLoading) {
+    return (
+      <div className="glass" style={{ padding: '14px 16px', borderRadius: 14, height: 110, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 0.3; }
+          }
+        `}</style>
+        <div style={{ width: '60%', height: 14, background: 'var(--bg-3)', borderRadius: 4, marginBottom: 12, animation: 'pulse 1.5s infinite ease-in-out' }} />
+        <div style={{ width: '80%', height: 10, background: 'var(--bg-3)', borderRadius: 4, animation: 'pulse 1.5s infinite ease-in-out' }} />
+      </div>
+    )
+  }
+
+  if (!food) {
+    return (
+      <div className="glass" style={{ padding: '14px 16px', borderRadius: 14, height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.7 }}>
+        <span style={{ fontSize: 12, color: 'var(--fg-quiet)', fontStyle: 'italic' }}>{name} (No data)</span>
+      </div>
+    )
+  }
+
+  const satFat = food.nutrients_per_100g?.saturated_fat_g ?? 0
+  const calories = food.nutrients_per_100g?.calories ?? 0
+  const protein = food.nutrients_per_100g?.protein_g ?? 0
+  const fiber = food.nutrients_per_100g?.dietary_fiber_g ?? food.nutrients_per_100g?.soluble_fiber_g ?? 0
+
+  return (
+    <button
+      onClick={onClick}
+      className="glass-bright"
+      style={{
+        padding: '14px 16px',
+        borderRadius: 14,
+        textAlign: 'left',
+        cursor: 'pointer',
+        border: '1px solid var(--glass-edge)',
+        transition: 'border-color 150ms, background 150ms, transform 150ms',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        width: '100%',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = 'var(--glass-edge-strong)'
+        e.currentTarget.style.transform = 'translateY(-2px)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = 'var(--glass-edge)'
+        e.currentTarget.style.transform = 'translateY(0)'
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', width: '100%', gap: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{food.name}</div>
+        <div className="num" style={{ fontSize: 11, color: 'var(--fg-secondary)', flexShrink: 0 }}>{Math.round(calories)} kcal</div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--fg-quiet)', marginBottom: 2 }}>
+            <span className="eyebrow" style={{ fontSize: 8 }}>Sat fat / 100g</span>
+            <span className="num" style={{ fontWeight: 600, color: satFat < 3 ? 'var(--good)' : satFat < 8 ? 'var(--warn)' : 'var(--bad)' }}>{satFat.toFixed(1)}g</span>
+          </div>
+          <div style={{ height: 3, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${Math.min((satFat / 30) * 100, 100)}%`, background: satFat < 3 ? 'var(--good)' : satFat < 8 ? 'var(--warn)' : 'var(--bad)', borderRadius: 2 }} />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, borderTop: '1px solid var(--glass-edge)', paddingTop: 6, marginTop: 2 }}>
+          <span style={{ color: 'var(--fg-tertiary)' }}>Protein: <span className="num" style={{ color: '#a78bfa', fontWeight: 600 }}>{protein.toFixed(1)}g</span></span>
+          {fiber > 0 && (
+            <span style={{ color: 'var(--fg-tertiary)' }}>Fiber: <span className="num" style={{ color: 'var(--sky-400)', fontWeight: 600 }}>{fiber.toFixed(1)}g</span></span>
+          )}
+        </div>
+      </div>
+    </button>
   )
 }
 
@@ -35,11 +128,7 @@ function CategoryGrid({
   onSelect: (category: FoodCategory) => void
 }) {
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-      gap: 12,
-    }}>
+    <div className="food-category-grid">
       {FOOD_CATEGORIES.map((cat) => (
         <button
           key={cat.id}
@@ -227,6 +316,7 @@ function SatFatLegend() {
 function FoodsTab() {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<FoodCategory | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -250,8 +340,7 @@ function FoodsTab() {
   const showResults = debouncedQuery.length > 1
 
   function handleCategorySelect(cat: FoodCategory) {
-    handleQueryChange(cat.searchQuery)
-    inputRef.current?.focus()
+    setSelectedCategory(cat)
   }
 
   return (
@@ -307,12 +396,75 @@ function FoodsTab() {
             <FoodSearchResults results={searchResults} isLoading={isFetching && !searchResults} />
           </div>
         </>
+      ) : selectedCategory ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Category Hub Header */}
+          <div
+            className="glass"
+            style={{
+              padding: '18px 20px',
+              borderRadius: 16,
+              border: '1px solid var(--glass-edge)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+            }}
+          >
+            <div style={{ display: 'flex' }}>
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className="btn btn-ghost"
+                style={{
+                  padding: '6px 12px',
+                  fontSize: 12,
+                  gap: 6,
+                  borderRadius: 8,
+                  marginLeft: -8,
+                  color: 'var(--fg-secondary)',
+                  height: 'auto',
+                }}
+              >
+                <ArrowLeft size={14} />
+                Back to groups
+              </button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 28 }}>{selectedCategory.emoji}</span>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--fg-primary)' }}>
+                  {selectedCategory.name}
+                </h2>
+              </div>
+              <SatFatBadge level={selectedCategory.satFatLevel} range={selectedCategory.satFatRange} />
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-secondary)', lineHeight: 1.5 }}>
+              {selectedCategory.description}
+            </p>
+          </div>
+
+          <div>
+            <div className="eyebrow" style={{ marginBottom: 12 }}>Curated Reference Comparisons</div>
+            <div className="food-category-grid">
+              {selectedCategory.examples.map((ex) => (
+                <ExampleFoodCard
+                  key={ex}
+                  name={ex}
+                  onClick={() => {
+                    handleQueryChange(ex)
+                    setSelectedCategory(null)
+                    inputRef.current?.focus()
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       ) : (
         <>
           <div style={{ marginBottom: 12 }}>
             <div className="eyebrow" style={{ marginBottom: 4 }}>Food groups</div>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-tertiary)' }}>
-              Typical saturated fat per 100g. Click any group to search those foods.
+              Typical saturated fat per 100g. Click any group to compare clinical-grade reference ingredients.
             </p>
           </div>
           <SatFatLegend />
@@ -544,8 +696,8 @@ export default function MealsRoute() {
 
   const initialTab: TabKey = (() => {
     const t = searchParams.get('tab')
-    if (t === 'plan' || t === 'journal') return t
-    return 'foods'
+    if (t === 'foods' || t === 'journal') return t
+    return 'plan'
   })()
 
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab)
@@ -563,11 +715,11 @@ export default function MealsRoute() {
 
   function switchTab(tab: TabKey) {
     setActiveTab(tab)
-    setSearchParams(tab === 'foods' ? {} : { tab }, { replace: true })
+    setSearchParams(tab === 'plan' ? {} : { tab }, { replace: true })
   }
 
   return (
-    <div style={{ padding: '24px 20px 80px', maxWidth: 960, margin: '0 auto' }}>
+    <div className="meals-page thin-scroll">
       {/* Page header */}
       <header style={{ marginBottom: 24 }}>
         <div className="eyebrow" style={{ marginBottom: 6 }}>MEALS</div>
@@ -619,11 +771,7 @@ export default function MealsRoute() {
 
       {/* Tab content */}
       {activeTab === 'foods' && <FoodsTab />}
-      {activeTab === 'plan' && (
-        <div style={{ margin: '0 -20px' }}>
-          <PlanRoute />
-        </div>
-      )}
+      {activeTab === 'plan' && <PlanRoute />}
       {activeTab === 'journal' && (
         <JournalTab openWithPrefill={journalPrefill} />
       )}

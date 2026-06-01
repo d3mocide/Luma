@@ -24,7 +24,7 @@ services:
       VITE_API_TARGET:    http://api:8000
       VITE_PORT:          5173
       VITE_USE_MOCK_DATA: ${VITE_USE_MOCK_DATA:-1}
-      CHOKIDAR_USEPOLLING: ${CHOKIDAR_USEPOLLING:-0}
+      CHOKIDAR_USEPOLLING: ${CHOKIDAR_USEPOLLING:-1}
       CHOKIDAR_INTERVAL:  ${CHOKIDAR_INTERVAL:-200}
     volumes:
       - ./frontend:/app
