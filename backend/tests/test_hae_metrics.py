@@ -70,6 +70,26 @@ def test_convert_fps_to_mps():
     assert _convert(1.0, "ft/s", "stair_speed_down_mps") == pytest.approx(0.3048, rel=1e-5)
 
 
+def test_convert_weight_lb_to_kg():
+    """HAE sends weight in lb on US-locale iPhones even with metric export enabled."""
+    from luma.services.hae_normalizer import _convert
+    # 203.26 lb is what Alle's iPhone sent; should land as ~92.19 kg, not 203 kg
+    assert _convert(203.26, "lb", "weight_kg") == pytest.approx(203.26 / 2.20462262, rel=1e-6)
+    assert _convert(203.26, "lbs", "weight_kg") == pytest.approx(203.26 / 2.20462262, rel=1e-6)
+    # Metric iPhones send kg — should pass through unchanged
+    assert _convert(101.85, "kg", "weight_kg") == pytest.approx(101.85, rel=1e-6)
+
+
+def test_convert_weight_lb_no_warning(caplog):
+    """lb is a known valid unit for weight_kg — should not log a warning."""
+    import logging
+    from luma.services.hae_normalizer import _convert
+    with caplog.at_level(logging.WARNING, logger="luma.services.hae_normalizer"):
+        _convert(203.26, "lb", "weight_kg")
+        _convert(101.85, "kg", "weight_kg")
+    assert not caplog.records
+
+
 def test_convert_known_metric_units_no_warning(caplog):
     """Metric-mode HAE exports (km, degC, etc.) pass through without warnings."""
     import logging

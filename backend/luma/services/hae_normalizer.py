@@ -68,6 +68,10 @@ _KNOWN_UNITS: dict[str, frozenset[str]] = {
     "wrist_temp_c":         frozenset({"degF", "degC"}),
     "stair_speed_up_mps":   frozenset({"ft/s", "m/s"}),
     "stair_speed_down_mps": frozenset({"ft/s", "m/s"}),
+    # HAE exports weight in whatever unit Apple Health uses natively on the
+    # device (controlled by iOS Language & Region, not the HAE metric toggle).
+    # US-locale iPhones send lb even when HAE is set to metric.
+    "weight_kg":            frozenset({"kg", "lb", "lbs"}),
 }
 
 
@@ -76,6 +80,10 @@ def _convert(value: float, hae_unit: str, internal_metric: str) -> float:
         return value * 60
     if internal_metric in ("active_kcal", "bmr_kcal") and hae_unit == "kJ":
         return value / 4.184
+    if internal_metric == "weight_kg" and hae_unit in ("lb", "lbs"):
+        # HAE uses the device's regional unit (iOS Language & Region), not the
+        # HAE metric toggle, for body mass. US-locale phones send lb.
+        return value / 2.20462262
     if hae_unit == "mi":
         return value * 1.60934
     if hae_unit == "mi/hr":
@@ -199,7 +207,7 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                                 "metric": iname,
                                 "value": _convert(float(raw), hae_unit, iname),
                                 "source": "hae",
-                                "source_meta": {"hae_source": source, "hae_metric": hae_name},
+                                "source_meta": {"hae_source": source, "hae_metric": hae_name, "hae_unit": hae_unit},
                             })
                         except (ValueError, TypeError) as exc:
                             logger.warning("Bad HAE sleep field %s=%s: %s", hae_field, raw, exc)
@@ -231,7 +239,7 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                 "metric": internal,
                 "value": value,
                 "source": "hae",
-                "source_meta": {"hae_source": source, "hae_metric": hae_name},
+                "source_meta": {"hae_source": source, "hae_metric": hae_name, "hae_unit": hae_unit},
             })
 
     # Derive sleep_score from any sleep metrics in this payload.
@@ -283,4 +291,34 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
     )
     await db.commit()
     logger.info("HAE ingest: inserted up to %d rows for user %s", len(rows), user_id)
+
+    # Refresh the continuous aggregate immediately so Trends reflects this data
+    # without waiting for the hourly policy job. Must run in AUTOCOMMIT mode.
+    await _refresh_biometrics_daily(rows)
+
     return len(rows)
+
+
+async def _refresh_biometrics_daily(rows: list[dict]) -> None:
+    """Refresh biometrics_daily for the date range covered by the ingested rows."""
+    if not rows:
+        return
+    from datetime import timedelta
+    from luma.db.session import engine
+    from sqlalchemy import text as sa_text
+
+    ts_values = [r["ts"] for r in rows]
+    start = min(ts_values).replace(hour=0, minute=0, second=0, microsecond=0)
+    end = max(ts_values).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=2)
+
+    try:
+        async with engine.connect() as conn:
+            await conn.execution_options(isolation_level="AUTOCOMMIT")
+            await conn.execute(
+                sa_text("CALL refresh_continuous_aggregate('biometrics_daily', :start, :end)"),
+                {"start": start, "end": end},
+            )
+        logger.debug("biometrics_daily refreshed for %s → %s", start.date(), end.date())
+    except Exception as exc:
+        # Non-fatal: the scheduled policy will catch up within an hour.
+        logger.warning("biometrics_daily refresh failed (will self-heal): %s", exc)
