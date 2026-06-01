@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useUIStore } from './stores'
 import AppShell from './components/AppShell'
 import TodayRoute from './routes/today'
@@ -27,8 +27,6 @@ export default function App() {
           <Route index element={<Navigate to="/today" replace />} />
           <Route path="/today" element={<TodayRoute />} />
           <Route path="/meals" element={<MealsRoute />} />
-          <Route path="/foods" element={<Navigate to="/meals" replace />} />
-          <Route path="/plan" element={<Navigate to="/meals?tab=plan" replace />} />
           <Route path="/trends" element={<TrendsRoute />} />
           <Route path="/coach" element={<CoachRoute />} />
           <Route path="/coach/:threadId" element={<CoachRoute />} />
