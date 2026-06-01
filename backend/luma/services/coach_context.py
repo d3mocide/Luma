@@ -171,7 +171,7 @@ async def _upsert_context(user_id: str, ctx: dict, db: AsyncSession) -> None:
     await db.execute(
         text("""
             INSERT INTO coach_context (user_id, context, updated_at)
-            VALUES (:uid, :ctx::jsonb, now())
+            VALUES (:uid, CAST(:ctx AS jsonb), now())
             ON CONFLICT (user_id) DO UPDATE
             SET context = EXCLUDED.context, updated_at = now()
         """),

@@ -130,7 +130,12 @@ TOOLS: list[dict[str, Any]] = [
 
 
 async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
+    from datetime import datetime
     from sqlalchemy import text
+
+    # Helper: convert ISO date string to Python date object
+    def parse_date(s: str):
+        return datetime.fromisoformat(s).date()
 
     if name == "query_biometric_trend":
         rows = await db.execute(
@@ -141,7 +146,7 @@ async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
                   AND day BETWEEN :start AND :end
                 ORDER BY day
             """),
-            {"uid": user_id, "metric": args["metric"], "start": args["start_date"], "end": args["end_date"]},
+            {"uid": user_id, "metric": args["metric"], "start": parse_date(args["start_date"]), "end": parse_date(args["end_date"])},
         )
         return json.dumps([{"date": r.day, "avg": r.avg_value, "last": r.last_value} for r in rows])
 
@@ -160,7 +165,7 @@ async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
                 GROUP BY DATE(ts AT TIME ZONE 'UTC')
                 ORDER BY day
             """),
-            {"uid": user_id, "start": args["start_date"], "end": args["end_date"]},
+            {"uid": user_id, "start": parse_date(args["start_date"]), "end": parse_date(args["end_date"])},
         )
         data = [
             {"day": str(r.day), "calories": r.calories, "sat_fat_g": r.sat_fat_g,
@@ -222,7 +227,6 @@ async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
             text("UPDATE meal_plan_slots SET food_id = :fid WHERE id = :sid"),
             {"fid": args["food_id"], "sid": args["slot_id"]},
         )
-        await db.commit()
         return json.dumps({"status": "updated", "slot_id": args["slot_id"]})
 
     if name == "get_user_goals":
@@ -262,10 +266,15 @@ async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
         )
         alerts = []
         for r in rows:
-            try:
-                narr = json.loads(r.narrative) if isinstance(r.narrative, str) else (r.narrative or {})
-            except (TypeError, json.JSONDecodeError):
-                narr = {}
+            narr = {}
+            if r.narrative:
+                if isinstance(r.narrative, str):
+                    try:
+                        narr = json.loads(r.narrative)
+                    except json.JSONDecodeError:
+                        logger.warning("Failed to parse narrative JSON for alert %s", r.rule_id)
+                elif isinstance(r.narrative, dict):
+                    narr = r.narrative
             alerts.append({
                 "rule_id": r.rule_id,
                 "severity": r.severity,
@@ -377,7 +386,14 @@ async def coach_stream(
     full_messages = [{"role": "system", "content": system_content}, *messages]
     target = build_litellm_target(settings.coach_model)
 
-    for _ in range(6):
+    def is_transient_error(exc: Exception) -> bool:
+        """Check if error might succeed on retry."""
+        msg = str(exc).lower()
+        transient_markers = ["timeout", "connection", "rate limit", "temporarily", "unavailable", "502", "503", "504"]
+        return any(marker in msg for marker in transient_markers)
+
+    max_retries = 3
+    for attempt in range(max_retries):
         try:
             response = await litellm.acompletion(
                 **target,
@@ -387,8 +403,11 @@ async def coach_stream(
                 temperature=1.0,
                 timeout=60.0,
             )
-        except Exception:
-            logger.exception("Coach LLM call failed")
+        except Exception as e:
+            if is_transient_error(e) and attempt < max_retries - 1:
+                logger.warning("Coach LLM call transient error (attempt %d/%d): %s", attempt + 1, max_retries, e)
+                continue
+            logger.exception("Coach LLM call failed (permanent or max retries)")
             yield "data: " + json.dumps({"type": "error", "text": "Coach temporarily unavailable."}) + "\n\n"
             return
 
@@ -413,8 +432,16 @@ async def coach_stream(
                 yield "data: " + json.dumps({"type": "tool_call", "name": fn_name}) + "\n\n"
                 try:
                     result = await _execute_tool(fn_name, fn_args, user_id, db)
+                except KeyError as e:
+                    logger.warning("Tool %s missing required argument: %s", fn_name, e)
+                    await db.rollback()
+                    result = json.dumps({"error": f"missing argument: {e}"})
+                except ValueError as e:
+                    logger.warning("Tool %s invalid argument: %s", fn_name, e)
+                    await db.rollback()
+                    result = json.dumps({"error": f"invalid argument: {e}"})
                 except Exception:
-                    logger.exception("Tool %s failed", fn_name)
+                    logger.exception("Tool %s execution failed", fn_name)
                     await db.rollback()
                     result = json.dumps({"error": "tool execution failed"})
                 yield "data: " + json.dumps({"type": "tool_result", "name": fn_name}) + "\n\n"
@@ -426,6 +453,8 @@ async def coach_stream(
             stream = await litellm.acompletion(
                 **target,
                 messages=full_messages,
+                tools=TOOLS,
+                tool_choice="auto",
                 stream=True,
                 temperature=1.0,
                 timeout=60.0,
