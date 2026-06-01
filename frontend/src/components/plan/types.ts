@@ -2,7 +2,7 @@ export interface MealSlot {
   id: string
   slot_date: string
   slot: string
-  custom_name: string
+  custom_name: string | null
   notes: string
   recipe_id: string | null
   food_id: string | null

@@ -1,4 +1,4 @@
-import { Lock } from 'lucide-react'
+import { Lock, Plus } from 'lucide-react'
 import { type MealSlot, SLOT_META } from './types'
 
 type Props = {
@@ -48,10 +48,11 @@ export function PlanDayCard({ dateStr, slots, dayTotals, isToday, onSlotClick, o
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {slots.map((slot) => {
           const meta = SLOT_META[slot.slot] ?? { color: '#94a3b8', emoji: '🍽' }
+          const isEmpty = !slot.custom_name && !slot.food_id && !slot.recipe_id
           return (
             <button
               key={slot.id}
-              draggable={!slot.locked}
+              draggable={!slot.locked && !isEmpty}
               onDragStart={(e) => {
                 e.dataTransfer.setData('text/plain', slot.id)
                 e.dataTransfer.effectAllowed = 'move'
@@ -60,23 +61,34 @@ export function PlanDayCard({ dateStr, slots, dayTotals, isToday, onSlotClick, o
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 10px', borderRadius: 10,
-                background: 'var(--glass-1)', border: `1px solid ${slot.locked ? meta.color + '44' : 'var(--glass-edge)'}`,
-                textAlign: 'left', cursor: slot.locked ? 'pointer' : 'grab', width: '100%',
+                background: isEmpty ? 'transparent' : 'var(--glass-1)',
+                border: isEmpty
+                  ? `1px dashed ${meta.color}33`
+                  : `1px solid ${slot.locked ? meta.color + '44' : 'var(--glass-edge)'}`,
+                textAlign: 'left',
+                cursor: 'pointer',
+                width: '100%',
                 transition: 'background 120ms',
+                opacity: isEmpty ? 0.7 : 1,
               }}
             >
-              <span style={{ fontSize: 13, flexShrink: 0 }}>{meta.emoji}</span>
+              <span style={{ fontSize: 13, flexShrink: 0, opacity: isEmpty ? 0.4 : 1 }}>{meta.emoji}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 9, color: meta.color, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 1 }}>
                   {slot.slot}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {slot.custom_name}
+                <div style={{
+                  fontSize: 12,
+                  color: isEmpty ? 'var(--fg-quiet)' : 'var(--fg-primary)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {isEmpty ? 'Add meal' : slot.custom_name}
                 </div>
               </div>
-              {slot.locked && (
-                <Lock size={10} style={{ color: meta.color, flexShrink: 0, opacity: 0.8 }} />
-              )}
+              {isEmpty
+                ? <Plus size={11} style={{ color: 'var(--fg-quiet)', flexShrink: 0, opacity: 0.5 }} />
+                : slot.locked && <Lock size={10} style={{ color: meta.color, flexShrink: 0, opacity: 0.8 }} />
+              }
             </button>
           )
         })}

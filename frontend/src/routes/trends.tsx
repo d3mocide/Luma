@@ -12,10 +12,11 @@ const RANGES = ['7d', '30d', '90d', '1y'] as const
 type Range = typeof RANGES[number]
 
 const TABS = [
-  { id: 'vitals',   label: 'Vitals & Composition', Icon: Heart },
-  { id: 'recovery', label: 'Recovery & Sleep', Icon: Moon },
-  { id: 'activity', label: 'Activity & Energy', Icon: Flame },
-  { id: 'gait',     label: 'Gait & Posture',   Icon: TrendingUp },
+  { id: 'vitals',    label: 'Vitals & Composition', Icon: Heart },
+  { id: 'recovery',  label: 'Recovery & Sleep', Icon: Moon },
+  { id: 'activity',  label: 'Activity & Energy', Icon: Flame },
+  { id: 'gait',      label: 'Gait & Posture',   Icon: TrendingUp },
+  { id: 'wellbeing', label: 'Wellbeing', Icon: Sun },
 ] as const
 
 type TabId = typeof TABS[number]['id']
@@ -99,6 +100,112 @@ interface MealSummary {
   slot: string
   calories: number
   headline: string
+}
+
+// ── Wellbeing tab ────────────────────────────────────────────────────────────
+
+interface JournalEntry {
+  logged_at: string
+  energy: number
+  digestion: number
+  mood: number
+  satiety: number
+}
+
+const WELL_METRICS = [
+  { key: 'energy' as const,    label: 'Energy',    color: 'var(--sky-400)', insight: 'How energised you feel after meals. Low scores may point to blood sugar spikes or heavy sat-fat loads.' },
+  { key: 'digestion' as const, label: 'Digestion', color: 'var(--good)',    insight: 'Consistent low digestion scores alongside specific meals can reveal intolerances.' },
+  { key: 'mood' as const,      label: 'Mood',      color: '#a78bfa',        insight: 'Mood after eating tracks gut-brain signalling. Omega-3-rich meals tend to score well here.' },
+  { key: 'satiety' as const,   label: 'Satiety',   color: 'var(--sun-400)', insight: 'High-fibre, high-protein meals sustain satiety. Low scores often precede overeating.' },
+]
+
+function WellbeingTab() {
+  const { data, isLoading } = useQuery<{ entries: JournalEntry[] }>({
+    queryKey: ['journal'],
+    queryFn: () => api.get('/journal?limit=200'),
+    staleTime: 60_000,
+  })
+
+  const entries = data?.entries ?? []
+
+  // Bucket entries by date, average scores per day
+  const byDate = entries.reduce<Record<string, { energy: number[]; digestion: number[]; mood: number[]; satiety: number[] }>>((acc, e) => {
+    const d = e.logged_at.slice(0, 10)
+    if (!acc[d]) acc[d] = { energy: [], digestion: [], mood: [], satiety: [] }
+    acc[d].energy.push(e.energy)
+    acc[d].digestion.push(e.digestion)
+    acc[d].mood.push(e.mood)
+    acc[d].satiety.push(e.satiety)
+    return acc
+  }, {})
+
+  const chartData = Object.entries(byDate)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, scores]) => ({
+      date,
+      label: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      energy: +(scores.energy.reduce((a, b) => a + b, 0) / scores.energy.length).toFixed(1),
+      digestion: +(scores.digestion.reduce((a, b) => a + b, 0) / scores.digestion.length).toFixed(1),
+      mood: +(scores.mood.reduce((a, b) => a + b, 0) / scores.mood.length).toFixed(1),
+      satiety: +(scores.satiety.reduce((a, b) => a + b, 0) / scores.satiety.length).toFixed(1),
+    }))
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid rgba(56,189,248,0.2)', borderTopColor: '#38bdf8', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    )
+  }
+
+  if (chartData.length === 0) {
+    return (
+      <div className="glass" style={{ padding: '48px 24px', textAlign: 'center', borderRadius: 16, border: '1px solid var(--glass-edge)', margin: '0 auto', maxWidth: 420 }}>
+        <Sun size={32} style={{ color: 'var(--fg-quiet)', marginBottom: 12 }} />
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-secondary)', fontWeight: 500 }}>No journal data yet.</p>
+        <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--fg-tertiary)' }}>
+          Log how meals make you feel in the Meals → Journal tab and your trends will appear here.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {WELL_METRICS.map(({ key, label, color, insight }) => (
+        <div key={key} className="glass" style={{ padding: 20, borderRadius: 16, border: '1px solid var(--glass-edge)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+            <div className="eyebrow">{label}</div>
+            <span className="num" style={{ fontSize: 11, color, fontWeight: 600 }}>
+              avg {(chartData.reduce((a, d) => a + d[key], 0) / chartData.length).toFixed(1)} / 5
+            </span>
+          </div>
+          <p style={{ margin: '0 0 14px', fontSize: 11, color: 'var(--fg-quiet)', lineHeight: 1.5 }}>{insight}</p>
+          <ResponsiveContainer width="100%" height={100}>
+            <AreaChart data={chartData} margin={{ top: 4, right: 0, left: -32, bottom: 0 }}>
+              <defs>
+                <linearGradient id={`wg-${key}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <XAxis dataKey="label" tick={{ fontSize: 9, fill: 'var(--fg-quiet)' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis domain={[1, 5]} ticks={[1, 2, 3, 4, 5]} tick={{ fontSize: 9, fill: 'var(--fg-quiet)' }} tickLine={false} axisLine={false} />
+              <Tooltip
+                contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--glass-edge)', borderRadius: 8, fontSize: 12 }}
+                formatter={(val: number) => [`${val} / 5`, label]}
+                labelStyle={{ color: 'var(--fg-tertiary)', fontSize: 11 }}
+              />
+              <ReferenceLine y={3} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
+              <Area type="monotone" dataKey={key} stroke={color} strokeWidth={2} fill={`url(#wg-${key})`} dot={chartData.length <= 14 ? { r: 3, fill: color, strokeWidth: 0 } : false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export default function TrendsRoute() {
@@ -209,24 +316,28 @@ export default function TrendsRoute() {
         })}
       </div>
 
-      <div className="trends-metric-grid">
-        {METRICS.filter(m => m.tab === activeTab).map((m) => (
-          <MetricChart
-            key={m.id}
-            metricId={m.id}
-            label={m.label}
-            unit={m.unit}
-            color={m.color}
-            range={range}
-            measurementSystem={measurementSystem}
-            alerts={alerts}
-            insight={m.insight}
-            invert={m.invert}
-            onDrillDown={setDrillDate}
-            Icon={m.Icon}
-          />
-        ))}
-      </div>
+      {activeTab === 'wellbeing' ? (
+        <WellbeingTab />
+      ) : (
+        <div className="trends-metric-grid">
+          {METRICS.filter(m => m.tab === activeTab).map((m) => (
+            <MetricChart
+              key={m.id}
+              metricId={m.id}
+              label={m.label}
+              unit={m.unit}
+              color={m.color}
+              range={range}
+              measurementSystem={measurementSystem}
+              alerts={alerts}
+              insight={m.insight}
+              invert={m.invert}
+              onDrillDown={setDrillDate}
+              Icon={m.Icon}
+            />
+          ))}
+        </div>
+      )}
 
       {drillDate && (
         <DrillDownSheet date={drillDate} onClose={() => setDrillDate(null)}/>

@@ -1,12 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Shuffle, Sparkles } from 'lucide-react'
+import { Shuffle, Sparkles, Plus } from 'lucide-react'
 import { api } from '../lib/api'
 import {
   type MealSlot,
   type PlanData,
   type ShoppingItem,
   type WeekSummary,
+  SLOT_META,
   groupByDate,
   formatWeek,
   formatWeekLabel,
@@ -18,12 +19,79 @@ import { ShoppingListView } from '../components/plan/ShoppingListView'
 import { SlotModal } from '../components/plan/SlotModal'
 import { WeekNav } from '../components/plan/WeekNav'
 
+// ── Blank day card (shown before any plan is created) ─────────────────────────
+
+function BlankDayCard({
+  dateStr,
+  isToday,
+  isPending,
+  onSlotClick,
+}: {
+  dateStr: string
+  isToday: boolean
+  isPending: boolean
+  onSlotClick: (slotType: string) => void
+}) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dateObj = new Date(y, m - 1, d)
+  const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
+  const dayNum = dateObj.getDate()
+
+  return (
+    <div className="glass plan-day-card" style={{ padding: 16, borderRadius: 16, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <div className="eyebrow" style={{ fontSize: 10 }}>{dayName}</div>
+        <div style={{
+          fontSize: 22, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.02em',
+          color: isToday ? 'var(--sky-400)' : 'var(--fg-primary)',
+        }}>
+          {dayNum}
+        </div>
+        {isToday && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--sky-400)', flexShrink: 0 }} />}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {(['breakfast', 'lunch', 'snack', 'dinner'] as const).map((slotType) => {
+          const meta = SLOT_META[slotType]
+          return (
+            <button
+              key={slotType}
+              onClick={() => onSlotClick(slotType)}
+              disabled={isPending}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 10px', borderRadius: 10,
+                background: 'transparent',
+                border: `1px dashed ${meta.color}33`,
+                textAlign: 'left', cursor: isPending ? 'wait' : 'pointer', width: '100%',
+                opacity: isPending ? 0.5 : 1, transition: 'opacity 150ms',
+              }}
+            >
+              <span style={{ fontSize: 13, flexShrink: 0, opacity: 0.4 }}>{meta.emoji}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 9, color: meta.color, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 1 }}>
+                  {slotType}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>Add meal</div>
+              </div>
+              <Plus size={11} style={{ color: 'var(--fg-quiet)', flexShrink: 0, opacity: 0.4 }} />
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Plan route ────────────────────────────────────────────────────────────────
+
 export default function PlanRoute() {
   const queryClient = useQueryClient()
   const [selectedWeek, setSelectedWeek] = useState<string>(() => getWeekSunday())
   const [customConstraints, setCustomConstraints] = useState('')
   const [selectedSlot, setSelectedSlot] = useState<MealSlot | null>(null)
   const [activeTab, setActiveTab] = useState<'calendar' | 'shopping'>('calendar')
+  const [pendingSlotKey, setPendingSlotKey] = useState<{ date: string; slotType: string } | null>(null)
 
   const currentWeek = getWeekSunday()
   const nextWeek = addWeeks(currentWeek, 1)
@@ -97,8 +165,37 @@ export default function PlanRoute() {
     onError: () => alert('Failed to generate meal plan. Make sure your AI API key is configured.'),
   })
 
+  const initMutation = useMutation({
+    mutationFn: (weekStart: string) => api.post('/plan/init', { week_start: weekStart }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plan', selectedWeek] })
+      queryClient.invalidateQueries({ queryKey: ['plan-weeks'] })
+    },
+  })
+
+  // After blank init, auto-open the slot the user clicked
+  useEffect(() => {
+    if (!pendingSlotKey || !plan) return
+    const slot = plan.slots.find(
+      (s) => s.slot_date === pendingSlotKey.date && s.slot === pendingSlotKey.slotType
+    )
+    if (slot) {
+      setSelectedSlot(slot)
+      setPendingSlotKey(null)
+    }
+  }, [plan, pendingSlotKey])
+
   const grouped = groupByDate(plan?.slots ?? [])
   const dates = Object.keys(grouped).sort()
+
+  // All 7 dates for the selected week (used for blank-week grid)
+  const weekDates = useMemo(() => {
+    const [y, m, d] = selectedWeek.split('-').map(Number)
+    return Array.from({ length: 7 }, (_, i) => {
+      const dt = new Date(y, m - 1, d + i)
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+    })
+  }, [selectedWeek])
   const todayStr = (() => {
     const n = new Date()
     return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
@@ -269,77 +366,63 @@ export default function PlanRoute() {
         </div>
       )}
 
-      {/* Empty state — no plan for selected week */}
+      {/* Blank week — no plan yet, show empty scaffold */}
       {!plan && !isLoading && (
-        <div style={{ maxWidth: 500, margin: '0 auto' }}>
-          <div className="glass" style={{ padding: 40 }}>
-            <div style={{ textAlign: 'center', marginBottom: 28 }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>
-                {isPastWeek ? '📅' : isFutureWeek ? '🔮' : '🥗'}
+        <>
+          {/* AI generate banner */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16,
+            padding: '12px 16px', background: 'var(--glass-1)', borderRadius: 12,
+            border: '1px solid var(--glass-edge)',
+          }}>
+            <Sparkles size={16} style={{ color: 'var(--sky-400)', flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, color: 'var(--fg-primary)', fontWeight: 500 }}>
+                No plan for {isPastWeek ? formatWeekLabel(selectedWeek) : 'this week'} yet.
               </div>
-              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--fg-primary)' }}>
-                {isPastWeek
-                  ? `No plan for ${formatWeekLabel(selectedWeek)}`
-                  : isCurrentWeek
-                  ? 'No plan for this week yet'
-                  : `Plan ahead for ${formatWeekLabel(selectedWeek)}`}
-              </h2>
-              <p style={{ margin: '10px 0 0', fontSize: 14, color: 'var(--fg-tertiary)', lineHeight: 1.6 }}>
-                {isPastWeek
-                  ? 'No plan was recorded for this week. You can still generate one for reference.'
-                  : isCurrentWeek
-                  ? 'Generate a personalized 7-day plan calculated for LDL reduction and soluble fiber targets.'
-                  : `Get ahead of next week's meals and shopping in one step.`}
-              </p>
+              <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginTop: 1 }}>
+                Click any slot to add a meal, or generate a full week with AI.
+              </div>
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <div className="eyebrow" style={{ marginBottom: 8 }}>Additional constraints (optional)</div>
-                <textarea
-                  className="field-input plan-constraints-input"
-                  value={customConstraints}
-                  onChange={(e) => setCustomConstraints(e.target.value)}
-                  placeholder="e.g. Include salmon twice, vegetarian lunches, no dairy…"
-                  rows={3}
-                  disabled={generateMutation.isPending}
-                  style={{ width: '100%', resize: 'none', border: '1px solid var(--glass-edge)', borderRadius: 14, padding: '12px 14px', color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)', fontSize: 14, outline: 'none' }}
-                />
-              </div>
-
-              <button
-                className="btn btn-primary"
-                style={{ padding: '14px 20px', fontSize: 14, opacity: generateMutation.isPending ? 0.7 : 1 }}
-                onClick={() => handleGenerate(selectedWeek, customConstraints)}
-                disabled={generateMutation.isPending}
-              >
-                <Sparkles size={15} />
-                {generateMutation.isPending
-                  ? 'Luma is orchestrating…'
-                  : `Generate Plan for ${formatWeekLabel(selectedWeek)}`}
-              </button>
-
-              {/* Copy from last week — shown when prev week has a plan */}
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
               {prevWeekHasPlan && !isPastWeek && (
                 <button
                   className="btn"
-                  style={{ fontSize: 13, padding: '10px 16px', color: 'var(--fg-secondary)' }}
+                  style={{ fontSize: 12, padding: '7px 12px' }}
                   onClick={handleUseLastWeekTemplate}
                   disabled={generateMutation.isPending}
                 >
-                  📋 Use last week as inspiration
+                  📋 Use last week
                 </button>
               )}
-
-              {/* Browse past weeks */}
-              {weeksWithPlans.size > 0 && (
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--fg-quiet)', textAlign: 'center' }}>
-                  Browse past weeks above for meal ideas ↑
-                </p>
-              )}
+              <button
+                className="btn"
+                style={{ fontSize: 12, padding: '7px 12px' }}
+                onClick={() => handleGenerate(selectedWeek, customConstraints)}
+                disabled={generateMutation.isPending}
+              >
+                <Sparkles size={12} />
+                Generate with AI
+              </button>
             </div>
           </div>
-        </div>
+
+          {/* Empty 7-day scaffold */}
+          <div className="plan-calendar-grid">
+            {weekDates.map((dateStr) => (
+              <BlankDayCard
+                key={dateStr}
+                dateStr={dateStr}
+                isToday={dateStr === todayStr}
+                isPending={initMutation.isPending}
+                onSlotClick={(slotType) => {
+                  setPendingSlotKey({ date: dateStr, slotType })
+                  initMutation.mutate(selectedWeek)
+                }}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {/* Calendar view */}

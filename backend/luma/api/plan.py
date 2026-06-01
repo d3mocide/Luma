@@ -52,6 +52,10 @@ class ShoppingToggleRequest(BaseModel):
     purchased: bool
 
 
+class PlanInitRequest(BaseModel):
+    week_start: date
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("/weeks")
@@ -135,6 +139,83 @@ async def get_current_plan(db: DbDep, current_user: CurrentUser) -> dict:
         "status":     plan.status,
         "slots":      [_slot_dict(s) for s in slots],
         "day_totals": day_totals,
+    }
+
+
+@router.post("/init")
+async def init_blank_plan(req: PlanInitRequest, db: DbDep, current_user: CurrentUser) -> dict:
+    existing = (await db.execute(
+        select(MealPlan)
+        .where(
+            MealPlan.user_id == current_user.id,
+            MealPlan.week_start == req.week_start,
+            MealPlan.status == "active",
+        )
+        .limit(1)
+    )).scalar_one_or_none()
+
+    if existing:
+        slots = list((await db.execute(
+            select(MealPlanSlot)
+            .where(MealPlanSlot.plan_id == existing.id)
+            .order_by(MealPlanSlot.slot_date, MealPlanSlot.slot)
+        )).scalars().all())
+        by_date: dict[str, list] = {}
+        for s in slots:
+            by_date.setdefault(s.slot_date.isoformat(), []).append(s)
+        day_totals = {day: _sum_nutrition(ss) for day, ss in by_date.items()}
+        return {
+            "id": str(existing.id),
+            "week_start": existing.week_start.isoformat(),
+            "status": existing.status,
+            "slots": [_slot_dict(s) for s in slots],
+            "day_totals": day_totals,
+        }
+
+    await db.execute(
+        update(MealPlan)
+        .where(MealPlan.user_id == current_user.id, MealPlan.week_start == req.week_start)
+        .values(status="archived")
+    )
+
+    plan = MealPlan(
+        id=uuid.uuid4(),
+        user_id=current_user.id,
+        week_start=req.week_start,
+        status="active",
+        generation_meta={"source": "blank"},
+    )
+    db.add(plan)
+    await db.flush()
+
+    slot_types = ["breakfast", "lunch", "snack", "dinner"]
+    for day_offset in range(7):
+        slot_date = req.week_start + timedelta(days=day_offset)
+        for slot_type in slot_types:
+            db.add(MealPlanSlot(
+                id=uuid.uuid4(),
+                plan_id=plan.id,
+                slot_date=slot_date,
+                slot=slot_type,
+                custom_name=None,
+                notes="",
+                nutrition={},
+            ))
+
+    await db.commit()
+
+    slots = list((await db.execute(
+        select(MealPlanSlot)
+        .where(MealPlanSlot.plan_id == plan.id)
+        .order_by(MealPlanSlot.slot_date, MealPlanSlot.slot)
+    )).scalars().all())
+
+    return {
+        "id": str(plan.id),
+        "week_start": plan.week_start.isoformat(),
+        "status": plan.status,
+        "slots": [_slot_dict(s) for s in slots],
+        "day_totals": {},
     }
 
 
