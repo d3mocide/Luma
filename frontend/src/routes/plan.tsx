@@ -110,9 +110,9 @@ export default function PlanRoute() {
     if (!days.length) return null
     const sum = days.reduce(
       (acc, d) => ({
-        calories: acc.calories + (d.calories ?? 0),
-        saturated_fat_g: acc.saturated_fat_g + (d.saturated_fat_g ?? 0),
-        soluble_fiber_g: acc.soluble_fiber_g + (d.soluble_fiber_g ?? 0),
+        calories: acc.calories + Number(d.calories ?? 0),
+        saturated_fat_g: acc.saturated_fat_g + Number(d.saturated_fat_g ?? 0),
+        soluble_fiber_g: acc.soluble_fiber_g + Number(d.soluble_fiber_g ?? 0),
       }),
       { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0 }
     )
@@ -382,7 +382,7 @@ export default function PlanRoute() {
                   value: weeklyAvg.saturated_fat_g,
                   target: goals?.daily_sat_fat_g_max ?? null,
                   unit: 'g', color: 'var(--bad)',
-                  fmt: (v: number) => v.toFixed(1) + 'g',
+                  fmt: (v: number) => Number(v).toFixed(1) + 'g',
                   lowerIsBetter: true,
                 },
                 {
@@ -390,7 +390,7 @@ export default function PlanRoute() {
                   value: weeklyAvg.soluble_fiber_g,
                   target: goals?.daily_soluble_fiber_g ?? null,
                   unit: 'g', color: 'var(--good)',
-                  fmt: (v: number) => v.toFixed(1) + 'g',
+                  fmt: (v: number) => Number(v).toFixed(1) + 'g',
                 },
               ].map(({ label, value, target, color, fmt, lowerIsBetter }) => {
                 const pct = target ? Math.min((value / target) * 100, 120) : null

@@ -91,7 +91,7 @@ export function PlanDayCard({ dateStr, slots, dayTotals, isToday, onSlotClick, o
           ].map(({ key, label, color }) => (
             <div key={key} style={{ flex: 1, textAlign: 'center' }}>
               <div className="num" style={{ fontSize: 11, fontWeight: 600, color }}>
-                {key === 'calories' ? Math.round(dayTotals[key] ?? 0) : (dayTotals[key] ?? 0).toFixed(1)}
+                {key === 'calories' ? Math.round(Number(dayTotals[key] ?? 0)) : Number(dayTotals[key] ?? 0).toFixed(1)}
               </div>
               <div style={{ fontSize: 9, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>{label}</div>
             </div>
