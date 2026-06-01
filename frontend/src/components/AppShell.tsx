@@ -12,8 +12,8 @@ import LogSheet from './LogSheet'
 import Login from './Login'
 
 const NAV_ITEMS = [
-  { to: '/foods',  label: 'Foods',  Icon: Utensils  },
   { to: '/today',  label: 'Today',  Icon: CircleDot },
+  { to: '/foods',  label: 'Foods',  Icon: Utensils  },
   { to: '/trends', label: 'Trends', Icon: Activity  },
   { to: '/coach',  label: 'Coach',  Icon: Sparkles  },
 ]
