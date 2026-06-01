@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { VoiceTab } from './log-sheet/VoiceTab'
 import { BarcodeTab } from './log-sheet/BarcodeTab'
 import { PlateTab } from './log-sheet/PlateTab'
+import { ComboTab } from './log-sheet/ComboTab'
 import type { DraftItem } from './log-sheet/types'
 
 type LogSheetMode = 'sheet' | 'page'
@@ -27,10 +28,11 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
     close()
   }
 
-  const [activeTab, setActiveTab] = useState<'voice' | 'barcode' | 'search'>('voice')
+  const [activeTab, setActiveTab] = useState<'voice' | 'barcode' | 'search' | 'combo'>('voice')
   const [slot, setSlot] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast')
   const [draftItems, setDraftItems] = useState<DraftItem[]>([])
   const [transcription, setTranscription] = useState('')
+  const [comboName, setComboName] = useState('')
 
   const addItems = (items: DraftItem[]) => setDraftItems((prev) => [...prev, ...items])
   const addItem = (item: DraftItem) => setDraftItems((prev) => [...prev, item])
@@ -78,14 +80,20 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const saveMutation = useMutation({
     mutationFn: () =>
       api.post('/log/meal', {
-        slot, source: activeTab, items: draftItems, nutrition: totals,
-        raw_input: transcription || 'Manual Log',
+        slot,
+        source: activeTab,
+        items: draftItems,
+        nutrition: totals,
+        raw_input: activeTab === 'combo'
+          ? (comboName.trim() || 'Batch prep combo')
+          : (transcription || 'Manual Log'),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['today'] })
       queryClient.invalidateQueries({ queryKey: ['meals'] })
       setDraftItems([])
       setTranscription('')
+      setComboName('')
       handleClose()
     },
     onError: (err) => {
@@ -150,8 +158,8 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
 
         {/* Tab nav */}
         <div className="log-sheet-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--glass-edge)', position: 'relative', zIndex: 1 }}>
-          {(['voice', 'barcode', 'search'] as const).map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: '12px', background: 'transparent', border: 'none', borderBottom: `2px solid ${activeTab === tab ? 'var(--sky-400)' : 'transparent'}`, color: activeTab === tab ? 'var(--sky-300)' : 'var(--fg-quiet)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)', textTransform: 'capitalize', transition: 'all 150ms' }}>
+          {(['voice', 'barcode', 'search', 'combo'] as const).map((tab) => (
+            <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: '12px 6px', background: 'transparent', border: 'none', borderBottom: `2px solid ${activeTab === tab ? 'var(--sky-400)' : 'transparent'}`, color: activeTab === tab ? 'var(--sky-300)' : 'var(--fg-quiet)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)', textTransform: 'capitalize', transition: 'all 150ms' }}>
               {tab === 'search' ? 'Search' : tab}
             </button>
           ))}
@@ -179,6 +187,15 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               onUpdateWeight={updateItemWeight}
             />
           )}
+          {activeTab === 'combo' && (
+            <ComboTab
+              draftItems={draftItems}
+              comboName={comboName}
+              onComboNameChange={setComboName}
+              onAddItem={addItem}
+              onRemoveItem={removeItem}
+            />
+          )}
         </div>
 
         {/* Footer / save */}
@@ -199,7 +216,11 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               ))}
             </div>
             <button className="btn btn-primary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} style={{ width: '100%', padding: '13px', fontSize: 14, opacity: saveMutation.isPending ? 0.7 : 1 }}>
-              {saveMutation.isPending ? 'Logging…' : 'Save meal log'}
+              {saveMutation.isPending
+                ? 'Logging…'
+                : activeTab === 'combo'
+                ? `Log combo${comboName.trim() ? ` — ${comboName.trim()}` : ''}`
+                : 'Save meal log'}
             </button>
           </div>
         )}

@@ -44,6 +44,54 @@ class ShoppingToggleRequest(BaseModel):
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
+@router.get("/weeks")
+async def list_plan_weeks(db: DbDep, current_user: CurrentUser) -> dict:
+    rows = (await db.execute(
+        select(MealPlan.week_start, MealPlan.status)
+        .where(MealPlan.user_id == current_user.id)
+        .order_by(MealPlan.week_start.desc())
+    )).all()
+    return {"weeks": [{"week_start": r.week_start.isoformat(), "status": r.status} for r in rows]}
+
+
+@router.get("/week/{week_start_str}")
+async def get_plan_by_week(week_start_str: str, db: DbDep, current_user: CurrentUser) -> dict:
+    try:
+        week_date = date.fromisoformat(week_start_str)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid date format. Use YYYY-MM-DD.")
+
+    plan = (await db.execute(
+        select(MealPlan)
+        .where(MealPlan.user_id == current_user.id, MealPlan.week_start == week_date)
+        .order_by(MealPlan.status)  # 'active' < 'archived' alphabetically
+        .limit(1)
+    )).scalar_one_or_none()
+
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No plan for this week")
+
+    slots = list((await db.execute(
+        select(MealPlanSlot)
+        .where(MealPlanSlot.plan_id == plan.id)
+        .order_by(MealPlanSlot.slot_date, MealPlanSlot.slot)
+    )).scalars().all())
+
+    by_date: dict[str, list[MealPlanSlot]] = {}
+    for s in slots:
+        by_date.setdefault(s.slot_date.isoformat(), []).append(s)
+
+    day_totals = {day: _sum_nutrition(day_slots) for day, day_slots in by_date.items()}
+
+    return {
+        "id": str(plan.id),
+        "week_start": plan.week_start.isoformat(),
+        "status": plan.status,
+        "slots": [_slot_dict(s) for s in slots],
+        "day_totals": day_totals,
+    }
+
+
 @router.get("/current")
 @router.get("")
 async def get_current_plan(db: DbDep, current_user: CurrentUser) -> dict:

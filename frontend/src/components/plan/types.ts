@@ -25,6 +25,11 @@ export interface FoodResult {
   nutrients_per_100g: Record<string, number>
 }
 
+export interface WeekSummary {
+  week_start: string
+  status: 'active' | 'archived'
+}
+
 export interface ShoppingItem {
   food_id: string
   name: string
@@ -72,6 +77,28 @@ export function groupByDate(slots: MealSlot[]) {
     out[s.slot_date].push(s)
   })
   return out
+}
+
+/** Returns the ISO date (YYYY-MM-DD) of the Monday of the user's current local week. */
+export function getWeekMonday(): string {
+  const now = new Date()
+  const day = now.getDay() // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day
+  const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diff)
+  return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, '0')}-${String(mon.getDate()).padStart(2, '0')}`
+}
+
+/** Add/subtract whole weeks from a YYYY-MM-DD week-start string. */
+export function addWeeks(weekStart: string, n: number): string {
+  const [y, m, d] = weekStart.split('-').map(Number)
+  const date = new Date(y, m - 1, d + n * 7)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+/** Short label for week-nav tabs, e.g. "Jun 1". */
+export function formatWeekLabel(weekStart: string): string {
+  const [y, m, d] = weekStart.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 export function formatWeek(dateStr: string) {
