@@ -14,10 +14,6 @@ logging.basicConfig(
 
 # SQLAlchemy logs every query+params at INFO by default — too noisy
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
-# LiteLLM logs full request/response bodies at DEBUG — extremely noisy
-logging.getLogger("LiteLLM").setLevel(logging.WARNING)
-logging.getLogger("litellm").setLevel(logging.WARNING)
-
 
 class _HealthCheckFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
