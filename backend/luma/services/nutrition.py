@@ -7,9 +7,11 @@ ZERO_NUTRIENTS: dict[str, float] = {
     "fat_g": 0.0,
     "saturated_fat_g": 0.0,
     "carbohydrates_g": 0.0,
+    "sugars_g": 0.0,
     "fiber_g": 0.0,
     "soluble_fiber_g": 0.0,
     "sodium_mg": 0.0,
+    "potassium_mg": 0.0,
 }
 
 

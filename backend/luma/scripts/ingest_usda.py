@@ -12,6 +12,7 @@ from pathlib import Path
 from sqlalchemy import delete
 from luma.db.session import AsyncSessionLocal
 from luma.db.models import Food
+from luma.services.food_flags import merge_flags
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ingest_usda")
@@ -30,6 +31,7 @@ async def main() -> None:
 
         logger.info(f"Seeding {len(seed_foods)} high-fidelity core USDA items...")
         for item in seed_foods:
+            computed_flags = merge_flags(item.get("flags", []), item["nutrients"])
             session.add(Food(
                 id=uuid.uuid4(),
                 source="usda",
@@ -39,6 +41,7 @@ async def main() -> None:
                 serving_size_g=item["serving_size_g"],
                 nutrients_per_100g=item["nutrients"],
                 tags=item["tags"],
+                flags=computed_flags,
                 created_by=None,
             ))
 

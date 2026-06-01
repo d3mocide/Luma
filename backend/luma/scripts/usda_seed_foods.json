@@ -10,14 +10,19 @@
     ],
     "nutrients": {
       "calories": 375.0,
-      "saturated_fat_g": 1.25,
-      "soluble_fiber_g": 5.0,
       "protein_g": 12.5,
-      "carbohydrates_g": 67.5,
       "fat_g": 6.25,
+      "saturated_fat_g": 1.25,
+      "carbohydrates_g": 67.5,
+      "sugars_g": 0.0,
       "fiber_g": 10.0,
-      "sodium_mg": 0.0
-    }
+      "soluble_fiber_g": 5.0,
+      "sodium_mg": 0.0,
+      "potassium_mg": 363.0
+    },
+    "flags": [
+      "heart-healthy"
+    ]
   },
   {
     "name": "Rolled Oats",
@@ -30,14 +35,19 @@
     ],
     "nutrients": {
       "calories": 389.0,
-      "saturated_fat_g": 1.2,
-      "soluble_fiber_g": 4.5,
       "protein_g": 13.1,
-      "carbohydrates_g": 66.3,
       "fat_g": 6.9,
+      "saturated_fat_g": 1.2,
+      "carbohydrates_g": 66.3,
+      "sugars_g": 0.0,
       "fiber_g": 10.1,
-      "sodium_mg": 2.0
-    }
+      "soluble_fiber_g": 4.5,
+      "sodium_mg": 2.0,
+      "potassium_mg": 362.0
+    },
+    "flags": [
+      "heart-healthy"
+    ]
   },
   {
     "name": "Quinoa (Cooked)",
@@ -50,14 +60,19 @@
     ],
     "nutrients": {
       "calories": 120.0,
-      "saturated_fat_g": 0.2,
-      "soluble_fiber_g": 0.8,
       "protein_g": 4.4,
-      "carbohydrates_g": 21.3,
       "fat_g": 1.9,
+      "saturated_fat_g": 0.2,
+      "carbohydrates_g": 21.3,
+      "sugars_g": 0.9,
       "fiber_g": 2.8,
-      "sodium_mg": 7.0
-    }
+      "soluble_fiber_g": 0.8,
+      "sodium_mg": 7.0,
+      "potassium_mg": 172.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
   },
   {
     "name": "Brown Rice (Cooked)",
@@ -69,14 +84,65 @@
     ],
     "nutrients": {
       "calories": 111.0,
-      "saturated_fat_g": 0.2,
-      "soluble_fiber_g": 0.3,
       "protein_g": 2.6,
-      "carbohydrates_g": 23.0,
       "fat_g": 0.9,
+      "saturated_fat_g": 0.2,
+      "carbohydrates_g": 23.0,
+      "sugars_g": 0.4,
       "fiber_g": 1.8,
-      "sodium_mg": 5.0
-    }
+      "soluble_fiber_g": 0.3,
+      "sodium_mg": 5.0,
+      "potassium_mg": 43.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "White Rice (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 186.0,
+    "tags": [
+      "grain",
+      "carb"
+    ],
+    "nutrients": {
+      "calories": 130.0,
+      "protein_g": 2.7,
+      "fat_g": 0.3,
+      "saturated_fat_g": 0.08,
+      "carbohydrates_g": 28.7,
+      "sugars_g": 0.0,
+      "fiber_g": 0.4,
+      "soluble_fiber_g": 0.1,
+      "sodium_mg": 1.0,
+      "potassium_mg": 35.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Pasta (Cooked, Enriched)",
+    "brand": "USDA Reference",
+    "serving_size_g": 140.0,
+    "tags": [
+      "grain",
+      "carb"
+    ],
+    "nutrients": {
+      "calories": 131.0,
+      "protein_g": 5.0,
+      "fat_g": 1.1,
+      "saturated_fat_g": 0.2,
+      "carbohydrates_g": 25.0,
+      "sugars_g": 0.4,
+      "fiber_g": 1.8,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 1.0,
+      "potassium_mg": 44.0
+    },
+    "flags": []
   },
   {
     "name": "Whole Wheat Bread",
@@ -88,14 +154,42 @@
     ],
     "nutrients": {
       "calories": 247.0,
-      "saturated_fat_g": 0.4,
-      "soluble_fiber_g": 1.5,
       "protein_g": 13.0,
-      "carbohydrates_g": 41.0,
       "fat_g": 3.4,
+      "saturated_fat_g": 0.4,
+      "carbohydrates_g": 41.0,
+      "sugars_g": 5.0,
       "fiber_g": 7.0,
-      "sodium_mg": 400.0
-    }
+      "soluble_fiber_g": 1.5,
+      "sodium_mg": 400.0,
+      "potassium_mg": 248.0
+    },
+    "flags": []
+  },
+  {
+    "name": "White Bread",
+    "brand": "USDA Reference",
+    "serving_size_g": 25.0,
+    "tags": [
+      "grain",
+      "bread",
+      "high-sodium"
+    ],
+    "nutrients": {
+      "calories": 266.0,
+      "protein_g": 9.0,
+      "fat_g": 3.3,
+      "saturated_fat_g": 0.7,
+      "carbohydrates_g": 49.2,
+      "sugars_g": 5.7,
+      "fiber_g": 2.7,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 491.0,
+      "potassium_mg": 115.0
+    },
+    "flags": [
+      "processed"
+    ]
   },
   {
     "name": "Banana",
@@ -103,19 +197,24 @@
     "serving_size_g": 118.0,
     "tags": [
       "fruit",
-      "potassium",
+      "potassium-rich",
       "energy"
     ],
     "nutrients": {
       "calories": 89.0,
-      "saturated_fat_g": 0.1,
-      "soluble_fiber_g": 0.6,
       "protein_g": 1.1,
-      "carbohydrates_g": 22.8,
       "fat_g": 0.3,
+      "saturated_fat_g": 0.1,
+      "carbohydrates_g": 22.8,
+      "sugars_g": 12.2,
       "fiber_g": 2.6,
-      "sodium_mg": 1.0
-    }
+      "soluble_fiber_g": 0.6,
+      "sodium_mg": 1.0,
+      "potassium_mg": 358.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
   },
   {
     "name": "Apple (with skin)",
@@ -129,14 +228,19 @@
     ],
     "nutrients": {
       "calories": 52.0,
-      "saturated_fat_g": 0.05,
-      "soluble_fiber_g": 1.0,
       "protein_g": 0.3,
-      "carbohydrates_g": 13.8,
       "fat_g": 0.2,
+      "saturated_fat_g": 0.05,
+      "carbohydrates_g": 13.8,
+      "sugars_g": 10.4,
       "fiber_g": 2.4,
-      "sodium_mg": 1.0
-    }
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 1.0,
+      "potassium_mg": 107.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
   },
   {
     "name": "Blueberries",
@@ -149,14 +253,21 @@
     ],
     "nutrients": {
       "calories": 57.0,
-      "saturated_fat_g": 0.03,
-      "soluble_fiber_g": 0.8,
       "protein_g": 0.7,
-      "carbohydrates_g": 14.5,
       "fat_g": 0.3,
+      "saturated_fat_g": 0.03,
+      "carbohydrates_g": 14.5,
+      "sugars_g": 10.0,
       "fiber_g": 2.4,
-      "sodium_mg": 1.0
-    }
+      "soluble_fiber_g": 0.8,
+      "sodium_mg": 1.0,
+      "potassium_mg": 77.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ]
   },
   {
     "name": "Strawberries",
@@ -168,14 +279,48 @@
     ],
     "nutrients": {
       "calories": 32.0,
-      "saturated_fat_g": 0.01,
-      "soluble_fiber_g": 0.5,
       "protein_g": 0.7,
-      "carbohydrates_g": 7.7,
       "fat_g": 0.3,
+      "saturated_fat_g": 0.01,
+      "carbohydrates_g": 7.7,
+      "sugars_g": 4.9,
       "fiber_g": 2.0,
-      "sodium_mg": 1.0
-    }
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 1.0,
+      "potassium_mg": 153.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Raspberries",
+    "brand": "USDA Reference",
+    "serving_size_g": 123.0,
+    "tags": [
+      "fruit",
+      "fiber-rich",
+      "antioxidant"
+    ],
+    "nutrients": {
+      "calories": 52.0,
+      "protein_g": 1.2,
+      "fat_g": 0.7,
+      "saturated_fat_g": 0.02,
+      "carbohydrates_g": 11.9,
+      "sugars_g": 4.4,
+      "fiber_g": 6.5,
+      "soluble_fiber_g": 0.7,
+      "sodium_mg": 1.0,
+      "potassium_mg": 151.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ]
   },
   {
     "name": "Avocado",
@@ -185,18 +330,362 @@
       "fruit",
       "healthy-fat",
       "monounsaturated",
-      "cholesterol-lowering"
+      "cholesterol-lowering",
+      "potassium-rich"
     ],
     "nutrients": {
       "calories": 160.0,
-      "saturated_fat_g": 2.1,
-      "soluble_fiber_g": 2.0,
       "protein_g": 2.0,
-      "carbohydrates_g": 8.5,
       "fat_g": 14.7,
+      "saturated_fat_g": 2.1,
+      "carbohydrates_g": 8.5,
+      "sugars_g": 0.7,
       "fiber_g": 6.7,
-      "sodium_mg": 7.0
-    }
+      "soluble_fiber_g": 2.0,
+      "sodium_mg": 7.0,
+      "potassium_mg": 485.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Orange (Navel)",
+    "brand": "USDA Reference",
+    "serving_size_g": 131.0,
+    "tags": [
+      "fruit",
+      "vitamin-c",
+      "fiber-rich"
+    ],
+    "nutrients": {
+      "calories": 49.0,
+      "protein_g": 0.9,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.01,
+      "carbohydrates_g": 12.5,
+      "sugars_g": 8.5,
+      "fiber_g": 2.2,
+      "soluble_fiber_g": 1.8,
+      "sodium_mg": 0.0,
+      "potassium_mg": 181.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Grapefruit (Pink)",
+    "brand": "USDA Reference",
+    "serving_size_g": 246.0,
+    "tags": [
+      "fruit",
+      "vitamin-c",
+      "low-calorie"
+    ],
+    "nutrients": {
+      "calories": 42.0,
+      "protein_g": 0.8,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.01,
+      "carbohydrates_g": 10.7,
+      "sugars_g": 7.0,
+      "fiber_g": 1.6,
+      "soluble_fiber_g": 1.2,
+      "sodium_mg": 0.0,
+      "potassium_mg": 148.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Mango",
+    "brand": "USDA Reference",
+    "serving_size_g": 165.0,
+    "tags": [
+      "fruit",
+      "vitamin-c",
+      "tropical"
+    ],
+    "nutrients": {
+      "calories": 60.0,
+      "protein_g": 0.8,
+      "fat_g": 0.4,
+      "saturated_fat_g": 0.09,
+      "carbohydrates_g": 15.0,
+      "sugars_g": 13.7,
+      "fiber_g": 1.6,
+      "soluble_fiber_g": 0.8,
+      "sodium_mg": 1.0,
+      "potassium_mg": 168.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Peach (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 150.0,
+    "tags": [
+      "fruit",
+      "low-calorie"
+    ],
+    "nutrients": {
+      "calories": 39.0,
+      "protein_g": 0.9,
+      "fat_g": 0.3,
+      "saturated_fat_g": 0.02,
+      "carbohydrates_g": 9.5,
+      "sugars_g": 8.4,
+      "fiber_g": 1.5,
+      "soluble_fiber_g": 0.9,
+      "sodium_mg": 0.0,
+      "potassium_mg": 190.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Pear (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 178.0,
+    "tags": [
+      "fruit",
+      "fiber-rich",
+      "pectin"
+    ],
+    "nutrients": {
+      "calories": 57.0,
+      "protein_g": 0.4,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.01,
+      "carbohydrates_g": 15.5,
+      "sugars_g": 9.8,
+      "fiber_g": 3.1,
+      "soluble_fiber_g": 1.2,
+      "sodium_mg": 1.0,
+      "potassium_mg": 119.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Pineapple (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 165.0,
+    "tags": [
+      "fruit",
+      "tropical",
+      "vitamin-c"
+    ],
+    "nutrients": {
+      "calories": 50.0,
+      "protein_g": 0.5,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.01,
+      "carbohydrates_g": 13.1,
+      "sugars_g": 9.9,
+      "fiber_g": 1.4,
+      "soluble_fiber_g": 0.3,
+      "sodium_mg": 1.0,
+      "potassium_mg": 109.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Watermelon",
+    "brand": "USDA Reference",
+    "serving_size_g": 280.0,
+    "tags": [
+      "fruit",
+      "hydrating",
+      "low-calorie"
+    ],
+    "nutrients": {
+      "calories": 30.0,
+      "protein_g": 0.6,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.02,
+      "carbohydrates_g": 7.6,
+      "sugars_g": 6.2,
+      "fiber_g": 0.4,
+      "soluble_fiber_g": 0.1,
+      "sodium_mg": 1.0,
+      "potassium_mg": 112.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Kiwi (Green)",
+    "brand": "USDA Reference",
+    "serving_size_g": 69.0,
+    "tags": [
+      "fruit",
+      "vitamin-c",
+      "fiber-rich"
+    ],
+    "nutrients": {
+      "calories": 61.0,
+      "protein_g": 1.1,
+      "fat_g": 0.5,
+      "saturated_fat_g": 0.03,
+      "carbohydrates_g": 14.7,
+      "sugars_g": 9.0,
+      "fiber_g": 3.0,
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 3.0,
+      "potassium_mg": 312.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Arugula (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 20.0,
+    "tags": [
+      "vegetable",
+      "green",
+      "low-calorie",
+      "salad"
+    ],
+    "nutrients": {
+      "calories": 25.0,
+      "protein_g": 2.6,
+      "fat_g": 0.7,
+      "saturated_fat_g": 0.09,
+      "carbohydrates_g": 3.7,
+      "sugars_g": 2.1,
+      "fiber_g": 1.6,
+      "soluble_fiber_g": 0.3,
+      "sodium_mg": 27.0,
+      "potassium_mg": 369.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Artichoke (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 120.0,
+    "tags": [
+      "vegetable",
+      "fiber-rich",
+      "cholesterol-lowering",
+      "prebiotic"
+    ],
+    "nutrients": {
+      "calories": 53.0,
+      "protein_g": 2.9,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.04,
+      "carbohydrates_g": 12.4,
+      "sugars_g": 1.0,
+      "fiber_g": 6.8,
+      "soluble_fiber_g": 3.3,
+      "sodium_mg": 60.0,
+      "potassium_mg": 354.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Asparagus (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 134.0,
+    "tags": [
+      "vegetable",
+      "green",
+      "low-calorie"
+    ],
+    "nutrients": {
+      "calories": 20.0,
+      "protein_g": 2.2,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.04,
+      "carbohydrates_g": 3.9,
+      "sugars_g": 1.9,
+      "fiber_g": 2.1,
+      "soluble_fiber_g": 1.2,
+      "sodium_mg": 2.0,
+      "potassium_mg": 202.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Beets (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 170.0,
+    "tags": [
+      "vegetable",
+      "potassium-rich",
+      "fiber-rich"
+    ],
+    "nutrients": {
+      "calories": 44.0,
+      "protein_g": 1.7,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.03,
+      "carbohydrates_g": 10.0,
+      "sugars_g": 8.5,
+      "fiber_g": 2.0,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 77.0,
+      "potassium_mg": 305.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Bell Pepper (Red, Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 119.0,
+    "tags": [
+      "vegetable",
+      "vitamin-c",
+      "low-calorie"
+    ],
+    "nutrients": {
+      "calories": 31.0,
+      "protein_g": 1.0,
+      "fat_g": 0.3,
+      "saturated_fat_g": 0.06,
+      "carbohydrates_g": 6.0,
+      "sugars_g": 4.2,
+      "fiber_g": 2.1,
+      "soluble_fiber_g": 0.6,
+      "sodium_mg": 4.0,
+      "potassium_mg": 211.0
+    },
+    "flags": [
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
   },
   {
     "name": "Broccoli (Raw)",
@@ -209,35 +698,22 @@
     ],
     "nutrients": {
       "calories": 34.0,
-      "saturated_fat_g": 0.04,
-      "soluble_fiber_g": 1.2,
       "protein_g": 2.8,
+      "fat_g": 0.4,
+      "saturated_fat_g": 0.04,
       "carbohydrates_g": 6.6,
-      "fat_g": 0.4,
+      "sugars_g": 1.7,
       "fiber_g": 2.6,
-      "sodium_mg": 33.0
-    }
-  },
-  {
-    "name": "Spinach (Raw)",
-    "brand": "USDA Reference",
-    "serving_size_g": 30.0,
-    "tags": [
-      "vegetable",
-      "green",
-      "iron",
-      "low-calorie"
-    ],
-    "nutrients": {
-      "calories": 23.0,
-      "saturated_fat_g": 0.06,
-      "soluble_fiber_g": 0.8,
-      "protein_g": 2.9,
-      "carbohydrates_g": 3.6,
-      "fat_g": 0.4,
-      "fiber_g": 2.2,
-      "sodium_mg": 79.0
-    }
+      "soluble_fiber_g": 1.2,
+      "sodium_mg": 33.0,
+      "potassium_mg": 316.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
   },
   {
     "name": "Brussels Sprouts",
@@ -251,34 +727,75 @@
     ],
     "nutrients": {
       "calories": 43.0,
-      "saturated_fat_g": 0.06,
-      "soluble_fiber_g": 2.0,
       "protein_g": 3.4,
-      "carbohydrates_g": 9.0,
       "fat_g": 0.3,
+      "saturated_fat_g": 0.06,
+      "carbohydrates_g": 9.0,
+      "sugars_g": 2.2,
       "fiber_g": 3.8,
-      "sodium_mg": 25.0
-    }
+      "soluble_fiber_g": 2.0,
+      "sodium_mg": 25.0,
+      "potassium_mg": 389.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
   },
   {
-    "name": "Sweet Potato (Baked)",
+    "name": "Butternut Squash (Baked)",
     "brand": "USDA Reference",
-    "serving_size_g": 150.0,
+    "serving_size_g": 205.0,
     "tags": [
       "vegetable",
       "complex-carb",
-      "fiber-rich"
+      "potassium-rich",
+      "vitamin-a"
     ],
     "nutrients": {
-      "calories": 90.0,
-      "saturated_fat_g": 0.02,
-      "soluble_fiber_g": 1.8,
-      "protein_g": 2.0,
-      "carbohydrates_g": 20.7,
+      "calories": 45.0,
+      "protein_g": 1.0,
       "fat_g": 0.1,
-      "fiber_g": 3.3,
-      "sodium_mg": 36.0
-    }
+      "saturated_fat_g": 0.02,
+      "carbohydrates_g": 11.7,
+      "sugars_g": 2.2,
+      "fiber_g": 2.0,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 4.0,
+      "potassium_mg": 352.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Cabbage (Raw, Green)",
+    "brand": "USDA Reference",
+    "serving_size_g": 89.0,
+    "tags": [
+      "vegetable",
+      "fiber-rich",
+      "low-calorie"
+    ],
+    "nutrients": {
+      "calories": 25.0,
+      "protein_g": 1.3,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.03,
+      "carbohydrates_g": 5.8,
+      "sugars_g": 3.2,
+      "fiber_g": 2.5,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 18.0,
+      "potassium_mg": 170.0
+    },
+    "flags": [
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
   },
   {
     "name": "Carrots (Raw)",
@@ -291,177 +808,638 @@
     ],
     "nutrients": {
       "calories": 41.0,
-      "saturated_fat_g": 0.04,
-      "soluble_fiber_g": 1.1,
       "protein_g": 0.9,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.04,
       "carbohydrates_g": 9.6,
-      "fat_g": 0.2,
+      "sugars_g": 4.7,
       "fiber_g": 2.8,
-      "sodium_mg": 69.0
-    }
+      "soluble_fiber_g": 1.1,
+      "sodium_mg": 69.0,
+      "potassium_mg": 320.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ]
   },
   {
-    "name": "Chicken Breast (Boneless Skinless Cooked)",
+    "name": "Cauliflower (Raw)",
     "brand": "USDA Reference",
-    "serving_size_g": 100.0,
+    "serving_size_g": 107.0,
     "tags": [
-      "protein",
-      "lean-protein",
-      "low-fat"
+      "vegetable",
+      "low-carb",
+      "fiber-rich"
     ],
     "nutrients": {
-      "calories": 165.0,
-      "saturated_fat_g": 1.0,
-      "soluble_fiber_g": 0.0,
-      "protein_g": 31.0,
-      "carbohydrates_g": 0.0,
-      "fat_g": 3.6,
-      "fiber_g": 0.0,
-      "sodium_mg": 74.0
-    }
+      "calories": 25.0,
+      "protein_g": 1.9,
+      "fat_g": 0.3,
+      "saturated_fat_g": 0.06,
+      "carbohydrates_g": 5.0,
+      "sugars_g": 1.9,
+      "fiber_g": 2.0,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 30.0,
+      "potassium_mg": 299.0
+    },
+    "flags": [
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
   },
   {
-    "name": "Wild Atlantic Salmon (Cooked)",
+    "name": "Celery (Raw)",
     "brand": "USDA Reference",
-    "serving_size_g": 100.0,
+    "serving_size_g": 38.0,
     "tags": [
-      "protein",
-      "healthy-fat",
-      "omega-3",
-      "cholesterol-lowering"
+      "vegetable",
+      "low-calorie",
+      "hydrating"
     ],
     "nutrients": {
-      "calories": 182.0,
-      "saturated_fat_g": 1.3,
-      "soluble_fiber_g": 0.0,
-      "protein_g": 25.0,
-      "carbohydrates_g": 0.0,
-      "fat_g": 8.0,
-      "fiber_g": 0.0,
-      "sodium_mg": 60.0
-    }
-  },
-  {
-    "name": "Egg (Large Whole)",
-    "brand": "USDA Reference",
-    "serving_size_g": 50.0,
-    "tags": [
-      "protein",
-      "breakfast"
-    ],
-    "nutrients": {
-      "calories": 143.0,
-      "saturated_fat_g": 3.1,
-      "soluble_fiber_g": 0.0,
-      "protein_g": 12.6,
-      "carbohydrates_g": 0.7,
-      "fat_g": 9.5,
-      "fiber_g": 0.0,
-      "sodium_mg": 142.0
-    }
-  },
-  {
-    "name": "Egg White (Large)",
-    "brand": "USDA Reference",
-    "serving_size_g": 33.0,
-    "tags": [
-      "protein",
-      "lean-protein",
-      "fat-free"
-    ],
-    "nutrients": {
-      "calories": 52.0,
-      "saturated_fat_g": 0.0,
-      "soluble_fiber_g": 0.0,
-      "protein_g": 10.9,
-      "carbohydrates_g": 0.7,
+      "calories": 16.0,
+      "protein_g": 0.7,
       "fat_g": 0.2,
-      "fiber_g": 0.0,
-      "sodium_mg": 166.0
-    }
+      "saturated_fat_g": 0.05,
+      "carbohydrates_g": 3.0,
+      "sugars_g": 1.3,
+      "fiber_g": 1.6,
+      "soluble_fiber_g": 0.7,
+      "sodium_mg": 80.0,
+      "potassium_mg": 260.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
   },
   {
-    "name": "Tofu (Extra Firm)",
+    "name": "Collard Greens (Cooked)",
     "brand": "USDA Reference",
-    "serving_size_g": 85.0,
+    "serving_size_g": 190.0,
     "tags": [
-      "protein",
-      "plant-protein",
-      "vegan"
+      "vegetable",
+      "green",
+      "fiber-rich",
+      "calcium"
     ],
     "nutrients": {
-      "calories": 83.0,
-      "saturated_fat_g": 0.5,
-      "soluble_fiber_g": 0.1,
-      "protein_g": 10.0,
-      "carbohydrates_g": 1.2,
-      "fat_g": 5.0,
-      "fiber_g": 0.9,
-      "sodium_mg": 4.0
-    }
+      "calories": 32.0,
+      "protein_g": 2.7,
+      "fat_g": 0.6,
+      "saturated_fat_g": 0.08,
+      "carbohydrates_g": 6.3,
+      "sugars_g": 0.5,
+      "fiber_g": 4.0,
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 17.0,
+      "potassium_mg": 220.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ]
   },
   {
-    "name": "Greek Yogurt (Nonfat Plain)",
+    "name": "Corn (Yellow, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 154.0,
+    "tags": [
+      "vegetable",
+      "starchy",
+      "complex-carb"
+    ],
+    "nutrients": {
+      "calories": 96.0,
+      "protein_g": 3.4,
+      "fat_g": 1.5,
+      "saturated_fat_g": 0.2,
+      "carbohydrates_g": 21.1,
+      "sugars_g": 3.2,
+      "fiber_g": 2.4,
+      "soluble_fiber_g": 0.3,
+      "sodium_mg": 15.0,
+      "potassium_mg": 270.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Cucumber (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 52.0,
+    "tags": [
+      "vegetable",
+      "hydrating",
+      "low-calorie"
+    ],
+    "nutrients": {
+      "calories": 15.0,
+      "protein_g": 0.7,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.03,
+      "carbohydrates_g": 3.6,
+      "sugars_g": 1.7,
+      "fiber_g": 0.5,
+      "soluble_fiber_g": 0.2,
+      "sodium_mg": 2.0,
+      "potassium_mg": 147.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Eggplant (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 99.0,
+    "tags": [
+      "vegetable",
+      "low-calorie",
+      "fiber-rich"
+    ],
+    "nutrients": {
+      "calories": 35.0,
+      "protein_g": 0.8,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.04,
+      "carbohydrates_g": 8.7,
+      "sugars_g": 3.5,
+      "fiber_g": 2.5,
+      "soluble_fiber_g": 0.7,
+      "sodium_mg": 1.0,
+      "potassium_mg": 123.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Garlic (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 3.0,
+    "tags": [
+      "vegetable",
+      "flavoring",
+      "prebiotic"
+    ],
+    "nutrients": {
+      "calories": 149.0,
+      "protein_g": 6.4,
+      "fat_g": 0.5,
+      "saturated_fat_g": 0.09,
+      "carbohydrates_g": 33.1,
+      "sugars_g": 1.0,
+      "fiber_g": 2.1,
+      "soluble_fiber_g": 0.8,
+      "sodium_mg": 17.0,
+      "potassium_mg": 401.0
+    },
+    "flags": [
+      "anti-inflammatory",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Green Beans (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 125.0,
+    "tags": [
+      "vegetable",
+      "fiber-rich",
+      "low-calorie"
+    ],
+    "nutrients": {
+      "calories": 35.0,
+      "protein_g": 1.9,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.03,
+      "carbohydrates_g": 7.9,
+      "sugars_g": 3.3,
+      "fiber_g": 3.4,
+      "soluble_fiber_g": 0.9,
+      "sodium_mg": 1.0,
+      "potassium_mg": 209.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Green Peas (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 160.0,
+    "tags": [
+      "vegetable",
+      "plant-protein",
+      "fiber-rich",
+      "starchy"
+    ],
+    "nutrients": {
+      "calories": 84.0,
+      "protein_g": 5.4,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.04,
+      "carbohydrates_g": 15.6,
+      "sugars_g": 5.7,
+      "fiber_g": 5.5,
+      "soluble_fiber_g": 1.8,
+      "sodium_mg": 3.0,
+      "potassium_mg": 271.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Kale (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 67.0,
+    "tags": [
+      "vegetable",
+      "green",
+      "potassium-rich",
+      "vitamin-k"
+    ],
+    "nutrients": {
+      "calories": 49.0,
+      "protein_g": 4.3,
+      "fat_g": 0.9,
+      "saturated_fat_g": 0.09,
+      "carbohydrates_g": 8.8,
+      "sugars_g": 2.3,
+      "fiber_g": 3.6,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 38.0,
+      "potassium_mg": 491.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Leek (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 124.0,
+    "tags": [
+      "vegetable",
+      "flavoring",
+      "prebiotic"
+    ],
+    "nutrients": {
+      "calories": 31.0,
+      "protein_g": 0.8,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.03,
+      "carbohydrates_g": 7.6,
+      "sugars_g": 2.1,
+      "fiber_g": 1.8,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 7.0,
+      "potassium_mg": 87.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Mushrooms (White, Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 70.0,
+    "tags": [
+      "vegetable",
+      "umami",
+      "low-calorie"
+    ],
+    "nutrients": {
+      "calories": 22.0,
+      "protein_g": 3.1,
+      "fat_g": 0.3,
+      "saturated_fat_g": 0.04,
+      "carbohydrates_g": 3.3,
+      "sugars_g": 2.0,
+      "fiber_g": 1.0,
+      "soluble_fiber_g": 0.3,
+      "sodium_mg": 5.0,
+      "potassium_mg": 318.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Onion (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 110.0,
+    "tags": [
+      "vegetable",
+      "flavoring",
+      "prebiotic"
+    ],
+    "nutrients": {
+      "calories": 40.0,
+      "protein_g": 1.1,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.04,
+      "carbohydrates_g": 9.3,
+      "sugars_g": 4.2,
+      "fiber_g": 1.7,
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 4.0,
+      "potassium_mg": 146.0
+    },
+    "flags": [
+      "anti-inflammatory",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Romaine Lettuce (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 47.0,
+    "tags": [
+      "vegetable",
+      "green",
+      "salad",
+      "low-calorie"
+    ],
+    "nutrients": {
+      "calories": 17.0,
+      "protein_g": 1.2,
+      "fat_g": 0.3,
+      "saturated_fat_g": 0.04,
+      "carbohydrates_g": 3.3,
+      "sugars_g": 1.2,
+      "fiber_g": 2.1,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 8.0,
+      "potassium_mg": 247.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Snap Peas (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 98.0,
+    "tags": [
+      "vegetable",
+      "fiber-rich",
+      "snack"
+    ],
+    "nutrients": {
+      "calories": 42.0,
+      "protein_g": 2.8,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.04,
+      "carbohydrates_g": 7.6,
+      "sugars_g": 4.0,
+      "fiber_g": 2.6,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 4.0,
+      "potassium_mg": 200.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Spinach (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 30.0,
+    "tags": [
+      "vegetable",
+      "green",
+      "iron",
+      "low-calorie",
+      "potassium-rich"
+    ],
+    "nutrients": {
+      "calories": 23.0,
+      "protein_g": 2.9,
+      "fat_g": 0.4,
+      "saturated_fat_g": 0.06,
+      "carbohydrates_g": 3.6,
+      "sugars_g": 0.4,
+      "fiber_g": 2.2,
+      "soluble_fiber_g": 0.8,
+      "sodium_mg": 79.0,
+      "potassium_mg": 558.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Sweet Potato (Baked)",
     "brand": "USDA Reference",
     "serving_size_g": 150.0,
     "tags": [
-      "protein",
-      "dairy",
-      "probiotic",
-      "low-fat"
+      "vegetable",
+      "complex-carb",
+      "fiber-rich",
+      "potassium-rich"
     ],
     "nutrients": {
-      "calories": 59.0,
-      "saturated_fat_g": 0.1,
-      "soluble_fiber_g": 0.0,
-      "protein_g": 10.0,
-      "carbohydrates_g": 3.6,
-      "fat_g": 0.4,
+      "calories": 90.0,
+      "protein_g": 2.0,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.02,
+      "carbohydrates_g": 20.7,
+      "sugars_g": 6.5,
+      "fiber_g": 3.3,
+      "soluble_fiber_g": 1.8,
+      "sodium_mg": 36.0,
+      "potassium_mg": 475.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Swiss Chard (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 175.0,
+    "tags": [
+      "vegetable",
+      "green",
+      "potassium-rich",
+      "iron"
+    ],
+    "nutrients": {
+      "calories": 20.0,
+      "protein_g": 1.9,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.01,
+      "carbohydrates_g": 4.1,
+      "sugars_g": 1.1,
+      "fiber_g": 2.1,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 179.0,
+      "potassium_mg": 549.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Tomato (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 123.0,
+    "tags": [
+      "vegetable",
+      "low-calorie",
+      "lycopene"
+    ],
+    "nutrients": {
+      "calories": 18.0,
+      "protein_g": 0.9,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.03,
+      "carbohydrates_g": 3.9,
+      "sugars_g": 2.6,
+      "fiber_g": 1.2,
+      "soluble_fiber_g": 0.6,
+      "sodium_mg": 5.0,
+      "potassium_mg": 237.0
+    },
+    "flags": [
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "White Potato (Baked, flesh and skin)",
+    "brand": "USDA Reference",
+    "serving_size_g": 173.0,
+    "tags": [
+      "vegetable",
+      "complex-carb",
+      "potassium-rich"
+    ],
+    "nutrients": {
+      "calories": 93.0,
+      "protein_g": 2.5,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.03,
+      "carbohydrates_g": 21.1,
+      "sugars_g": 0.9,
+      "fiber_g": 2.1,
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 10.0,
+      "potassium_mg": 535.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Zucchini (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 113.0,
+    "tags": [
+      "vegetable",
+      "low-calorie",
+      "low-carb"
+    ],
+    "nutrients": {
+      "calories": 17.0,
+      "protein_g": 1.2,
+      "fat_g": 0.3,
+      "saturated_fat_g": 0.08,
+      "carbohydrates_g": 3.1,
+      "sugars_g": 2.5,
+      "fiber_g": 1.0,
+      "soluble_fiber_g": 0.3,
+      "sodium_mg": 8.0,
+      "potassium_mg": 261.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Bacon (Pan-Fried)",
+    "brand": "USDA Reference",
+    "serving_size_g": 15.0,
+    "tags": [
+      "protein",
+      "pork",
+      "high-sodium",
+      "high-saturated-fat"
+    ],
+    "nutrients": {
+      "calories": 541.0,
+      "protein_g": 37.0,
+      "fat_g": 42.0,
+      "saturated_fat_g": 14.0,
+      "carbohydrates_g": 1.4,
+      "sugars_g": 0.0,
       "fiber_g": 0.0,
-      "sodium_mg": 36.0
-    }
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 1717.0,
+      "potassium_mg": 565.0
+    },
+    "flags": [
+      "inflammatory",
+      "processed",
+      "keto-friendly"
+    ]
   },
   {
-    "name": "Lentils (Cooked)",
+    "name": "Beef Sirloin Steak (Lean, Cooked)",
     "brand": "USDA Reference",
-    "serving_size_g": 198.0,
+    "serving_size_g": 100.0,
     "tags": [
       "protein",
-      "plant-protein",
-      "fiber-rich",
-      "cholesterol-lowering"
+      "beef",
+      "lean-protein"
     ],
     "nutrients": {
-      "calories": 116.0,
-      "saturated_fat_g": 0.1,
-      "soluble_fiber_g": 3.0,
-      "protein_g": 9.0,
-      "carbohydrates_g": 20.0,
-      "fat_g": 0.4,
-      "fiber_g": 7.9,
-      "sodium_mg": 2.0
-    }
-  },
-  {
-    "name": "Chickpeas / Garbanzo Beans (Cooked)",
-    "brand": "USDA Reference",
-    "serving_size_g": 164.0,
-    "tags": [
-      "protein",
-      "plant-protein",
-      "fiber-rich",
-      "cholesterol-lowering"
-    ],
-    "nutrients": {
-      "calories": 164.0,
-      "saturated_fat_g": 0.6,
-      "soluble_fiber_g": 2.5,
-      "protein_g": 8.9,
-      "carbohydrates_g": 27.4,
-      "fat_g": 2.6,
-      "fiber_g": 7.6,
-      "sodium_mg": 24.0
-    }
+      "calories": 207.0,
+      "protein_g": 30.0,
+      "fat_g": 8.7,
+      "saturated_fat_g": 3.5,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 57.0,
+      "potassium_mg": 376.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
   },
   {
     "name": "Black Beans (Cooked)",
@@ -475,14 +1453,641 @@
     ],
     "nutrients": {
       "calories": 132.0,
-      "saturated_fat_g": 0.1,
-      "soluble_fiber_g": 2.8,
       "protein_g": 8.9,
-      "carbohydrates_g": 23.7,
       "fat_g": 0.5,
+      "saturated_fat_g": 0.1,
+      "carbohydrates_g": 23.7,
+      "sugars_g": 0.3,
       "fiber_g": 8.7,
-      "sodium_mg": 1.0
-    }
+      "soluble_fiber_g": 2.8,
+      "sodium_mg": 1.0,
+      "potassium_mg": 355.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Canned Tuna (in Water, Drained)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "lean-protein",
+      "omega-3",
+      "seafood"
+    ],
+    "nutrients": {
+      "calories": 116.0,
+      "protein_g": 25.5,
+      "fat_g": 1.0,
+      "saturated_fat_g": 0.3,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 300.0,
+      "potassium_mg": 279.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Cheddar Cheese",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "dairy",
+      "calcium",
+      "high-sodium",
+      "high-saturated-fat"
+    ],
+    "nutrients": {
+      "calories": 403.0,
+      "protein_g": 24.9,
+      "fat_g": 33.1,
+      "saturated_fat_g": 21.1,
+      "carbohydrates_g": 1.3,
+      "sugars_g": 0.5,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 621.0,
+      "potassium_mg": 98.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Chickpeas / Garbanzo Beans (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 164.0,
+    "tags": [
+      "protein",
+      "plant-protein",
+      "fiber-rich",
+      "cholesterol-lowering"
+    ],
+    "nutrients": {
+      "calories": 164.0,
+      "protein_g": 8.9,
+      "fat_g": 2.6,
+      "saturated_fat_g": 0.6,
+      "carbohydrates_g": 27.4,
+      "sugars_g": 5.0,
+      "fiber_g": 7.6,
+      "soluble_fiber_g": 2.5,
+      "sodium_mg": 24.0,
+      "potassium_mg": 291.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Chicken Breast (Boneless Skinless Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 100.0,
+    "tags": [
+      "protein",
+      "lean-protein",
+      "low-fat"
+    ],
+    "nutrients": {
+      "calories": 165.0,
+      "protein_g": 31.0,
+      "fat_g": 3.6,
+      "saturated_fat_g": 1.0,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 74.0,
+      "potassium_mg": 256.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Chia Seeds",
+    "brand": "USDA Reference",
+    "serving_size_g": 15.0,
+    "tags": [
+      "seeds",
+      "fiber-rich",
+      "omega-3",
+      "cholesterol-lowering"
+    ],
+    "nutrients": {
+      "calories": 486.0,
+      "protein_g": 16.5,
+      "fat_g": 30.7,
+      "saturated_fat_g": 3.3,
+      "carbohydrates_g": 42.1,
+      "sugars_g": 0.0,
+      "fiber_g": 34.4,
+      "soluble_fiber_g": 7.0,
+      "sodium_mg": 16.0,
+      "potassium_mg": 407.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Cod (Baked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 100.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "lean-protein",
+      "low-fat"
+    ],
+    "nutrients": {
+      "calories": 105.0,
+      "protein_g": 22.8,
+      "fat_g": 0.9,
+      "saturated_fat_g": 0.1,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 78.0,
+      "potassium_mg": 413.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Cottage Cheese (Low Fat, 1%)",
+    "brand": "USDA Reference",
+    "serving_size_g": 113.0,
+    "tags": [
+      "dairy",
+      "protein",
+      "high-sodium"
+    ],
+    "nutrients": {
+      "calories": 72.0,
+      "protein_g": 12.4,
+      "fat_g": 1.0,
+      "saturated_fat_g": 0.6,
+      "carbohydrates_g": 2.7,
+      "sugars_g": 2.7,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 406.0,
+      "potassium_mg": 84.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Deli Ham (Regular)",
+    "brand": "USDA Reference",
+    "serving_size_g": 57.0,
+    "tags": [
+      "protein",
+      "pork",
+      "high-sodium"
+    ],
+    "nutrients": {
+      "calories": 145.0,
+      "protein_g": 18.7,
+      "fat_g": 7.5,
+      "saturated_fat_g": 2.5,
+      "carbohydrates_g": 1.5,
+      "sugars_g": 0.5,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 1203.0,
+      "potassium_mg": 287.0
+    },
+    "flags": [
+      "inflammatory",
+      "processed"
+    ]
+  },
+  {
+    "name": "Edamame (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 155.0,
+    "tags": [
+      "protein",
+      "plant-protein",
+      "vegan",
+      "potassium-rich"
+    ],
+    "nutrients": {
+      "calories": 121.0,
+      "protein_g": 11.9,
+      "fat_g": 5.2,
+      "saturated_fat_g": 0.6,
+      "carbohydrates_g": 8.9,
+      "sugars_g": 2.2,
+      "fiber_g": 5.2,
+      "soluble_fiber_g": 1.5,
+      "sodium_mg": 4.0,
+      "potassium_mg": 436.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Egg (Large Whole)",
+    "brand": "USDA Reference",
+    "serving_size_g": 50.0,
+    "tags": [
+      "protein",
+      "breakfast"
+    ],
+    "nutrients": {
+      "calories": 143.0,
+      "protein_g": 12.6,
+      "fat_g": 9.5,
+      "saturated_fat_g": 3.1,
+      "carbohydrates_g": 0.7,
+      "sugars_g": 0.4,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 142.0,
+      "potassium_mg": 138.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Egg White (Large)",
+    "brand": "USDA Reference",
+    "serving_size_g": 33.0,
+    "tags": [
+      "protein",
+      "lean-protein",
+      "fat-free"
+    ],
+    "nutrients": {
+      "calories": 52.0,
+      "protein_g": 10.9,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.0,
+      "carbohydrates_g": 0.7,
+      "sugars_g": 0.2,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 166.0,
+      "potassium_mg": 163.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Extra Virgin Olive Oil",
+    "brand": "USDA Reference",
+    "serving_size_g": 14.0,
+    "tags": [
+      "oil",
+      "healthy-fat",
+      "monounsaturated",
+      "cholesterol-lowering"
+    ],
+    "nutrients": {
+      "calories": 884.0,
+      "protein_g": 0.0,
+      "fat_g": 100.0,
+      "saturated_fat_g": 13.8,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 0.0,
+      "potassium_mg": 1.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Avocado Oil",
+    "brand": "USDA Reference",
+    "serving_size_g": 14.0,
+    "tags": [
+      "oil",
+      "healthy-fat",
+      "monounsaturated"
+    ],
+    "nutrients": {
+      "calories": 884.0,
+      "protein_g": 0.0,
+      "fat_g": 100.0,
+      "saturated_fat_g": 11.6,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 0.0,
+      "potassium_mg": 1.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Flax Seeds (Ground)",
+    "brand": "USDA Reference",
+    "serving_size_g": 10.0,
+    "tags": [
+      "seeds",
+      "fiber-rich",
+      "omega-3",
+      "cholesterol-lowering"
+    ],
+    "nutrients": {
+      "calories": 534.0,
+      "protein_g": 18.3,
+      "fat_g": 42.2,
+      "saturated_fat_g": 3.7,
+      "carbohydrates_g": 28.9,
+      "sugars_g": 1.6,
+      "fiber_g": 27.3,
+      "soluble_fiber_g": 6.5,
+      "sodium_mg": 30.0,
+      "potassium_mg": 813.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Greek Yogurt (Nonfat Plain)",
+    "brand": "USDA Reference",
+    "serving_size_g": 150.0,
+    "tags": [
+      "protein",
+      "dairy",
+      "probiotic",
+      "low-fat"
+    ],
+    "nutrients": {
+      "calories": 59.0,
+      "protein_g": 10.0,
+      "fat_g": 0.4,
+      "saturated_fat_g": 0.1,
+      "carbohydrates_g": 3.6,
+      "sugars_g": 3.2,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 36.0,
+      "potassium_mg": 141.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Ground Beef (90% Lean, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "beef"
+    ],
+    "nutrients": {
+      "calories": 218.0,
+      "protein_g": 26.1,
+      "fat_g": 11.8,
+      "saturated_fat_g": 4.5,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 76.0,
+      "potassium_mg": 318.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Halibut (Baked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 100.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "lean-protein",
+      "potassium-rich"
+    ],
+    "nutrients": {
+      "calories": 140.0,
+      "protein_g": 27.2,
+      "fat_g": 2.9,
+      "saturated_fat_g": 0.4,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 69.0,
+      "potassium_mg": 576.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Kidney Beans (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 177.0,
+    "tags": [
+      "protein",
+      "plant-protein",
+      "fiber-rich",
+      "cholesterol-lowering",
+      "potassium-rich"
+    ],
+    "nutrients": {
+      "calories": 127.0,
+      "protein_g": 8.7,
+      "fat_g": 0.5,
+      "saturated_fat_g": 0.07,
+      "carbohydrates_g": 22.8,
+      "sugars_g": 0.3,
+      "fiber_g": 6.4,
+      "soluble_fiber_g": 3.0,
+      "sodium_mg": 2.0,
+      "potassium_mg": 403.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Lamb (Ground, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "lamb",
+      "red-meat"
+    ],
+    "nutrients": {
+      "calories": 283.0,
+      "protein_g": 24.9,
+      "fat_g": 19.6,
+      "saturated_fat_g": 8.3,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 90.0,
+      "potassium_mg": 354.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Lentils (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 198.0,
+    "tags": [
+      "protein",
+      "plant-protein",
+      "fiber-rich",
+      "cholesterol-lowering"
+    ],
+    "nutrients": {
+      "calories": 116.0,
+      "protein_g": 9.0,
+      "fat_g": 0.4,
+      "saturated_fat_g": 0.1,
+      "carbohydrates_g": 20.0,
+      "sugars_g": 1.8,
+      "fiber_g": 7.9,
+      "soluble_fiber_g": 3.0,
+      "sodium_mg": 2.0,
+      "potassium_mg": 369.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Mahi-Mahi (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 100.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "lean-protein",
+      "potassium-rich"
+    ],
+    "nutrients": {
+      "calories": 109.0,
+      "protein_g": 23.7,
+      "fat_g": 0.9,
+      "saturated_fat_g": 0.2,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 96.0,
+      "potassium_mg": 490.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Mozzarella (Part-Skim)",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "dairy",
+      "protein",
+      "calcium",
+      "high-sodium"
+    ],
+    "nutrients": {
+      "calories": 254.0,
+      "protein_g": 24.3,
+      "fat_g": 15.9,
+      "saturated_fat_g": 10.1,
+      "carbohydrates_g": 2.8,
+      "sugars_g": 1.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 627.0,
+      "potassium_mg": 82.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Peanut Butter (Natural, No Salt Added)",
+    "brand": "USDA Reference",
+    "serving_size_g": 32.0,
+    "tags": [
+      "nuts",
+      "healthy-fat",
+      "protein",
+      "potassium-rich"
+    ],
+    "nutrients": {
+      "calories": 588.0,
+      "protein_g": 25.0,
+      "fat_g": 50.4,
+      "saturated_fat_g": 10.0,
+      "carbohydrates_g": 20.1,
+      "sugars_g": 9.2,
+      "fiber_g": 6.0,
+      "soluble_fiber_g": 2.3,
+      "sodium_mg": 5.0,
+      "potassium_mg": 649.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ]
   },
   {
     "name": "Almonds (Raw)",
@@ -497,56 +2102,265 @@
     ],
     "nutrients": {
       "calories": 579.0,
-      "saturated_fat_g": 3.8,
-      "soluble_fiber_g": 1.5,
       "protein_g": 21.2,
-      "carbohydrates_g": 21.6,
       "fat_g": 49.9,
+      "saturated_fat_g": 3.8,
+      "carbohydrates_g": 21.6,
+      "sugars_g": 4.4,
       "fiber_g": 12.5,
-      "sodium_mg": 1.0
-    }
+      "soluble_fiber_g": 1.5,
+      "sodium_mg": 1.0,
+      "potassium_mg": 733.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ]
   },
   {
-    "name": "Chia Seeds",
+    "name": "Pork Chop (Boneless, Cooked)",
     "brand": "USDA Reference",
-    "serving_size_g": 15.0,
+    "serving_size_g": 100.0,
     "tags": [
-      "seeds",
-      "fiber-rich",
+      "protein",
+      "pork"
+    ],
+    "nutrients": {
+      "calories": 212.0,
+      "protein_g": 27.0,
+      "fat_g": 11.1,
+      "saturated_fat_g": 3.8,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 74.0,
+      "potassium_mg": 382.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Pork Tenderloin (Roasted)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "pork",
+      "lean-protein",
+      "potassium-rich"
+    ],
+    "nutrients": {
+      "calories": 143.0,
+      "protein_g": 26.2,
+      "fat_g": 3.5,
+      "saturated_fat_g": 1.2,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 62.0,
+      "potassium_mg": 423.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Ricotta (Part-Skim)",
+    "brand": "USDA Reference",
+    "serving_size_g": 124.0,
+    "tags": [
+      "dairy",
+      "protein",
+      "calcium"
+    ],
+    "nutrients": {
+      "calories": 138.0,
+      "protein_g": 11.4,
+      "fat_g": 7.9,
+      "saturated_fat_g": 4.9,
+      "carbohydrates_g": 5.1,
+      "sugars_g": 0.3,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 84.0,
+      "potassium_mg": 125.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Sardines (Canned in Water, Drained)",
+    "brand": "USDA Reference",
+    "serving_size_g": 92.0,
+    "tags": [
+      "protein",
+      "seafood",
       "omega-3",
+      "calcium",
       "cholesterol-lowering"
     ],
     "nutrients": {
-      "calories": 486.0,
-      "saturated_fat_g": 3.3,
-      "soluble_fiber_g": 7.0,
-      "protein_g": 16.5,
-      "carbohydrates_g": 42.1,
-      "fat_g": 30.7,
-      "fiber_g": 34.4,
-      "sodium_mg": 16.0
-    }
+      "calories": 208.0,
+      "protein_g": 24.6,
+      "fat_g": 11.5,
+      "saturated_fat_g": 1.5,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 307.0,
+      "potassium_mg": 397.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
   },
   {
-    "name": "Flax Seeds (Ground)",
+    "name": "Shrimp (Cooked)",
     "brand": "USDA Reference",
-    "serving_size_g": 10.0,
+    "serving_size_g": 85.0,
     "tags": [
-      "seeds",
-      "fiber-rich",
-      "omega-3",
-      "cholesterol-lowering"
+      "protein",
+      "seafood",
+      "lean-protein"
     ],
     "nutrients": {
-      "calories": 534.0,
-      "saturated_fat_g": 3.7,
-      "soluble_fiber_g": 6.5,
-      "protein_g": 18.3,
-      "carbohydrates_g": 28.9,
-      "fat_g": 42.2,
-      "fiber_g": 27.3,
-      "sodium_mg": 30.0
-    }
+      "calories": 99.0,
+      "protein_g": 24.0,
+      "fat_g": 0.3,
+      "saturated_fat_g": 0.1,
+      "carbohydrates_g": 0.2,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 224.0,
+      "potassium_mg": 220.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Tempeh",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "plant-protein",
+      "vegan",
+      "probiotic",
+      "potassium-rich"
+    ],
+    "nutrients": {
+      "calories": 195.0,
+      "protein_g": 20.3,
+      "fat_g": 10.8,
+      "saturated_fat_g": 2.2,
+      "carbohydrates_g": 7.6,
+      "sugars_g": 0.0,
+      "fiber_g": 4.1,
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 9.0,
+      "potassium_mg": 401.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Tilapia (Baked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 100.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "lean-protein",
+      "low-fat"
+    ],
+    "nutrients": {
+      "calories": 128.0,
+      "protein_g": 26.2,
+      "fat_g": 2.7,
+      "saturated_fat_g": 0.9,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 56.0,
+      "potassium_mg": 380.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Tofu (Extra Firm)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "plant-protein",
+      "vegan"
+    ],
+    "nutrients": {
+      "calories": 83.0,
+      "protein_g": 10.0,
+      "fat_g": 5.0,
+      "saturated_fat_g": 0.5,
+      "carbohydrates_g": 1.2,
+      "sugars_g": 0.3,
+      "fiber_g": 0.9,
+      "soluble_fiber_g": 0.1,
+      "sodium_mg": 4.0,
+      "potassium_mg": 148.0
+    },
+    "flags": [
+      "heart-healthy",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Turkey Breast (Roasted, Skinless)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "lean-protein",
+      "low-fat"
+    ],
+    "nutrients": {
+      "calories": 135.0,
+      "protein_g": 30.1,
+      "fat_g": 1.0,
+      "saturated_fat_g": 0.3,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 70.0,
+      "potassium_mg": 298.0
+    },
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ]
   },
   {
     "name": "Walnuts",
@@ -560,54 +2374,2175 @@
     ],
     "nutrients": {
       "calories": 654.0,
-      "saturated_fat_g": 6.1,
-      "soluble_fiber_g": 1.2,
       "protein_g": 15.2,
-      "carbohydrates_g": 13.7,
       "fat_g": 65.2,
+      "saturated_fat_g": 6.1,
+      "carbohydrates_g": 13.7,
+      "sugars_g": 2.6,
       "fiber_g": 6.7,
-      "sodium_mg": 2.0
-    }
+      "soluble_fiber_g": 1.2,
+      "sodium_mg": 2.0,
+      "potassium_mg": 441.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ]
   },
   {
-    "name": "Extra Virgin Olive Oil",
+    "name": "Whey Protein Powder (Unflavored)",
     "brand": "USDA Reference",
-    "serving_size_g": 14.0,
+    "serving_size_g": 30.0,
     "tags": [
-      "oil",
-      "healthy-fat",
-      "monounsaturated",
-      "cholesterol-lowering"
+      "protein",
+      "supplement",
+      "dairy"
     ],
     "nutrients": {
-      "calories": 884.0,
-      "saturated_fat_g": 13.8,
-      "soluble_fiber_g": 0.0,
-      "protein_g": 0.0,
-      "carbohydrates_g": 0.0,
-      "fat_g": 100.0,
+      "calories": 352.0,
+      "protein_g": 75.0,
+      "fat_g": 3.7,
+      "saturated_fat_g": 2.4,
+      "carbohydrates_g": 14.6,
+      "sugars_g": 3.0,
       "fiber_g": 0.0,
-      "sodium_mg": 0.0
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 352.0,
+      "potassium_mg": 573.0
+    },
+    "flags": [
+      "processed"
+    ]
+  },
+  {
+    "name": "Wild Atlantic Salmon (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 100.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "healthy-fat",
+      "omega-3",
+      "cholesterol-lowering",
+      "potassium-rich"
+    ],
+    "nutrients": {
+      "calories": 182.0,
+      "protein_g": 25.0,
+      "fat_g": 8.0,
+      "saturated_fat_g": 1.3,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 60.0,
+      "potassium_mg": 628.0
+    },
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ]
+  },
+  {
+    "name": "Whole Milk (3.25% Fat)",
+    "brand": "USDA Reference",
+    "serving_size_g": 244.0,
+    "tags": [
+      "dairy",
+      "calcium"
+    ],
+    "nutrients": {
+      "calories": 61.0,
+      "protein_g": 3.2,
+      "fat_g": 3.3,
+      "saturated_fat_g": 1.9,
+      "carbohydrates_g": 4.8,
+      "sugars_g": 5.1,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 43.0,
+      "potassium_mg": 150.0
+    },
+    "flags": [
+      "gluten-free"
+    ]
+  },
+  {
+    "name": "Barley (Pearled, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 157.0,
+    "tags": [
+      "grain",
+      "fiber-rich",
+      "cholesterol-lowering"
+    ],
+    "flags": [
+      "heart-healthy"
+    ],
+    "nutrients": {
+      "calories": 123.0,
+      "protein_g": 2.3,
+      "fat_g": 0.4,
+      "saturated_fat_g": 0.09,
+      "carbohydrates_g": 28.2,
+      "sugars_g": 0.3,
+      "fiber_g": 6.0,
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 3.0,
+      "potassium_mg": 93.0
     }
   },
   {
-    "name": "Avocado Oil",
+    "name": "Bulgur Wheat (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 182.0,
+    "tags": [
+      "grain",
+      "complex-carb"
+    ],
+    "flags": [],
+    "nutrients": {
+      "calories": 83.0,
+      "protein_g": 3.1,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.03,
+      "carbohydrates_g": 18.6,
+      "sugars_g": 0.1,
+      "fiber_g": 4.5,
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 5.0,
+      "potassium_mg": 68.0
+    }
+  },
+  {
+    "name": "Farro (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 200.0,
+    "tags": [
+      "grain",
+      "ancient-grain"
+    ],
+    "flags": [],
+    "nutrients": {
+      "calories": 170.0,
+      "protein_g": 6.3,
+      "fat_g": 1.4,
+      "saturated_fat_g": 0.2,
+      "carbohydrates_g": 33.2,
+      "sugars_g": 0.5,
+      "fiber_g": 3.5,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 5.0,
+      "potassium_mg": 122.0
+    }
+  },
+  {
+    "name": "Millet (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 174.0,
+    "tags": [
+      "grain",
+      "gluten-free"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 119.0,
+      "protein_g": 3.5,
+      "fat_g": 1.0,
+      "saturated_fat_g": 0.2,
+      "carbohydrates_g": 23.7,
+      "sugars_g": 0.1,
+      "fiber_g": 1.3,
+      "soluble_fiber_g": 0.2,
+      "sodium_mg": 2.0,
+      "potassium_mg": 62.0
+    }
+  },
+  {
+    "name": "Amaranth (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 246.0,
+    "tags": [
+      "grain",
+      "gluten-free",
+      "ancient-grain"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 102.0,
+      "protein_g": 3.8,
+      "fat_g": 1.6,
+      "saturated_fat_g": 0.4,
+      "carbohydrates_g": 18.8,
+      "sugars_g": 0.9,
+      "fiber_g": 2.1,
+      "soluble_fiber_g": 0.3,
+      "sodium_mg": 6.0,
+      "potassium_mg": 135.0
+    }
+  },
+  {
+    "name": "Basmati Rice (White, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 163.0,
+    "tags": [
+      "grain",
+      "carb",
+      "gluten-free"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 130.0,
+      "protein_g": 2.7,
+      "fat_g": 0.3,
+      "saturated_fat_g": 0.1,
+      "carbohydrates_g": 28.2,
+      "sugars_g": 0.0,
+      "fiber_g": 0.4,
+      "soluble_fiber_g": 0.1,
+      "sodium_mg": 1.0,
+      "potassium_mg": 35.0
+    }
+  },
+  {
+    "name": "Wild Rice (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 164.0,
+    "tags": [
+      "grain",
+      "gluten-free",
+      "potassium-rich"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 101.0,
+      "protein_g": 4.0,
+      "fat_g": 0.3,
+      "saturated_fat_g": 0.05,
+      "carbohydrates_g": 21.3,
+      "sugars_g": 0.7,
+      "fiber_g": 1.8,
+      "soluble_fiber_g": 0.4,
+      "sodium_mg": 3.0,
+      "potassium_mg": 101.0
+    }
+  },
+  {
+    "name": "Corn Tortilla (Small)",
+    "brand": "USDA Reference",
+    "serving_size_g": 26.0,
+    "tags": [
+      "grain",
+      "gluten-free"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 218.0,
+      "protein_g": 5.7,
+      "fat_g": 2.6,
+      "saturated_fat_g": 0.3,
+      "carbohydrates_g": 45.1,
+      "sugars_g": 0.6,
+      "fiber_g": 5.9,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 231.0,
+      "potassium_mg": 186.0
+    }
+  },
+  {
+    "name": "Sourdough Bread",
+    "brand": "USDA Reference",
+    "serving_size_g": 56.0,
+    "tags": [
+      "grain",
+      "bread"
+    ],
+    "flags": [],
+    "nutrients": {
+      "calories": 274.0,
+      "protein_g": 9.3,
+      "fat_g": 1.7,
+      "saturated_fat_g": 0.3,
+      "carbohydrates_g": 55.0,
+      "sugars_g": 2.7,
+      "fiber_g": 2.4,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 516.0,
+      "potassium_mg": 99.0
+    }
+  },
+  {
+    "name": "Rye Bread",
+    "brand": "USDA Reference",
+    "serving_size_g": 32.0,
+    "tags": [
+      "grain",
+      "bread",
+      "fiber-rich"
+    ],
+    "flags": [],
+    "nutrients": {
+      "calories": 259.0,
+      "protein_g": 8.5,
+      "fat_g": 3.3,
+      "saturated_fat_g": 0.5,
+      "carbohydrates_g": 48.3,
+      "sugars_g": 3.9,
+      "fiber_g": 5.8,
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 603.0,
+      "potassium_mg": 166.0
+    }
+  },
+  {
+    "name": "Oatmeal (Instant, Plain, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 234.0,
+    "tags": [
+      "grain",
+      "fiber-rich"
+    ],
+    "flags": [],
+    "nutrients": {
+      "calories": 68.0,
+      "protein_g": 2.4,
+      "fat_g": 1.4,
+      "saturated_fat_g": 0.2,
+      "carbohydrates_g": 12.0,
+      "sugars_g": 0.3,
+      "fiber_g": 1.7,
+      "soluble_fiber_g": 0.8,
+      "sodium_mg": 49.0,
+      "potassium_mg": 61.0
+    }
+  },
+  {
+    "name": "Buckwheat Groats (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 168.0,
+    "tags": [
+      "grain",
+      "gluten-free",
+      "complex-carb"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 92.0,
+      "protein_g": 3.4,
+      "fat_g": 0.6,
+      "saturated_fat_g": 0.13,
+      "carbohydrates_g": 19.9,
+      "sugars_g": 0.9,
+      "fiber_g": 2.7,
+      "soluble_fiber_g": 0.6,
+      "sodium_mg": 4.0,
+      "potassium_mg": 88.0
+    }
+  },
+  {
+    "name": "Cherries (Sweet, Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 138.0,
+    "tags": [
+      "fruit",
+      "antioxidant"
+    ],
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 63.0,
+      "protein_g": 1.1,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.04,
+      "carbohydrates_g": 16.0,
+      "sugars_g": 12.8,
+      "fiber_g": 2.1,
+      "soluble_fiber_g": 0.4,
+      "sodium_mg": 0.0,
+      "potassium_mg": 222.0
+    }
+  },
+  {
+    "name": "Pomegranate Arils",
+    "brand": "USDA Reference",
+    "serving_size_g": 87.0,
+    "tags": [
+      "fruit",
+      "antioxidant",
+      "polyphenol"
+    ],
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 83.0,
+      "protein_g": 1.7,
+      "fat_g": 1.2,
+      "saturated_fat_g": 0.12,
+      "carbohydrates_g": 18.7,
+      "sugars_g": 13.7,
+      "fiber_g": 4.0,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 3.0,
+      "potassium_mg": 236.0
+    }
+  },
+  {
+    "name": "Blackberries (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 144.0,
+    "tags": [
+      "fruit",
+      "fiber-rich",
+      "antioxidant"
+    ],
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 43.0,
+      "protein_g": 1.4,
+      "fat_g": 0.5,
+      "saturated_fat_g": 0.01,
+      "carbohydrates_g": 9.6,
+      "sugars_g": 4.9,
+      "fiber_g": 5.3,
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 1.0,
+      "potassium_mg": 162.0
+    }
+  },
+  {
+    "name": "Cantaloupe (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 177.0,
+    "tags": [
+      "fruit",
+      "vitamin-a",
+      "hydrating"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 34.0,
+      "protein_g": 0.8,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.05,
+      "carbohydrates_g": 8.2,
+      "sugars_g": 7.9,
+      "fiber_g": 0.9,
+      "soluble_fiber_g": 0.1,
+      "sodium_mg": 16.0,
+      "potassium_mg": 267.0
+    }
+  },
+  {
+    "name": "Dates (Medjool)",
+    "brand": "USDA Reference",
+    "serving_size_g": 24.0,
+    "tags": [
+      "fruit",
+      "potassium-rich",
+      "fiber-rich"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 277.0,
+      "protein_g": 1.8,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.02,
+      "carbohydrates_g": 74.9,
+      "sugars_g": 66.5,
+      "fiber_g": 6.7,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 1.0,
+      "potassium_mg": 696.0
+    }
+  },
+  {
+    "name": "Bok Choy (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 170.0,
+    "tags": [
+      "vegetable",
+      "green",
+      "calcium",
+      "low-calorie"
+    ],
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 12.0,
+      "protein_g": 1.6,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.02,
+      "carbohydrates_g": 1.7,
+      "sugars_g": 1.1,
+      "fiber_g": 1.0,
+      "soluble_fiber_g": 0.2,
+      "sodium_mg": 58.0,
+      "potassium_mg": 371.0
+    }
+  },
+  {
+    "name": "Fennel (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 87.0,
+    "tags": [
+      "vegetable",
+      "flavoring",
+      "low-calorie"
+    ],
+    "flags": [
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 31.0,
+      "protein_g": 1.2,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.05,
+      "carbohydrates_g": 7.3,
+      "sugars_g": 3.9,
+      "fiber_g": 3.1,
+      "soluble_fiber_g": 0.4,
+      "sodium_mg": 52.0,
+      "potassium_mg": 414.0
+    }
+  },
+  {
+    "name": "Okra (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 92.0,
+    "tags": [
+      "vegetable",
+      "fiber-rich",
+      "prebiotic"
+    ],
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 33.0,
+      "protein_g": 1.9,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.05,
+      "carbohydrates_g": 7.5,
+      "sugars_g": 3.9,
+      "fiber_g": 3.2,
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 7.0,
+      "potassium_mg": 269.0
+    }
+  },
+  {
+    "name": "Radishes (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 58.0,
+    "tags": [
+      "vegetable",
+      "low-calorie",
+      "crunchy"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 16.0,
+      "protein_g": 0.7,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.03,
+      "carbohydrates_g": 3.4,
+      "sugars_g": 1.9,
+      "fiber_g": 1.6,
+      "soluble_fiber_g": 0.3,
+      "sodium_mg": 39.0,
+      "potassium_mg": 233.0
+    }
+  },
+  {
+    "name": "Turnip (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 156.0,
+    "tags": [
+      "vegetable",
+      "low-calorie",
+      "fiber-rich"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 20.0,
+      "protein_g": 0.7,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.01,
+      "carbohydrates_g": 4.5,
+      "sugars_g": 2.3,
+      "fiber_g": 1.8,
+      "soluble_fiber_g": 0.3,
+      "sodium_mg": 17.0,
+      "potassium_mg": 170.0
+    }
+  },
+  {
+    "name": "Watercress (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 34.0,
+    "tags": [
+      "vegetable",
+      "green",
+      "low-calorie",
+      "superfood"
+    ],
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 11.0,
+      "protein_g": 2.3,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.03,
+      "carbohydrates_g": 1.3,
+      "sugars_g": 0.2,
+      "fiber_g": 0.5,
+      "soluble_fiber_g": 0.1,
+      "sodium_mg": 41.0,
+      "potassium_mg": 330.0
+    }
+  },
+  {
+    "name": "Belgian Endive (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 53.0,
+    "tags": [
+      "vegetable",
+      "salad",
+      "prebiotic"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 17.0,
+      "protein_g": 1.3,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.05,
+      "carbohydrates_g": 3.4,
+      "sugars_g": 0.4,
+      "fiber_g": 3.1,
+      "soluble_fiber_g": 0.7,
+      "sodium_mg": 22.0,
+      "potassium_mg": 211.0
+    }
+  },
+  {
+    "name": "Parsnips (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 156.0,
+    "tags": [
+      "vegetable",
+      "complex-carb",
+      "fiber-rich"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 71.0,
+      "protein_g": 1.0,
+      "fat_g": 0.3,
+      "saturated_fat_g": 0.05,
+      "carbohydrates_g": 17.1,
+      "sugars_g": 4.7,
+      "fiber_g": 4.0,
+      "soluble_fiber_g": 0.8,
+      "sodium_mg": 9.0,
+      "potassium_mg": 318.0
+    }
+  },
+  {
+    "name": "Scallions / Green Onions (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 50.0,
+    "tags": [
+      "vegetable",
+      "flavoring",
+      "low-calorie"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 32.0,
+      "protein_g": 1.8,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.05,
+      "carbohydrates_g": 7.3,
+      "sugars_g": 2.3,
+      "fiber_g": 2.6,
+      "soluble_fiber_g": 0.6,
+      "sodium_mg": 16.0,
+      "potassium_mg": 276.0
+    }
+  },
+  {
+    "name": "Jalape\u00f1o Pepper (Raw)",
     "brand": "USDA Reference",
     "serving_size_g": 14.0,
     "tags": [
-      "oil",
+      "vegetable",
+      "spicy",
+      "low-calorie"
+    ],
+    "flags": [
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 29.0,
+      "protein_g": 0.9,
+      "fat_g": 0.4,
+      "saturated_fat_g": 0.05,
+      "carbohydrates_g": 6.5,
+      "sugars_g": 4.1,
+      "fiber_g": 2.8,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 3.0,
+      "potassium_mg": 248.0
+    }
+  },
+  {
+    "name": "Atlantic Mackerel (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 100.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "omega-3",
+      "healthy-fat"
+    ],
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 262.0,
+      "protein_g": 23.9,
+      "fat_g": 17.8,
+      "saturated_fat_g": 4.2,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 83.0,
+      "potassium_mg": 314.0
+    }
+  },
+  {
+    "name": "Rainbow Trout (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 100.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "omega-3",
+      "potassium-rich"
+    ],
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 190.0,
+      "protein_g": 26.6,
+      "fat_g": 8.5,
+      "saturated_fat_g": 2.5,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 68.0,
+      "potassium_mg": 556.0
+    }
+  },
+  {
+    "name": "Oysters (Pacific, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "zinc",
+      "iron"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 163.0,
+      "protein_g": 18.9,
+      "fat_g": 4.7,
+      "saturated_fat_g": 1.0,
+      "carbohydrates_g": 8.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 417.0,
+      "potassium_mg": 228.0
+    }
+  },
+  {
+    "name": "Scallops (Steamed)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "lean-protein"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 111.0,
+      "protein_g": 20.5,
+      "fat_g": 0.8,
+      "saturated_fat_g": 0.1,
+      "carbohydrates_g": 5.4,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 333.0,
+      "potassium_mg": 476.0
+    }
+  },
+  {
+    "name": "Canned Salmon (Pink, in Water)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "omega-3",
+      "calcium"
+    ],
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 127.0,
+      "protein_g": 19.8,
+      "fat_g": 5.1,
+      "saturated_fat_g": 1.3,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 406.0,
+      "potassium_mg": 289.0
+    }
+  },
+  {
+    "name": "Dungeness Crab (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "lean-protein"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 110.0,
+      "protein_g": 22.3,
+      "fat_g": 1.4,
+      "saturated_fat_g": 0.2,
+      "carbohydrates_g": 0.9,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 395.0,
+      "potassium_mg": 262.0
+    }
+  },
+  {
+    "name": "Lobster (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "lean-protein"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 98.0,
+      "protein_g": 20.5,
+      "fat_g": 0.6,
+      "saturated_fat_g": 0.1,
+      "carbohydrates_g": 1.3,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 423.0,
+      "potassium_mg": 352.0
+    }
+  },
+  {
+    "name": "Anchovies (Canned in Olive Oil, Drained)",
+    "brand": "USDA Reference",
+    "serving_size_g": 20.0,
+    "tags": [
+      "protein",
+      "seafood",
+      "omega-3",
+      "high-sodium"
+    ],
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 210.0,
+      "protein_g": 29.0,
+      "fat_g": 9.7,
+      "saturated_fat_g": 2.2,
+      "carbohydrates_g": 0.6,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 3668.0,
+      "potassium_mg": 383.0
+    }
+  },
+  {
+    "name": "Chicken Thigh (Boneless, Skinless, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 100.0,
+    "tags": [
+      "protein",
+      "poultry"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 177.0,
+      "protein_g": 24.2,
+      "fat_g": 8.2,
+      "saturated_fat_g": 2.2,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 95.0,
+      "potassium_mg": 259.0
+    }
+  },
+  {
+    "name": "Ground Turkey (93% Lean, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "poultry",
+      "lean-protein"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 170.0,
+      "protein_g": 22.4,
+      "fat_g": 8.3,
+      "saturated_fat_g": 2.5,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 89.0,
+      "potassium_mg": 281.0
+    }
+  },
+  {
+    "name": "Venison (Ground, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "game",
+      "lean-protein"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 187.0,
+      "protein_g": 26.0,
+      "fat_g": 8.6,
+      "saturated_fat_g": 3.5,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 68.0,
+      "potassium_mg": 318.0
+    }
+  },
+  {
+    "name": "Bison (Ground, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "beef",
+      "lean-protein"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 215.0,
+      "protein_g": 28.9,
+      "fat_g": 10.4,
+      "saturated_fat_g": 4.0,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 75.0,
+      "potassium_mg": 348.0
+    }
+  },
+  {
+    "name": "Pork Sausage (Link, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 68.0,
+    "tags": [
+      "protein",
+      "pork",
+      "high-sodium"
+    ],
+    "flags": [
+      "processed"
+    ],
+    "nutrients": {
+      "calories": 339.0,
+      "protein_g": 19.3,
+      "fat_g": 28.8,
+      "saturated_fat_g": 10.0,
+      "carbohydrates_g": 2.4,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 749.0,
+      "potassium_mg": 283.0
+    }
+  },
+  {
+    "name": "Turkey Bacon (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "protein",
+      "poultry",
+      "high-sodium"
+    ],
+    "flags": [
+      "processed"
+    ],
+    "nutrients": {
+      "calories": 218.0,
+      "protein_g": 27.8,
+      "fat_g": 11.6,
+      "saturated_fat_g": 3.4,
+      "carbohydrates_g": 1.3,
+      "sugars_g": 0.5,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 1717.0,
+      "potassium_mg": 290.0
+    }
+  },
+  {
+    "name": "Corned Beef (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "protein",
+      "beef",
+      "high-sodium"
+    ],
+    "flags": [
+      "processed"
+    ],
+    "nutrients": {
+      "calories": 251.0,
+      "protein_g": 18.2,
+      "fat_g": 19.0,
+      "saturated_fat_g": 6.3,
+      "carbohydrates_g": 0.5,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 973.0,
+      "potassium_mg": 145.0
+    }
+  },
+  {
+    "name": "Cashews (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "nuts",
+      "healthy-fat",
+      "magnesium"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 553.0,
+      "protein_g": 18.2,
+      "fat_g": 43.9,
+      "saturated_fat_g": 7.8,
+      "carbohydrates_g": 30.2,
+      "sugars_g": 5.9,
+      "fiber_g": 3.3,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 12.0,
+      "potassium_mg": 660.0
+    }
+  },
+  {
+    "name": "Pistachios (Roasted, Unsalted)",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "nuts",
+      "fiber-rich",
+      "potassium-rich",
+      "protein"
+    ],
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 572.0,
+      "protein_g": 21.4,
+      "fat_g": 45.8,
+      "saturated_fat_g": 5.8,
+      "carbohydrates_g": 27.5,
+      "sugars_g": 8.0,
+      "fiber_g": 10.6,
+      "soluble_fiber_g": 1.5,
+      "sodium_mg": 6.0,
+      "potassium_mg": 1025.0
+    }
+  },
+  {
+    "name": "Pumpkin Seeds / Pepitas (Roasted)",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "seeds",
+      "zinc",
+      "magnesium",
+      "protein-rich"
+    ],
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 574.0,
+      "protein_g": 29.8,
+      "fat_g": 49.1,
+      "saturated_fat_g": 8.7,
+      "carbohydrates_g": 14.7,
+      "sugars_g": 1.4,
+      "fiber_g": 6.5,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 18.0,
+      "potassium_mg": 788.0
+    }
+  },
+  {
+    "name": "Sunflower Seeds (Roasted, No Salt)",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "seeds",
+      "vitamin-e",
+      "healthy-fat"
+    ],
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 582.0,
+      "protein_g": 19.3,
+      "fat_g": 51.5,
+      "saturated_fat_g": 5.1,
+      "carbohydrates_g": 24.1,
+      "sugars_g": 2.6,
+      "fiber_g": 11.5,
+      "soluble_fiber_g": 1.5,
+      "sodium_mg": 3.0,
+      "potassium_mg": 689.0
+    }
+  },
+  {
+    "name": "Hemp Seeds (Hulled)",
+    "brand": "USDA Reference",
+    "serving_size_g": 30.0,
+    "tags": [
+      "seeds",
+      "omega-3",
+      "protein-rich",
+      "gluten-free"
+    ],
+    "flags": [
+      "heart-healthy",
+      "anti-inflammatory",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 553.0,
+      "protein_g": 31.6,
+      "fat_g": 48.8,
+      "saturated_fat_g": 4.6,
+      "carbohydrates_g": 8.7,
+      "sugars_g": 1.7,
+      "fiber_g": 4.0,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 5.0,
+      "potassium_mg": 1200.0
+    }
+  },
+  {
+    "name": "Sesame Seeds (Whole, Dried)",
+    "brand": "USDA Reference",
+    "serving_size_g": 9.0,
+    "tags": [
+      "seeds",
+      "calcium",
+      "healthy-fat"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 573.0,
+      "protein_g": 17.7,
+      "fat_g": 50.0,
+      "saturated_fat_g": 7.0,
+      "carbohydrates_g": 23.5,
+      "sugars_g": 0.3,
+      "fiber_g": 11.8,
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 11.0,
+      "potassium_mg": 468.0
+    }
+  },
+  {
+    "name": "Macadamia Nuts (Raw)",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "nuts",
       "healthy-fat",
       "monounsaturated"
     ],
+    "flags": [
+      "gluten-free"
+    ],
     "nutrients": {
-      "calories": 884.0,
-      "saturated_fat_g": 11.6,
-      "soluble_fiber_g": 0.0,
-      "protein_g": 0.0,
-      "carbohydrates_g": 0.0,
-      "fat_g": 100.0,
+      "calories": 718.0,
+      "protein_g": 7.9,
+      "fat_g": 75.8,
+      "saturated_fat_g": 11.7,
+      "carbohydrates_g": 13.8,
+      "sugars_g": 4.6,
+      "fiber_g": 8.6,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 5.0,
+      "potassium_mg": 368.0
+    }
+  },
+  {
+    "name": "Brazil Nuts",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "nuts",
+      "selenium",
+      "healthy-fat"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 659.0,
+      "protein_g": 14.3,
+      "fat_g": 67.1,
+      "saturated_fat_g": 16.1,
+      "carbohydrates_g": 12.3,
+      "sugars_g": 2.3,
+      "fiber_g": 7.5,
+      "soluble_fiber_g": 0.5,
+      "sodium_mg": 3.0,
+      "potassium_mg": 659.0
+    }
+  },
+  {
+    "name": "Pinto Beans (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 171.0,
+    "tags": [
+      "protein",
+      "plant-protein",
+      "fiber-rich"
+    ],
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 143.0,
+      "protein_g": 9.0,
+      "fat_g": 0.7,
+      "saturated_fat_g": 0.13,
+      "carbohydrates_g": 26.8,
+      "sugars_g": 0.4,
+      "fiber_g": 9.0,
+      "soluble_fiber_g": 2.5,
+      "sodium_mg": 1.0,
+      "potassium_mg": 436.0
+    }
+  },
+  {
+    "name": "Navy Beans (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 182.0,
+    "tags": [
+      "protein",
+      "plant-protein",
+      "fiber-rich",
+      "cholesterol-lowering"
+    ],
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 140.0,
+      "protein_g": 8.2,
+      "fat_g": 0.6,
+      "saturated_fat_g": 0.08,
+      "carbohydrates_g": 26.1,
+      "sugars_g": 0.6,
+      "fiber_g": 10.5,
+      "soluble_fiber_g": 2.8,
+      "sodium_mg": 0.0,
+      "potassium_mg": 389.0
+    }
+  },
+  {
+    "name": "Split Peas (Green, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 196.0,
+    "tags": [
+      "protein",
+      "plant-protein",
+      "fiber-rich"
+    ],
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 116.0,
+      "protein_g": 8.3,
+      "fat_g": 0.4,
+      "saturated_fat_g": 0.05,
+      "carbohydrates_g": 20.6,
+      "sugars_g": 2.9,
+      "fiber_g": 8.1,
+      "soluble_fiber_g": 1.3,
+      "sodium_mg": 2.0,
+      "potassium_mg": 362.0
+    }
+  },
+  {
+    "name": "Black-Eyed Peas (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 165.0,
+    "tags": [
+      "protein",
+      "plant-protein",
+      "fiber-rich"
+    ],
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 116.0,
+      "protein_g": 7.7,
+      "fat_g": 0.5,
+      "saturated_fat_g": 0.13,
+      "carbohydrates_g": 20.8,
+      "sugars_g": 3.3,
+      "fiber_g": 6.5,
+      "soluble_fiber_g": 1.5,
+      "sodium_mg": 4.0,
+      "potassium_mg": 278.0
+    }
+  },
+  {
+    "name": "Mung Beans (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 202.0,
+    "tags": [
+      "protein",
+      "plant-protein",
+      "fiber-rich"
+    ],
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 105.0,
+      "protein_g": 7.0,
+      "fat_g": 0.4,
+      "saturated_fat_g": 0.11,
+      "carbohydrates_g": 19.2,
+      "sugars_g": 2.0,
+      "fiber_g": 7.6,
+      "soluble_fiber_g": 1.5,
+      "sodium_mg": 2.0,
+      "potassium_mg": 266.0
+    }
+  },
+  {
+    "name": "Butter (Unsalted)",
+    "brand": "USDA Reference",
+    "serving_size_g": 14.0,
+    "tags": [
+      "dairy",
+      "fat"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 717.0,
+      "protein_g": 0.9,
+      "fat_g": 81.1,
+      "saturated_fat_g": 51.4,
+      "carbohydrates_g": 0.1,
+      "sugars_g": 0.1,
       "fiber_g": 0.0,
-      "sodium_mg": 0.0
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 11.0,
+      "potassium_mg": 24.0
+    }
+  },
+  {
+    "name": "Cream Cheese (Regular)",
+    "brand": "USDA Reference",
+    "serving_size_g": 29.0,
+    "tags": [
+      "dairy",
+      "fat",
+      "spread"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 342.0,
+      "protein_g": 5.9,
+      "fat_g": 34.2,
+      "saturated_fat_g": 19.3,
+      "carbohydrates_g": 4.1,
+      "sugars_g": 3.8,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 321.0,
+      "potassium_mg": 138.0
+    }
+  },
+  {
+    "name": "Feta Cheese",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "dairy",
+      "calcium",
+      "high-sodium"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 264.0,
+      "protein_g": 14.2,
+      "fat_g": 21.3,
+      "saturated_fat_g": 14.9,
+      "carbohydrates_g": 4.1,
+      "sugars_g": 4.1,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 1116.0,
+      "potassium_mg": 62.0
+    }
+  },
+  {
+    "name": "Parmesan (Grated)",
+    "brand": "USDA Reference",
+    "serving_size_g": 5.0,
+    "tags": [
+      "dairy",
+      "calcium",
+      "high-sodium",
+      "protein"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 431.0,
+      "protein_g": 38.5,
+      "fat_g": 29.7,
+      "saturated_fat_g": 18.7,
+      "carbohydrates_g": 3.2,
+      "sugars_g": 0.8,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 1529.0,
+      "potassium_mg": 92.0
+    }
+  },
+  {
+    "name": "Swiss Cheese",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "dairy",
+      "calcium",
+      "protein"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 380.0,
+      "protein_g": 26.9,
+      "fat_g": 27.8,
+      "saturated_fat_g": 17.8,
+      "carbohydrates_g": 5.4,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 192.0,
+      "potassium_mg": 88.0
+    }
+  },
+  {
+    "name": "Gouda Cheese",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "dairy",
+      "calcium"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 356.0,
+      "protein_g": 24.9,
+      "fat_g": 27.4,
+      "saturated_fat_g": 17.6,
+      "carbohydrates_g": 2.2,
+      "sugars_g": 2.2,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 819.0,
+      "potassium_mg": 121.0
+    }
+  },
+  {
+    "name": "Brie Cheese",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "dairy",
+      "fat",
+      "calcium"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 334.0,
+      "protein_g": 20.7,
+      "fat_g": 27.7,
+      "saturated_fat_g": 17.4,
+      "carbohydrates_g": 0.5,
+      "sugars_g": 0.5,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 629.0,
+      "potassium_mg": 152.0
+    }
+  },
+  {
+    "name": "Goat Cheese (Ch\u00e8vre, Soft)",
+    "brand": "USDA Reference",
+    "serving_size_g": 28.0,
+    "tags": [
+      "dairy",
+      "calcium"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 364.0,
+      "protein_g": 21.6,
+      "fat_g": 29.8,
+      "saturated_fat_g": 20.6,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 368.0,
+      "potassium_mg": 158.0
+    }
+  },
+  {
+    "name": "Sour Cream (Regular)",
+    "brand": "USDA Reference",
+    "serving_size_g": 30.0,
+    "tags": [
+      "dairy",
+      "fat"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 198.0,
+      "protein_g": 2.4,
+      "fat_g": 19.4,
+      "saturated_fat_g": 12.1,
+      "carbohydrates_g": 4.6,
+      "sugars_g": 4.3,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 53.0,
+      "potassium_mg": 144.0
+    }
+  },
+  {
+    "name": "Heavy Whipping Cream",
+    "brand": "USDA Reference",
+    "serving_size_g": 30.0,
+    "tags": [
+      "dairy",
+      "fat",
+      "keto"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 340.0,
+      "protein_g": 2.8,
+      "fat_g": 36.1,
+      "saturated_fat_g": 22.3,
+      "carbohydrates_g": 2.8,
+      "sugars_g": 2.8,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 27.0,
+      "potassium_mg": 75.0
+    }
+  },
+  {
+    "name": "Greek Yogurt (Whole Milk, Full Fat)",
+    "brand": "USDA Reference",
+    "serving_size_g": 150.0,
+    "tags": [
+      "dairy",
+      "protein",
+      "probiotic"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 97.0,
+      "protein_g": 9.0,
+      "fat_g": 5.0,
+      "saturated_fat_g": 3.2,
+      "carbohydrates_g": 3.6,
+      "sugars_g": 3.2,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 35.0,
+      "potassium_mg": 141.0
+    }
+  },
+  {
+    "name": "Kefir (Whole Milk, Plain)",
+    "brand": "USDA Reference",
+    "serving_size_g": 240.0,
+    "tags": [
+      "dairy",
+      "probiotic",
+      "calcium"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 61.0,
+      "protein_g": 3.3,
+      "fat_g": 3.3,
+      "saturated_fat_g": 2.1,
+      "carbohydrates_g": 4.5,
+      "sugars_g": 4.5,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 40.0,
+      "potassium_mg": 150.0
+    }
+  },
+  {
+    "name": "Low-Fat Milk (2%)",
+    "brand": "USDA Reference",
+    "serving_size_g": 244.0,
+    "tags": [
+      "dairy",
+      "calcium",
+      "protein"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 50.0,
+      "protein_g": 3.3,
+      "fat_g": 2.0,
+      "saturated_fat_g": 1.2,
+      "carbohydrates_g": 4.8,
+      "sugars_g": 5.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 44.0,
+      "potassium_mg": 150.0
+    }
+  },
+  {
+    "name": "Skim Milk (Nonfat)",
+    "brand": "USDA Reference",
+    "serving_size_g": 244.0,
+    "tags": [
+      "dairy",
+      "calcium",
+      "low-fat"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 34.0,
+      "protein_g": 3.4,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.06,
+      "carbohydrates_g": 5.0,
+      "sugars_g": 5.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 42.0,
+      "potassium_mg": 156.0
+    }
+  },
+  {
+    "name": "Plain Whole Milk Yogurt",
+    "brand": "USDA Reference",
+    "serving_size_g": 170.0,
+    "tags": [
+      "dairy",
+      "probiotic",
+      "calcium"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 62.0,
+      "protein_g": 3.5,
+      "fat_g": 3.3,
+      "saturated_fat_g": 2.1,
+      "carbohydrates_g": 4.7,
+      "sugars_g": 4.7,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 46.0,
+      "potassium_mg": 155.0
+    }
+  },
+  {
+    "name": "Hummus (Commercial)",
+    "brand": "USDA Reference",
+    "serving_size_g": 30.0,
+    "tags": [
+      "condiment",
+      "plant-protein",
+      "fiber-rich"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 177.0,
+      "protein_g": 5.0,
+      "fat_g": 9.6,
+      "saturated_fat_g": 1.4,
+      "carbohydrates_g": 20.1,
+      "sugars_g": 3.1,
+      "fiber_g": 6.0,
+      "soluble_fiber_g": 1.0,
+      "sodium_mg": 379.0,
+      "potassium_mg": 228.0
+    }
+  },
+  {
+    "name": "Tahini (Sesame Paste)",
+    "brand": "USDA Reference",
+    "serving_size_g": 15.0,
+    "tags": [
+      "condiment",
+      "healthy-fat",
+      "calcium"
+    ],
+    "flags": [
+      "heart-healthy",
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 595.0,
+      "protein_g": 17.0,
+      "fat_g": 53.8,
+      "saturated_fat_g": 7.6,
+      "carbohydrates_g": 21.2,
+      "sugars_g": 0.5,
+      "fiber_g": 9.3,
+      "soluble_fiber_g": 1.5,
+      "sodium_mg": 115.0,
+      "potassium_mg": 414.0
+    }
+  },
+  {
+    "name": "Honey (Pure)",
+    "brand": "USDA Reference",
+    "serving_size_g": 21.0,
+    "tags": [
+      "sweetener",
+      "natural"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 304.0,
+      "protein_g": 0.3,
+      "fat_g": 0.0,
+      "saturated_fat_g": 0.0,
+      "carbohydrates_g": 82.4,
+      "sugars_g": 82.1,
+      "fiber_g": 0.2,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 4.0,
+      "potassium_mg": 52.0
+    }
+  },
+  {
+    "name": "Maple Syrup (Pure)",
+    "brand": "USDA Reference",
+    "serving_size_g": 30.0,
+    "tags": [
+      "sweetener",
+      "natural"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 260.0,
+      "protein_g": 0.0,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.01,
+      "carbohydrates_g": 67.0,
+      "sugars_g": 60.5,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 12.0,
+      "potassium_mg": 212.0
+    }
+  },
+  {
+    "name": "Tomato Sauce (Canned, No Salt Added)",
+    "brand": "USDA Reference",
+    "serving_size_g": 61.0,
+    "tags": [
+      "condiment",
+      "lycopene",
+      "vegetable"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 26.0,
+      "protein_g": 1.3,
+      "fat_g": 0.5,
+      "saturated_fat_g": 0.1,
+      "carbohydrates_g": 5.7,
+      "sugars_g": 3.5,
+      "fiber_g": 1.7,
+      "soluble_fiber_g": 0.4,
+      "sodium_mg": 16.0,
+      "potassium_mg": 354.0
+    }
+  },
+  {
+    "name": "Apple Cider Vinegar",
+    "brand": "USDA Reference",
+    "serving_size_g": 15.0,
+    "tags": [
+      "condiment",
+      "probiotic"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 21.0,
+      "protein_g": 0.0,
+      "fat_g": 0.0,
+      "saturated_fat_g": 0.0,
+      "carbohydrates_g": 0.9,
+      "sugars_g": 0.4,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 5.0,
+      "potassium_mg": 73.0
+    }
+  },
+  {
+    "name": "Yellow Mustard",
+    "brand": "USDA Reference",
+    "serving_size_g": 5.0,
+    "tags": [
+      "condiment",
+      "low-calorie"
+    ],
+    "flags": [
+      "gluten-free"
+    ],
+    "nutrients": {
+      "calories": 66.0,
+      "protein_g": 4.4,
+      "fat_g": 3.7,
+      "saturated_fat_g": 0.2,
+      "carbohydrates_g": 5.8,
+      "sugars_g": 1.6,
+      "fiber_g": 3.4,
+      "soluble_fiber_g": 0.3,
+      "sodium_mg": 1135.0,
+      "potassium_mg": 152.0
+    }
+  },
+  {
+    "name": "Salsa (Fresh/Restaurant Style)",
+    "brand": "USDA Reference",
+    "serving_size_g": 60.0,
+    "tags": [
+      "condiment",
+      "tomato",
+      "low-calorie"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 36.0,
+      "protein_g": 1.5,
+      "fat_g": 0.4,
+      "saturated_fat_g": 0.06,
+      "carbohydrates_g": 7.4,
+      "sugars_g": 4.0,
+      "fiber_g": 1.8,
+      "soluble_fiber_g": 0.3,
+      "sodium_mg": 342.0,
+      "potassium_mg": 263.0
+    }
+  },
+  {
+    "name": "Coconut Milk (Canned, Full Fat)",
+    "brand": "USDA Reference",
+    "serving_size_g": 60.0,
+    "tags": [
+      "dairy-free",
+      "fat",
+      "tropical"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 230.0,
+      "protein_g": 2.3,
+      "fat_g": 23.8,
+      "saturated_fat_g": 21.1,
+      "carbohydrates_g": 3.3,
+      "sugars_g": 3.3,
+      "fiber_g": 2.2,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 15.0,
+      "potassium_mg": 263.0
+    }
+  },
+  {
+    "name": "Coconut Oil",
+    "brand": "USDA Reference",
+    "serving_size_g": 14.0,
+    "tags": [
+      "oil",
+      "fat",
+      "tropical"
+    ],
+    "flags": [
+      "gluten-free",
+      "keto-friendly"
+    ],
+    "nutrients": {
+      "calories": 892.0,
+      "protein_g": 0.0,
+      "fat_g": 99.1,
+      "saturated_fat_g": 82.5,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 0.0,
+      "potassium_mg": 0.0
+    }
+  },
+  {
+    "name": "Soy Sauce (Low Sodium)",
+    "brand": "USDA Reference",
+    "serving_size_g": 16.0,
+    "tags": [
+      "condiment",
+      "umami",
+      "high-sodium"
+    ],
+    "flags": [],
+    "nutrients": {
+      "calories": 60.0,
+      "protein_g": 10.3,
+      "fat_g": 0.1,
+      "saturated_fat_g": 0.01,
+      "carbohydrates_g": 4.7,
+      "sugars_g": 1.5,
+      "fiber_g": 0.8,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 5490.0,
+      "potassium_mg": 362.0
     }
   }
 ]

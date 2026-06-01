@@ -4,6 +4,8 @@ import httpx
 import logging
 from typing import Dict, Any, Optional
 
+from luma.services.food_flags import compute_threshold_flags
+
 logger = logging.getLogger("off_client")
 
 
@@ -32,19 +34,23 @@ async def lookup_barcode(barcode: str) -> Optional[Dict[str, Any]]:
                 kj = nutr.get("energy_100g")
                 kcal = float(kj) / 4.184 if kj is not None else 0.0
             
-            # Sodium is in grams in OFF, we store in milligrams
+            # Sodium and potassium are in grams in OFF, we store in milligrams
             sodium_g = nutr.get("sodium_100g", 0.0)
             sodium_mg = float(sodium_g) * 1000.0 if sodium_g is not None else 0.0
-            
+            potassium_g = nutr.get("potassium_100g", 0.0)
+            potassium_mg = float(potassium_g) * 1000.0 if potassium_g is not None else 0.0
+
             mapped_nutrients = {
                 "calories": float(kcal or 0.0),
                 "saturated_fat_g": float(nutr.get("saturated-fat_100g") or 0.0),
                 "soluble_fiber_g": float(nutr.get("soluble-fiber_100g") or 0.0),
                 "protein_g": float(nutr.get("proteins_100g") or 0.0),
                 "carbohydrates_g": float(nutr.get("carbohydrates_100g") or 0.0),
+                "sugars_g": float(nutr.get("sugars_100g") or 0.0),
                 "fat_g": float(nutr.get("fat_100g") or 0.0),
                 "fiber_g": float(nutr.get("fiber_100g") or 0.0),
-                "sodium_mg": sodium_mg
+                "sodium_mg": sodium_mg,
+                "potassium_mg": potassium_mg,
             }
             
             serving_size = prod.get("serving_quantity")
@@ -59,7 +65,8 @@ async def lookup_barcode(barcode: str) -> Optional[Dict[str, Any]]:
                 "serving_size_g": serving_size,
                 "nutrients_per_100g": mapped_nutrients,
                 "tags": [t.replace("en:", "") for t in prod.get("categories_tags", [])[:5]],
-                "source_id": f"off_{barcode}"
+                "flags": compute_threshold_flags(mapped_nutrients),
+                "source_id": f"off_{barcode}",
             }
     except Exception as e:
         logger.exception(f"Error looking up barcode {barcode} from OFF: {e}")

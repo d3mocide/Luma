@@ -8,10 +8,12 @@ Nutrient IDs used (FDC canonical):
   1003 Protein
   1004 Total lipid (fat)
   1005 Carbohydrate
+  2000 Total sugars
   1079 Fiber
   1258 Fatty acids, total saturated
   1082 Fiber, soluble   (not always present — derived from insoluble if missing)
   1093 Sodium
+  1092 Potassium
 """
 from __future__ import annotations
 
@@ -21,6 +23,7 @@ from typing import Any
 import httpx
 
 from luma.config import settings
+from luma.services.food_flags import compute_threshold_flags
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +35,12 @@ _NUTRIENT_MAP: dict[int, str] = {
     1003: "protein_g",
     1004: "fat_g",
     1005: "carbohydrates_g",
+    2000: "sugars_g",
     1079: "fiber_g",
     1258: "saturated_fat_g",
     1082: "soluble_fiber_g",
     1093: "sodium_mg",
+    1092: "potassium_mg",
 }
 
 _EMPTY_NUTRIENTS: dict[str, float] = {k: 0.0 for k in _NUTRIENT_MAP.values()}
@@ -60,14 +65,16 @@ def _to_luma_food(fdc_food: dict[str, Any]) -> dict[str, Any]:
     fdc_id = str(fdc_food.get("fdcId", ""))
     serving_size = float(fdc_food.get("servingSize") or 100.0)
 
+    nutrients = _extract_nutrients(fdc_food)
     return {
         "source": "usda",
         "source_id": f"fdc_{fdc_id}",
         "name": description,
         "brand": brand,
         "serving_size_g": serving_size,
-        "nutrients_per_100g": _extract_nutrients(fdc_food),
+        "nutrients_per_100g": nutrients,
         "tags": [],
+        "flags": compute_threshold_flags(nutrients),
     }
 
 

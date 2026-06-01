@@ -132,6 +132,18 @@ Fully implemented, verified, stabilized, and bug-fixed.
 - [ ] Proactive weekly recap — end-of-week coach message summarising LDL-relevant wins and misses; triggered by arq worker on Sunday evening
 - [ ] Trend-aware nudges — if weight or LDL-proxy metrics stall for 2+ weeks, surface a coach prompt suggesting plan adjustments
 
+### Food database backlog (approved for Phase 3)
+- [x] Expand seed pool to ~170 foods covering vegetables, fruits, proteins, dairy, grains, nuts/seeds, condiments
+- [x] `flags` column on `foods` table (migration `0010_food_flags`) — ARRAY(Text) with GIN index
+- [x] `food_flags.py` service — canonical taxonomy, `compute_threshold_flags()`, `merge_flags()`
+- [x] Auto-threshold flags: `high-fiber` (≥5g), `high-protein` (≥20g), `low-sodium` (≤140mg), `high-saturated-fat` (>5g), `high-sodium` (>400mg), `high-sugar` (>12.5g)
+- [x] Curated positive flags: `heart-healthy`, `anti-inflammatory`, `gluten-free`, `keto-friendly`
+- [x] Curated negative flags (seed only): `inflammatory`, `processed`
+- [x] Filter chips in food search (PlateTab) — Heart Healthy, Anti-Inflam, Gluten Free, High Protein, High Fiber, Keto
+- [x] Flag badges on food result cards (PlateTab + ComboTab)
+- [x] `GET /foods/search?flags=` filter param — AND logic across selected flags
+- [ ] **P3 BACKLOG**: Threshold heuristics for `inflammatory` and `processed` auto-flags — define nutrient-based rules (e.g. sodium_mg > 1000 + processed indicator, omega-6:omega-3 ratio > threshold) so live USDA API and OFF barcode results can receive these flags automatically without manual curation
+
 ### Future enhancement ideas (post-Phase 3)
 - **Wearable-native integrations** — Garmin Connect IQ data bridge, Oura Ring API (HRV, readiness score), Withings scale direct sync
 - **Recipe import** — paste any URL → Claude extracts ingredients + nutrition; store as user recipe
