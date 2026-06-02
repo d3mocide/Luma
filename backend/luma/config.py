@@ -1,3 +1,5 @@
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 from typing import Any, Literal
@@ -41,8 +43,19 @@ class Settings(BaseSettings):
     coach_fallback_model: str = ""
     insight_narrator_fallback_model: str = ""
 
+    server_timezone: str = "UTC"
+
     environment: Literal["development", "production"] = "development"
     cors_origins: Any = ["http://localhost:5173"]
+
+    @field_validator("server_timezone")
+    @classmethod
+    def validate_timezone(cls, v: str) -> str:
+        try:
+            ZoneInfo(v)
+        except (ZoneInfoNotFoundError, KeyError):
+            raise ValueError(f"Unknown timezone {v!r} — use an IANA name like 'America/New_York'.")
+        return v
 
     @field_validator("cors_origins", mode="before")
     @classmethod

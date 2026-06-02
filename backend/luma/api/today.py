@@ -1,10 +1,12 @@
 import logging
-from datetime import date, timedelta, datetime, timezone
+from datetime import timedelta, datetime, timezone, time
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter
 from sqlalchemy import select, text
 
+from luma.config import settings
 from luma.deps import CurrentUser, DbDep
 
 logger = logging.getLogger(__name__)
@@ -13,24 +15,27 @@ router = APIRouter()
 
 @router.get("/today")
 async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
-    today_dt = date.today()
+    tz = ZoneInfo(settings.server_timezone)
+    today_dt = datetime.now(tz).date()
     yesterday_dt = today_dt - timedelta(days=1)
-    
+
     # 1. Fetch user's goals
     from luma.db.models import Goal, MealEvent, MealPlan, MealPlanSlot
     stmt_goal = select(Goal).where(Goal.user_id == user.id)
     res_goal = await db.execute(stmt_goal)
     goal = res_goal.scalar_one_or_none()
-    
+
     target_cal = goal.daily_calorie_target if goal else None
     target_sat = float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else None
     target_sol = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else None
-    
+
     # 2. Fetch yesterday's meal events
-    yesterday_start = datetime.combine(yesterday_dt, datetime.min.time()).replace(tzinfo=timezone.utc)
-    yesterday_end = datetime.combine(today_dt, datetime.min.time()).replace(tzinfo=timezone.utc)
+    # All boundaries are computed in the configured local timezone then converted
+    # to UTC so queries align with the user's calendar day, not the server clock.
+    yesterday_start = datetime.combine(yesterday_dt, time.min, tzinfo=tz).astimezone(timezone.utc)
+    yesterday_end = datetime.combine(today_dt, time.min, tzinfo=tz).astimezone(timezone.utc)
     today_start = yesterday_end
-    today_end = datetime.combine(today_dt + timedelta(days=1), datetime.min.time()).replace(tzinfo=timezone.utc)
+    today_end = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=tz).astimezone(timezone.utc)
     
     stmt_events = (
         select(MealEvent)
@@ -147,16 +152,16 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     for row in cumulative_rows:
         latest[row.metric] = row.value
 
-    # Streak: consecutive days (UTC) where at least one meal was logged
+    # Streak: consecutive days (server timezone) where at least one meal was logged
     streak_rows = await db.execute(
         text("""
-            SELECT DISTINCT DATE(ts AT TIME ZONE 'UTC') AS day
+            SELECT DISTINCT DATE(ts AT TIME ZONE :tz) AS day
             FROM meal_events
             WHERE user_id = :user_id
               AND ts >= NOW() - INTERVAL '365 days'
             ORDER BY day DESC
         """),
-        {"user_id": str(user.id)},
+        {"user_id": str(user.id), "tz": settings.server_timezone},
     )
     days_set = {row.day for row in streak_rows}
     # Start from today; fall back to yesterday before midnight resets the streak
