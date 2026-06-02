@@ -339,3 +339,129 @@ async def test_blood_pressure_split_into_systolic_diastolic():
     by_metric = {r["metric"]: r for r in captured}
     assert by_metric["bp_systolic_mmhg"]["value"] == pytest.approx(118.0)
     assert by_metric["bp_diastolic_mmhg"]["value"] == pytest.approx(76.0)
+
+
+@pytest.mark.asyncio
+async def test_sleep_analysis_hae_v2_zero_inbed_uses_totalsleep():
+    """HAE v2 sets inBed=0 and asleep=0; real data is in totalSleep/awake/core/deep/rem."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "sleep_analysis", "units": "hr", "data": [
+            {
+                "date": "2026-06-02 00:00:00 -0700",
+                "source": "William's Apple Watch",
+                "inBed": 0,
+                "asleep": 0,
+                "totalSleep": 5.475455911854902,
+                "core": 3.5163537311553954,
+                "deep": 1.0297965515653291,
+                "rem": 0.92930562913417825,
+                "awake": 0.67811643540859223,
+            }
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "sleep_duration_min" in by_metric
+    # inBed = totalSleep + awake = 5.4755 + 0.6781 = 6.1536 h → 369.2 min
+    expected_duration = (5.475455911854902 + 0.67811643540859223) * 60
+    assert by_metric["sleep_duration_min"]["value"] == pytest.approx(expected_duration, rel=1e-4)
+    assert "sleep_asleep_min" in by_metric
+    # asleep = totalSleep = 5.4755 h → 328.5 min
+    assert by_metric["sleep_asleep_min"]["value"] == pytest.approx(5.475455911854902 * 60, rel=1e-4)
+    assert "sleep_score" in by_metric
+    # duration_score = min(60, 369.2/480*60) ≈ 46.1; efficiency = 328.5/369.2 → ~89% → 35.6
+    assert 75 < by_metric["sleep_score"]["value"] < 90
+
+
+@pytest.mark.asyncio
+async def test_lean_body_mass_ingested():
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "lean_body_mass", "units": "kg", "data": [
+            {"qty": 76.359216462556731, "date": "2026-06-02 00:00:00 -0700", "source": "RENPHO Health"}
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "lean_body_mass_kg" in by_metric
+    assert by_metric["lean_body_mass_kg"]["value"] == pytest.approx(76.359216462556731, rel=1e-6)
+
+
+@pytest.mark.asyncio
+async def test_lean_body_mass_lb_converted():
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "lean_body_mass", "units": "lb", "data": [
+            {"qty": 168.35, "date": "2026-06-02 00:00:00 -0700", "source": "RENPHO Health"}
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert by_metric["lean_body_mass_kg"]["value"] == pytest.approx(168.35 / 2.20462262, rel=1e-6)
+
+
+@pytest.mark.asyncio
+async def test_six_minute_walk_distance_ingested():
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "six_minute_walking_test_distance", "units": "m", "data": [
+            {"qty": 471.0, "date": "2026-06-01 00:00:00 -0700", "source": "L4z0r-Kitt3n"}
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "six_min_walk_m" in by_metric
+    assert by_metric["six_min_walk_m"]["value"] == pytest.approx(471.0, rel=1e-6)
+
+
+@pytest.mark.asyncio
+async def test_environmental_audio_exposure_ingested():
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "environmental_audio_exposure", "units": "dBASPL", "data": [
+            {"qty": 56.68, "date": "2026-06-02 00:00:00 -0700", "source": "William's Apple Watch"}
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "audio_exposure_db" in by_metric
+    assert by_metric["audio_exposure_db"]["value"] == pytest.approx(56.68, rel=1e-4)
+
+
+@pytest.mark.asyncio
+async def test_walking_heart_rate_average_ingested():
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "walking_heart_rate_average", "units": "count/min", "data": [
+            {"qty": 93.0, "date": "2026-06-01 00:00:00 -0700", "source": "William's Apple Watch"}
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "walking_hr_bpm" in by_metric
+    assert by_metric["walking_hr_bpm"]["value"] == pytest.approx(93.0, rel=1e-6)

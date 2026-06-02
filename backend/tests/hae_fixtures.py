@@ -13,7 +13,7 @@ SAMPLE_PAYLOAD = {
             {"name": "apple_stand_hour", "units": "count", "data": [{"date": "2026-05-19 00:00:00 -0700", "qty": 12, "source": ""}]},
             {"name": "apple_stand_time", "units": "min", "data": [{"date": "2026-05-19 00:00:00 -0700", "source": "William's Apple Watch", "qty": 146}]},
             {"name": "breathing_disturbances", "units": "count", "data": [{"date": "2026-05-19 00:00:00 -0700", "source": "William's Apple Watch", "qty": 0.94398015737533569}]},
-            {"name": "environmental_audio", "units": "dBASPL", "data": [{"date": "2026-05-19 00:00:00 -0700", "source": "William's Apple Watch", "qty": 63.990700962442752}]},
+            {"name": "environmental_audio_exposure", "units": "dBASPL", "data": [{"date": "2026-05-19 00:00:00 -0700", "source": "William's Apple Watch", "qty": 63.990700962442752}]},
             {"name": "flights_climbed", "units": "count", "data": [{"date": "2026-05-19 00:00:00 -0700", "source": "William's Apple Watch|L4z0r-Kitt3n", "qty": 5}]},
             # heart_rate has Min/Avg/Max structure (no qty) — must be gracefully skipped
             {"name": "heart_rate", "units": "count/min", "data": [{"Min": 52, "Avg": 74.613139994679827, "date": "2026-05-19 00:00:00 -0700", "source": "William's Apple Watch", "Max": 116}]},
@@ -27,7 +27,7 @@ SAMPLE_PAYLOAD = {
             {"name": "stair_speed_up", "units": "ft/s", "data": [{"qty": 0.68338807877593155, "source": "William's Apple Watch", "date": "2026-05-19 00:00:00 -0700"}]},
             {"name": "time_in_daylight", "units": "min", "data": [{"qty": 37, "source": "William's Apple Watch", "date": "2026-05-19 00:00:00 -0700"}]},
             {"name": "walking_running_distance", "units": "mi", "data": [{"source": "William's Apple Watch|L4z0r-Kitt3n", "qty": 3.2878305909330341, "date": "2026-05-19 00:00:00 -0700"}]},
-            {"name": "walking_heart_rate", "units": "count/min", "data": [{"date": "2026-05-19 00:00:00 -0700", "source": "William's Apple Watch", "qty": 99}]},
+            {"name": "walking_heart_rate_average", "units": "count/min", "data": [{"date": "2026-05-19 00:00:00 -0700", "source": "William's Apple Watch", "qty": 99}]},
             {"name": "walking_asymmetry_percentage", "units": "%", "data": [{"qty": 0.82758620689655171, "date": "2026-05-19 00:00:00 -0700", "source": "L4z0r-Kitt3n"}]},
             {"name": "walking_speed", "units": "mi/hr", "data": [{"date": "2026-05-19 00:00:00 -0700", "qty": 2.6729106101996991, "source": "L4z0r-Kitt3n"}]},
             {"name": "walking_double_support_percentage", "units": "%", "data": [{"source": "L4z0r-Kitt3n", "date": "2026-05-19 00:00:00 -0700", "qty": 30.017391304347836}]},
