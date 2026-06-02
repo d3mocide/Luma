@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Mic } from 'lucide-react'
+import { Mic, AlertCircle, X } from 'lucide-react'
 import { api } from '../../lib/api'
 import type { DraftItem } from './types'
 
@@ -8,12 +8,66 @@ type Props = {
   onSwitchToPlate: () => void
 }
 
+function VoiceErrorModal({ message, onClose }: { message: string; onClose: () => void }) {
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(5,8,17,0.75)', backdropFilter: 'blur(8px)',
+        zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="glass" style={{ maxWidth: 400, width: '100%', padding: 28, borderRadius: 20, position: 'relative' }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: 16, right: 16,
+            background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8,
+            color: 'var(--fg-tertiary)', cursor: 'pointer', padding: 6, display: 'flex',
+          }}
+        >
+          <X size={16} />
+        </button>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10, background: 'rgba(239,68,68,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <AlertCircle size={18} style={{ color: '#f87171' }} />
+          </div>
+          <div>
+            <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: 'var(--fg-primary)' }}>
+              Voice logging failed
+            </p>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-secondary)', lineHeight: 1.55 }}>
+              {message}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            marginTop: 20, width: '100%', padding: '10px 0',
+            background: 'rgba(255,255,255,0.06)', border: '1px solid var(--glass-edge)',
+            borderRadius: 12, color: 'var(--fg-primary)', fontSize: 14,
+            fontWeight: 500, cursor: 'pointer', letterSpacing: '-0.01em',
+          }}
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [transcription, setTranscription] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [voiceError, setVoiceError] = useState<string | null>(null)
   const timerRef = useRef<number | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -56,7 +110,7 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
       setIsRecording(true)
     } catch (err) {
       console.error('Microphone access denied:', err)
-      alert('Microphone access denied. You can still use the mock preset voice logger below!')
+      setVoiceError('Microphone access was denied. You can still use the text presets below.')
     }
   }
 
@@ -103,7 +157,7 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
       }
     } catch (err) {
       console.error(err)
-      alert('Error transcribing audio. Please try again or use manual search!')
+      setVoiceError('Audio could not be transcribed — no speech detected or the recording was too short. Try again or use the text presets below.')
     } finally {
       setIsProcessing(false)
     }
@@ -131,13 +185,15 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
       }
     } catch (err) {
       console.error(err)
-      alert('Error processing text. Please try again or use manual search!')
+      setVoiceError('Text could not be processed. Try again or use the manual search tab.')
     } finally {
       setIsProcessing(false)
     }
   }
 
   return (
+    <>
+    {voiceError && <VoiceErrorModal message={voiceError} onClose={() => setVoiceError(null)} />}
     <div className="log-sheet-section log-sheet-center-stack">
       <div className="log-sheet-voice-main">
         <div className="text-center space-y-2 max-w-xs mx-auto">
@@ -208,5 +264,6 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
         </div>
       </div>
     </div>
+    </>
   )
 }
