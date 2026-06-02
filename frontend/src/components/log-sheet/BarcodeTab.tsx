@@ -151,27 +151,6 @@ export function BarcodeTab({ onAddItem, onSwitchToPlate }: Props) {
         </form>
       )}
 
-      {!isScanning && (
-        <div className="border-t border-slate-800 pt-6">
-          <span className="eyebrow block mb-3">Presets</span>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: 'Quaker Oats', code: '028400070566' },
-              { label: 'Alpro Soy Milk', code: '5411188110825' },
-            ].map(({ label, code }) => (
-              <button
-                key={code}
-                onClick={() => void lookup(code)}
-                disabled={isLoading}
-                className="p-2.5 text-center rounded-lg border transition-colors disabled:opacity-50"
-                style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)' }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
