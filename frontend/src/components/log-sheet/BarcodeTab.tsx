@@ -72,6 +72,8 @@ export function BarcodeTab({ onAddItem, onSwitchToPlate }: Props) {
     if (!isScanning) return
     const scanner = new Html5Qrcode(SCANNER_ID, { formatsToSupport: FOOD_FORMATS, verbose: false })
     let fired = false
+    let startResolved = false
+    let stopRequested = false
 
     scanner
       .start(
@@ -86,12 +88,17 @@ export function BarcodeTab({ onAddItem, onSwitchToPlate }: Props) {
         },
         () => {}, // per-frame decode errors are expected noise, not worth surfacing
       )
+      .then(() => {
+        startResolved = true
+        if (stopRequested) scanner.stop().catch(() => {})
+      })
       .catch(() => setIsScanning(false))
 
     return () => {
-      scanner.stop().catch(() => {})
+      stopRequested = true
+      if (startResolved) scanner.stop().catch(() => {})
     }
-  }, [isScanning]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isScanning])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

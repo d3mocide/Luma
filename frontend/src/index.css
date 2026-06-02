@@ -542,6 +542,7 @@
 /* ══════════════════════════════════════════════════════════════════════════
  * SCROLLBAR
  * ══════════════════════════════════════════════════════════════════════════ */
+.thin-scroll { scrollbar-width: thin; scrollbar-color: var(--glass-edge) transparent; }
 .thin-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
 .thin-scroll::-webkit-scrollbar-thumb { background: var(--glass-edge); border-radius: 3px; }
 .thin-scroll::-webkit-scrollbar-track { background: transparent; }

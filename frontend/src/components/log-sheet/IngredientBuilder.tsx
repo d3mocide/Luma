@@ -265,7 +265,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
 
       {/* ── Search results ── */}
       {results.length > 0 && (
-        <div className="glass-inset" style={{ borderRadius: 12, overflow: 'hidden', maxHeight: 200, overflowY: 'auto' }}>
+        <div className="glass-inset thin-scroll" style={{ borderRadius: 12, overflowX: 'hidden', maxHeight: 200, overflowY: 'auto' }}>
           {results.map((food) => (
             <button
               key={food.id}
