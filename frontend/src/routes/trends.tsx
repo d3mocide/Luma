@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
@@ -214,6 +214,26 @@ export default function TrendsRoute() {
   const [drillDate, setDrillDate] = useState<string | null>(null)
   const measurementSystem = useMeasurementSystem()
 
+  const swipeStartX = useRef<number | null>(null)
+  const swipeStartY = useRef<number | null>(null)
+
+  function handleSwipeStart(e: React.TouchEvent) {
+    swipeStartX.current = e.touches[0].clientX
+    swipeStartY.current = e.touches[0].clientY
+  }
+
+  function handleSwipeEnd(e: React.TouchEvent) {
+    if (swipeStartX.current === null || swipeStartY.current === null) return
+    const dx = e.changedTouches[0].clientX - swipeStartX.current
+    const dy = e.changedTouches[0].clientY - swipeStartY.current
+    swipeStartX.current = null
+    swipeStartY.current = null
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return
+    const idx = TABS.findIndex(t => t.id === activeTab)
+    if (dx < 0 && idx < TABS.length - 1) setActiveTab(TABS[idx + 1].id)
+    else if (dx > 0 && idx > 0) setActiveTab(TABS[idx - 1].id)
+  }
+
   const { data: insightsData } = useQuery<{ insights: Insight[] }>({
     queryKey: ['insights'],
     queryFn: () => api.get('/insights?limit=50'),
@@ -316,28 +336,30 @@ export default function TrendsRoute() {
         })}
       </div>
 
-      {activeTab === 'wellbeing' ? (
-        <WellbeingTab />
-      ) : (
-        <div className="trends-metric-grid">
-          {METRICS.filter(m => m.tab === activeTab).map((m) => (
-            <MetricChart
-              key={m.id}
-              metricId={m.id}
-              label={m.label}
-              unit={m.unit}
-              color={m.color}
-              range={range}
-              measurementSystem={measurementSystem}
-              alerts={alerts}
-              insight={m.insight}
-              invert={m.invert}
-              onDrillDown={setDrillDate}
-              Icon={m.Icon}
-            />
-          ))}
-        </div>
-      )}
+      <div onTouchStart={handleSwipeStart} onTouchEnd={handleSwipeEnd}>
+        {activeTab === 'wellbeing' ? (
+          <WellbeingTab />
+        ) : (
+          <div className="trends-metric-grid">
+            {METRICS.filter(m => m.tab === activeTab).map((m) => (
+              <MetricChart
+                key={m.id}
+                metricId={m.id}
+                label={m.label}
+                unit={m.unit}
+                color={m.color}
+                range={range}
+                measurementSystem={measurementSystem}
+                alerts={alerts}
+                insight={m.insight}
+                invert={m.invert}
+                onDrillDown={setDrillDate}
+                Icon={m.Icon}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {drillDate && (
         <DrillDownSheet date={drillDate} onClose={() => setDrillDate(null)}/>
