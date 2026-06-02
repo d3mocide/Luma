@@ -741,28 +741,18 @@ export default function MealsRoute() {
       </header>
 
       {/* Tab bar */}
-      <div style={{
-        display: 'flex', gap: 2, marginBottom: 24,
-        background: 'var(--bg-3)', borderRadius: 10, padding: 3,
-        width: 'fit-content',
-      }}>
+      <div className="settings-tabs" role="tablist">
         {([
-          { key: 'foods', label: 'Foods' },
-          { key: 'plan',  label: 'Plan'  },
+          { key: 'foods',   label: 'Foods'   },
+          { key: 'plan',    label: 'Plan'    },
           { key: 'journal', label: 'Journal' },
         ] as const).map(({ key, label }) => (
           <button
             key={key}
+            role="tab"
+            aria-selected={activeTab === key}
+            className="settings-tab"
             onClick={() => switchTab(key)}
-            style={{
-              padding: '7px 20px', borderRadius: 8,
-              fontSize: 13, fontWeight: 500,
-              border: 'none', cursor: 'pointer',
-              background: activeTab === key ? 'rgba(14,165,233,0.15)' : 'transparent',
-              color: activeTab === key ? 'var(--sky-400)' : 'var(--fg-quiet)',
-              boxShadow: activeTab === key ? '0 1px 4px rgba(14,165,233,0.25)' : 'none',
-              transition: 'all 150ms',
-            }}
           >
             {label}
           </button>
