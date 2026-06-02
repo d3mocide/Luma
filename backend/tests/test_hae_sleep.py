@@ -146,13 +146,13 @@ async def test_sleep_analysis_hae_v4_aggregated_format():
             {
                 "date": "2026-05-29 03:54:00 -0700",
                 "source": "Apple Watch",
-                "InBed": 5.85,
-                "Asleep": 4.858333,
-                "Core": 2.291667,
-                "Deep": 0.608333,
-                "Rem": 0.958333,
-                "Awake": 0.416667,
-                "Unspecified": 0.0,
+                "inBed": 5.85,
+                "asleep": 4.858333,
+                "core": 2.291667,
+                "deep": 0.608333,
+                "rem": 0.958333,
+                "awake": 0.416667,
+                "unspecified": 0.0,
             }
         ]}
     ]}}
@@ -180,8 +180,8 @@ async def test_sleep_analysis_hae_v4_inbed_only():
             {
                 "date": "2026-05-29 07:00:00 -0700",
                 "source": "Apple Watch",
-                "InBed": 7.0,
-                "Awake": 0.5,
+                "inBed": 7.0,
+                "awake": 0.5,
             }
         ]}
     ]}}

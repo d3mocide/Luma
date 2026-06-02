@@ -187,8 +187,9 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
             if "." in hae_name:
                 sub = hae_name.split(".")[-1]
                 internal = SLEEP_MAP.get(sub)
-            elif data_points and "InBed" in data_points[0]:
-                # HAE v4 aggregated format: one record per night with InBed/Asleep/Core/Deep/Rem/Awake
+            elif data_points and "inBed" in data_points[0]:
+                # HAE aggregated format (Summarize Data ON): one record per night with
+                # inBed/asleep/core/deep/rem fields (camelCase per HAE v2 JSON spec).
                 for point in data_points:
                     try:
                         ts = _parse_hae_ts(point["date"])
@@ -196,7 +197,7 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                     except (KeyError, ValueError, TypeError) as exc:
                         logger.warning("Malformed HAE sleep point %s: %s", point, exc)
                         continue
-                    for hae_field, iname in (("InBed", "sleep_duration_min"), ("Asleep", "sleep_asleep_min")):
+                    for hae_field, iname in (("inBed", "sleep_duration_min"), ("asleep", "sleep_asleep_min")):
                         raw = point.get(hae_field)
                         if raw is None:
                             continue
