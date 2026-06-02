@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check } from 'lucide-react'
+import { Check, Download } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import type { ShoppingItem } from './types'
@@ -30,7 +30,7 @@ export function ShoppingListView({ planId, shoppingList }: Props) {
               const res: Record<string, string> = await api.post(`/plan/${planId}/shopping-list/export-reminders`)
               alert(res.message || 'Exported!')
             }}>
-            🍏 Export
+            <Download size={12} /> Export
           </button>
         </div>
 

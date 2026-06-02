@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Search, X, Plus, BookOpen, ArrowLeft } from 'lucide-react'
+import { Search, X, Plus, BookOpen, ArrowLeft, BatteryLow, Battery, BatteryMedium, Zap, Flame, Frown, Meh, Smile, SmilePlus, Laugh, CircleDashed, Circle, CircleDot, Disc, CheckCircle2 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { api } from '../lib/api'
 import { type FoodResult } from '../components/plan/types'
 import { FOOD_CATEGORIES, SAT_FAT_COLORS, type FoodCategory } from '../lib/food-categories'
@@ -504,18 +505,20 @@ interface Correlation {
 
 // ── Score chip ────────────────────────────────────────────────────────────────
 
-const SCORE_EMOJIS = {
-  energy:    ['😴','😐','🙂','⚡','🚀'],
-  digestion: ['😣','😕','😐','🙂','😊'],
-  mood:      ['😢','😕','😐','🙂','😄'],
-  satiety:   ['🫙','😕','😐','🙂','🫃'],
-} as const
+type ScoreType = 'energy' | 'digestion' | 'mood' | 'satiety'
 
-function ScoreChip({ label, value, type }: { label: string; value: number; type: keyof typeof SCORE_EMOJIS }) {
-  const emoji = SCORE_EMOJIS[type][value - 1] ?? '—'
+const SCORE_ICONS: Record<ScoreType, LucideIcon[]> = {
+  energy:    [BatteryLow, Battery, BatteryMedium, Zap, Flame],
+  digestion: [Frown, Meh, Smile, SmilePlus, Laugh],
+  mood:      [Frown, Meh, Smile, SmilePlus, Laugh],
+  satiety:   [CircleDashed, Circle, CircleDot, Disc, CheckCircle2],
+}
+
+function ScoreChip({ label, value, type }: { label: string; value: number; type: ScoreType }) {
+  const Icon = SCORE_ICONS[type]?.[value - 1]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-      <span style={{ fontSize: 16 }}>{emoji}</span>
+      {Icon ? <Icon size={16} /> : <span style={{ fontSize: 16 }}>—</span>}
       <span style={{ fontSize: 9, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
     </div>
   )

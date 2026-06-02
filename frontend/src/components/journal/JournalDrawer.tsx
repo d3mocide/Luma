@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { X, Check } from 'lucide-react'
+import { X, Check, BatteryLow, Battery, BatteryMedium, Zap, Flame, Frown, Meh, Smile, SmilePlus, Laugh, CircleDashed, Circle, CircleDot, Disc, CheckCircle2 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 
@@ -17,29 +18,34 @@ interface Props {
 
 // ── Scale definitions ─────────────────────────────────────────────────────────
 
-const SCALES = [
+const SCALES: Array<{
+  key: 'energy' | 'digestion' | 'mood' | 'satiety'
+  label: string
+  options: LucideIcon[]
+  captions: string[]
+}> = [
   {
-    key: 'energy' as const,
+    key: 'energy',
     label: 'Energy',
-    options: ['😴', '😐', '🙂', '⚡', '🚀'],
+    options: [BatteryLow, Battery, BatteryMedium, Zap, Flame],
     captions: ['Drained', 'Low', 'OK', 'Good', 'Excellent'],
   },
   {
-    key: 'digestion' as const,
+    key: 'digestion',
     label: 'Digestion',
-    options: ['😣', '😕', '😐', '🙂', '😊'],
+    options: [Frown, Meh, Smile, SmilePlus, Laugh],
     captions: ['Painful', 'Uncomfortable', 'OK', 'Good', 'Great'],
   },
   {
-    key: 'mood' as const,
+    key: 'mood',
     label: 'Mood',
-    options: ['😢', '😕', '😐', '🙂', '😄'],
+    options: [Frown, Meh, Smile, SmilePlus, Laugh],
     captions: ['Low', 'Down', 'Neutral', 'Good', 'Great'],
   },
   {
-    key: 'satiety' as const,
+    key: 'satiety',
     label: 'Satiety',
-    options: ['🫙', '😕', '😐', '🙂', '🫃'],
+    options: [CircleDashed, Circle, CircleDot, Disc, CheckCircle2],
     captions: ['Still hungry', 'A bit hungry', 'OK', 'Satisfied', 'Very full'],
   },
 ]
@@ -73,7 +79,7 @@ function ScaleRow({
         )}
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        {scale.options.map((emoji, i) => {
+        {scale.options.map((Icon, i) => {
           const score = i + 1
           const selected = value === score
           return (
@@ -81,15 +87,17 @@ function ScaleRow({
               key={score}
               onClick={() => onChange(score)}
               style={{
-                flex: 1, height: 44, borderRadius: 10, fontSize: 20,
+                flex: 1, height: 44, borderRadius: 10,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: selected ? '2px solid var(--sky-400)' : '1px solid var(--glass-edge)',
                 background: selected ? 'rgba(56,189,248,0.12)' : 'var(--glass-1)',
+                color: selected ? 'var(--sky-400)' : 'var(--fg-secondary)',
                 cursor: 'pointer',
                 transition: 'all 120ms',
                 transform: selected ? 'scale(1.08)' : 'scale(1)',
               }}
             >
-              {emoji}
+              <Icon size={20} />
             </button>
           )
         })}
