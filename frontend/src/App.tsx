@@ -8,7 +8,7 @@ import TrendsRoute from './routes/trends'
 import CoachRoute from './routes/coach'
 import SettingsRoute from './routes/settings'
 import LogRoute from './routes/log'
-import RecipesRoute from './routes/recipes'
+import FavoritesRoute from './routes/favorites'
 import { OfflineBanner, InstallPrompt } from './components/PwaPrompts'
 
 export default function App() {
@@ -32,7 +32,7 @@ export default function App() {
           <Route path="/coach/:threadId" element={<CoachRoute />} />
           <Route path="/settings" element={<SettingsRoute />} />
           <Route path="/log" element={<LogRoute />} />
-          <Route path="/recipes" element={<RecipesRoute />} />
+          <Route path="/favorites" element={<FavoritesRoute />} />
         </Route>
       </Routes>
     </BrowserRouter>

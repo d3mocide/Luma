@@ -16,7 +16,9 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
   const [isProcessing, setIsProcessing] = useState(false)
   const timerRef = useRef<number | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+  const mimeTypeRef = useRef<string>('audio/mp4')
 
   useEffect(() => {
     if (isRecording) {
@@ -35,15 +37,20 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
       audioChunksRef.current = []
-      const mediaRecorder = new MediaRecorder(stream)
+
+      // iOS Safari only supports audio/mp4; prefer webm on browsers that support it
+      const mimeType = ['audio/webm', 'audio/mp4'].find((t) => MediaRecorder.isTypeSupported(t)) ?? ''
+      mimeTypeRef.current = mimeType || 'audio/mp4'
+      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
       mediaRecorderRef.current = mediaRecorder
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) audioChunksRef.current.push(event.data)
       }
       mediaRecorder.onstop = () => {
-        setAudioBlob(new Blob(audioChunksRef.current, { type: 'audio/wav' }))
+        setAudioBlob(new Blob(audioChunksRef.current, { type: mimeTypeRef.current }))
       }
       mediaRecorder.start()
       setIsRecording(true)
@@ -54,19 +61,30 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
   }
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop()
-      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
-      setIsRecording(false)
+    // Always clean up state — wrap in try/catch so iOS errors don't leave the UI stuck
+    try {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop()
+      }
+    } catch (err) {
+      console.error('Error stopping MediaRecorder:', err)
     }
+    try {
+      streamRef.current?.getTracks().forEach((track) => track.stop())
+    } catch (err) {
+      console.error('Error stopping stream tracks:', err)
+    }
+    streamRef.current = null
+    setIsRecording(false)
   }
 
   const handleUploadAudio = async (blobToUpload: Blob) => {
     setIsProcessing(true)
     setTranscription('')
     try {
+      const ext = blobToUpload.type.includes('mp4') ? 'm4a' : 'webm'
       const formData = new FormData()
-      formData.append('file', blobToUpload, 'recording.wav')
+      formData.append('file', blobToUpload, `recording.${ext}`)
       const data = await api.upload<{ raw_input: string; items: DraftItem[]; nutrition: unknown; confidence: number }>(
         '/log/meal/voice',
         formData,
@@ -132,7 +150,7 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
 
         <div className="relative flex items-center justify-center py-6">
           {isRecording && (
-            <div className="absolute inset-0 w-28 h-28 bg-red-500/10 rounded-full animate-ping" />
+            <div className="absolute inset-0 w-28 h-28 bg-red-500/10 rounded-full animate-ping pointer-events-none" />
           )}
           <button
             onClick={isRecording ? stopRecording : startRecording}

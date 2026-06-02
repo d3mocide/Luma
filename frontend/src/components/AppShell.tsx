@@ -3,7 +3,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CircleDot, Utensils, Activity, Sparkles, Settings, Plus, Moon, Sun, Loader2, ChevronDown,
-  Lock, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight,
+  Lock, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight, Heart,
 } from 'lucide-react'
 import { api, TodayData, User } from '../lib/api'
 import { useUIStore } from '../stores'
@@ -19,10 +19,11 @@ const NAV_ITEMS = [
 ]
 
 const DESKTOP_NAV_ITEMS = [
-  { to: '/today',  label: 'Today',  Icon: CircleDot },
-  { to: '/meals',  label: 'Meals',  Icon: Utensils  },
-  { to: '/trends', label: 'Trends', Icon: Activity  },
-  { to: '/coach',  label: 'Coach',  Icon: Sparkles  },
+  { to: '/today',     label: 'Today',     Icon: CircleDot },
+  { to: '/meals',     label: 'Meals',     Icon: Utensils  },
+  { to: '/trends',    label: 'Trends',    Icon: Activity  },
+  { to: '/coach',     label: 'Coach',     Icon: Sparkles  },
+  { to: '/favorites', label: 'Favorites', Icon: Heart     },
 ]
 
 export default function AppShell() {
