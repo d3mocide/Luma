@@ -1,4 +1,5 @@
 import { type CSSProperties, useEffect, useState } from 'react'
+import { X } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, User } from '../lib/api'
 import {
@@ -488,7 +489,7 @@ function AdminTab({ currentUserId }: { currentUserId: string }) {
                             onClick={() => setConfirmDeleteId(null)}
                             style={{ ...smallBtnBase, background: 'transparent' }}
                           >
-                            ✕
+                            <X size={14} />
                           </button>
                         </div>
                       ) : (

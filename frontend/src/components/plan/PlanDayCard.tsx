@@ -1,4 +1,4 @@
-import { Lock, Plus } from 'lucide-react'
+import { Lock, Plus, Utensils } from 'lucide-react'
 import { type MealSlot, SLOT_META } from './types'
 
 type Props = {
@@ -47,7 +47,7 @@ export function PlanDayCard({ dateStr, slots, dayTotals, isToday, onSlotClick, o
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {slots.map((slot) => {
-          const meta = SLOT_META[slot.slot] ?? { color: '#94a3b8', emoji: '🍽' }
+          const meta = SLOT_META[slot.slot] ?? { color: '#94a3b8', icon: Utensils }
           const isEmpty = !slot.custom_name && !slot.food_id && !slot.recipe_id
           return (
             <button
@@ -72,7 +72,7 @@ export function PlanDayCard({ dateStr, slots, dayTotals, isToday, onSlotClick, o
                 opacity: isEmpty ? 0.7 : 1,
               }}
             >
-              <span style={{ fontSize: 13, flexShrink: 0, opacity: isEmpty ? 0.4 : 1 }}>{meta.emoji}</span>
+              <meta.icon size={13} style={{ flexShrink: 0, opacity: isEmpty ? 0.4 : 1, color: meta.color }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 9, color: meta.color, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 1 }}>
                   {slot.slot}

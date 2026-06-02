@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Camera, ImagePlus, X } from 'lucide-react'
+import { Camera, ImagePlus, X, CheckCircle2 } from 'lucide-react'
 import type { DraftItem } from './types'
 
 type Props = {
@@ -151,7 +151,7 @@ export function PhotoTab({ onAddItems }: Props) {
 
       {state === 'done' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center', padding: '8px 0' }}>
-          <div style={{ fontSize: 36 }}>✅</div>
+          <CheckCircle2 size={36} color="var(--good)" />
           <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-secondary)', textAlign: 'center' }}>
             Items added — review and adjust portions below, then save.
           </p>

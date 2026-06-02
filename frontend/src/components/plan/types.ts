@@ -65,11 +65,14 @@ export interface ShoppingItem {
   purchased: boolean
 }
 
-export const SLOT_META: Record<string, { color: string; emoji: string }> = {
-  breakfast: { color: '#fbbf24', emoji: '☀' },
-  lunch:     { color: '#38bdf8', emoji: '🐟' },
-  snack:     { color: '#34d399', emoji: '🍎' },
-  dinner:    { color: '#a78bfa', emoji: '🌿' },
+import type { LucideIcon } from 'lucide-react'
+import { Sunrise, Fish, Apple, Leaf } from 'lucide-react'
+
+export const SLOT_META: Record<string, { color: string; icon: LucideIcon }> = {
+  breakfast: { color: '#fbbf24', icon: Sunrise },
+  lunch:     { color: '#38bdf8', icon: Fish },
+  snack:     { color: '#34d399', icon: Apple },
+  dinner:    { color: '#a78bfa', icon: Leaf },
 }
 
 export const KEY_NUTRIENTS = [

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Shuffle, Sparkles, Plus } from 'lucide-react'
+import { Shuffle, Sparkles, Plus, AlertTriangle, CalendarDays, ClipboardList, Clock, Calendar } from 'lucide-react'
+import { LumaLogo } from '../components/ui/LumaLogo'
 import { api } from '../lib/api'
 import {
   type MealSlot,
@@ -67,7 +68,7 @@ function BlankDayCard({
                 opacity: isPending ? 0.5 : 1, transition: 'opacity 150ms',
               }}
             >
-              <span style={{ fontSize: 13, flexShrink: 0, opacity: 0.4 }}>{meta.emoji}</span>
+              <meta.icon size={13} style={{ flexShrink: 0, opacity: 0.4, color: meta.color }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 9, color: meta.color, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 1 }}>
                   {slotType}
@@ -248,7 +249,7 @@ export default function PlanRoute() {
             boxShadow: '0 24px 48px -12px rgba(0,0,0,0.5)',
             border: '1px solid rgba(255,255,255,0.08)',
           }}>
-            <div style={{ fontSize: 44, animation: 'pulse-opacity 2s infinite ease-in-out' }}>🥗</div>
+            <div style={{ animation: 'pulse-opacity 2s infinite ease-in-out' }}><LumaLogo size={44} /></div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 400, color: 'var(--fg-primary)' }}>
                 Orchestrating Weekly Plan
@@ -271,8 +272,8 @@ export default function PlanRoute() {
               <span style={{ fontSize: 13, color: 'var(--fg-secondary)', fontWeight: 400, animation: 'pulse-opacity 2.5s infinite ease-in-out' }}>
                 This may take a while…
               </span>
-              <span style={{ fontSize: 11, color: 'var(--warn)', opacity: 0.9, fontWeight: 500 }}>
-                ⚠️ Do not leave or refresh this page.
+              <span style={{ fontSize: 11, color: 'var(--warn)', opacity: 0.9, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <AlertTriangle size={11} /> Do not leave or refresh this page.
               </span>
             </div>
           </div>
@@ -329,7 +330,7 @@ export default function PlanRoute() {
       {/* End-of-week nudge: suggest planning next week */}
       {showNextWeekNudge && !generateMutation.isPending && (
         <div className="plan-next-week-nudge">
-          <span style={{ fontSize: 20, flexShrink: 0 }}>📆</span>
+          <CalendarDays size={20} style={{ flexShrink: 0, color: 'var(--fg-secondary)' }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>
               Next week starts {formatWeekLabel(nextWeek)}
@@ -383,7 +384,7 @@ export default function PlanRoute() {
                   onClick={handleUseLastWeekTemplate}
                   disabled={generateMutation.isPending}
                 >
-                  📋 Use last week
+                  <ClipboardList size={12} /> Use last week
                 </button>
               )}
               <button
@@ -422,7 +423,7 @@ export default function PlanRoute() {
           {/* Past-week context banner */}
           {(isPastWeek || isFutureWeek) && (
             <div className="plan-context-banner">
-              <span style={{ fontSize: 14 }}>{isPastWeek ? '🕐' : '📅'}</span>
+              {isPastWeek ? <Clock size={14} style={{ color: 'var(--fg-tertiary)' }} /> : <Calendar size={14} style={{ color: 'var(--fg-tertiary)' }} />}
               <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>
                 {isPastWeek
                   ? `Viewing past plan — ${formatWeek(plan.week_start)}`

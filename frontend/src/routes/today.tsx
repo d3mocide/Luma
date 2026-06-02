@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, Flame, Heart, Activity, Moon, Timer, Wind, X } from 'lucide-react'
+import { Sparkles, Flame, Heart, Activity, Moon, Timer, Wind, X, Leaf } from 'lucide-react'
 import { api, TodayData, TrendSeries, User } from '../lib/api'
 import { createMockTodayData, createMockWeightSeries, isTodaySparseData } from '../lib/mock-data'
 import { fmtMinutes, fmt } from '../lib/format'
@@ -158,7 +158,7 @@ export default function TodayRoute() {
           background: 'linear-gradient(90deg, rgba(56,189,248,0.08), rgba(167,139,250,0.08))',
           borderBottom: '1px solid var(--glass-edge)',
         }}>
-          <span style={{ fontSize: 18, flexShrink: 0 }}>🌿</span>
+          <Leaf size={18} style={{ flexShrink: 0, color: 'var(--fg-secondary)' }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <span style={{ fontSize: 13, color: 'var(--fg-primary)' }}>
               How did you feel after <strong>{pendingMeal.meal_name}</strong>?

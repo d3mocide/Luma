@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, ChevronLeft, Search, X } from 'lucide-react'
+import { Plus, Trash2, ChevronLeft, Search, X, Utensils } from 'lucide-react'
 import { api } from '../lib/api'
 import type { Recipe, RecipeIngredient, FoodResult } from '../components/plan/types'
 import { KEY_NUTRIENTS, fmtNutr } from '../components/plan/types'
@@ -297,7 +297,7 @@ export default function RecipesRoute() {
 
       {!isLoading && recipes.length === 0 && (
         <div className="glass" style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>🥘</div>
+          <div style={{ marginBottom: 16, color: 'var(--fg-quiet)' }}><Utensils size={40} /></div>
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 400, color: 'var(--fg-primary)' }}>No recipes yet</h3>
           <p style={{ margin: '8px 0 20px', fontSize: 14, color: 'var(--fg-tertiary)' }}>
             Build your first composite meal — a named collection of ingredients you can place in any plan slot.
