@@ -758,9 +758,9 @@ export default function MealsRoute() {
               padding: '7px 20px', borderRadius: 8,
               fontSize: 13, fontWeight: 500,
               border: 'none', cursor: 'pointer',
-              background: activeTab === key ? 'var(--glass-1)' : 'transparent',
-              color: activeTab === key ? 'var(--fg-primary)' : 'var(--fg-quiet)',
-              boxShadow: activeTab === key ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+              background: activeTab === key ? 'rgba(14,165,233,0.15)' : 'transparent',
+              color: activeTab === key ? 'var(--sky-400)' : 'var(--fg-quiet)',
+              boxShadow: activeTab === key ? '0 1px 4px rgba(14,165,233,0.25)' : 'none',
               transition: 'all 150ms',
             }}
           >
