@@ -24,7 +24,6 @@ _MISSING_NATIVE = (
     "asyncpg",
     "litellm",
     "arq",
-    "orjson",
     "argon2",
     "argon2.exceptions",
     "redis",
@@ -36,8 +35,20 @@ for _mod in _MISSING_NATIVE:
     if _mod not in sys.modules:
         sys.modules[_mod] = MagicMock()
 
+# orjson: use a functional stub backed by stdlib json so serialization in
+# normalize_hae_payload works correctly in tests (a pure MagicMock stub would
+# return MagicMock objects from dumps/loads, breaking the capturing helper).
+if "orjson" not in sys.modules:
+    import json as _json
+    _orjson_stub = ModuleType("orjson")
+    _orjson_stub.dumps = lambda obj, **kw: _json.dumps(obj, default=str).encode()
+    _orjson_stub.loads = _json.loads
+    _orjson_stub.OPT_NON_STR_KEYS = 0
+    sys.modules["orjson"] = _orjson_stub
+
 # Stub the session module so create_async_engine is never called at import time.
 if "luma.db.session" not in sys.modules:
     _session_stub = ModuleType("luma.db.session")
     _session_stub.AsyncSessionLocal = MagicMock()
+    _session_stub.engine = MagicMock()
     sys.modules["luma.db.session"] = _session_stub

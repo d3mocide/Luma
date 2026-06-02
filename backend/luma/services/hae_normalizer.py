@@ -212,6 +212,37 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                         except (ValueError, TypeError) as exc:
                             logger.warning("Bad HAE sleep field %s=%s: %s", hae_field, raw, exc)
                 continue  # aggregated sleep handled; move to next metric_block
+            elif data_points and "value" in data_points[0]:
+                # HAE per-interval format: each point is one sleep stage interval; the
+                # 'value' field names the stage (e.g. "HKCategoryValueSleepAnalysisAsleep"
+                # or the shorter "Asleep" / "InBed" variants). Core/Deep/REM all count
+                # toward actual sleep time.
+                _STAGE_MAP = {
+                    "inbed":  "sleep_duration_min",
+                    "asleep": "sleep_asleep_min",
+                    "core":   "sleep_asleep_min",
+                    "deep":   "sleep_asleep_min",
+                    "rem":    "sleep_asleep_min",
+                }
+                for point in data_points:
+                    try:
+                        ts = _parse_hae_ts(point["date"])
+                        source = point.get("source", "hae")
+                        stage = str(point.get("value", "")).lower()
+                        iname = next((n for k, n in _STAGE_MAP.items() if k in stage), None)
+                        if iname is None:
+                            continue  # awake / unknown — skip
+                        rows.append({
+                            "user_id": str(user_id),
+                            "ts": ts,
+                            "metric": iname,
+                            "value": _convert(float(point["qty"]), hae_unit, iname),
+                            "source": "hae",
+                            "source_meta": {"hae_source": source, "hae_metric": hae_name, "hae_unit": hae_unit},
+                        })
+                    except (KeyError, ValueError, TypeError) as exc:
+                        logger.warning("Malformed HAE sleep point %s: %s", point, exc)
+                continue  # per-interval sleep handled; move to next metric_block
             else:
                 # Legacy/simple qty format — treat as inBed duration
                 internal = "sleep_duration_min"
@@ -304,14 +335,14 @@ async def _refresh_biometrics_daily(rows: list[dict]) -> None:
     if not rows:
         return
     from datetime import timedelta
-    from luma.db.session import engine
-    from sqlalchemy import text as sa_text
 
     ts_values = [r["ts"] for r in rows]
     start = min(ts_values).replace(hour=0, minute=0, second=0, microsecond=0)
     end = max(ts_values).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=2)
 
     try:
+        from luma.db.session import engine
+        from sqlalchemy import text as sa_text
         async with engine.connect() as conn:
             await conn.execution_options(isolation_level="AUTOCOMMIT")
             await conn.execute(
