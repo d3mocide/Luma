@@ -204,8 +204,8 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                 sub = hae_name.split(".")[-1]
                 internal = SLEEP_MAP.get(sub)
             elif data_points and "inBed" in data_points[0]:
-                # HAE aggregated format (Summarize Data ON): one record per night with
-                # inBed/asleep/core/deep/rem fields (camelCase per HAE v2 JSON spec).
+                # HAE v2 aggregated format (Summarize Data ON): one record per night
+                # with inBed/asleep/totalSleep/core/deep/rem/awake fields.
                 for point in data_points:
                     try:
                         ts = _parse_hae_ts(point["date"])

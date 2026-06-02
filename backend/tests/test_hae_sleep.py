@@ -137,8 +137,8 @@ async def test_sleep_score_not_computed_without_sleep_data():
 
 
 @pytest.mark.asyncio
-async def test_sleep_analysis_hae_v4_aggregated_format():
-    """HAE v4 sends one record per night with InBed/Asleep/Core/Deep/Rem/Awake fields."""
+async def test_sleep_analysis_hae_v2_aggregated_format():
+    """HAE v2 sends one record per night with InBed/Asleep/Core/Deep/Rem/Awake fields."""
     from luma.services.hae_normalizer import normalize_hae_payload
 
     payload = {"data": {"metrics": [
@@ -171,8 +171,8 @@ async def test_sleep_analysis_hae_v4_aggregated_format():
 
 
 @pytest.mark.asyncio
-async def test_sleep_analysis_hae_v4_inbed_only():
-    """HAE v4 aggregated format with only InBed (no Asleep) uses neutral efficiency."""
+async def test_sleep_analysis_hae_v2_inbed_only():
+    """HAE v2 aggregated format with only InBed (no Asleep) uses neutral efficiency."""
     from luma.services.hae_normalizer import normalize_hae_payload
 
     payload = {"data": {"metrics": [
