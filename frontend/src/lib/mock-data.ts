@@ -33,6 +33,8 @@ export function createMockTodayData(): TodayData {
       bmr_kcal: 1820,
       exercise_min: 34,
       respiratory_rate_bpm: 16,
+      spo2_pct: 97.5,
+      body_temp_c: 36.8,
     },
     plan_today: [
       { id: 'mock-plan-breakfast', plan_id: 'mock-plan-id', slot: 'breakfast', custom_name: 'Greek yogurt + berries + flax', notes: null, recipe_id: null, logged: true },

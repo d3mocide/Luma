@@ -68,6 +68,8 @@ export interface TodayData {
     bmr_kcal: number | null
     exercise_min: number | null
     respiratory_rate_bpm: number | null
+    spo2_pct: number | null
+    body_temp_c: number | null
   }
   plan_today: Array<{
     id: string

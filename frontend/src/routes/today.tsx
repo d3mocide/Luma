@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, Flame, Heart, Activity, Moon, Timer, Wind, X, Leaf } from 'lucide-react'
+import { Sparkles, Flame, Heart, Activity, Moon, Timer, Wind, X, Leaf, Thermometer } from 'lucide-react'
 import { api, TodayData, TrendSeries, User } from '../lib/api'
 import { createMockTodayData, createMockWeightSeries, isTodaySparseData } from '../lib/mock-data'
 import { fmtMinutes, fmt } from '../lib/format'
@@ -267,15 +267,17 @@ export default function TodayRoute() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div className="eyebrow">Biometrics · last night</div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
             <BioTile icon={<Heart size={13} strokeWidth={1.5}/>} label="HRV" value={fmt(bio?.hrv_ms, 0)} unit="ms" color="var(--bad)"/>
             <BioTile icon={<Activity size={13} strokeWidth={1.5}/>} label="Resting HR" value={fmt(bio?.rhr_bpm, 0)} unit="bpm" color="var(--sky-400)"/>
             <BioTile icon={<Moon size={13} strokeWidth={1.5}/>} label="Sleep" value={fmtMinutes(bio?.sleep_duration_min)} color="var(--aurora-violet)"/>
             <BioTile icon={<Sparkles size={13} strokeWidth={1.5}/>} label="Sleep score" value={fmt(bio?.sleep_score, 0)} color="var(--sun-400)"/>
+            <BioTile icon={<Wind size={13} strokeWidth={1.5}/>} label="Blood O₂" value={fmt(bio?.spo2_pct, 1)} unit="%" color="var(--sky-400)"/>
             <BioTile icon={<Activity size={13} strokeWidth={1.5}/>} label="Steps" value={bio?.steps != null ? Math.round(bio.steps).toLocaleString() : '—'} color="var(--sky-400)"/>
             <BioTile icon={<Flame size={13} strokeWidth={1.5}/>} label="Active cal" value={fmt(bio?.active_kcal, 0)} unit="kcal" color="var(--sun-400)"/>
             <BioTile icon={<Timer size={13} strokeWidth={1.5}/>} label="Exercise" value={fmt(bio?.exercise_min, 0)} unit="min" color="var(--good)"/>
             <BioTile icon={<Wind size={13} strokeWidth={1.5}/>} label="Respir. rate" value={fmt(bio?.respiratory_rate_bpm, 1)} unit="bpm" color="var(--sky-300)"/>
+            <BioTile icon={<Thermometer size={13} strokeWidth={1.5}/>} label="Body temp" value={fmt(bio?.body_temp_c, 1)} unit="°C" color="var(--good)"/>
           </div>
         </div>
 
@@ -417,6 +419,8 @@ export default function TodayRoute() {
             <BioTile icon={<Activity size={13} strokeWidth={1.5}/>} label="RHR" value={fmt(bio?.rhr_bpm, 0)} unit="bpm" color="var(--sky-400)"/>
             <BioTile icon={<Moon size={13} strokeWidth={1.5}/>} label="Sleep" value={fmtMinutes(bio?.sleep_duration_min)} color="var(--aurora-violet)"/>
             <BioTile icon={<Sparkles size={13} strokeWidth={1.5}/>} label="Score" value={fmt(bio?.sleep_score, 0)} color="var(--sun-400)"/>
+            <BioTile icon={<Wind size={13} strokeWidth={1.5}/>} label="Blood O₂" value={fmt(bio?.spo2_pct, 1)} unit="%" color="var(--sky-400)"/>
+            <BioTile icon={<Thermometer size={13} strokeWidth={1.5}/>} label="Body temp" value={fmt(bio?.body_temp_c, 1)} unit="°C" color="var(--good)"/>
             <BioTile icon={<Activity size={13} strokeWidth={1.5}/>} label="Steps" value={bio?.steps != null ? Math.round(bio.steps).toLocaleString() : '—'} color="var(--sky-400)"/>
             <BioTile icon={<Flame size={13} strokeWidth={1.5}/>} label="Active cal" value={fmt(bio?.active_kcal, 0)} unit="kcal" color="var(--sun-400)"/>
             <BioTile icon={<Timer size={13} strokeWidth={1.5}/>} label="Exercise" value={fmt(bio?.exercise_min, 0)} unit="min" color="var(--good)"/>
