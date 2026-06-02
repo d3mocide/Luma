@@ -1,7 +1,8 @@
 import logging
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time
 from typing import Any, Literal
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -69,9 +70,10 @@ async def put_goals(body: GoalIn, user: CurrentUser, db: DbDep) -> dict[str, Any
 
 @router.get("/goals/recommend")
 async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
-    today_dt = date.today()
-    start_ts = datetime.combine(today_dt - timedelta(days=7), datetime.min.time()).replace(tzinfo=timezone.utc)
-    end_ts = datetime.combine(today_dt, datetime.min.time()).replace(tzinfo=timezone.utc)
+    tz = ZoneInfo(settings.server_timezone)
+    today_dt = datetime.now(tz).date()
+    start_ts = datetime.combine(today_dt - timedelta(days=7), time.min, tzinfo=tz).astimezone(timezone.utc)
+    end_ts = datetime.combine(today_dt, time.min, tzinfo=tz).astimezone(timezone.utc)
 
     # 7-day daily totals — use MEDIAN (percentile_cont 0.5) instead of mean so
     # outlier days from bulk HAE historical exports don't skew the result.
