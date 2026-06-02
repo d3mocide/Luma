@@ -1,6 +1,6 @@
 """Per-user import token auth tests for the HAE ingest endpoint."""
-import json
 import hashlib
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -71,11 +71,10 @@ def test_correct_app_secret_accepted():
                 mock_settings.hae_shared_secret = APP_SECRET
                 with TestClient(app, raise_server_exceptions=False) as client:
                     body = json.dumps(SAMPLE_PAYLOAD).encode("utf-8")
-                    signature = hmac.new(APP_SECRET.encode("utf-8"), body, hashlib.sha256).hexdigest()
                     resp = client.post(
                         f"/api/v1/ingest/hae/{uuid4()}",
                         content=body,
-                        headers={"X-HAE-Signature": signature, "Content-Type": "application/json"}
+                        headers={"X-HAE-Signature": APP_SECRET, "Content-Type": "application/json"}
                     )
 
     assert resp.status_code == 200

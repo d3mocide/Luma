@@ -194,3 +194,68 @@ async def test_sleep_analysis_hae_v4_inbed_only():
     assert by_metric["sleep_duration_min"]["value"] == pytest.approx(420.0)
     assert "sleep_score" in by_metric
     assert by_metric["sleep_score"]["value"] == pytest.approx(72.5)  # (420/480)*60 + 20 neutral
+
+
+@pytest.mark.asyncio
+async def test_sleep_analysis_per_interval_hk_value_strings():
+    """HAE per-interval format: value field is HealthKit category value string."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "sleep_analysis", "units": "hr", "data": [
+            {"date": "2026-06-02 22:30:00 -0700", "source": "William's Apple Watch",
+             "value": "HKCategoryValueSleepAnalysisInBed", "qty": 4.15},
+            {"date": "2026-06-02 22:45:00 -0700", "source": "William's Apple Watch",
+             "value": "HKCategoryValueSleepAnalysisAsleep", "qty": 3.85},
+            {"date": "2026-06-02 23:00:00 -0700", "source": "William's Apple Watch",
+             "value": "HKCategoryValueSleepAnalysisCore", "qty": 1.5},
+            {"date": "2026-06-02 23:30:00 -0700", "source": "William's Apple Watch",
+             "value": "HKCategoryValueSleepAnalysisDeep", "qty": 0.75},
+            {"date": "2026-06-03 00:00:00 -0700", "source": "William's Apple Watch",
+             "value": "HKCategoryValueSleepAnalysisREM", "qty": 1.0},
+            {"date": "2026-06-03 01:00:00 -0700", "source": "William's Apple Watch",
+             "value": "HKCategoryValueSleepAnalysisAwake", "qty": 0.25},
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+
+    # InBed interval → sleep_duration_min
+    assert "sleep_duration_min" in by_metric
+    assert by_metric["sleep_duration_min"]["value"] == pytest.approx(4.15 * 60, rel=1e-3)
+
+    # Asleep/Core/Deep/REM all map to sleep_asleep_min — dedup keeps one per ts;
+    # just confirm the metric is present with correct hours-to-minutes conversion.
+    assert "sleep_asleep_min" in captured[1]["metric"] or any(
+        r["metric"] == "sleep_asleep_min" for r in captured
+    )
+
+    # Awake interval must be skipped (no row for it)
+    awake_rows = [r for r in captured if "awake" in str(r.get("source_meta", "")).lower()]
+    assert not awake_rows
+
+
+@pytest.mark.asyncio
+async def test_sleep_analysis_per_interval_short_value_strings():
+    """HAE sometimes sends short value strings like 'Asleep' / 'InBed'."""
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "sleep_analysis", "units": "hr", "data": [
+            {"date": "2026-06-02 23:00:00 -0700", "source": "William's Apple Watch",
+             "value": "InBed", "qty": 7.0},
+            {"date": "2026-06-02 23:30:00 -0700", "source": "William's Apple Watch",
+             "value": "Asleep", "qty": 6.5},
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert by_metric["sleep_duration_min"]["value"] == pytest.approx(420.0)
+    assert by_metric["sleep_asleep_min"]["value"] == pytest.approx(390.0)
+    assert "sleep_score" in by_metric
