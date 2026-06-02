@@ -64,7 +64,10 @@ export default function FavoritesRoute() {
 
   const { data: favorites = [], isLoading } = useQuery<Favorite[]>({
     queryKey: ['favorites'],
-    queryFn: () => api.get('/favorites'),
+    queryFn: async () => {
+      const response = await api.get<{ favorites: Favorite[] }>('/favorites')
+      return response.favorites
+    },
   })
 
   const createMutation = useMutation({

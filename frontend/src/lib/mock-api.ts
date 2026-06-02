@@ -42,6 +42,23 @@ let signedIn = true
 let measurementSystem: 'metric' | 'imperial' = 'metric'
 let aiPricingOverrides: Record<string, { input: number; output: number }> = {}
 
+interface FavoriteItem {
+  food_name: string
+  brand: string | null
+  quantity_g: number
+  nutrients: Record<string, number>
+}
+
+interface Favorite {
+  id: string
+  name: string
+  created_at: string
+  updated_at: string
+  items: (FavoriteItem & { id: string; sort_order: number })[]
+}
+
+const favorites: Favorite[] = []
+
 const MOCK_SHOPPING_LIST = [
   { food_id: 'f-1', name: 'Rolled oats', brand: null, aisle: 'Breakfast', quantity: 1, unit: 'bag', purchased: false },
   { food_id: 'f-2', name: 'Blueberries', brand: null, aisle: 'Produce', quantity: 2, unit: 'pints', purchased: false },
@@ -465,6 +482,63 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
       ],
       nutrition: { calories: 210, protein_g: 6.7, carbohydrates_g: 39, fat_g: 3.8, fiber_g: 5.8, saturated_fat_g: 0.7, soluble_fiber_g: 2.8, sodium_mg: 15 },
     }
+  }
+
+  if (method === 'GET' && pathname === '/favorites') {
+    requireAuth()
+    return { favorites }
+  }
+
+  if (method === 'POST' && pathname === '/favorites') {
+    requireAuth()
+    const body = parseBody(init)
+    const id = Math.random().toString(36).substr(2, 9)
+    const now = new Date().toISOString()
+    const name = typeof body.name === 'string' ? body.name : 'My favorite'
+    const items = Array.isArray(body.items) ? body.items : []
+    const newFavorite: Favorite = {
+      id,
+      name,
+      created_at: now,
+      updated_at: now,
+      items: items.map((item: FavoriteItem, idx: number) => ({
+        id: Math.random().toString(36).substr(2, 9),
+        sort_order: idx,
+        ...item,
+      })),
+    }
+    favorites.push(newFavorite)
+    return newFavorite
+  }
+
+  if (method === 'PATCH' && /^\/favorites\/[^/]+$/.test(pathname)) {
+    requireAuth()
+    const parts = pathname.split('/')
+    const id = parts[2]
+    const body = parseBody(init)
+    const favorite = favorites.find((f) => f.id === id)
+    if (!favorite) throw new MockApiError(404, 'Favorite not found')
+
+    if (typeof body.name === 'string') favorite.name = body.name
+    if (Array.isArray(body.items)) {
+      favorite.items = body.items.map((item: FavoriteItem, idx: number) => ({
+        id: Math.random().toString(36).substr(2, 9),
+        sort_order: idx,
+        ...item,
+      }))
+    }
+    favorite.updated_at = new Date().toISOString()
+    return favorite
+  }
+
+  if (method === 'DELETE' && /^\/favorites\/[^/]+$/.test(pathname)) {
+    requireAuth()
+    const parts = pathname.split('/')
+    const id = parts[2]
+    const index = favorites.findIndex((f) => f.id === id)
+    if (index === -1) throw new MockApiError(404, 'Favorite not found')
+    favorites.splice(index, 1)
+    return { status: 'ok' }
   }
 
   throw new MockApiError(404, `Mock route not implemented: ${method} ${path}`)
