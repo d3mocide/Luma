@@ -3,7 +3,7 @@ from datetime import datetime, date
 from typing import Any
 
 from sqlalchemy import (
-    Boolean, Column, Date, DateTime, Double, ForeignKey,
+    Boolean, Column, Date, DateTime, Double, Float, ForeignKey,
     Integer, Numeric, String, Text, UniqueConstraint, Index,
     text, ARRAY,
 )
@@ -36,6 +36,7 @@ class User(Base):
     goals = relationship("Goal", back_populates="user", uselist=False, cascade="all, delete-orphan")
     preferences = relationship("Preference", back_populates="user", cascade="all, delete-orphan")
     recipes = relationship("Recipe", back_populates="user", cascade="all, delete-orphan")
+    favorites = relationship("Favorite", back_populates="user", cascade="all, delete-orphan")
     meal_plans = relationship("MealPlan", back_populates="user", cascade="all, delete-orphan")
     coach_threads = relationship("CoachThread", back_populates="user", cascade="all, delete-orphan")
 
@@ -266,3 +267,30 @@ class Biometric(Base):
     value = Column(Double, nullable=False)
     source = Column(Text, nullable=False)
     source_meta = Column(JSONB)
+
+
+class Favorite(Base):
+    __tablename__ = "favorites"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    user = relationship("User", back_populates="favorites")
+    items = relationship("FavoriteItem", back_populates="favorite", cascade="all, delete-orphan", order_by="FavoriteItem.sort_order")
+
+
+class FavoriteItem(Base):
+    __tablename__ = "favorite_items"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    favorite_id = Column(UUID(as_uuid=True), ForeignKey("favorites.id", ondelete="CASCADE"), nullable=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+    food_name = Column(Text, nullable=False)
+    brand = Column(Text, nullable=True)
+    quantity_g = Column(Float, nullable=False)
+    nutrients = Column(JSONB, nullable=False, default=dict)
+
+    favorite = relationship("Favorite", back_populates="items")
