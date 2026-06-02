@@ -146,13 +146,13 @@ async def test_sleep_analysis_hae_v4_aggregated_format():
             {
                 "date": "2026-05-29 03:54:00 -0700",
                 "source": "Apple Watch",
-                "InBed": 5.85,
-                "Asleep": 4.858333,
-                "Core": 2.291667,
-                "Deep": 0.608333,
-                "Rem": 0.958333,
-                "Awake": 0.416667,
-                "Unspecified": 0.0,
+                "inBed": 5.85,
+                "asleep": 4.858333,
+                "core": 2.291667,
+                "deep": 0.608333,
+                "rem": 0.958333,
+                "awake": 0.416667,
+                "unspecified": 0.0,
             }
         ]}
     ]}}
@@ -180,8 +180,8 @@ async def test_sleep_analysis_hae_v4_inbed_only():
             {
                 "date": "2026-05-29 07:00:00 -0700",
                 "source": "Apple Watch",
-                "InBed": 7.0,
-                "Awake": 0.5,
+                "inBed": 7.0,
+                "awake": 0.5,
             }
         ]}
     ]}}
@@ -203,17 +203,23 @@ async def test_sleep_analysis_per_interval_hk_value_strings():
 
     payload = {"data": {"metrics": [
         {"name": "sleep_analysis", "units": "hr", "data": [
-            {"date": "2026-06-02 22:30:00 -0700", "source": "William's Apple Watch",
+            {"startDate": "2026-06-02 22:30:00 -0700", "endDate": "2026-06-02 22:45:00 -0700",
+             "source": "William's Apple Watch",
              "value": "HKCategoryValueSleepAnalysisInBed", "qty": 4.15},
-            {"date": "2026-06-02 22:45:00 -0700", "source": "William's Apple Watch",
+            {"startDate": "2026-06-02 22:45:00 -0700", "endDate": "2026-06-02 23:15:00 -0700",
+             "source": "William's Apple Watch",
              "value": "HKCategoryValueSleepAnalysisAsleep", "qty": 3.85},
-            {"date": "2026-06-02 23:00:00 -0700", "source": "William's Apple Watch",
+            {"startDate": "2026-06-02 23:00:00 -0700", "endDate": "2026-06-02 23:30:00 -0700",
+             "source": "William's Apple Watch",
              "value": "HKCategoryValueSleepAnalysisCore", "qty": 1.5},
-            {"date": "2026-06-02 23:30:00 -0700", "source": "William's Apple Watch",
+            {"startDate": "2026-06-02 23:30:00 -0700", "endDate": "2026-06-03 00:00:00 -0700",
+             "source": "William's Apple Watch",
              "value": "HKCategoryValueSleepAnalysisDeep", "qty": 0.75},
-            {"date": "2026-06-03 00:00:00 -0700", "source": "William's Apple Watch",
+            {"startDate": "2026-06-03 00:00:00 -0700", "endDate": "2026-06-03 01:00:00 -0700",
+             "source": "William's Apple Watch",
              "value": "HKCategoryValueSleepAnalysisREM", "qty": 1.0},
-            {"date": "2026-06-03 01:00:00 -0700", "source": "William's Apple Watch",
+            {"startDate": "2026-06-03 01:00:00 -0700", "endDate": "2026-06-03 01:15:00 -0700",
+             "source": "William's Apple Watch",
              "value": "HKCategoryValueSleepAnalysisAwake", "qty": 0.25},
         ]}
     ]}}
@@ -240,15 +246,15 @@ async def test_sleep_analysis_per_interval_hk_value_strings():
 
 @pytest.mark.asyncio
 async def test_sleep_analysis_per_interval_short_value_strings():
-    """HAE sometimes sends short value strings like 'Asleep' / 'InBed'."""
+    """HAE sends short value strings: 'Asleep', 'InBed', and 'In Bed' (with space)."""
     from luma.services.hae_normalizer import normalize_hae_payload
 
     payload = {"data": {"metrics": [
         {"name": "sleep_analysis", "units": "hr", "data": [
-            {"date": "2026-06-02 23:00:00 -0700", "source": "William's Apple Watch",
-             "value": "InBed", "qty": 7.0},
-            {"date": "2026-06-02 23:30:00 -0700", "source": "William's Apple Watch",
-             "value": "Asleep", "qty": 6.5},
+            {"startDate": "2026-06-02 23:00:00 -0700", "endDate": "2026-06-03 06:00:00 -0700",
+             "source": "William's Apple Watch", "value": "In Bed", "qty": 7.0},
+            {"startDate": "2026-06-02 23:30:00 -0700", "endDate": "2026-06-03 06:00:00 -0700",
+             "source": "William's Apple Watch", "value": "Asleep", "qty": 6.5},
         ]}
     ]}}
 
@@ -256,6 +262,80 @@ async def test_sleep_analysis_per_interval_short_value_strings():
     await normalize_hae_payload(payload, db, _FAKE_USER_ID)
 
     by_metric = {r["metric"]: r for r in captured}
+    # "In Bed" (with space) must map to sleep_duration_min
     assert by_metric["sleep_duration_min"]["value"] == pytest.approx(420.0)
     assert by_metric["sleep_asleep_min"]["value"] == pytest.approx(390.0)
     assert "sleep_score" in by_metric
+
+
+@pytest.mark.asyncio
+async def test_blood_oxygen_saturation_ingested():
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "blood_oxygen_saturation", "units": "%", "data": [
+            {"qty": 97.0, "date": "2026-06-02 08:00:00 -0700", "source": "Apple Watch"}
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "spo2_pct" in by_metric
+    assert by_metric["spo2_pct"]["value"] == pytest.approx(97.0)
+
+
+@pytest.mark.asyncio
+async def test_body_temperature_degf_converted():
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "body_temperature", "units": "degF", "data": [
+            {"qty": 98.6, "date": "2026-06-02 08:00:00 -0700", "source": "Apple Watch"}
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "body_temp_c" in by_metric
+    assert by_metric["body_temp_c"]["value"] == pytest.approx(37.0, abs=0.01)
+
+
+@pytest.mark.asyncio
+async def test_mindful_minutes_ingested():
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "mindful_minutes", "units": "min", "data": [
+            {"qty": 20.0, "date": "2026-06-02 07:00:00 -0700", "source": "Apple Watch"}
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert "mindful_min" in by_metric
+    assert by_metric["mindful_min"]["value"] == pytest.approx(20.0)
+
+
+@pytest.mark.asyncio
+async def test_blood_pressure_split_into_systolic_diastolic():
+    from luma.services.hae_normalizer import normalize_hae_payload
+
+    payload = {"data": {"metrics": [
+        {"name": "blood_pressure", "units": "mmHg", "data": [
+            {"date": "2026-06-02 09:00:00 -0700", "source": "Apple Watch",
+             "systolic": 118, "diastolic": 76}
+        ]}
+    ]}}
+
+    db, captured = build_capturing_db()
+    await normalize_hae_payload(payload, db, _FAKE_USER_ID)
+
+    by_metric = {r["metric"]: r for r in captured}
+    assert by_metric["bp_systolic_mmhg"]["value"] == pytest.approx(118.0)
+    assert by_metric["bp_diastolic_mmhg"]["value"] == pytest.approx(76.0)

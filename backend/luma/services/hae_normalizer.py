@@ -16,8 +16,9 @@ HAE_METRIC_MAP: dict[str, str] = {
     # Cardiovascular
     "heart_rate_variability":       "hrv_ms",
     "resting_heart_rate":           "rhr_bpm",
-    "walking_heart_rate_average":   "walking_hr_bpm",
+    "walking_heart_rate":           "walking_hr_bpm",
     "respiratory_rate":             "respiratory_rate_bpm",
+    "blood_oxygen_saturation":      "spo2_pct",
     # Energy
     "active_energy":                "active_kcal",
     "basal_energy_burned":          "bmr_kcal",
@@ -30,6 +31,7 @@ HAE_METRIC_MAP: dict[str, str] = {
     "apple_stand_hour":             "stand_hours",
     "walking_running_distance":     "distance_km",
     "time_in_daylight":             "daylight_min",
+    "mindful_minutes":              "mindful_min",
     # Gait
     "walking_speed":                "walking_speed_kmh",
     "walking_step_length":          "step_length_cm",
@@ -37,8 +39,10 @@ HAE_METRIC_MAP: dict[str, str] = {
     "walking_double_support_percentage": "double_support_pct",
     "stair_speed_up":               "stair_speed_up_mps",
     "stair_speed_down":             "stair_speed_down_mps",
+    # Body
+    "body_temperature":             "body_temp_c",
     # Environment / sleep
-    "environmental_audio_exposure": "audio_exposure_db",
+    "environmental_audio":          "audio_exposure_db",
     "apple_sleeping_wrist_temperature": "wrist_temp_c",
     "breathing_disturbances":       "breathing_disturbances",
     # sleep_analysis handled separately via SLEEP_MAP (sub-type in name)
@@ -72,6 +76,10 @@ _KNOWN_UNITS: dict[str, frozenset[str]] = {
     # device (controlled by iOS Language & Region, not the HAE metric toggle).
     # US-locale iPhones send lb even when HAE is set to metric.
     "weight_kg":            frozenset({"kg", "lb", "lbs"}),
+    "spo2_pct":             frozenset({"%"}),
+    "body_temp_c":          frozenset({"degC", "degF"}),
+    "bp_systolic_mmhg":     frozenset({"mmHg"}),
+    "bp_diastolic_mmhg":    frozenset({"mmHg"}),
 }
 
 
@@ -187,8 +195,9 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
             if "." in hae_name:
                 sub = hae_name.split(".")[-1]
                 internal = SLEEP_MAP.get(sub)
-            elif data_points and "InBed" in data_points[0]:
-                # HAE v4 aggregated format: one record per night with InBed/Asleep/Core/Deep/Rem/Awake
+            elif data_points and "inBed" in data_points[0]:
+                # HAE aggregated format (Summarize Data ON): one record per night with
+                # inBed/asleep/core/deep/rem fields (camelCase per HAE v2 JSON spec).
                 for point in data_points:
                     try:
                         ts = _parse_hae_ts(point["date"])
@@ -196,7 +205,7 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                     except (KeyError, ValueError, TypeError) as exc:
                         logger.warning("Malformed HAE sleep point %s: %s", point, exc)
                         continue
-                    for hae_field, iname in (("InBed", "sleep_duration_min"), ("Asleep", "sleep_asleep_min")):
+                    for hae_field, iname in (("inBed", "sleep_duration_min"), ("asleep", "sleep_asleep_min")):
                         raw = point.get(hae_field)
                         if raw is None:
                             continue
@@ -226,9 +235,10 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                 }
                 for point in data_points:
                     try:
-                        ts = _parse_hae_ts(point["date"])
+                        ts = _parse_hae_ts(point["startDate"])
                         source = point.get("source", "hae")
-                        stage = str(point.get("value", "")).lower()
+                        # Strip spaces so "In Bed" → "inbed" matches the map key.
+                        stage = str(point.get("value", "")).lower().replace(" ", "")
                         iname = next((n for k, n in _STAGE_MAP.items() if k in stage), None)
                         if iname is None:
                             continue  # awake / unknown — skip
@@ -246,6 +256,30 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
             else:
                 # Legacy/simple qty format — treat as inBed duration
                 internal = "sleep_duration_min"
+        elif hae_name == "blood_pressure":
+            for point in data_points:
+                try:
+                    ts = _parse_hae_ts(point["date"])
+                    source = point.get("source", "hae")
+                except (KeyError, ValueError, TypeError) as exc:
+                    logger.warning("Malformed HAE blood_pressure point %s: %s", point, exc)
+                    continue
+                for field, iname in (("systolic", "bp_systolic_mmhg"), ("diastolic", "bp_diastolic_mmhg")):
+                    raw = point.get(field)
+                    if raw is None:
+                        continue
+                    try:
+                        rows.append({
+                            "user_id": str(user_id),
+                            "ts": ts,
+                            "metric": iname,
+                            "value": float(raw),
+                            "source": "hae",
+                            "source_meta": {"hae_source": source, "hae_metric": hae_name, "hae_unit": hae_unit},
+                        })
+                    except (ValueError, TypeError) as exc:
+                        logger.warning("Bad HAE blood_pressure field %s=%s: %s", field, raw, exc)
+            continue
         elif hae_name in HAE_AGGREGATE_MAP:
             internal, qty_field = HAE_AGGREGATE_MAP[hae_name]
         else:

@@ -200,6 +200,8 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
             "bmr_kcal":            latest.get("bmr_kcal"),
             "exercise_min":        latest.get("exercise_min"),
             "respiratory_rate_bpm": latest.get("respiratory_rate_bpm"),
+            "spo2_pct":            latest.get("spo2_pct"),
+            "body_temp_c":         latest.get("body_temp_c"),
         },
         "plan_today": [
             {

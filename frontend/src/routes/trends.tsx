@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
-import { Heart, Activity, Moon, Flame, TrendingUp, TrendingDown, X, Timer, Wind, Sun, type LucideIcon } from 'lucide-react'
+import { Heart, Activity, Moon, Flame, TrendingUp, TrendingDown, X, Timer, Wind, Sun, Thermometer, Leaf, type LucideIcon } from 'lucide-react'
 import { api, TrendSeries } from '../lib/api'
 import { convertWeight, measurementWeightUnit, type MeasurementSystem, useMeasurementSystem } from '../lib/measurements'
 import Spark from '../components/ui/Spark'
@@ -75,13 +75,25 @@ const METRICS = [
     insight: 'A general vitals indicator of cardiac performance and circulatory load.' },
   { id: 'walking_hr_bpm', label: 'Walking Heart Rate', unit: 'bpm', color: 'var(--bad)', Icon: Heart, invert: true, tab: 'vitals',
     insight: 'Cardiovascular response to light effort. Lower means higher efficiency.' },
+  { id: 'spo2_pct', label: 'Blood Oxygen', unit: '%', color: 'var(--sky-400)', Icon: Wind, tab: 'vitals',
+    insight: 'SpO₂ should stay above 95%. Dips during sleep can signal breathing disruptions.' },
+  { id: 'body_temp_c', label: 'Body Temp', unit: '°C', color: 'var(--good)', Icon: Thermometer, tab: 'vitals',
+    insight: 'Small elevations above your personal baseline can indicate illness or recovery load.' },
+  { id: 'bp_systolic_mmhg', label: 'Systolic BP', unit: 'mmHg', color: 'var(--bad)', Icon: Heart, invert: true, tab: 'vitals',
+    insight: 'The top blood pressure number. Under 120 is optimal; trends down are a positive signal.' },
+  { id: 'bp_diastolic_mmhg', label: 'Diastolic BP', unit: 'mmHg', color: 'var(--sky-300)', Icon: Heart, invert: true, tab: 'vitals',
+    insight: 'The bottom blood pressure number. Under 80 is optimal.' },
+
+  // Activity & Energy (mindful minutes added here alongside exercise)
+  { id: 'mindful_min', label: 'Mindfulness', unit: 'min', color: 'var(--aurora-violet)', Icon: Leaf, tab: 'activity',
+    insight: 'Even 10 minutes of daily mindfulness measurably lowers cortisol and improves HRV.' },
 ]
 
 // Cumulative metrics arrive as many interval samples; the daily figure that
 // matters is the total, so chart their daily sum rather than a per-sample avg.
 const CUMULATIVE_METRICS = new Set([
   'active_kcal', 'steps', 'exercise_min', 'distance_km',
-  'stand_hours', 'stand_min', 'flights_climbed', 'daylight_min',
+  'stand_hours', 'stand_min', 'flights_climbed', 'daylight_min', 'mindful_min',
 ])
 
 interface Insight {
@@ -410,6 +422,7 @@ function MetricChart({
     if (metricId === 'sleep_duration_min') return (val / 60).toFixed(1)
     if (metricId === 'walking_asymmetry_pct') return val.toFixed(2)
     if (unit === 'm/s') return val.toFixed(2)
+    if (unit === 'mmHg') return val.toFixed(0)
     return val.toFixed(1)
   }
 

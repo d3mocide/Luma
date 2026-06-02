@@ -116,11 +116,11 @@ def test_convert_unknown_unit_logs_warning(caplog):
 
 
 def test_convert_unknown_unit_non_sensitive_no_warning(caplog):
-    """Unknown units for metrics not in _KNOWN_UNITS (kcal, bpm, etc.) never warn."""
+    """Metrics absent from _KNOWN_UNITS never emit a unit-mismatch warning."""
     import logging
     from luma.services.hae_normalizer import _convert
     with caplog.at_level(logging.WARNING, logger="luma.services.hae_normalizer"):
-        _convert(515.0, "kcal/some-weird-variant", "active_kcal")
+        _convert(59.0, "some-weird-unit", "hrv_ms")
     assert not caplog.records
 
 
