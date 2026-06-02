@@ -1756,15 +1756,15 @@ input[type="search"]::-webkit-search-results-decoration {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   flex: 1;
   min-width: 0;
-  padding: 6px 4px;
+  padding: 8px 6px;
   border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
-  transition: background 150ms ease-out, border-color 150ms ease-out;
+  transition: background 150ms ease-out, border-color 150ms ease-out, opacity 150ms ease-out;
 }
 
 .plan-week-tab:hover {
@@ -1773,15 +1773,15 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .plan-week-tab.selected {
-  background: rgba(56,189,248,0.07);
-  border-color: rgba(56,189,248,0.28);
+  background: rgba(56,189,248,0.12);
+  border-color: rgba(56,189,248,0.45);
 }
 
 .plan-week-tab-label {
-  font-size: 11px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.01em;
-  color: var(--fg-quiet);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+  color: var(--fg-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1795,6 +1795,7 @@ input[type="search"]::-webkit-search-results-decoration {
 
 .plan-week-tab.selected .plan-week-tab-label {
   color: var(--fg-primary);
+  font-weight: 500;
 }
 
 .plan-week-tab.selected.current .plan-week-tab-label {
@@ -1802,22 +1803,29 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .plan-week-tab-dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--good);
   flex-shrink: 0;
+  box-shadow: 0 0 5px var(--good-glow);
   transition: opacity 150ms;
 }
 
 .plan-week-tab-dot.empty {
   background: var(--fg-quiet);
-  opacity: 0.25;
+  opacity: 0.2;
+  box-shadow: none;
 }
 
-/* Hide outermost tabs on narrow screens */
+/* Visually de-emphasise outermost tabs so focus stays on the centre */
 .plan-week-tab.edge {
   display: flex;
+  opacity: 0.45;
+}
+
+.plan-week-tab.edge:hover {
+  opacity: 1;
 }
 
 .plan-week-nav-today {

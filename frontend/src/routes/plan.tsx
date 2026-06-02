@@ -281,7 +281,7 @@ export default function PlanRoute() {
 
       {/* Header */}
       <header className="plan-header">
-        <div className="eyebrow" style={{ color: 'var(--fg-tertiary)', letterSpacing: '0.12em', fontSize: 10 }}>
+        <div className="eyebrow" style={{ color: 'var(--fg-secondary)', letterSpacing: '0.12em', fontSize: 11 }}>
           {isCurrentWeek
             ? plan
               ? `Week of ${formatWeek(plan.week_start)}`
