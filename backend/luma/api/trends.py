@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Query
@@ -11,7 +13,7 @@ router = APIRouter()
 
 VALID_METRICS = {
     # Body composition
-    "weight_kg", "bmi", "body_fat_pct",
+    "weight_kg", "bmi", "body_fat_pct", "lean_body_mass_kg",
     # Cardiovascular
     "hrv_ms", "rhr_bpm", "heart_rate_avg_bpm", "walking_hr_bpm", "respiratory_rate_bpm",
     # Energy
@@ -25,11 +27,54 @@ VALID_METRICS = {
     # Gait
     "walking_speed_kmh", "step_length_cm", "walking_asymmetry_pct",
     "double_support_pct", "stair_speed_up_mps", "stair_speed_down_mps",
+    "six_min_walk_m",
     # Environment
     "audio_exposure_db",
 }
 
 RANGE_TO_DAYS = {"7d": 7, "30d": 30, "90d": 90, "1y": 365}
+
+
+async def _live_today_row(db: Any, user_id: str, metric: str) -> SimpleNamespace | None:
+    """Query today's data directly from biometrics when the aggregate hasn't caught up."""
+    today_utc = datetime.now(timezone.utc).date()
+    today_start = datetime(today_utc.year, today_utc.month, today_utc.day, tzinfo=timezone.utc)
+    today_end = today_start + timedelta(days=1)
+
+    agg = await db.execute(
+        text("""
+            SELECT avg(value) AS avg_val, min(value) AS min_val,
+                   max(value) AS max_val, sum(value) AS sum_val,
+                   count(*)   AS cnt
+            FROM biometrics
+            WHERE user_id = :uid AND metric = :m
+              AND ts >= :ts0 AND ts < :ts1
+        """),
+        {"uid": user_id, "m": metric, "ts0": today_start, "ts1": today_end},
+    )
+    agg_row = agg.fetchone()
+    if not agg_row or not agg_row.cnt:
+        return None
+
+    last_r = await db.execute(
+        text("""
+            SELECT value FROM biometrics
+            WHERE user_id = :uid AND metric = :m
+              AND ts >= :ts0 AND ts < :ts1
+            ORDER BY ts DESC LIMIT 1
+        """),
+        {"uid": user_id, "m": metric, "ts0": today_start, "ts1": today_end},
+    )
+    last_row = last_r.fetchone()
+    return SimpleNamespace(
+        date=str(today_utc),
+        avg_value=agg_row.avg_val,
+        min_value=agg_row.min_val,
+        max_value=agg_row.max_val,
+        sum_value=agg_row.sum_val,
+        last_value=last_row.value if last_row else agg_row.avg_val,
+        sample_count=agg_row.cnt,
+    )
 
 
 @router.get("/{metric}")
@@ -48,7 +93,7 @@ async def get_trend(
     result = await db.execute(
         text("""
             SELECT
-                CAST(day AS text) AS date,
+                CAST(day::date AS text) AS date,
                 avg_value,
                 min_value,
                 max_value,
@@ -63,7 +108,15 @@ async def get_trend(
         """),
         {"user_id": str(user.id), "metric": metric, "days": days},
     )
-    rows = result.fetchall()
+    rows = list(result.fetchall())
+
+    # Supplement with a live query when the continuous aggregate hasn't
+    # materialized today's bucket yet (aggregate refresh lags by up to 1 hour).
+    today_str = str(datetime.now(timezone.utc).date())
+    if not rows or rows[-1].date != today_str:
+        live = await _live_today_row(db, str(user.id), metric)
+        if live:
+            rows.append(live)
 
     return {
         "metric": metric,

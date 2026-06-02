@@ -37,12 +37,15 @@ HAE_METRIC_MAP: dict[str, str] = {
     "walking_step_length":          "step_length_cm",
     "walking_asymmetry_percentage": "walking_asymmetry_pct",
     "walking_double_support_percentage": "double_support_pct",
+    "walking_heart_rate_average":   "walking_hr_bpm",
     "stair_speed_up":               "stair_speed_up_mps",
     "stair_speed_down":             "stair_speed_down_mps",
+    "six_minute_walking_test_distance": "six_min_walk_m",
     # Body
     "body_temperature":             "body_temp_c",
+    "lean_body_mass":               "lean_body_mass_kg",
     # Environment / sleep
-    "environmental_audio":          "audio_exposure_db",
+    "environmental_audio_exposure": "audio_exposure_db",
     "apple_sleeping_wrist_temperature": "wrist_temp_c",
     "breathing_disturbances":       "breathing_disturbances",
     # sleep_analysis handled separately via SLEEP_MAP (sub-type in name)
@@ -80,6 +83,9 @@ _KNOWN_UNITS: dict[str, frozenset[str]] = {
     "body_temp_c":          frozenset({"degC", "degF"}),
     "bp_systolic_mmhg":     frozenset({"mmHg"}),
     "bp_diastolic_mmhg":    frozenset({"mmHg"}),
+    "lean_body_mass_kg":    frozenset({"kg", "lb", "lbs"}),
+    "six_min_walk_m":       frozenset({"m", "ft"}),
+    "audio_exposure_db":    frozenset({"dBASPL", "dB"}),
 }
 
 
@@ -88,10 +94,12 @@ def _convert(value: float, hae_unit: str, internal_metric: str) -> float:
         return value * 60
     if internal_metric in ("active_kcal", "bmr_kcal") and hae_unit == "kJ":
         return value / 4.184
-    if internal_metric == "weight_kg" and hae_unit in ("lb", "lbs"):
+    if internal_metric in ("weight_kg", "lean_body_mass_kg") and hae_unit in ("lb", "lbs"):
         # HAE uses the device's regional unit (iOS Language & Region), not the
         # HAE metric toggle, for body mass. US-locale phones send lb.
         return value / 2.20462262
+    if internal_metric == "six_min_walk_m" and hae_unit == "ft":
+        return value * 0.3048
     if hae_unit == "mi":
         return value * 1.60934
     if hae_unit == "mi/hr":
@@ -196,8 +204,8 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                 sub = hae_name.split(".")[-1]
                 internal = SLEEP_MAP.get(sub)
             elif data_points and "inBed" in data_points[0]:
-                # HAE aggregated format (Summarize Data ON): one record per night with
-                # inBed/asleep/core/deep/rem fields (camelCase per HAE v2 JSON spec).
+                # HAE v2 aggregated format (Summarize Data ON): one record per night
+                # with inBed/asleep/totalSleep/core/deep/rem/awake fields.
                 for point in data_points:
                     try:
                         ts = _parse_hae_ts(point["date"])
@@ -205,21 +213,49 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                     except (KeyError, ValueError, TypeError) as exc:
                         logger.warning("Malformed HAE sleep point %s: %s", point, exc)
                         continue
-                    for hae_field, iname in (("inBed", "sleep_duration_min"), ("asleep", "sleep_asleep_min")):
-                        raw = point.get(hae_field)
-                        if raw is None:
+
+                    # HAE v2 sets inBed=0 and asleep=0; real data is in
+                    # totalSleep/core/deep/rem/awake (all in hours).
+                    # Derive: inBed time = totalSleep + awake; asleep = totalSleep.
+                    raw_in_bed = point.get("inBed")
+                    raw_asleep = point.get("asleep")
+                    try:
+                        in_bed_val = float(raw_in_bed) if raw_in_bed is not None else None
+                        asleep_val = float(raw_asleep) if raw_asleep is not None else None
+                    except (ValueError, TypeError):
+                        in_bed_val = asleep_val = None
+
+                    if in_bed_val == 0:
+                        total = point.get("totalSleep")
+                        awake = point.get("awake")
+                        if total is not None:
+                            try:
+                                in_bed_val = float(total) + (float(awake) if awake is not None else 0.0)
+                            except (ValueError, TypeError):
+                                pass
+
+                    if asleep_val == 0:
+                        total = point.get("totalSleep")
+                        if total is not None:
+                            try:
+                                asleep_val = float(total)
+                            except (ValueError, TypeError):
+                                pass
+
+                    for val, iname in ((in_bed_val, "sleep_duration_min"), (asleep_val, "sleep_asleep_min")):
+                        if val is None:
                             continue
                         try:
                             rows.append({
                                 "user_id": str(user_id),
                                 "ts": ts,
                                 "metric": iname,
-                                "value": _convert(float(raw), hae_unit, iname),
+                                "value": _convert(val, hae_unit, iname),
                                 "source": "hae",
                                 "source_meta": {"hae_source": source, "hae_metric": hae_name, "hae_unit": hae_unit},
                             })
                         except (ValueError, TypeError) as exc:
-                            logger.warning("Bad HAE sleep field %s=%s: %s", hae_field, raw, exc)
+                            logger.warning("Bad HAE sleep field %s=%s: %s", iname, val, exc)
                 continue  # aggregated sleep handled; move to next metric_block
             elif data_points and "value" in data_points[0]:
                 # HAE per-interval format: each point is one sleep stage interval; the
