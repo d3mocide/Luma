@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -28,7 +29,22 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Luma API starting (env=%s)", settings.environment)
-    
+
+    # Apply any pending Alembic migrations before accepting traffic so that
+    # new deployments are never stuck waiting for a manual `make migrate`.
+    def _run_alembic():
+        from alembic.config import Config
+        from alembic import command
+        cfg = Config("alembic.ini")
+        command.upgrade(cfg, "head")
+
+    try:
+        await asyncio.get_running_loop().run_in_executor(None, _run_alembic)
+        logger.info("Database schema is up to date")
+    except Exception as exc:
+        logger.error("Database migration failed — aborting startup: %s", exc)
+        raise
+
     # Automatically seed the clinical core USDA Reference dataset on first startup if the database is empty
     from luma.db.session import AsyncSessionLocal
     from luma.db.models import Food

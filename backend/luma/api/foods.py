@@ -87,7 +87,7 @@ async def search_foods(
 
     def _apply_flag_filters(s):
         for flag in flag_list:
-            s = s.where(Food.flags.contains([flag]))
+            s = s.where(Food.flags.any_(flag))
         return s
 
     if not q or not q.strip():
