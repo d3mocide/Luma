@@ -53,6 +53,7 @@ async def extract_foods_from_text(text: str) -> List[Dict[str, Any]]:
         resp = await call_llm(
             primary_model=settings.food_extractor_model,
             fallback_model=settings.food_extractor_fallback_model,
+            trigger="food_extract",
             messages=messages,
             temperature=0.1,
             timeout=180.0,
@@ -92,6 +93,7 @@ async def extract_foods_from_text(text: str) -> List[Dict[str, Any]]:
             retry_resp = await call_llm(
                 primary_model=settings.food_extractor_model,
                 fallback_model=settings.food_extractor_fallback_model,
+                trigger="food_extract",
                 messages=correction_messages,
                 temperature=0.1,
                 timeout=60.0,

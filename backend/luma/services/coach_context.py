@@ -128,6 +128,7 @@ async def update_case_file(user_id: str, db: AsyncSession) -> None:
         resp = await call_llm(
             primary_model=settings.coach_model,
             fallback_model=settings.coach_fallback_model,
+            trigger="coach_context",
             messages=[
                 {"role": "system", "content": _CASE_FILE_SYSTEM},
                 {

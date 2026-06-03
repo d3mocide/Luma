@@ -493,6 +493,7 @@ async def swap_slot(slot_id: str, db: DbDep, current_user: CurrentUser) -> dict:
         resp = await call_llm(
             primary_model=settings.meal_planner_model,
             fallback_model=settings.meal_planner_fallback_model,
+            trigger="meal_alternatives",
             messages=messages,
             temperature=0.6,
             timeout=60.0,

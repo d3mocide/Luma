@@ -7,6 +7,7 @@ type Props = {
   onAddItems: (items: DraftItem[]) => void
   onSwitchToPlate: () => void
   favorites?: Favorite[]
+  onLogFavoriteDirect?: (items: DraftItem[], name: string) => void
 }
 
 function VoiceErrorModal({ message, onClose }: { message: string; onClose: () => void }) {
@@ -62,7 +63,7 @@ function VoiceErrorModal({ message, onClose }: { message: string; onClose: () =>
   )
 }
 
-export function VoiceTab({ onAddItems, onSwitchToPlate, favorites }: Props) {
+export function VoiceTab({ onAddItems, onSwitchToPlate, favorites, onLogFavoriteDirect }: Props) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
@@ -164,34 +165,6 @@ export function VoiceTab({ onAddItems, onSwitchToPlate, favorites }: Props) {
     }
   }
 
-  const handleTextLog = async (text: string) => {
-    setIsProcessing(true)
-    setTranscription('')
-    try {
-      const data = await api.post<{ raw_input: string; items: DraftItem[]; nutrition: unknown; confidence: number }>(
-        '/log/meal/text',
-        { text },
-      )
-      setTranscription(data.raw_input)
-      if (data.items && data.items.length > 0) {
-        const mapped = data.items.map((item) => ({
-          name: item.name,
-          quantity: item.quantity,
-          unit: item.unit,
-          estimated_weight_g: item.estimated_weight_g ?? 100.0,
-          nutrients: item.nutrients,
-        }))
-        onAddItems(mapped)
-        onSwitchToPlate()
-      }
-    } catch (err) {
-      console.error(err)
-      setVoiceError('Text could not be processed. Try again or use the manual search tab.')
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
   return (
     <>
     {voiceError && <VoiceErrorModal message={voiceError} onClose={() => setVoiceError(null)} />}
@@ -245,26 +218,6 @@ export function VoiceTab({ onAddItems, onSwitchToPlate, favorites }: Props) {
         )}
       </div>
 
-      <div className="log-sheet-voice-presets w-full border-t border-slate-800 pt-6">
-        <span className="eyebrow block mb-3" style={{ color: 'var(--fg-quiet)' }}>Voice presets</span>
-        <div className="grid grid-cols-1 gap-2">
-          <button
-            onClick={() => handleTextLog('One cup of cooked steel cut oatmeal with blueberries and ground flaxseeds')}
-            className="p-3 text-left rounded-lg border transition-colors"
-            style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)' }}
-          >
-            Steel cut oatmeal with blueberries and flax
-          </button>
-          <button
-            onClick={() => handleTextLog('Grilled salmon fillet with two tablespoons of olive oil and steamed broccoli')}
-            className="p-3 text-left rounded-lg border transition-colors"
-            style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)' }}
-          >
-            Grilled salmon with olive oil and broccoli
-          </button>
-        </div>
-      </div>
-
       {favorites && favorites.length > 0 && (
         <div className="w-full border-t border-slate-800 pt-6">
           <span className="eyebrow block mb-3" style={{ color: 'var(--fg-quiet)' }}>My favorites</span>
@@ -291,7 +244,7 @@ export function VoiceTab({ onAddItems, onSwitchToPlate, favorites }: Props) {
               return (
                 <button
                   key={fav.id}
-                  onClick={() => { onAddItems(draftItems); onSwitchToPlate() }}
+                  onClick={() => onLogFavoriteDirect?.(draftItems, fav.name)}
                   className="p-3 text-left rounded-lg border transition-colors flex items-center justify-between gap-3"
                   style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}
                 >

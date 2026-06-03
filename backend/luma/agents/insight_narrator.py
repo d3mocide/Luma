@@ -48,6 +48,7 @@ async def narrate_alert(
     resp = await call_llm(
         primary_model=settings.insight_narrator_model,
         fallback_model=settings.insight_narrator_fallback_model,
+        trigger="insight_narrate",
         messages=[
             {"role": "system", "content": _SYSTEM},
             {"role": "user", "content": user_prompt},

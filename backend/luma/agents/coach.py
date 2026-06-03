@@ -327,6 +327,7 @@ async def _compress_thread_if_needed(thread_id: str, messages: list[dict], db) -
         resp = await call_llm(
             primary_model=settings.coach_model,
             fallback_model=settings.coach_fallback_model,
+            trigger="coach_compress",
             messages=compression_prompt,
             temperature=0.2,
             timeout=30.0,
