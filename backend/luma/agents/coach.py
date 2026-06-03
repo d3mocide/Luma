@@ -8,9 +8,11 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 import litellm
+from time import perf_counter
 
 from luma.config import settings
 from luma.services.llm_client import build_litellm_target, call_llm
+from luma.services.llm_metrics import tracker as llm_metrics_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -386,15 +388,16 @@ async def coach_stream(
 
     full_messages = [{"role": "system", "content": system_content}, *messages]
     target = build_litellm_target(settings.coach_model)
+    _coach_provider = settings.coach_model.split("/")[0] if "/" in settings.coach_model else "native"
 
     def is_transient_error(exc: Exception) -> bool:
-        """Check if error might succeed on retry."""
         msg = str(exc).lower()
         transient_markers = ["timeout", "connection", "rate limit", "temporarily", "unavailable", "502", "503", "504"]
         return any(marker in msg for marker in transient_markers)
 
     max_retries = 3
     for attempt in range(max_retries):
+        _started = perf_counter()
         try:
             response = await litellm.acompletion(
                 **target,
@@ -404,7 +407,24 @@ async def coach_stream(
                 temperature=1.0,
                 timeout=60.0,
             )
+            await llm_metrics_tracker.record_event(
+                event="success",
+                model=settings.coach_model,
+                provider=_coach_provider,
+                attempt="primary",
+                elapsed_ms=round((perf_counter() - _started) * 1000, 1),
+                trigger="coach_tool_call",
+            )
         except Exception as e:
+            await llm_metrics_tracker.record_event(
+                event="failure",
+                model=settings.coach_model,
+                provider=_coach_provider,
+                attempt="primary",
+                elapsed_ms=round((perf_counter() - _started) * 1000, 1),
+                error_type=type(e).__name__,
+                trigger="coach_tool_call",
+            )
             if is_transient_error(e) and attempt < max_retries - 1:
                 logger.warning("Coach LLM call transient error (attempt %d/%d): %s", attempt + 1, max_retries, e)
                 continue
@@ -450,6 +470,7 @@ async def coach_stream(
             continue
 
         final_text = msg.content or ""
+        _stream_started = perf_counter()
         try:
             stream = await litellm.acompletion(
                 **target,
@@ -460,11 +481,28 @@ async def coach_stream(
                 temperature=1.0,
                 timeout=60.0,
             )
+            await llm_metrics_tracker.record_event(
+                event="success",
+                model=settings.coach_model,
+                provider=_coach_provider,
+                attempt="primary",
+                elapsed_ms=round((perf_counter() - _stream_started) * 1000, 1),
+                trigger="coach_stream",
+            )
             async for chunk in stream:
                 delta = chunk.choices[0].delta.content or ""
                 if delta:
                     yield "data: " + json.dumps({"type": "token", "text": delta}) + "\n\n"
         except Exception:
+            await llm_metrics_tracker.record_event(
+                event="failure",
+                model=settings.coach_model,
+                provider=_coach_provider,
+                attempt="primary",
+                elapsed_ms=round((perf_counter() - _stream_started) * 1000, 1),
+                error_type="StreamError",
+                trigger="coach_stream",
+            )
             for token in final_text.split(" "):
                 if token:
                     yield "data: " + json.dumps({"type": "token", "text": token + " "}) + "\n\n"

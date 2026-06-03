@@ -229,6 +229,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               onSwitchToPlate={() => setActiveTab('search')}
               favorites={favorites}
               onLogFavoriteDirect={(items, name) => logFavoriteDirect.mutate({ items, name })}
+              isLoggingFavorite={logFavoriteDirect.isPending}
             />
           )}
           {activeTab === 'barcode' && (

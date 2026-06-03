@@ -8,6 +8,7 @@ type Props = {
   onSwitchToPlate: () => void
   favorites?: Favorite[]
   onLogFavoriteDirect?: (items: DraftItem[], name: string) => void
+  isLoggingFavorite?: boolean
 }
 
 function VoiceErrorModal({ message, onClose }: { message: string; onClose: () => void }) {
@@ -63,7 +64,7 @@ function VoiceErrorModal({ message, onClose }: { message: string; onClose: () =>
   )
 }
 
-export function VoiceTab({ onAddItems, onSwitchToPlate, favorites, onLogFavoriteDirect }: Props) {
+export function VoiceTab({ onAddItems, onSwitchToPlate, favorites, onLogFavoriteDirect, isLoggingFavorite }: Props) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
@@ -159,7 +160,7 @@ export function VoiceTab({ onAddItems, onSwitchToPlate, favorites, onLogFavorite
       }
     } catch (err) {
       console.error(err)
-      setVoiceError('Audio could not be transcribed — no speech detected or the recording was too short. Try again or use the text presets below.')
+      setVoiceError('Audio could not be transcribed — no speech detected or the recording was too short. Try again or use the Search tab.')
     } finally {
       setIsProcessing(false)
     }
@@ -218,45 +219,57 @@ export function VoiceTab({ onAddItems, onSwitchToPlate, favorites, onLogFavorite
         )}
       </div>
 
-      {favorites && favorites.length > 0 && (
+      {favorites !== undefined && (
         <div className="w-full border-t border-slate-800 pt-6">
           <span className="eyebrow block mb-3" style={{ color: 'var(--fg-quiet)' }}>My favorites</span>
-          <div className="grid grid-cols-1 gap-2">
-            {favorites.map((fav) => {
-              const kcal = Math.round(fav.items.reduce((sum, i) => sum + (i.nutrients.calories ?? 0), 0))
-              const draftItems: DraftItem[] = fav.items.map((i) => ({
-                name: i.food_name,
-                brand: i.brand ?? undefined,
-                quantity: i.quantity_g,
-                unit: 'g',
-                estimated_weight_g: i.quantity_g,
-                nutrients: {
-                  calories: i.nutrients.calories ?? 0,
-                  saturated_fat_g: i.nutrients.saturated_fat_g ?? 0,
-                  soluble_fiber_g: i.nutrients.soluble_fiber_g ?? 0,
-                  protein_g: i.nutrients.protein_g ?? 0,
-                  carbohydrates_g: i.nutrients.carbohydrates_g ?? 0,
-                  fat_g: i.nutrients.fat_g ?? 0,
-                  fiber_g: i.nutrients.fiber_g ?? 0,
-                  sodium_mg: i.nutrients.sodium_mg ?? 0,
-                },
-              }))
-              return (
-                <button
-                  key={fav.id}
-                  onClick={() => onLogFavoriteDirect?.(draftItems, fav.name)}
-                  className="p-3 text-left rounded-lg border transition-colors flex items-center justify-between gap-3"
-                  style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}
-                >
-                  <span style={{ color: 'var(--fg-secondary)', fontSize: 13 }}>{fav.name}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--fg-quiet)', fontSize: 11, flexShrink: 0 }}>
-                    <Zap size={10} />
-                    {kcal} kcal
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          {favorites.length === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--fg-quiet)', margin: 0 }}>
+              Save a meal as a favourite from the footer to see it here.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-2">
+              {favorites.map((fav) => {
+                const kcal = Math.round(fav.items.reduce((sum, i) => sum + (i.nutrients.calories ?? 0), 0))
+                const draftItems: DraftItem[] = fav.items.map((i) => ({
+                  name: i.food_name,
+                  brand: i.brand ?? undefined,
+                  quantity: i.quantity_g,
+                  unit: 'g',
+                  estimated_weight_g: i.quantity_g,
+                  nutrients: {
+                    calories: i.nutrients.calories ?? 0,
+                    saturated_fat_g: i.nutrients.saturated_fat_g ?? 0,
+                    soluble_fiber_g: i.nutrients.soluble_fiber_g ?? 0,
+                    protein_g: i.nutrients.protein_g ?? 0,
+                    carbohydrates_g: i.nutrients.carbohydrates_g ?? 0,
+                    fat_g: i.nutrients.fat_g ?? 0,
+                    fiber_g: i.nutrients.fiber_g ?? 0,
+                    sodium_mg: i.nutrients.sodium_mg ?? 0,
+                  },
+                }))
+                return (
+                  <button
+                    key={fav.id}
+                    onClick={() => onLogFavoriteDirect?.(draftItems, fav.name)}
+                    disabled={isLoggingFavorite}
+                    className="p-3 text-left rounded-lg border transition-colors flex items-center justify-between gap-3"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      borderColor: 'rgba(255,255,255,0.08)',
+                      opacity: isLoggingFavorite ? 0.5 : 1,
+                      cursor: isLoggingFavorite ? 'default' : 'pointer',
+                    }}
+                  >
+                    <span style={{ color: 'var(--fg-secondary)', fontSize: 13 }}>{fav.name}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--fg-quiet)', fontSize: 11, flexShrink: 0 }}>
+                      <Zap size={10} />
+                      {isLoggingFavorite ? 'Logging…' : `${kcal} kcal`}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
