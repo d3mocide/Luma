@@ -37,6 +37,7 @@ class SlotPatchRequest(BaseModel):
     custom_name: Optional[str] = None
     notes: Optional[str] = None
     locked: Optional[bool] = None
+    nutrition: Optional[dict] = None
 
 
 class SlotReplaceRequest(BaseModel):
@@ -379,6 +380,8 @@ async def patch_slot(slot_id: str, req: SlotPatchRequest, db: DbDep, current_use
         slot.notes = req.notes
     if req.locked is not None:
         slot.locked = req.locked
+    if req.nutrition is not None:
+        slot.nutrition = req.nutrition
 
     await db.commit()
     await db.refresh(slot)

@@ -1,8 +1,28 @@
 import { useState } from 'react'
-import { X, Check, Search, ChevronLeft, Utensils, Lock, Unlock, Sparkles } from 'lucide-react'
+import { X, Check, Search, ChevronLeft, Utensils, Lock, Unlock, Sparkles, Heart } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { type MealSlot, type FoodResult, SLOT_META, KEY_NUTRIENTS, fmtNutr, computeNutrition } from './types'
+
+type FavoriteItem = {
+  id: string
+  food_name: string
+  quantity_g: number
+  nutrients: Record<string, number>
+}
+
+type Favorite = {
+  id: string
+  name: string
+  items: FavoriteItem[]
+}
+
+function sumFavoriteNutrition(items: FavoriteItem[]): Record<string, number> {
+  return items.reduce((acc, item) => {
+    Object.entries(item.nutrients).forEach(([k, v]) => { acc[k] = (acc[k] ?? 0) + v })
+    return acc
+  }, {} as Record<string, number>)
+}
 
 type Props = {
   slot: MealSlot
@@ -29,6 +49,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
   const [servingG, setServingG] = useState('')
   const [alternatives, setAlternatives] = useState<Alternative[]>([])
   const [altLoading, setAltLoading] = useState(false)
+  const [browseTab, setBrowseTab] = useState<'foods' | 'saved'>('foods')
 
   const openBrowser = () => {
     setView('browse')
@@ -36,6 +57,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
     setFoodQuery('')
     setDebouncedQuery('')
     setServingG('')
+    setBrowseTab('foods')
   }
 
   const openAlternatives = async () => {
@@ -55,8 +77,26 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
   const { data: foodResults, isFetching: foodSearching } = useQuery<FoodResult[]>({
     queryKey: ['foods', debouncedQuery],
     queryFn: () => api.get(`/foods/search?q=${encodeURIComponent(debouncedQuery)}`),
-    enabled: view === 'browse' && debouncedQuery.length > 1,
+    enabled: view === 'browse' && browseTab === 'foods' && debouncedQuery.length > 1,
     staleTime: 60_000,
+  })
+
+  const { data: favoritesData } = useQuery<{ favorites: Favorite[] }>({
+    queryKey: ['favorites'],
+    queryFn: () => api.get('/favorites'),
+    enabled: view === 'browse' && browseTab === 'saved',
+    staleTime: 60_000,
+  })
+  const favorites = favoritesData?.favorites ?? []
+
+  const useFromFavoriteMutation = useMutation({
+    mutationFn: ({ name, nutrition }: { name: string; nutrition: Record<string, number> }) =>
+      api.patch<MealSlot>(`/plan/slot/${slot.id}`, { custom_name: name, nutrition }),
+    onSuccess: (updated) => {
+      onSlotUpdated(updated)
+      queryClient.invalidateQueries({ queryKey: ['plan'] })
+      setView('detail')
+    },
   })
 
   const logEatenMutation = useMutation({
@@ -264,72 +304,128 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
               </div>
             </div>
 
-            <div style={{ position: 'relative', marginBottom: 16 }}>
-              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-quiet)' }}/>
-              <input
-                autoFocus
-                value={foodQuery}
-                onChange={(e) => { setFoodQuery(e.target.value); setDebouncedQuery(e.target.value); setSelectedFood(null) }}
-                placeholder="Search foods…"
-                className="luma-browser-input"
-                style={{ paddingLeft: 36, paddingRight: 14, paddingTop: 10, paddingBottom: 10 }}
-              />
+            {/* Tab toggle */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 14, background: 'var(--glass-1)', borderRadius: 12, padding: 4 }}>
+              {(['foods', 'saved'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => { setBrowseTab(tab); setSelectedFood(null) }}
+                  style={{
+                    flex: 1, padding: '7px 10px', borderRadius: 9, fontSize: 12, fontWeight: 500,
+                    border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    background: browseTab === tab ? 'var(--glass-3)' : 'transparent',
+                    color: browseTab === tab ? 'var(--fg-primary)' : 'var(--fg-quiet)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {tab === 'foods' ? <Search size={12}/> : <Heart size={12}/>}
+                  {tab === 'foods' ? 'Foods' : 'Saved meals'}
+                </button>
+              ))}
             </div>
 
-            {!selectedFood && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 16, maxHeight: 220, overflowY: 'auto' }}>
-                {foodSearching && <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 12, color: 'var(--fg-quiet)' }}>Searching…</div>}
-                {!foodSearching && debouncedQuery.length > 1 && !foodResults?.length && (
-                  <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 12, color: 'var(--fg-quiet)' }}>No foods found.</div>
+            {browseTab === 'foods' && (
+              <>
+                <div style={{ position: 'relative', marginBottom: 16 }}>
+                  <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-quiet)' }}/>
+                  <input
+                    autoFocus
+                    value={foodQuery}
+                    onChange={(e) => { setFoodQuery(e.target.value); setDebouncedQuery(e.target.value); setSelectedFood(null) }}
+                    placeholder="Search foods…"
+                    className="luma-browser-input"
+                    style={{ paddingLeft: 36, paddingRight: 14, paddingTop: 10, paddingBottom: 10 }}
+                  />
+                </div>
+
+                {!selectedFood && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 16, maxHeight: 220, overflowY: 'auto' }}>
+                    {foodSearching && <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 12, color: 'var(--fg-quiet)' }}>Searching…</div>}
+                    {!foodSearching && debouncedQuery.length > 1 && !foodResults?.length && (
+                      <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 12, color: 'var(--fg-quiet)' }}>No foods found.</div>
+                    )}
+                    {!foodSearching && foodResults?.map((food) => (
+                      <button key={food.id}
+                        onClick={() => { setSelectedFood(food); setServingG(String(food.serving_size_g ?? 100)) }}
+                        className="glass-inset food-result-row"
+                        style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid var(--glass-edge)', textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-1)', marginBottom: 8, width: '100%' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                            <span style={{ fontSize: 13, color: 'var(--fg-primary)', fontWeight: 500 }}>{food.name}</span>
+                            {food.brand === 'USDA Reference' ? (
+                              <span style={{
+                                fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                                background: 'rgba(56,189,248,0.15)', color: 'var(--sky-400)',
+                                border: '1px solid rgba(56,189,248,0.25)', fontWeight: 600,
+                                fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                              }}>
+                                USDA Reference
+                              </span>
+                            ) : food.source === 'user' ? (
+                              <span style={{
+                                fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                                background: 'rgba(167,139,250,0.15)', color: '#c084fc',
+                                border: '1px solid rgba(167,139,250,0.25)', fontWeight: 600,
+                                fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                              }}>
+                                Custom
+                              </span>
+                            ) : (
+                              <span style={{
+                                fontSize: 9, padding: '2px 8px', borderRadius: 20,
+                                background: 'rgba(255,255,255,0.06)', color: 'var(--fg-tertiary)',
+                                border: '1px solid rgba(255,255,255,0.08)', fontWeight: 500,
+                                fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
+                              }}>
+                                {food.source === 'off' ? 'Open Food Facts' : 'USDA API'}
+                              </span>
+                            )}
+                          </div>
+                          {food.brand && food.brand !== 'USDA Reference' && <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 2 }}>{food.brand}</div>}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--sky-400)', fontFamily: 'var(--font-mono)', fontWeight: 500, textAlign: 'right', flexShrink: 0 }}>
+                          {Math.round(food.nutrients_per_100g.calories ?? 0)} <span style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>cal</span>
+                          <div style={{ fontSize: 9, color: 'var(--fg-quiet)', fontWeight: 400, marginTop: 2 }}>per 100g</div>
+                        </div>
+                      </button>
+                    ))}
+                    {debouncedQuery.length <= 1 && (
+                      <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 12, color: 'var(--fg-quiet)' }}>Type to search the food database</div>
+                    )}
+                  </div>
                 )}
-                {!foodSearching && foodResults?.map((food) => (
-                  <button key={food.id}
-                    onClick={() => { setSelectedFood(food); setServingG(String(food.serving_size_g ?? 100)) }}
-                    className="glass-inset food-result-row"
-                    style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid var(--glass-edge)', textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-1)', marginBottom: 8, width: '100%' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                        <span style={{ fontSize: 13, color: 'var(--fg-primary)', fontWeight: 500 }}>{food.name}</span>
-                        {food.brand === 'USDA Reference' ? (
-                          <span style={{
-                            fontSize: 9, padding: '2px 8px', borderRadius: 20,
-                            background: 'rgba(56,189,248,0.15)', color: 'var(--sky-400)',
-                            border: '1px solid rgba(56,189,248,0.25)', fontWeight: 600,
-                            fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
-                          }}>
-                            USDA Reference
-                          </span>
-                        ) : food.source === 'user' ? (
-                          <span style={{
-                            fontSize: 9, padding: '2px 8px', borderRadius: 20,
-                            background: 'rgba(167,139,250,0.15)', color: '#c084fc',
-                            border: '1px solid rgba(167,139,250,0.25)', fontWeight: 600,
-                            fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
-                          }}>
-                            Custom
-                          </span>
-                        ) : (
-                          <span style={{
-                            fontSize: 9, padding: '2px 8px', borderRadius: 20,
-                            background: 'rgba(255,255,255,0.06)', color: 'var(--fg-tertiary)',
-                            border: '1px solid rgba(255,255,255,0.08)', fontWeight: 500,
-                            fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
-                          }}>
-                            {food.source === 'off' ? 'Open Food Facts' : 'USDA API'}
-                          </span>
-                        )}
+              </>
+            )}
+
+            {browseTab === 'saved' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 280, overflowY: 'auto' }}>
+                {favorites.length === 0 && (
+                  <div style={{ padding: '28px 0', textAlign: 'center', fontSize: 12, color: 'var(--fg-quiet)' }}>
+                    No saved meals yet. Save a meal from the log sheet to reuse it here.
+                  </div>
+                )}
+                {favorites.map((fav) => {
+                  const totalKcal = Math.round(fav.items.reduce((s, i) => s + (i.nutrients.calories ?? 0), 0))
+                  const totalProtein = fav.items.reduce((s, i) => s + (i.nutrients.protein_g ?? 0), 0).toFixed(1)
+                  return (
+                    <button
+                      key={fav.id}
+                      disabled={useFromFavoriteMutation.isPending}
+                      onClick={() => useFromFavoriteMutation.mutate({ name: fav.name, nutrition: sumFavoriteNutrition(fav.items) })}
+                      className="glass-inset food-result-row"
+                      style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid var(--glass-edge)', textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-1)', width: '100%' }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: 'var(--fg-primary)', fontWeight: 500, marginBottom: 3 }}>{fav.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{fav.items.length} item{fav.items.length !== 1 ? 's' : ''}</div>
                       </div>
-                      {food.brand && food.brand !== 'USDA Reference' && <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 2 }}>{food.brand}</div>}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--sky-400)', fontFamily: 'var(--font-mono)', fontWeight: 500, textAlign: 'right', flexShrink: 0 }}>
-                      {Math.round(food.nutrients_per_100g.calories ?? 0)} <span style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>cal</span>
-                      <div style={{ fontSize: 9, color: 'var(--fg-quiet)', fontWeight: 400, marginTop: 2 }}>per 100g</div>
-                    </div>
-                  </button>
-                ))}
-                {debouncedQuery.length <= 1 && (
-                  <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 12, color: 'var(--fg-quiet)' }}>Type to search the food database</div>
-                )}
+                      <div style={{ fontSize: 12, color: 'var(--sky-400)', fontFamily: 'var(--font-mono)', fontWeight: 500, textAlign: 'right', flexShrink: 0 }}>
+                        {totalKcal} <span style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>kcal</span>
+                        <div style={{ fontSize: 9, color: 'var(--fg-quiet)', fontWeight: 400, marginTop: 2 }}>{totalProtein}g protein</div>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             )}
 
