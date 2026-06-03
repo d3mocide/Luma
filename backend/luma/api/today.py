@@ -94,6 +94,7 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         items = event.items if isinstance(event.items, list) else []
         first_item = items[0].get("name") if items and isinstance(items[0], dict) else None
         nutrition = event.nutrition if isinstance(event.nutrition, dict) else {}
+        headline = event.raw_input if event.source in ("favorite", "favorites") and event.raw_input else (first_item or "Logged meal")
         recent_meals.append(
             {
                 "id": str(event.id),
@@ -102,7 +103,7 @@ async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
                 "source": event.source,
                 "item_count": len(items),
                 "calories": float(nutrition.get("calories") or 0.0),
-                "headline": first_item or "Logged meal",
+                "headline": headline,
             }
         )
 

@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, Plus, ArrowLeft, Trash2, Pencil } from 'lucide-react'
+import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check } from 'lucide-react'
 import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
-import { useUIStore } from '../stores'
+import { getCurrentSlot } from '../lib/format'
 import type { DraftItem, Favorite, FavoriteItem } from '../components/log-sheet/types'
 
 function mapFavoriteItemToDraft(i: FavoriteItem): DraftItem {
@@ -45,6 +45,7 @@ export default function FavoritesRoute() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [favName, setFavName] = useState('')
   const [items, setItems] = useState<DraftItem[]>([])
+  const [successModal, setSuccessModal] = useState<{ name: string; slot: string } | null>(null)
 
   const { data: favoritesData, isLoading } = useQuery<{ favorites: Favorite[] }>({
     queryKey: ['favorites'],
@@ -103,9 +104,43 @@ export default function FavoritesRoute() {
     setView('building')
   }
 
-  function logFavorite(fav: Favorite) {
-    useUIStore.getState().logWithItems(fav.items.map(mapFavoriteItemToDraft))
-  }
+  const logFavoriteDirect = useMutation({
+    mutationFn: (fav: Favorite) => {
+      const slot = getCurrentSlot()
+      const draftItems = fav.items.map(mapFavoriteItemToDraft)
+      const nutrition = draftItems.reduce(
+        (acc, cur) => {
+          const n = cur.nutrients
+          return {
+            calories: acc.calories + (n.calories || 0),
+            saturated_fat_g: acc.saturated_fat_g + (n.saturated_fat_g || 0),
+            soluble_fiber_g: acc.soluble_fiber_g + (n.soluble_fiber_g || 0),
+            protein_g: acc.protein_g + (n.protein_g || 0),
+            carbohydrates_g: acc.carbohydrates_g + (n.carbohydrates_g || 0),
+            fat_g: acc.fat_g + (n.fat_g || 0),
+            fiber_g: acc.fiber_g + (n.fiber_g || 0),
+            sodium_mg: acc.sodium_mg + (n.sodium_mg || 0),
+          }
+        },
+        { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0 }
+      )
+      return api.post('/log/meal', {
+        slot,
+        source: 'favorite',
+        items: draftItems,
+        nutrition,
+        raw_input: fav.name,
+      })
+    },
+    onSuccess: (_, fav) => {
+      queryClient.invalidateQueries({ queryKey: ['today'] })
+      queryClient.invalidateQueries({ queryKey: ['meals'] })
+      setSuccessModal({ name: fav.name, slot: getCurrentSlot() })
+    },
+    onError: () => {
+      alert('Failed to log favorite. Try again!')
+    },
+  })
 
   function handleSave() {
     if (editingId) {
@@ -213,12 +248,13 @@ export default function FavoritesRoute() {
 
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                       <button
-                        onClick={() => logFavorite(fav)}
+                        onClick={() => logFavoriteDirect.mutate(fav)}
+                        disabled={logFavoriteDirect.isPending}
                         className="btn btn-primary"
-                        style={{ padding: '6px 12px', fontSize: 12, gap: 5 }}
+                        style={{ padding: '6px 12px', fontSize: 12, gap: 5, opacity: logFavoriteDirect.isPending ? 0.7 : 1 }}
                       >
                         <Heart size={12} strokeWidth={2} />
-                        Log this
+                        {logFavoriteDirect.isPending && logFavoriteDirect.variables?.id === fav.id ? 'Logging…' : 'Log this'}
                       </button>
                       <button
                         onClick={() => startEdit(fav)}
@@ -316,6 +352,64 @@ export default function FavoritesRoute() {
             </button>
           </div>
         </>
+      )}
+      {successModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(5,8,17,0.75)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSuccessModal(null)
+          }}
+        >
+          <div
+            className="glass"
+            style={{
+              maxWidth: 360,
+              width: '100%',
+              padding: 28,
+              borderRadius: 20,
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                background: 'rgba(16,185,129,0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px',
+                color: 'var(--good)',
+              }}
+            >
+              <Check size={24} />
+            </div>
+            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 500, color: 'var(--fg-primary)' }}>
+              Meal logged
+            </h3>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--fg-secondary)', lineHeight: 1.5 }}>
+              Added <strong>{successModal.name}</strong> to {successModal.slot}.
+            </p>
+            <button
+              onClick={() => setSuccessModal(null)}
+              className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center' }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

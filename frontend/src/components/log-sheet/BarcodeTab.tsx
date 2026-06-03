@@ -79,7 +79,7 @@ export function BarcodeTab({ onAddItem, onSwitchToPlate }: Props) {
       .start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 250, height: 130 } },
-        (code) => {
+        (code: string) => {
           if (fired) return
           fired = true
           setIsScanning(false)

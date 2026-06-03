@@ -1,14 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import { Mic, AlertCircle, X, Zap } from 'lucide-react'
+import { Mic, AlertCircle, X } from 'lucide-react'
 import { api } from '../../lib/api'
-import type { DraftItem, Favorite } from './types'
+import type { DraftItem } from './types'
 
 type Props = {
   onAddItems: (items: DraftItem[]) => void
   onSwitchToPlate: () => void
-  favorites?: Favorite[]
-  onLogFavoriteDirect?: (items: DraftItem[], name: string) => void
-  isLoggingFavorite?: boolean
 }
 
 function VoiceErrorModal({ message, onClose }: { message: string; onClose: () => void }) {
@@ -64,7 +61,7 @@ function VoiceErrorModal({ message, onClose }: { message: string; onClose: () =>
   )
 }
 
-export function VoiceTab({ onAddItems, onSwitchToPlate, favorites, onLogFavoriteDirect, isLoggingFavorite }: Props) {
+export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
@@ -142,7 +139,7 @@ export function VoiceTab({ onAddItems, onSwitchToPlate, favorites, onLogFavorite
       const ext = blobToUpload.type.includes('mp4') ? 'm4a' : 'webm'
       const formData = new FormData()
       formData.append('file', blobToUpload, `recording.${ext}`)
-      const data = await api.upload<{ raw_input: string; items: DraftItem[]; nutrition: unknown; confidence: number }>(
+      const data = await api.upload<{ raw_input: string; items: DraftItem[]; nutrition: unknown; confidence: number }> (
         '/log/meal/voice',
         formData,
       )
@@ -218,60 +215,6 @@ export function VoiceTab({ onAddItems, onSwitchToPlate, favorites, onLogFavorite
           </button>
         )}
       </div>
-
-      {favorites !== undefined && (
-        <div className="w-full border-t border-slate-800 pt-6">
-          <span className="eyebrow block mb-3" style={{ color: 'var(--fg-quiet)' }}>My favorites</span>
-          {favorites.length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--fg-quiet)', margin: 0 }}>
-              Save a meal as a favourite from the footer to see it here.
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 gap-2">
-              {favorites.map((fav) => {
-                const kcal = Math.round(fav.items.reduce((sum, i) => sum + (i.nutrients.calories ?? 0), 0))
-                const draftItems: DraftItem[] = fav.items.map((i) => ({
-                  name: i.food_name,
-                  brand: i.brand ?? undefined,
-                  quantity: i.quantity_g,
-                  unit: 'g',
-                  estimated_weight_g: i.quantity_g,
-                  nutrients: {
-                    calories: i.nutrients.calories ?? 0,
-                    saturated_fat_g: i.nutrients.saturated_fat_g ?? 0,
-                    soluble_fiber_g: i.nutrients.soluble_fiber_g ?? 0,
-                    protein_g: i.nutrients.protein_g ?? 0,
-                    carbohydrates_g: i.nutrients.carbohydrates_g ?? 0,
-                    fat_g: i.nutrients.fat_g ?? 0,
-                    fiber_g: i.nutrients.fiber_g ?? 0,
-                    sodium_mg: i.nutrients.sodium_mg ?? 0,
-                  },
-                }))
-                return (
-                  <button
-                    key={fav.id}
-                    onClick={() => onLogFavoriteDirect?.(draftItems, fav.name)}
-                    disabled={isLoggingFavorite}
-                    className="p-3 text-left rounded-lg border transition-colors flex items-center justify-between gap-3"
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      borderColor: 'rgba(255,255,255,0.08)',
-                      opacity: isLoggingFavorite ? 0.5 : 1,
-                      cursor: isLoggingFavorite ? 'default' : 'pointer',
-                    }}
-                  >
-                    <span style={{ color: 'var(--fg-secondary)', fontSize: 13 }}>{fav.name}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--fg-quiet)', fontSize: 11, flexShrink: 0 }}>
-                      <Zap size={10} />
-                      {isLoggingFavorite ? 'Logging…' : `${kcal} kcal`}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
     </div>
     </>
   )

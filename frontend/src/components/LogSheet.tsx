@@ -8,6 +8,7 @@ import { BarcodeTab } from './log-sheet/BarcodeTab'
 import { SearchTab } from './log-sheet/SearchTab'
 import { PhotoTab } from './log-sheet/PhotoTab'
 import type { DraftItem, Favorite } from './log-sheet/types'
+import { getCurrentSlot } from '../lib/format'
 
 type LogSheetMode = 'sheet' | 'page'
 
@@ -32,7 +33,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const clearPendingLogItems = useUIStore((s) => s.clearPendingLogItems)
 
   const [activeTab, setActiveTab] = useState<'voice' | 'barcode' | 'search' | 'photo'>('voice')
-  const [slot, setSlot] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast')
+  const [slot, setSlot] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(getCurrentSlot)
   const [draftItems, setDraftItems] = useState<DraftItem[]>([])
   const [transcription, setTranscription] = useState('')
   const [savingFav, setSavingFav] = useState(false)
@@ -148,7 +149,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
         },
         { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0 }
       )
-      return api.post('/log/meal', { slot, source: 'favorites', items, nutrition, raw_input: name })
+      return api.post('/log/meal', { slot, source: 'favorite', items, nutrition, raw_input: name })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['today'] })
@@ -227,9 +228,6 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
             <VoiceTab
               onAddItems={addItems}
               onSwitchToPlate={() => setActiveTab('search')}
-              favorites={favorites}
-              onLogFavoriteDirect={(items, name) => logFavoriteDirect.mutate({ items, name })}
-              isLoggingFavorite={logFavoriteDirect.isPending}
             />
           )}
           {activeTab === 'barcode' && (
@@ -244,6 +242,9 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               onAddItem={addItem}
               onRemoveItem={removeItem}
               onUpdateWeight={updateItemWeight}
+              favorites={favorites}
+              onLogFavoriteDirect={(items, name) => logFavoriteDirect.mutate({ items, name })}
+              isLoggingFavorite={logFavoriteDirect.isPending}
             />
           )}
           {activeTab === 'photo' && (

@@ -416,6 +416,11 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     return { message: 'Reminders exported to your mock inbox.' }
   }
 
+  if (method === 'POST' && pathname === '/log/meal') {
+    requireAuth()
+    return { status: 'ok', meal_event_id: 'mock-meal-' + Math.random().toString(36).substr(2, 9) }
+  }
+
   if (method === 'POST' && pathname === '/log/meal/barcode') {
     requireAuth()
     const body = parseBody(init)
