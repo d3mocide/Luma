@@ -1,3 +1,19 @@
+export type FavoriteItem = {
+  id: string
+  sort_order: number
+  food_name: string
+  brand: string | null
+  quantity_g: number
+  nutrients: Record<string, number>
+}
+
+export type Favorite = {
+  id: string
+  name: string
+  created_at: string
+  items: FavoriteItem[]
+}
+
 export type DraftItem = {
   name: string
   brand?: string

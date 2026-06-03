@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useUIStore } from '../stores'
 import { api } from '../lib/api'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { X, Heart } from 'lucide-react'
 import { VoiceTab } from './log-sheet/VoiceTab'
 import { BarcodeTab } from './log-sheet/BarcodeTab'
 import { SearchTab } from './log-sheet/SearchTab'
 import { PhotoTab } from './log-sheet/PhotoTab'
-import type { DraftItem } from './log-sheet/types'
+import type { DraftItem, Favorite } from './log-sheet/types'
 
 type LogSheetMode = 'sheet' | 'page'
 
@@ -37,6 +37,13 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const [transcription, setTranscription] = useState('')
   const [savingFav, setSavingFav] = useState(false)
   const [favName, setFavName] = useState('')
+
+  const { data: favoritesData } = useQuery<{ favorites: Favorite[] }>({
+    queryKey: ['favorites'],
+    queryFn: () => api.get('/favorites'),
+    enabled: isVisible,
+  })
+  const favorites = favoritesData?.favorites ?? []
 
   useEffect(() => {
     if (pendingLogItems?.length) {
@@ -192,6 +199,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
             <VoiceTab
               onAddItems={addItems}
               onSwitchToPlate={() => setActiveTab('search')}
+              favorites={favorites}
             />
           )}
           {activeTab === 'barcode' && (
