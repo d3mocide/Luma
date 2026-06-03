@@ -115,6 +115,15 @@ cd frontend && pnpm type-check && pnpm lint
 
 Fix all errors before committing. Do not use `--no-verify` to bypass hooks. Do not commit code that fails type-check or lint.
 
+## Food Search Ranking — Invariants
+
+`backend/luma/api/foods.py` — do not regress these:
+
+- **`get_search_terms(q)`** must tokenize multi-word queries into individual words in addition to the full phrase. "Steak top" → `["steak top", "steak", "top"]`. Without this, reference foods drop out of the WHERE filter because their names don't contain the exact phrase, and USDA API results fill the top instead.
+- **Score formula**: `similarity + match_boost + ref_boost + user_boost + usda_boost`. Reference foods (`brand == "USDA Reference"`) carry a +1.5 boost. Any word-boundary match adds +2.0. Together these always outweigh a USDA API hit (+0.1) even when similarities are equal.
+- **`_LOCAL_THRESHOLD = 5`**: the USDA live fallback only fires when fewer than 5 local results match. After caching, the same ranked query re-runs so reference foods still sort first.
+- If ranking feels broken, check `get_search_terms` first — phrase-only terms are the most common regression.
+
 ## What Claude Code Should NOT Do
 
 - Do not add features beyond the current phase
