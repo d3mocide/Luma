@@ -12,10 +12,11 @@ import LogSheet from './LogSheet'
 import Login from './Login'
 
 const NAV_ITEMS = [
-  { to: '/today',  label: 'Today',  Icon: CircleDot },
-  { to: '/meals',  label: 'Meals',  Icon: Utensils  },
-  { to: '/trends', label: 'Trends', Icon: Activity  },
-  { to: '/coach',  label: 'Coach',  Icon: Sparkles  },
+  { to: '/today',     label: 'Today',     Icon: CircleDot },
+  { to: '/meals',     label: 'Meals',     Icon: Utensils  },
+  { to: '/trends',    label: 'Trends',    Icon: Activity  },
+  { to: '/coach',     label: 'Coach',     Icon: Sparkles  },
+  { to: '/favorites', label: 'Saved',     Icon: Heart     },
 ]
 
 const DESKTOP_NAV_ITEMS = [
