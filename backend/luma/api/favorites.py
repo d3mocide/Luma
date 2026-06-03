@@ -144,7 +144,7 @@ async def create_favorite(
         await db.execute(
             text("""
                 INSERT INTO favorite_items (id, favorite_id, sort_order, food_name, brand, quantity_g, nutrients)
-                VALUES (:id, :fav_id, :sort_order, :food_name, :brand, :quantity_g, :nutrients::jsonb)
+                VALUES (:id, :fav_id, :sort_order, :food_name, :brand, :quantity_g, CAST(:nutrients AS jsonb))
             """),
             {
                 "id": item_id,
@@ -196,7 +196,7 @@ async def update_favorite(
             await db.execute(
                 text("""
                     INSERT INTO favorite_items (id, favorite_id, sort_order, food_name, brand, quantity_g, nutrients)
-                    VALUES (:id, :fav_id, :sort_order, :food_name, :brand, :quantity_g, :nutrients::jsonb)
+                    VALUES (:id, :fav_id, :sort_order, :food_name, :brand, :quantity_g, CAST(:nutrients AS jsonb))
                 """),
                 {
                     "id": item_id,
