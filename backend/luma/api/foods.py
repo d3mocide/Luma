@@ -44,26 +44,37 @@ class FoodResponse(BaseModel):
 
 def get_search_terms(q: str) -> List[str]:
     q_clean = q.strip().lower()
-    terms = [q_clean]
-    # Simple singularization
-    if q_clean.endswith("s") and len(q_clean) > 3:
-        if q_clean.endswith("es") and len(q_clean) > 4:
-            terms.append(q_clean[:-2])
-            terms.append(q_clean[:-1])
-        else:
-            terms.append(q_clean[:-1])
-    
+    candidates = [q_clean]
+
+    # For multi-word queries also emit individual tokens so that e.g.
+    # "steak top" matches "Beef Sirloin Steak (Lean, Cooked)" via the
+    # individual word "steak", allowing the reference-food boost to apply.
+    words = q_clean.split()
+    if len(words) > 1:
+        candidates.extend(words)
+
+    # Simple singularization for each candidate
+    expanded: List[str] = []
+    for t in candidates:
+        expanded.append(t)
+        if t.endswith("s") and len(t) > 3:
+            if t.endswith("es") and len(t) > 4:
+                expanded.append(t[:-2])
+                expanded.append(t[:-1])
+            else:
+                expanded.append(t[:-1])
+
     # Clean terms for safe regular expressions (alphanumeric, spaces, hyphens, and apostrophes)
     cleaned_terms = []
-    for t in terms:
+    for t in expanded:
         cleaned = re.sub(r"[^a-zA-Z0-9\s\-\']", "", t)
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
         if cleaned:
             cleaned_terms.append(cleaned)
-            
+
     if not cleaned_terms:
         cleaned_terms = [q_clean]
-        
+
     return list(dict.fromkeys(cleaned_terms))
 
 
