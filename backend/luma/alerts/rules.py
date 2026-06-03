@@ -2,11 +2,14 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import NamedTuple
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from luma.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -145,27 +148,28 @@ async def check_hrv_anomaly(user_id: str, db: AsyncSession) -> AlertResult | Non
 
 async def check_logging_gap(user_id: str, db: AsyncSession) -> AlertResult | None:
     """Logging streak broken after 3+ consecutive days."""
+    tz = settings.server_timezone
     streak_row = await db.execute(
         text("""
-            SELECT COUNT(DISTINCT DATE(ts AT TIME ZONE 'UTC')) AS days_logged
+            SELECT COUNT(DISTINCT DATE(ts AT TIME ZONE :tz)) AS days_logged
             FROM meal_events
             WHERE user_id = :uid AND ts >= now() - INTERVAL '10 days'
         """),
-        {"uid": user_id},
+        {"uid": user_id, "tz": tz},
     )
     last_row = await db.execute(
         text("""
-            SELECT MAX(DATE(ts AT TIME ZONE 'UTC')) AS last_day
+            SELECT MAX(DATE(ts AT TIME ZONE :tz)) AS last_day
             FROM meal_events WHERE user_id = :uid
         """),
-        {"uid": user_id},
+        {"uid": user_id, "tz": tz},
     )
     sr = streak_row.fetchone()
     lr = last_row.fetchone()
     if not sr or not lr or lr.last_day is None:
         return None
 
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(ZoneInfo(tz)).date()
     days_since = (today - lr.last_day).days
     if sr.days_logged >= 3 and days_since >= 1:
         return AlertResult(
@@ -189,12 +193,12 @@ async def check_calorie_deficit(user_id: str, db: AsyncSession) -> AlertResult |
                 FROM meal_events
                 WHERE user_id = :uid
                   AND ts >= now() - INTERVAL '7 days'
-                GROUP BY DATE(ts AT TIME ZONE 'UTC')
+                GROUP BY DATE(ts AT TIME ZONE :tz)
             ) daily ON TRUE
             WHERE g.user_id = :uid AND g.daily_calorie_target IS NOT NULL
             GROUP BY g.daily_calorie_target
         """),
-        {"uid": user_id},
+        {"uid": user_id, "tz": settings.server_timezone},
     )
     r = row.fetchone()
     if not r or r.target is None or r.avg_logged is None or r.avg_logged == 0:
@@ -215,6 +219,8 @@ async def check_calorie_deficit(user_id: str, db: AsyncSession) -> AlertResult |
 
 async def check_ldl_risk_day(user_id: str, db: AsyncSession) -> AlertResult | None:
     """Yesterday: high sat fat AND low fiber — LDL risk pattern."""
+    tz = settings.server_timezone
+    yesterday = (datetime.now(ZoneInfo(tz)) - timedelta(days=1)).date()
     row = await db.execute(
         text("""
             SELECT
@@ -225,10 +231,10 @@ async def check_ldl_risk_day(user_id: str, db: AsyncSession) -> AlertResult | No
             FROM meal_events me
             JOIN goals g ON g.user_id = me.user_id
             WHERE me.user_id = :uid
-              AND DATE(me.ts AT TIME ZONE 'UTC') = CURRENT_DATE - 1
+              AND DATE(me.ts AT TIME ZONE :tz) = :yesterday
             GROUP BY g.daily_sat_fat_g_max, g.daily_soluble_fiber_g
         """),
-        {"uid": user_id},
+        {"uid": user_id, "tz": tz, "yesterday": yesterday},
     )
     r = row.fetchone()
     if not r or r.sat_fat is None or r.fiber is None:
@@ -253,11 +259,11 @@ async def check_positive_milestone(user_id: str, db: AsyncSession) -> AlertResul
     """7-day logging streak or within 1 kg of target weight."""
     streak_row = await db.execute(
         text("""
-            SELECT COUNT(DISTINCT DATE(ts AT TIME ZONE 'UTC')) AS streak
+            SELECT COUNT(DISTINCT DATE(ts AT TIME ZONE :tz)) AS streak
             FROM meal_events
             WHERE user_id = :uid AND ts >= now() - INTERVAL '7 days'
         """),
-        {"uid": user_id},
+        {"uid": user_id, "tz": settings.server_timezone},
     )
     sr = streak_row.fetchone()
     if sr and sr.streak == 7:

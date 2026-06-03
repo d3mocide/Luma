@@ -2,10 +2,12 @@ import logging
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from typing import Annotated, Any, Literal
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Query
 from sqlalchemy import text
 
+from luma.config import settings
 from luma.deps import CurrentUser, DbDep
 
 logger = logging.getLogger(__name__)
@@ -37,8 +39,9 @@ RANGE_TO_DAYS = {"7d": 7, "30d": 30, "90d": 90, "1y": 365}
 
 async def _live_today_row(db: Any, user_id: str, metric: str) -> SimpleNamespace | None:
     """Query today's data directly from biometrics when the aggregate hasn't caught up."""
-    today_utc = datetime.now(timezone.utc).date()
-    today_start = datetime(today_utc.year, today_utc.month, today_utc.day, tzinfo=timezone.utc)
+    tz = ZoneInfo(settings.server_timezone)
+    today_local = datetime.now(tz).date()
+    today_start = datetime(today_local.year, today_local.month, today_local.day, tzinfo=tz).astimezone(timezone.utc)
     today_end = today_start + timedelta(days=1)
 
     agg = await db.execute(
@@ -67,7 +70,7 @@ async def _live_today_row(db: Any, user_id: str, metric: str) -> SimpleNamespace
     )
     last_row = last_r.fetchone()
     return SimpleNamespace(
-        date=str(today_utc),
+        date=str(today_local),
         avg_value=agg_row.avg_val,
         min_value=agg_row.min_val,
         max_value=agg_row.max_val,
@@ -112,7 +115,7 @@ async def get_trend(
 
     # Supplement with a live query when the continuous aggregate hasn't
     # materialized today's bucket yet (aggregate refresh lags by up to 1 hour).
-    today_str = str(datetime.now(timezone.utc).date())
+    today_str = str(datetime.now(ZoneInfo(settings.server_timezone)).date())
     if not rows or rows[-1].date != today_str:
         live = await _live_today_row(db, str(user.id), metric)
         if live:
