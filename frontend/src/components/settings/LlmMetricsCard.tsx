@@ -68,6 +68,7 @@ export function LlmMetricsCard() {
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
                       {event.provider} · {event.attempt}
+                      {event.trigger ? ` · ${event.trigger}` : ''}
                       {event.fallback_model ? ` · fallback ${event.fallback_model}` : ''}
                       {event.error_type ? ` · ${event.error_type}` : ''}
                     </div>

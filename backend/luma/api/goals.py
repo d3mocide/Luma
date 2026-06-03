@@ -201,6 +201,7 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         resp = await call_llm(
             primary_model=settings.meal_planner_model,
             fallback_model=settings.meal_planner_fallback_model,
+            trigger="goal_rationale",
             messages=[
                 {
                     "role": "system",

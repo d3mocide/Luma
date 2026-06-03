@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
-import { Mic, AlertCircle, X } from 'lucide-react'
+import { Mic, AlertCircle, X, Zap } from 'lucide-react'
 import { api } from '../../lib/api'
-import type { DraftItem } from './types'
+import type { DraftItem, Favorite } from './types'
 
 type Props = {
   onAddItems: (items: DraftItem[]) => void
   onSwitchToPlate: () => void
+  favorites?: Favorite[]
+  onLogFavoriteDirect?: (items: DraftItem[], name: string) => void
+  isLoggingFavorite?: boolean
 }
 
 function VoiceErrorModal({ message, onClose }: { message: string; onClose: () => void }) {
@@ -61,7 +64,7 @@ function VoiceErrorModal({ message, onClose }: { message: string; onClose: () =>
   )
 }
 
-export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
+export function VoiceTab({ onAddItems, onSwitchToPlate, favorites, onLogFavoriteDirect, isLoggingFavorite }: Props) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
@@ -157,35 +160,7 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
       }
     } catch (err) {
       console.error(err)
-      setVoiceError('Audio could not be transcribed — no speech detected or the recording was too short. Try again or use the text presets below.')
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const handleTextLog = async (text: string) => {
-    setIsProcessing(true)
-    setTranscription('')
-    try {
-      const data = await api.post<{ raw_input: string; items: DraftItem[]; nutrition: unknown; confidence: number }>(
-        '/log/meal/text',
-        { text },
-      )
-      setTranscription(data.raw_input)
-      if (data.items && data.items.length > 0) {
-        const mapped = data.items.map((item) => ({
-          name: item.name,
-          quantity: item.quantity,
-          unit: item.unit,
-          estimated_weight_g: item.estimated_weight_g ?? 100.0,
-          nutrients: item.nutrients,
-        }))
-        onAddItems(mapped)
-        onSwitchToPlate()
-      }
-    } catch (err) {
-      console.error(err)
-      setVoiceError('Text could not be processed. Try again or use the manual search tab.')
+      setVoiceError('Audio could not be transcribed — no speech detected or the recording was too short. Try again or use the Search tab.')
     } finally {
       setIsProcessing(false)
     }
@@ -244,25 +219,59 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
         )}
       </div>
 
-      <div className="log-sheet-voice-presets w-full border-t border-slate-800 pt-6">
-        <span className="eyebrow block mb-3" style={{ color: 'var(--fg-quiet)' }}>Voice presets</span>
-        <div className="grid grid-cols-1 gap-2">
-          <button
-            onClick={() => handleTextLog('One cup of cooked steel cut oatmeal with blueberries and ground flaxseeds')}
-            className="p-3 text-left rounded-lg border transition-colors"
-            style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)' }}
-          >
-            Steel cut oatmeal with blueberries and flax
-          </button>
-          <button
-            onClick={() => handleTextLog('Grilled salmon fillet with two tablespoons of olive oil and steamed broccoli')}
-            className="p-3 text-left rounded-lg border transition-colors"
-            style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', color: 'var(--fg-secondary)' }}
-          >
-            Grilled salmon with olive oil and broccoli
-          </button>
+      {favorites !== undefined && (
+        <div className="w-full border-t border-slate-800 pt-6">
+          <span className="eyebrow block mb-3" style={{ color: 'var(--fg-quiet)' }}>My favorites</span>
+          {favorites.length === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--fg-quiet)', margin: 0 }}>
+              Save a meal as a favourite from the footer to see it here.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-2">
+              {favorites.map((fav) => {
+                const kcal = Math.round(fav.items.reduce((sum, i) => sum + (i.nutrients.calories ?? 0), 0))
+                const draftItems: DraftItem[] = fav.items.map((i) => ({
+                  name: i.food_name,
+                  brand: i.brand ?? undefined,
+                  quantity: i.quantity_g,
+                  unit: 'g',
+                  estimated_weight_g: i.quantity_g,
+                  nutrients: {
+                    calories: i.nutrients.calories ?? 0,
+                    saturated_fat_g: i.nutrients.saturated_fat_g ?? 0,
+                    soluble_fiber_g: i.nutrients.soluble_fiber_g ?? 0,
+                    protein_g: i.nutrients.protein_g ?? 0,
+                    carbohydrates_g: i.nutrients.carbohydrates_g ?? 0,
+                    fat_g: i.nutrients.fat_g ?? 0,
+                    fiber_g: i.nutrients.fiber_g ?? 0,
+                    sodium_mg: i.nutrients.sodium_mg ?? 0,
+                  },
+                }))
+                return (
+                  <button
+                    key={fav.id}
+                    onClick={() => onLogFavoriteDirect?.(draftItems, fav.name)}
+                    disabled={isLoggingFavorite}
+                    className="p-3 text-left rounded-lg border transition-colors flex items-center justify-between gap-3"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      borderColor: 'rgba(255,255,255,0.08)',
+                      opacity: isLoggingFavorite ? 0.5 : 1,
+                      cursor: isLoggingFavorite ? 'default' : 'pointer',
+                    }}
+                  >
+                    <span style={{ color: 'var(--fg-secondary)', fontSize: 13 }}>{fav.name}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--fg-quiet)', fontSize: 11, flexShrink: 0 }}>
+                      <Zap size={10} />
+                      {isLoggingFavorite ? 'Logging…' : `${kcal} kcal`}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
     </>
   )

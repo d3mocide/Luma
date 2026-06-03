@@ -40,6 +40,7 @@ class LLMMetricsTracker:
         total_tokens: int | None = None,
         error_type: str | None = None,
         fallback_model: str | None = None,
+        trigger: str | None = None,
     ) -> None:
         timestamp = datetime.now(timezone.utc).isoformat()
         payload: dict[str, Any] = {
@@ -61,6 +62,8 @@ class LLMMetricsTracker:
             payload["error_type"] = error_type
         if fallback_model is not None:
             payload["fallback_model"] = fallback_model
+        if trigger is not None:
+            payload["trigger"] = trigger
 
         try:
             redis = self._client()

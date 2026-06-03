@@ -325,6 +325,7 @@ async def log_meal_photo(
         resp = await call_llm(
             primary_model=settings.vision_classifier_model,
             fallback_model=settings.vision_classifier_fallback_model,
+            trigger="photo_log",
             messages=messages,
             temperature=0.1,
             timeout=60.0,
@@ -341,6 +342,7 @@ async def log_meal_photo(
             retry_resp = await call_llm(
                 primary_model=settings.vision_classifier_model,
                 fallback_model=settings.vision_classifier_fallback_model,
+                trigger="photo_log",
                 messages=correction_messages,
                 temperature=0.1,
                 timeout=30.0,

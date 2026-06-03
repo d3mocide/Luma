@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useUIStore } from '../stores'
 import { api } from '../lib/api'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { X, Heart } from 'lucide-react'
 import { VoiceTab } from './log-sheet/VoiceTab'
 import { BarcodeTab } from './log-sheet/BarcodeTab'
 import { SearchTab } from './log-sheet/SearchTab'
 import { PhotoTab } from './log-sheet/PhotoTab'
-import type { DraftItem } from './log-sheet/types'
+import type { DraftItem, Favorite } from './log-sheet/types'
 
 type LogSheetMode = 'sheet' | 'page'
 
@@ -37,6 +37,13 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const [transcription, setTranscription] = useState('')
   const [savingFav, setSavingFav] = useState(false)
   const [favName, setFavName] = useState('')
+
+  const { data: favoritesData } = useQuery<{ favorites: Favorite[] }>({
+    queryKey: ['favorites'],
+    queryFn: () => api.get('/favorites'),
+    enabled: isVisible,
+  })
+  const favorites = favoritesData?.favorites ?? []
 
   useEffect(() => {
     if (pendingLogItems?.length) {
@@ -123,6 +130,34 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
     onSuccess: () => { setSavingFav(false); setFavName('') },
   })
 
+  const logFavoriteDirect = useMutation({
+    mutationFn: ({ items, name }: { items: DraftItem[]; name: string }) => {
+      const nutrition = items.reduce(
+        (acc, cur) => {
+          const n = cur.nutrients
+          return {
+            calories: acc.calories + (n.calories || 0),
+            saturated_fat_g: acc.saturated_fat_g + (n.saturated_fat_g || 0),
+            soluble_fiber_g: acc.soluble_fiber_g + (n.soluble_fiber_g || 0),
+            protein_g: acc.protein_g + (n.protein_g || 0),
+            carbohydrates_g: acc.carbohydrates_g + (n.carbohydrates_g || 0),
+            fat_g: acc.fat_g + (n.fat_g || 0),
+            fiber_g: acc.fiber_g + (n.fiber_g || 0),
+            sodium_mg: acc.sodium_mg + (n.sodium_mg || 0),
+          }
+        },
+        { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0 }
+      )
+      return api.post('/log/meal', { slot, source: 'favorites', items, nutrition, raw_input: name })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['today'] })
+      queryClient.invalidateQueries({ queryKey: ['meals'] })
+      handleClose()
+    },
+    onError: () => { alert('Failed to log favorite. Try again!') },
+  })
+
   if (!isVisible) return null
 
   const slotColors: Record<string, string> = {
@@ -192,6 +227,9 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
             <VoiceTab
               onAddItems={addItems}
               onSwitchToPlate={() => setActiveTab('search')}
+              favorites={favorites}
+              onLogFavoriteDirect={(items, name) => logFavoriteDirect.mutate({ items, name })}
+              isLoggingFavorite={logFavoriteDirect.isPending}
             />
           )}
           {activeTab === 'barcode' && (

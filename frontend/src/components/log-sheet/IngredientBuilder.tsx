@@ -147,7 +147,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
       {/* ── Filter chips ── */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 4, overflowX: 'auto', flexWrap: 'nowrap', paddingBottom: 2 }}>
         {FILTER_CHIPS.map(({ label, flag, color }) => {
           const on = activeFlags.includes(flag)
           return (
@@ -155,8 +155,9 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
               key={flag}
               onClick={() => toggleFlag(flag)}
               style={{
-                padding: '4px 10px', borderRadius: 999, fontSize: 10, fontWeight: 600,
-                cursor: 'pointer', transition: 'all 150ms', letterSpacing: '0.02em',
+                padding: '4px 9px', borderRadius: 999, fontSize: 10, fontWeight: 600,
+                cursor: 'pointer', transition: 'all 150ms', letterSpacing: 0,
+                flexShrink: 0,
                 background: on ? color : 'var(--glass-1)',
                 border: on ? `1px solid ${color.replace('0.15', '0.5')}` : '1px solid var(--glass-edge)',
                 color: on ? 'var(--fg-primary)' : 'var(--fg-secondary)',

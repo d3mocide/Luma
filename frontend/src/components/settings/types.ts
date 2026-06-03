@@ -102,6 +102,7 @@ export type LlmMetrics = {
     total_tokens?: number
     error_type?: string
     fallback_model?: string
+    trigger?: string
   }>
 }
 

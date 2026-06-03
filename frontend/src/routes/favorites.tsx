@@ -4,23 +4,7 @@ import { Heart, Plus, ArrowLeft, Trash2, Pencil } from 'lucide-react'
 import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { useUIStore } from '../stores'
-import type { DraftItem } from '../components/log-sheet/types'
-
-type FavoriteItem = {
-  id: string
-  sort_order: number
-  food_name: string
-  brand: string | null
-  quantity_g: number
-  nutrients: Record<string, number>
-}
-
-type Favorite = {
-  id: string
-  name: string
-  created_at: string
-  items: FavoriteItem[]
-}
+import type { DraftItem, Favorite, FavoriteItem } from '../components/log-sheet/types'
 
 function mapFavoriteItemToDraft(i: FavoriteItem): DraftItem {
   return {
