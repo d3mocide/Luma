@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from typing import Optional
 from uuid import UUID
 import uuid
@@ -22,7 +23,7 @@ logger = logging.getLogger("plan")
 
 
 def get_current_week_sunday() -> date:
-    today = date.today()
+    today = datetime.now(ZoneInfo(settings.server_timezone)).date()
     return today - timedelta(days=(today.weekday() + 1) % 7)
 
 

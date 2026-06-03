@@ -70,7 +70,7 @@ async def _live_today_row(db: Any, user_id: str, metric: str) -> SimpleNamespace
     )
     last_row = last_r.fetchone()
     return SimpleNamespace(
-        date=str(today_utc),
+        date=str(today_local),
         avg_value=agg_row.avg_val,
         min_value=agg_row.min_val,
         max_value=agg_row.max_val,
