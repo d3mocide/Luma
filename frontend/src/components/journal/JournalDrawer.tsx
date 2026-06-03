@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { X, Check, BatteryLow, Battery, BatteryMedium, Zap, Flame, Frown, Meh, Smile, SmilePlus, Laugh, CircleDashed, Circle, CircleDot, Disc, CheckCircle2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
+import type { TodayData } from '../../lib/api'
 
 export interface PendingMeal {
   meal_event_id: string
@@ -108,18 +109,40 @@ function ScaleRow({
 
 // ── Main drawer ───────────────────────────────────────────────────────────────
 
+type RecentMeal = TodayData['recent_meals'][number]
+
+function fmtTime(isoStr: string): string {
+  const d = new Date(isoStr)
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
 export function JournalDrawer({ prefill, onClose }: Props) {
   const queryClient = useQueryClient()
 
   const [mealName, setMealName] = useState(prefill?.meal_name ?? '')
-  const [loggedAt] = useState(prefill?.logged_at ?? new Date().toISOString())
+  const [mealEventId, setMealEventId] = useState<string | null>(prefill?.meal_event_id ?? null)
+  const [loggedAt, setLoggedAt] = useState(prefill?.logged_at ?? new Date().toISOString())
   const [scores, setScores] = useState<Scores>({ energy: 0, digestion: 0, mood: 0, satiety: 0 })
   const [symptoms, setSymptoms] = useState<string[]>([])
   const [notes, setNotes] = useState('')
 
+  const { data: todayData } = useQuery<TodayData>({
+    queryKey: ['today'],
+    queryFn: () => api.get('/today'),
+    enabled: !prefill,
+    staleTime: 60_000,
+  })
+  const recentMeals: RecentMeal[] = prefill ? [] : (todayData?.recent_meals ?? [])
+
+  function selectMeal(meal: RecentMeal) {
+    setMealName(meal.headline)
+    setMealEventId(meal.id)
+    setLoggedAt(meal.ts)
+  }
+
   const mutation = useMutation({
     mutationFn: () => api.post('/journal', {
-      meal_event_id: prefill?.meal_event_id ?? null,
+      meal_event_id: mealEventId,
       meal_name: mealName.trim(),
       logged_at: loggedAt,
       energy: scores.energy,
@@ -231,11 +254,42 @@ export function JournalDrawer({ prefill, onClose }: Props) {
           {/* Meal name */}
           <div>
             <div className="eyebrow" style={{ marginBottom: 8 }}>Meal</div>
+            {recentMeals.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                {recentMeals.map((meal) => {
+                  const selected = mealEventId === meal.id
+                  return (
+                    <button
+                      key={meal.id}
+                      onClick={() => selectMeal(meal)}
+                      style={{
+                        padding: '5px 12px', borderRadius: 20, fontSize: 12,
+                        border: selected ? '1px solid var(--sky-400)' : '1px solid var(--glass-edge)',
+                        background: selected ? 'rgba(56,189,248,0.12)' : 'var(--glass-1)',
+                        color: selected ? 'var(--sky-400)' : 'var(--fg-secondary)',
+                        cursor: 'pointer', transition: 'all 120ms',
+                        display: 'flex', alignItems: 'center', gap: 5,
+                      }}
+                    >
+                      <span style={{ textTransform: 'capitalize', opacity: 0.7 }}>{meal.slot}</span>
+                      <span style={{ color: selected ? 'var(--sky-400)' : 'var(--fg-primary)', fontWeight: 500 }}>{meal.headline}</span>
+                      <span style={{ opacity: 0.5 }}>{fmtTime(meal.ts)}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
             <input
               type="text"
               value={mealName}
-              onChange={(e) => setMealName(e.target.value)}
-              placeholder="e.g. Grilled salmon with broccoli"
+              onChange={(e) => {
+                setMealName(e.target.value)
+                // Deselect linked meal if user edits the name manually
+                if (mealEventId && recentMeals.find((m) => m.id === mealEventId)?.headline !== e.target.value) {
+                  setMealEventId(null)
+                }
+              }}
+              placeholder={recentMeals.length > 0 ? 'Select above or type a meal name' : 'e.g. Grilled salmon with broccoli'}
               className="field-input"
               style={{
                 width: '100%', height: 42, borderRadius: 10,
