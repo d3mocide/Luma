@@ -4544,5 +4544,571 @@
       "sodium_mg": 5490.0,
       "potassium_mg": 362.0
     }
+  },
+  {
+    "name": "Ribeye Steak (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 227.0,
+    "tags": [
+      "beef",
+      "red-meat",
+      "protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 291.0,
+      "protein_g": 24.7,
+      "fat_g": 21.2,
+      "saturated_fat_g": 8.78,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 59.0,
+      "potassium_mg": 289.0
+    },
+    "flags": []
+  },
+  {
+    "name": "New York Strip Steak (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 227.0,
+    "tags": [
+      "beef",
+      "red-meat",
+      "protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 244.0,
+      "protein_g": 26.6,
+      "fat_g": 15.1,
+      "saturated_fat_g": 6.14,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 54.0,
+      "potassium_mg": 368.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Flank Steak (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 170.0,
+    "tags": [
+      "beef",
+      "red-meat",
+      "lean-protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 196.0,
+      "protein_g": 26.2,
+      "fat_g": 9.7,
+      "saturated_fat_g": 4.01,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 75.0,
+      "potassium_mg": 330.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Filet Mignon (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 170.0,
+    "tags": [
+      "beef",
+      "red-meat",
+      "lean-protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 215.0,
+      "protein_g": 27.8,
+      "fat_g": 11.3,
+      "saturated_fat_g": 4.5,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 60.0,
+      "potassium_mg": 369.0
+    },
+    "flags": []
+  },
+  {
+    "name": "T-Bone Steak (Lean, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 255.0,
+    "tags": [
+      "beef",
+      "red-meat",
+      "protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 235.0,
+      "protein_g": 27.0,
+      "fat_g": 13.8,
+      "saturated_fat_g": 5.52,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 65.0,
+      "potassium_mg": 316.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Skirt Steak (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 170.0,
+    "tags": [
+      "beef",
+      "red-meat",
+      "protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 243.0,
+      "protein_g": 26.7,
+      "fat_g": 14.7,
+      "saturated_fat_g": 5.91,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 90.0,
+      "potassium_mg": 350.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Beef Brisket (Lean, Braised)",
+    "brand": "USDA Reference",
+    "serving_size_g": 113.0,
+    "tags": [
+      "beef",
+      "red-meat",
+      "protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 252.0,
+      "protein_g": 29.4,
+      "fat_g": 14.4,
+      "saturated_fat_g": 5.68,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 81.0,
+      "potassium_mg": 280.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Beef Short Ribs (Braised)",
+    "brand": "USDA Reference",
+    "serving_size_g": 113.0,
+    "tags": [
+      "beef",
+      "red-meat",
+      "protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 295.0,
+      "protein_g": 22.6,
+      "fat_g": 22.9,
+      "saturated_fat_g": 9.62,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 66.0,
+      "potassium_mg": 278.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Ground Beef (80% Lean, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 113.0,
+    "tags": [
+      "beef",
+      "red-meat",
+      "protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 272.0,
+      "protein_g": 26.1,
+      "fat_g": 17.6,
+      "saturated_fat_g": 6.89,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 83.0,
+      "potassium_mg": 300.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Chicken Drumstick (Roasted, Skin On)",
+    "brand": "USDA Reference",
+    "serving_size_g": 86.0,
+    "tags": [
+      "poultry",
+      "protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 216.0,
+      "protein_g": 22.0,
+      "fat_g": 13.6,
+      "saturated_fat_g": 3.72,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 77.0,
+      "potassium_mg": 207.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Chicken Wing (Roasted, with Skin)",
+    "brand": "USDA Reference",
+    "serving_size_g": 34.0,
+    "tags": [
+      "poultry",
+      "protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 290.0,
+      "protein_g": 27.4,
+      "fat_g": 19.5,
+      "saturated_fat_g": 5.51,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 82.0,
+      "potassium_mg": 187.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Rotisserie Chicken Breast (with Skin)",
+    "brand": "USDA Reference",
+    "serving_size_g": 174.0,
+    "tags": [
+      "poultry",
+      "lean-protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 188.0,
+      "protein_g": 26.5,
+      "fat_g": 8.8,
+      "saturated_fat_g": 2.47,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 320.0,
+      "potassium_mg": 238.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Chicken Liver (Pan-Fried)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "poultry",
+      "protein",
+      "iron"
+    ],
+    "nutrients": {
+      "calories": 167.0,
+      "protein_g": 24.4,
+      "fat_g": 6.7,
+      "saturated_fat_g": 2.05,
+      "carbohydrates_g": 0.87,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 71.0,
+      "potassium_mg": 231.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Atlantic Salmon (Farmed, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 178.0,
+    "tags": [
+      "seafood",
+      "lean-protein",
+      "omega-3",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 206.0,
+      "protein_g": 20.4,
+      "fat_g": 13.4,
+      "saturated_fat_g": 3.11,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 59.0,
+      "potassium_mg": 384.0
+    },
+    "flags": [
+      "heart-healthy"
+    ]
+  },
+  {
+    "name": "Sockeye Salmon (Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 178.0,
+    "tags": [
+      "seafood",
+      "lean-protein",
+      "omega-3",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 169.0,
+      "protein_g": 23.5,
+      "fat_g": 8.0,
+      "saturated_fat_g": 1.39,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 59.0,
+      "potassium_mg": 415.0
+    },
+    "flags": [
+      "heart-healthy"
+    ]
+  },
+  {
+    "name": "Smoked Salmon (Cold Smoked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 57.0,
+    "tags": [
+      "seafood",
+      "protein",
+      "omega-3"
+    ],
+    "nutrients": {
+      "calories": 117.0,
+      "protein_g": 18.3,
+      "fat_g": 4.3,
+      "saturated_fat_g": 0.93,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 784.0,
+      "potassium_mg": 175.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Tuna (Yellowfin, Fresh, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 170.0,
+    "tags": [
+      "seafood",
+      "lean-protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 139.0,
+      "protein_g": 30.0,
+      "fat_g": 1.2,
+      "saturated_fat_g": 0.3,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 47.0,
+      "potassium_mg": 569.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Tuna (Bluefin, Fresh, Cooked)",
+    "brand": "USDA Reference",
+    "serving_size_g": 170.0,
+    "tags": [
+      "seafood",
+      "lean-protein",
+      "omega-3",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 184.0,
+      "protein_g": 29.9,
+      "fat_g": 6.3,
+      "saturated_fat_g": 1.62,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 60.0,
+      "potassium_mg": 323.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Tuna (Canned in Oil, Drained)",
+    "brand": "USDA Reference",
+    "serving_size_g": 140.0,
+    "tags": [
+      "seafood",
+      "protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 186.0,
+      "protein_g": 26.5,
+      "fat_g": 8.1,
+      "saturated_fat_g": 1.53,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 396.0,
+      "potassium_mg": 207.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Albacore Tuna (Canned in Water, Drained)",
+    "brand": "USDA Reference",
+    "serving_size_g": 140.0,
+    "tags": [
+      "seafood",
+      "lean-protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 109.0,
+      "protein_g": 25.0,
+      "fat_g": 2.5,
+      "saturated_fat_g": 0.67,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 333.0,
+      "potassium_mg": 258.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Baby Back Ribs (Pork, Braised)",
+    "brand": "USDA Reference",
+    "serving_size_g": 113.0,
+    "tags": [
+      "pork",
+      "protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 292.0,
+      "protein_g": 20.1,
+      "fat_g": 23.0,
+      "saturated_fat_g": 8.62,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 71.0,
+      "potassium_mg": 226.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Pork Belly (Braised)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "pork",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 518.0,
+      "protein_g": 9.3,
+      "fat_g": 53.0,
+      "saturated_fat_g": 19.35,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 35.0,
+      "potassium_mg": 130.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Ham (Regular, Cured, Roasted)",
+    "brand": "USDA Reference",
+    "serving_size_g": 85.0,
+    "tags": [
+      "pork",
+      "protein"
+    ],
+    "nutrients": {
+      "calories": 163.0,
+      "protein_g": 17.8,
+      "fat_g": 9.8,
+      "saturated_fat_g": 3.42,
+      "carbohydrates_g": 1.5,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 1203.0,
+      "potassium_mg": 267.0
+    },
+    "flags": []
+  },
+  {
+    "name": "Pulled Pork (Slow Roasted)",
+    "brand": "USDA Reference",
+    "serving_size_g": 113.0,
+    "tags": [
+      "pork",
+      "protein",
+      "keto"
+    ],
+    "nutrients": {
+      "calories": 237.0,
+      "protein_g": 25.4,
+      "fat_g": 14.7,
+      "saturated_fat_g": 5.4,
+      "carbohydrates_g": 0.0,
+      "sugars_g": 0.0,
+      "fiber_g": 0.0,
+      "soluble_fiber_g": 0.0,
+      "sodium_mg": 85.0,
+      "potassium_mg": 303.0
+    },
+    "flags": []
   }
 ]
