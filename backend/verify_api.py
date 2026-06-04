@@ -188,15 +188,15 @@ class SmokeRunner:
         )
 
     def _check_ingest_signed_hae(self) -> None:
-        body = b'{"data":{"test":"signed-smoke"}}'
-        signature = hmac.new(self.hae_secret.encode(), body, hashlib.sha256).hexdigest()
+        import time
+        body = f'{{"data":{{"test":"signed-smoke","timestamp":{time.time()}}}}}'.encode()
         self._request(
             "POST /api/v1/ingest/hae (signed)",
             "POST",
             f"{self.api}/ingest/hae",
             expected={200},
             data=body,
-            headers={"Content-Type": "application/json", "X-HAE-Signature": signature},
+            headers={"Content-Type": "application/json", "X-HAE-Signature": self.hae_secret},
         )
 
     def _check_today_and_trends(self) -> None:
@@ -378,6 +378,8 @@ class SmokeRunner:
 
         self._check_food_extractor()
         self._check_coach_stream()
+        self._check_voice_logging()
+        self._check_photo_logging()
         # Insight narrator has no direct endpoint — it runs in the worker when an
         # alert fires. We can only confirm the read path + surface any narratives.
         self._request(
@@ -483,6 +485,38 @@ class SmokeRunner:
         elapsed = time.monotonic() - t0
         self.results.append(
             CheckResult(name=name, ok=ok, status=status_code, elapsed_s=elapsed, detail=detail)
+        )
+
+    def _check_voice_logging(self) -> None:
+        # 44-byte dummy WAV header (silent/empty audio)
+        audio_bytes = b'RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x44\xac\x00\x00\x88\x58\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00'
+        
+        self._request(
+            "POST /api/v1/log/meal/voice (Whisper integration)",
+            "POST",
+            f"{self.api}/log/meal/voice",
+            expected={200, 400},
+            files={"file": ("test.wav", audio_bytes, "audio/wav")},
+            timeout=self.llm_timeout,
+        )
+
+    def _check_photo_logging(self) -> None:
+        # 141-byte dummy 1x1 pixel JPEG
+        jpeg_bytes = (
+            b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00\x48\x00\x48\x00\x00\xff\xdb\x00C\x00\x08\x06\x06\x07'
+            b'\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a\x1f\x1e\x1d'
+            b'\x1a\x1c\x1c $.\' \",#\x1c\x1c(7),01444\x1f\'9=82<.342\xff\xc0\x00\x0b\x08\x00\x01\x00\x01\x01\x01'
+            b'\x11\x00\xff\xc4\x00\x1f\x00\x00\x01\x05\x01\x01\x01\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x01'
+            b'\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\xff\xda\x00\x08\x01\x01\x00\x00?\x00\x37\x00\xff\xd9'
+        )
+        
+        self._request(
+            "POST /api/v1/log/meal/photo (Vision LLM integration)",
+            "POST",
+            f"{self.api}/log/meal/photo",
+            expected={200},
+            files={"file": ("test.jpg", jpeg_bytes, "image/jpeg")},
+            timeout=self.llm_timeout,
         )
 
     def _check_stub_endpoints(self) -> None:

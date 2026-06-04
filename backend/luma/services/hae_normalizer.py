@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 HAE_METRIC_MAP: dict[str, str] = {
     # Body composition
     "weight_body_mass":             "weight_kg",
+    "weight_&_body_mass":           "weight_kg",
+    "weight":                       "weight_kg",
+    "body_mass":                    "weight_kg",
     "body_mass_index":              "bmi",
     "body_fat_percentage":          "body_fat_pct",
     # Cardiovascular
@@ -19,6 +22,7 @@ HAE_METRIC_MAP: dict[str, str] = {
     "walking_heart_rate":           "walking_hr_bpm",
     "respiratory_rate":             "respiratory_rate_bpm",
     "blood_oxygen_saturation":      "spo2_pct",
+    "oxygen_saturation":            "spo2_pct",
     # Energy
     "active_energy":                "active_kcal",
     "basal_energy_burned":          "bmr_kcal",

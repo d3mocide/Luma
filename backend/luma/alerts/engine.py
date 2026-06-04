@@ -54,7 +54,7 @@ async def _process_user(user_id: str) -> None:
             await db.execute(
                 text("""
                     INSERT INTO alerts (id, user_id, ts, rule_id, severity, payload, status)
-                    VALUES (:id, :uid, :ts, :rule_id, :severity, :payload::jsonb, 'open')
+                    VALUES (:id, :uid, :ts, :rule_id, :severity, CAST(:payload AS JSONB), 'open')
                 """),
                 {
                     "id": str(alert_id),

@@ -70,10 +70,9 @@ def test_correct_app_secret_accepted():
             with patch("luma.api.ingest.settings") as mock_settings:
                 mock_settings.hae_shared_secret = APP_SECRET
                 with TestClient(app, raise_server_exceptions=False) as client:
-                    body = json.dumps(SAMPLE_PAYLOAD).encode("utf-8")
                     resp = client.post(
                         f"/api/v1/ingest/hae/{uuid4()}",
-                        content=body,
+                        json=SAMPLE_PAYLOAD,
                         headers={"X-HAE-Signature": APP_SECRET, "Content-Type": "application/json"}
                     )
 
