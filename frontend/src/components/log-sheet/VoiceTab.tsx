@@ -97,7 +97,12 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
       // iOS Safari only supports audio/mp4; prefer webm on browsers that support it
       const mimeType = ['audio/webm', 'audio/mp4'].find((t) => MediaRecorder.isTypeSupported(t)) ?? ''
       mimeTypeRef.current = mimeType || 'audio/mp4'
-      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+      
+      const options: any = { audioBitsPerSecond: 32000 }
+      if (mimeType) {
+        options.mimeType = mimeType
+      }
+      const mediaRecorder = new MediaRecorder(stream, options)
       mediaRecorderRef.current = mediaRecorder
 
       mediaRecorder.ondataavailable = (event) => {
