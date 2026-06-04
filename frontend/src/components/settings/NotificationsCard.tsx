@@ -151,12 +151,31 @@ export function NotificationsCard() {
     return () => clearTimeout(t)
   }, [swState])
 
+  // Optimistically write the new prefs into the query cache so the controlled
+  // checkbox/select reflect the tap immediately. Without this the native control
+  // flips, React re-renders it back to the (unchanged) server value before the
+  // PUT round-trips, and the toggle appears dead — especially on iOS.
   const prefsMutation = useMutation({
-    mutationFn: (update: NotifPrefs) => api.put('/notifications/preferences', update),
+    mutationFn: (update: NotifPrefs) => api.put<NotifPrefs>('/notifications/preferences', update),
+    onMutate: async (update) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications', 'preferences'] })
+      const previous = queryClient.getQueryData<NotifPrefs>(['notifications', 'preferences'])
+      queryClient.setQueryData(['notifications', 'preferences'], update)
+      return { previous }
+    },
+    onError: (_err, _update, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['notifications', 'preferences'], context.previous)
+      }
+      setStatusMsg("Couldn't save — try again.")
+      setTimeout(() => setStatusMsg(null), 3000)
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'preferences'] })
       setStatusMsg('Saved')
       setTimeout(() => setStatusMsg(null), 2000)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'preferences'] })
     },
   })
 
