@@ -77,6 +77,9 @@ services:
       INSIGHT_NARRATOR_FALLBACK_MODEL: ${INSIGHT_NARRATOR_FALLBACK_MODEL}
       WHISPER_URL:       ${WHISPER_URL:-http://whisper:9000}
       SERVER_TIMEZONE:   ${SERVER_TIMEZONE:-UTC}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_PUBLIC_KEY:  ${VAPID_PUBLIC_KEY:-}
+      VAPID_CLAIMS_EMAIL: ${VAPID_CLAIMS_EMAIL:-admin@example.com}
       ENVIRONMENT:       ${ENVIRONMENT:-development}
       CORS_ORIGINS:      ${CORS_ORIGINS:-http://localhost:5173}
     depends_on:
