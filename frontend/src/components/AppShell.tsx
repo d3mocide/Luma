@@ -348,7 +348,7 @@ function MobileHeader({ initials }: { initials: string }) {
           </span>
           {cal != null && (
             <span style={{ fontSize: 11, color: 'var(--fg-tertiary)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
-              {cal.logged ?? '—'} / {cal.target ?? '—'} kcal
+              {cal.logged != null ? Math.round(cal.logged) : '—'} / {cal.target != null ? Math.round(cal.target) : '—'} kcal
             </span>
           )}
         </div>
