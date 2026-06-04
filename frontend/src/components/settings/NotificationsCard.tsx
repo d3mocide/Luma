@@ -25,7 +25,7 @@ function swReady(): Promise<ServiceWorkerRegistration> {
   return Promise.race([
     navigator.serviceWorker.ready,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Service worker is not ready. Close the app completely, reopen it, and try again.')), 10000)
+      setTimeout(() => reject(new Error('_SW_TIMEOUT')), 30000)
     ),
   ])
 }
@@ -111,11 +111,29 @@ export function NotificationsCard() {
       return
     }
 
+    // Give immediate feedback based on actual SW state rather than waiting silently
+    const existingReg = await navigator.serviceWorker.getRegistration()
+    if (!existingReg) {
+      setStatusMsg('App is still setting up — wait a few seconds and try again.')
+      return
+    }
+    if (existingReg.installing) {
+      setStatusMsg('Installing in the background — wait a moment and try again.')
+      return
+    }
+    if (existingReg.waiting && !existingReg.active) {
+      setStatusMsg('Update pending — close the app fully, reopen it, and try again.')
+      return
+    }
+
     let reg: ServiceWorkerRegistration
     try {
       reg = await swReady()
     } catch (err) {
-      setStatusMsg(err instanceof Error ? err.message : 'Service worker error.')
+      const msg = err instanceof Error ? err.message : ''
+      setStatusMsg(msg === '_SW_TIMEOUT'
+        ? 'Still loading — close the app fully, reopen it, wait a few seconds, then try again.'
+        : `Service worker error: ${msg}`)
       return
     }
 
