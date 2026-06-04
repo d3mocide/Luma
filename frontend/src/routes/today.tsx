@@ -16,10 +16,12 @@ import { BioTile } from '../components/today/BioTile'
 import { PlanRow } from '../components/today/PlanRow'
 import { RecentMealsCard } from '../components/today/RecentMealsCard'
 import { NutritionCalculatorCard, type FoodAddPayload } from '../components/today/NutritionCalculatorCard'
+import { useHiddenMetrics } from '../lib/hidden-metrics'
 
 export default function TodayRoute() {
   const forceMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === '1'
   const measurementSystem = useMeasurementSystem()
+  const { hidden: hiddenMetrics } = useHiddenMetrics()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [loggingMealId, setLoggingMealId] = useState<string | null>(null)
@@ -264,23 +266,31 @@ export default function TodayRoute() {
         </div>
 
         {/* Biometrics */}
-        <div className="glass" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div className="eyebrow">Biometrics · last night</div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
-            <BioTile icon={<Heart size={13} strokeWidth={1.5}/>} label="HRV" value={fmt(bio?.hrv_ms, 0)} unit="ms" color="var(--bad)"/>
-            <BioTile icon={<Activity size={13} strokeWidth={1.5}/>} label="Resting HR" value={fmt(bio?.rhr_bpm, 0)} unit="bpm" color="var(--sky-400)"/>
-            <BioTile icon={<Moon size={13} strokeWidth={1.5}/>} label="Sleep" value={fmtMinutes(bio?.sleep_duration_min)} color="var(--aurora-violet)"/>
-            <BioTile icon={<Sparkles size={13} strokeWidth={1.5}/>} label="Sleep score" value={fmt(bio?.sleep_score, 0)} color="var(--sun-400)"/>
-            <BioTile icon={<Wind size={13} strokeWidth={1.5}/>} label="Blood O₂" value={fmt(bio?.spo2_pct, 1)} unit="%" color="var(--sky-400)"/>
-            <BioTile icon={<Activity size={13} strokeWidth={1.5}/>} label="Steps" value={bio?.steps != null ? Math.round(bio.steps).toLocaleString() : '—'} color="var(--sky-400)"/>
-            <BioTile icon={<Flame size={13} strokeWidth={1.5}/>} label="Active cal" value={fmt(bio?.active_kcal, 0)} unit="kcal" color="var(--sun-400)"/>
-            <BioTile icon={<Timer size={13} strokeWidth={1.5}/>} label="Exercise" value={fmt(bio?.exercise_min, 0)} unit="min" color="var(--good)"/>
-            <BioTile icon={<Wind size={13} strokeWidth={1.5}/>} label="Respir. rate" value={fmt(bio?.respiratory_rate_bpm, 1)} unit="bpm" color="var(--sky-300)"/>
-            <BioTile icon={<Thermometer size={13} strokeWidth={1.5}/>} label="Body temp" value={fmt(bio?.body_temp_c, 1)} unit="°C" color="var(--good)"/>
-          </div>
-        </div>
+        {(() => {
+          const tiles = [
+            !hiddenMetrics.has('hrv_ms') && <BioTile key="hrv_ms" icon={<Heart size={13} strokeWidth={1.5}/>} label="HRV" value={fmt(bio?.hrv_ms, 0)} unit="ms" color="var(--bad)"/>,
+            !hiddenMetrics.has('rhr_bpm') && <BioTile key="rhr_bpm" icon={<Activity size={13} strokeWidth={1.5}/>} label="Resting HR" value={fmt(bio?.rhr_bpm, 0)} unit="bpm" color="var(--sky-400)"/>,
+            !hiddenMetrics.has('sleep_duration_min') && <BioTile key="sleep_duration_min" icon={<Moon size={13} strokeWidth={1.5}/>} label="Sleep" value={fmtMinutes(bio?.sleep_duration_min)} color="var(--aurora-violet)"/>,
+            !hiddenMetrics.has('sleep_score') && <BioTile key="sleep_score" icon={<Sparkles size={13} strokeWidth={1.5}/>} label="Sleep score" value={fmt(bio?.sleep_score, 0)} color="var(--sun-400)"/>,
+            !hiddenMetrics.has('spo2_pct') && <BioTile key="spo2_pct" icon={<Wind size={13} strokeWidth={1.5}/>} label="Blood O₂" value={fmt(bio?.spo2_pct, 1)} unit="%" color="var(--sky-400)"/>,
+            !hiddenMetrics.has('steps') && <BioTile key="steps" icon={<Activity size={13} strokeWidth={1.5}/>} label="Steps" value={bio?.steps != null ? Math.round(bio.steps).toLocaleString() : '—'} color="var(--sky-400)"/>,
+            !hiddenMetrics.has('active_kcal') && <BioTile key="active_kcal" icon={<Flame size={13} strokeWidth={1.5}/>} label="Active cal" value={fmt(bio?.active_kcal, 0)} unit="kcal" color="var(--sun-400)"/>,
+            !hiddenMetrics.has('exercise_min') && <BioTile key="exercise_min" icon={<Timer size={13} strokeWidth={1.5}/>} label="Exercise" value={fmt(bio?.exercise_min, 0)} unit="min" color="var(--good)"/>,
+            !hiddenMetrics.has('respiratory_rate_bpm') && <BioTile key="respiratory_rate_bpm" icon={<Wind size={13} strokeWidth={1.5}/>} label="Respir. rate" value={fmt(bio?.respiratory_rate_bpm, 1)} unit="bpm" color="var(--sky-300)"/>,
+            !hiddenMetrics.has('body_temp_c') && <BioTile key="body_temp_c" icon={<Thermometer size={13} strokeWidth={1.5}/>} label="Body temp" value={fmt(bio?.body_temp_c, 1)} unit="°C" color="var(--good)"/>,
+          ].filter(Boolean)
+          if (tiles.length === 0) return null
+          return (
+            <div className="glass" style={{ padding: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div className="eyebrow">Biometrics · last night</div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
+                {tiles}
+              </div>
+            </div>
+          )
+        })()}
 
         <NutritionCalculatorCard adherence={data.adherence_today} onAdd={(p) => quickAddMutation.mutate(p)} isAdding={quickAddMutation.isPending} compact={false}/>
 
@@ -413,21 +423,29 @@ export default function TodayRoute() {
         </div>
 
         {/* Biometrics */}
-        <div className="glass" style={{ padding: 18, marginBottom: 14 }}>
-          <div className="eyebrow" style={{ marginBottom: 12 }}>Biometrics</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
-            <BioTile icon={<Heart size={13} strokeWidth={1.5}/>} label="HRV" value={fmt(bio?.hrv_ms, 0)} unit="ms" color="var(--bad)"/>
-            <BioTile icon={<Activity size={13} strokeWidth={1.5}/>} label="RHR" value={fmt(bio?.rhr_bpm, 0)} unit="bpm" color="var(--sky-400)"/>
-            <BioTile icon={<Moon size={13} strokeWidth={1.5}/>} label="Sleep" value={fmtMinutes(bio?.sleep_duration_min)} color="var(--aurora-violet)"/>
-            <BioTile icon={<Sparkles size={13} strokeWidth={1.5}/>} label="Score" value={fmt(bio?.sleep_score, 0)} color="var(--sun-400)"/>
-            <BioTile icon={<Wind size={13} strokeWidth={1.5}/>} label="Blood O₂" value={fmt(bio?.spo2_pct, 1)} unit="%" color="var(--sky-400)"/>
-            <BioTile icon={<Thermometer size={13} strokeWidth={1.5}/>} label="Body temp" value={fmt(bio?.body_temp_c, 1)} unit="°C" color="var(--good)"/>
-            <BioTile icon={<Activity size={13} strokeWidth={1.5}/>} label="Steps" value={bio?.steps != null ? Math.round(bio.steps).toLocaleString() : '—'} color="var(--sky-400)"/>
-            <BioTile icon={<Flame size={13} strokeWidth={1.5}/>} label="Active cal" value={fmt(bio?.active_kcal, 0)} unit="kcal" color="var(--sun-400)"/>
-            <BioTile icon={<Timer size={13} strokeWidth={1.5}/>} label="Exercise" value={fmt(bio?.exercise_min, 0)} unit="min" color="var(--good)"/>
-            <BioTile icon={<Wind size={13} strokeWidth={1.5}/>} label="Respir. rate" value={fmt(bio?.respiratory_rate_bpm, 1)} unit="bpm" color="var(--sky-300)"/>
-          </div>
-        </div>
+        {(() => {
+          const tiles = [
+            !hiddenMetrics.has('hrv_ms') && <BioTile key="hrv_ms" icon={<Heart size={13} strokeWidth={1.5}/>} label="HRV" value={fmt(bio?.hrv_ms, 0)} unit="ms" color="var(--bad)"/>,
+            !hiddenMetrics.has('rhr_bpm') && <BioTile key="rhr_bpm" icon={<Activity size={13} strokeWidth={1.5}/>} label="RHR" value={fmt(bio?.rhr_bpm, 0)} unit="bpm" color="var(--sky-400)"/>,
+            !hiddenMetrics.has('sleep_duration_min') && <BioTile key="sleep_duration_min" icon={<Moon size={13} strokeWidth={1.5}/>} label="Sleep" value={fmtMinutes(bio?.sleep_duration_min)} color="var(--aurora-violet)"/>,
+            !hiddenMetrics.has('sleep_score') && <BioTile key="sleep_score" icon={<Sparkles size={13} strokeWidth={1.5}/>} label="Score" value={fmt(bio?.sleep_score, 0)} color="var(--sun-400)"/>,
+            !hiddenMetrics.has('spo2_pct') && <BioTile key="spo2_pct" icon={<Wind size={13} strokeWidth={1.5}/>} label="Blood O₂" value={fmt(bio?.spo2_pct, 1)} unit="%" color="var(--sky-400)"/>,
+            !hiddenMetrics.has('body_temp_c') && <BioTile key="body_temp_c" icon={<Thermometer size={13} strokeWidth={1.5}/>} label="Body temp" value={fmt(bio?.body_temp_c, 1)} unit="°C" color="var(--good)"/>,
+            !hiddenMetrics.has('steps') && <BioTile key="steps" icon={<Activity size={13} strokeWidth={1.5}/>} label="Steps" value={bio?.steps != null ? Math.round(bio.steps).toLocaleString() : '—'} color="var(--sky-400)"/>,
+            !hiddenMetrics.has('active_kcal') && <BioTile key="active_kcal" icon={<Flame size={13} strokeWidth={1.5}/>} label="Active cal" value={fmt(bio?.active_kcal, 0)} unit="kcal" color="var(--sun-400)"/>,
+            !hiddenMetrics.has('exercise_min') && <BioTile key="exercise_min" icon={<Timer size={13} strokeWidth={1.5}/>} label="Exercise" value={fmt(bio?.exercise_min, 0)} unit="min" color="var(--good)"/>,
+            !hiddenMetrics.has('respiratory_rate_bpm') && <BioTile key="respiratory_rate_bpm" icon={<Wind size={13} strokeWidth={1.5}/>} label="Respir. rate" value={fmt(bio?.respiratory_rate_bpm, 1)} unit="bpm" color="var(--sky-300)"/>,
+          ].filter(Boolean)
+          if (tiles.length === 0) return null
+          return (
+            <div className="glass" style={{ padding: 18, marginBottom: 14 }}>
+              <div className="eyebrow" style={{ marginBottom: 12 }}>Biometrics</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                {tiles}
+              </div>
+            </div>
+          )
+        })()}
 
         <NutritionCalculatorCard adherence={data.adherence_today} onAdd={(p) => quickAddMutation.mutate(p)} isAdding={quickAddMutation.isPending} compact/>
 
