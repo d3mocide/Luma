@@ -3,7 +3,7 @@ SHELL := /bin/bash
 COMPOSE := docker compose
 CORE_SERVICES := api postgres redis whisper worker
 
-.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed seed-reference seed-mock clear-hae-data ai-smoke ai-smoke-full clean nuke
+.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed seed-reference seed-mock seed-build seed-merge clear-hae-data ai-smoke ai-smoke-full clean nuke
 
 help:
 	@echo "Luma quick commands"
@@ -23,6 +23,10 @@ help:
 	@echo "  make migrate  - run alembic migrations"
 	@echo "  make seed     - optional operator bootstrap / recovery"
 	@echo "  make seed-reference - manually force seed clinical core USDA Reference foods"
+	@echo "  make seed-build  - generate staged batch from downloaded FDC dataset"
+	@echo "                       BATCH=<proteins|grains|dairy|produce|legumes> SOURCE=<fdc.json>"
+	@echo "  make seed-merge  - merge reviewed staged batch into seed JSON then re-seed DB"
+	@echo "                       FILE=<staged/batch.json>"
 	@echo "  make seed-mock - seed high-fidelity mock data (weight, ldl, meals) for any user UUID"
 	@echo "  make clear-hae-data - delete all HAE biometric rows for a given user UUID"
 	@echo "  make ai-smoke    - run API E2E smoke tests (skips LLM + plan generation)"
@@ -75,6 +79,36 @@ seed:
 	$(COMPOSE) exec api python -m luma.scripts.seed_admin
 
 seed-reference:
+	$(COMPOSE) exec api python -m luma.scripts.ingest_usda
+
+# Generate a staged batch JSON from a downloaded USDA FDC dataset file.
+# Download SR Legacy or Foundation Foods ZIP from https://fdc.nal.usda.gov/download-datasets
+# then unzip and pass the JSON as SOURCE.
+# Example: make seed-build BATCH=grains SOURCE=~/Downloads/FoodData_Central_sr_legacy_food_json_2021-10-28.json
+BATCH ?= proteins
+SOURCE ?=
+seed-build:
+	@if [ -z "$(SOURCE)" ]; then \
+		echo "ERROR: SOURCE is required. Usage: make seed-build BATCH=$(BATCH) SOURCE=/path/to/fdc.json"; \
+		exit 1; \
+	fi
+	python3 -m luma.scripts.build_seed build \
+		--source "$(SOURCE)" \
+		--batch "$(BATCH)" \
+		--output "backend/luma/scripts/staged/batch_$(BATCH).json"
+	@echo ""
+	@echo "Review backend/luma/scripts/staged/batch_$(BATCH).json then run:"
+	@echo "  make seed-merge FILE=backend/luma/scripts/staged/batch_$(BATCH).json"
+
+# Merge a reviewed staged batch into usda_seed_foods.json and re-seed the running DB.
+# Example: make seed-merge FILE=backend/luma/scripts/staged/batch_grains.json
+FILE ?=
+seed-merge:
+	@if [ -z "$(FILE)" ]; then \
+		echo "ERROR: FILE is required. Usage: make seed-merge FILE=backend/luma/scripts/staged/batch.json"; \
+		exit 1; \
+	fi
+	python3 -m luma.scripts.build_seed merge "$(FILE)"
 	$(COMPOSE) exec api python -m luma.scripts.ingest_usda
 
 seed-mock:
