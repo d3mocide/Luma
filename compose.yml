@@ -76,6 +76,7 @@ services:
       INSIGHT_NARRATOR_MODEL:        ${INSIGHT_NARRATOR_MODEL}
       INSIGHT_NARRATOR_FALLBACK_MODEL: ${INSIGHT_NARRATOR_FALLBACK_MODEL}
       WHISPER_URL:       ${WHISPER_URL:-http://whisper:9000}
+      SERVER_TIMEZONE:   ${SERVER_TIMEZONE:-UTC}
       ENVIRONMENT:       ${ENVIRONMENT:-development}
       CORS_ORIGINS:      ${CORS_ORIGINS:-http://localhost:5173}
     depends_on:
