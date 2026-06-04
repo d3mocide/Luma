@@ -77,8 +77,14 @@ export function LlmMetricsCard() {
                     <div className="num" style={{ fontSize: 12, color: 'var(--fg-secondary)' }}>
                       {event.elapsed_ms != null ? `${event.elapsed_ms.toFixed(1)}ms` : '—'}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
-                      {event.total_tokens != null ? `${event.total_tokens} tok` : 'no usage'}
+                    <div className="num" style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
+                      {event.prompt_tokens != null && event.completion_tokens != null ? (
+                        `${event.prompt_tokens.toLocaleString()} in · ${event.completion_tokens.toLocaleString()} out`
+                      ) : event.total_tokens != null ? (
+                        `${event.total_tokens.toLocaleString()} tok`
+                      ) : (
+                        'no usage'
+                      )}
                     </div>
                   </div>
                 </div>

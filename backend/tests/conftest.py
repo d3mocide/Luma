@@ -20,6 +20,14 @@ if "jwt" not in sys.modules:
     _jwt_stub.InvalidTokenError = Exception
     sys.modules["jwt"] = _jwt_stub
 
+# redis.exceptions: stub with a real exception class so catching it works under test
+if "redis.exceptions" not in sys.modules:
+    _redis_exceptions_stub = ModuleType("redis.exceptions")
+    class TestRedisError(Exception):
+        pass
+    _redis_exceptions_stub.RedisError = TestRedisError
+    sys.modules["redis.exceptions"] = _redis_exceptions_stub
+
 _MISSING_NATIVE = (
     "asyncpg",
     "litellm",
@@ -28,7 +36,6 @@ _MISSING_NATIVE = (
     "argon2.exceptions",
     "redis",
     "redis.asyncio",
-    "redis.exceptions",
     "redis.client",
 )
 for _mod in _MISSING_NATIVE:

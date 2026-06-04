@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import { type AiConfig } from './types'
+import { type AiConfig, type LlmMetrics } from './types'
+import { Coins, TrendingUp } from 'lucide-react'
 
 type ModelPricing = {
   name: string
@@ -45,6 +46,13 @@ export function AiPriceCalculator() {
   const { data: pricingOverrides = {} } = useQuery<Record<string, { input: number; output: number }>>({
     queryKey: ['settings', 'ai-pricing-overrides'],
     queryFn: () => api.get('/settings/ai-pricing-overrides'),
+  })
+
+  // Fetch live LLM metrics telemetry
+  const { data: llmMetrics, isLoading: isMetricsLoading } = useQuery<LlmMetrics>({
+    queryKey: ['settings', 'llm-metrics'],
+    queryFn: () => api.get('/settings/llm-metrics'),
+    refetchInterval: 15000,
   })
 
   // Database persistence mutation for overrides
@@ -157,6 +165,27 @@ export function AiPriceCalculator() {
   const [customInputCost, setCustomInputCost] = useState('')
   const [customOutputCost, setCustomOutputCost] = useState('')
 
+  // Prepopulate sliders with average telemetry metrics once on load
+  const [hasPrepopulated, setHasPrepopulated] = useState(false)
+
+  useEffect(() => {
+    if (llmMetrics?.totals && !hasPrepopulated) {
+      const successes = llmMetrics.totals.successes
+      if (successes > 0) {
+        const avgPrompt = Math.round(llmMetrics.totals.prompt_tokens / successes)
+        const avgCompletion = Math.round(llmMetrics.totals.completion_tokens / successes)
+        
+        if (avgPrompt >= 100 && avgPrompt <= 10000) {
+          setInputTokens(Math.round(avgPrompt / 100) * 100)
+        }
+        if (avgCompletion >= 50 && avgCompletion <= 4000) {
+          setOutputTokens(Math.round(avgCompletion / 50) * 50)
+        }
+        setHasPrepopulated(true)
+      }
+    }
+  }, [llmMetrics, hasPrepopulated])
+
   // Default to first loaded model when active list is parsed
   useEffect(() => {
     if (activeModels.length > 0 && !selectedModelKey) {
@@ -193,6 +222,121 @@ export function AiPriceCalculator() {
     setIsEditingRates(false)
   }
 
+  // Compute actual spent costs per model
+  const getActualCosts = () => {
+    if (!llmMetrics?.model_totals) return { list: [], total: 0 }
+
+    const list: Array<{
+      modelKey: string
+      name: string
+      provider: 'gemini' | 'anthropic' | 'local'
+      promptTokens: number
+      completionTokens: number
+      cost: number
+    }> = []
+
+    let totalCost = 0
+    const modelKeys = new Set<string>()
+
+    Object.keys(llmMetrics.model_totals).forEach(key => {
+      const parts = key.split(':')
+      if (parts.length >= 2) {
+        modelKeys.add(parts.slice(1).join(':'))
+      }
+    })
+
+    modelKeys.forEach(modelKey => {
+      const promptKey = `prompt_tokens:${modelKey}`
+      const completionKey = `completion_tokens:${modelKey}`
+      const promptTokens = llmMetrics.model_totals?.[promptKey] || 0
+      const completionTokens = llmMetrics.model_totals?.[completionKey] || 0
+
+      if (promptTokens === 0 && completionTokens === 0) return
+
+      // Find the pricing rates for this model
+      let modelPricing = activeModels.find(m => m.originalKey === modelKey)
+      
+      if (!modelPricing) {
+        const lower = modelKey.toLowerCase()
+        let provider: 'gemini' | 'anthropic' | 'local' = 'local'
+        let inputCost = 0
+        let outputCost = 0
+        let cleanName = modelKey
+
+        if (lower.startsWith('anthropic/')) {
+          provider = 'anthropic'
+          cleanName = modelKey.substring('anthropic/'.length)
+        } else if (lower.startsWith('gemini/')) {
+          provider = 'gemini'
+          cleanName = modelKey.substring('gemini/'.length)
+        } else if (lower.startsWith('local/')) {
+          provider = 'local'
+          cleanName = modelKey.substring('local/'.length)
+        } else {
+          if (lower.includes('claude') || lower.includes('sonnet') || lower.includes('haiku')) {
+            provider = 'anthropic'
+          } else if (lower.includes('gemini')) {
+            provider = 'gemini'
+          }
+        }
+
+        if (provider === 'anthropic') {
+          if (lower.includes('haiku')) {
+            inputCost = 0.80
+            outputCost = 4.00
+          } else {
+            inputCost = 3.00
+            outputCost = 15.00
+          }
+        } else if (provider === 'gemini') {
+          if (lower.includes('pro')) {
+            inputCost = 1.25
+            outputCost = 5.00
+          } else {
+            inputCost = 0.075
+            outputCost = 0.30
+          }
+        }
+
+        if (pricingOverrides[modelKey]) {
+          inputCost = pricingOverrides[modelKey].input
+          outputCost = pricingOverrides[modelKey].output
+        }
+
+        const displayLabel = cleanName
+          .split(/[-_]/)
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ')
+
+        modelPricing = {
+          name: displayLabel,
+          originalKey: modelKey,
+          provider,
+          inputCostPerMillion: inputCost,
+          outputCostPerMillion: outputCost,
+        }
+      }
+
+      const promptCost = (promptTokens / 1000000) * modelPricing.inputCostPerMillion
+      const completionCost = (completionTokens / 1000000) * modelPricing.outputCostPerMillion
+      const cost = promptCost + completionCost
+      totalCost += cost
+
+      list.push({
+        modelKey,
+        name: modelPricing.name,
+        provider: modelPricing.provider,
+        promptTokens,
+        completionTokens,
+        cost,
+      })
+    })
+
+    return { list, total: totalCost }
+  }
+
+  const { list: actualCostList, total: actualTotalCost } = getActualCosts()
+
   // Projections
   const inputCostPerCall = (inputTokens / 1000000) * selectedModel.inputCostPerMillion
   const outputCostPerCall = (outputTokens / 1000000) * selectedModel.outputCostPerMillion
@@ -213,12 +357,13 @@ export function AiPriceCalculator() {
   }
 
   return (
-    <div className="glass settings-card" style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 18 }}>
+    <div className="glass settings-card" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Title */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
         <div>
-          <div className="eyebrow" style={{ margin: 0 }}>AI Call Price Calculator</div>
+          <div className="eyebrow" style={{ margin: 0 }}>AI Cost Analysis</div>
           <p style={{ color: 'var(--fg-tertiary)', fontSize: 13, margin: '4px 0 0' }}>
-            Estimate runtime costs and budget Luma agent query operations.
+            Monitor actual spent token usage and customize billing pricing rates.
           </p>
         </div>
         <div style={{
@@ -228,15 +373,67 @@ export function AiPriceCalculator() {
           border: '1px solid rgba(56, 189, 248, 0.15)',
           color: 'var(--sky-400)', letterSpacing: '0.05em'
         }}>
-          {isConfigLoading ? 'Syncing...' : 'Active Config'}
+          {isMetricsLoading || isConfigLoading ? 'Syncing...' : 'Active Telemetry'}
         </div>
       </div>
 
+      {/* Actual Usage Section */}
+      <div className="glass-inset" style={{ padding: 18, borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Coins size={16} style={{ color: 'var(--sun-400)' }} />
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Actual Spent Cost
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20, alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--fg-tertiary)' }}>Total Cost</div>
+            <div className="num" style={{ fontSize: 24, fontWeight: 600, color: 'var(--sun-400)', marginTop: 4 }}>
+              {actualTotalCost === 0 ? 'Free' : `$${actualTotalCost.toFixed(4)}`}
+            </div>
+            {llmMetrics?.totals && (
+              <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 4 }}>
+                {llmMetrics.totals.successes} successful calls
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, borderLeft: '1px solid var(--glass-edge)', paddingLeft: 20 }}>
+            {actualCostList.length > 0 ? (
+              actualCostList.map(item => (
+                <div key={item.modelKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                  <div style={{ minWidth: 0, marginRight: 8 }}>
+                    <div style={{ fontWeight: 500, color: 'var(--fg-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.name}
+                    </div>
+                    <div className="num" style={{ fontSize: 10, color: 'var(--fg-quiet)', marginTop: 1 }}>
+                      {item.promptTokens.toLocaleString()} in · {item.completionTokens.toLocaleString()} out
+                    </div>
+                  </div>
+                  <span className="num" style={{ fontWeight: 600, color: 'var(--fg-primary)', flexShrink: 0 }}>
+                    {item.cost === 0 ? 'Free' : `$${item.cost.toFixed(4)}`}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p style={{ color: 'var(--fg-quiet)', fontSize: 12, margin: 0 }}>
+                No token consumption recorded yet. Telemetry will aggregate cost details as AI features are queried.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Calculator Projection & Rates Section */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {/* Model Selection */}
+        {/* Model Selection & Rate Customization */}
         <div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--fg-quiet)', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>
-            Select Active Model
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Pricing Rate Management
+            </span>
+            <span style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>Select model to configure rates</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
             {activeModels.map((model) => {
@@ -271,8 +468,8 @@ export function AiPriceCalculator() {
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginTop: 2, display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{model.provider === 'local' ? 'Self-hosted' : `$${model.inputCostPerMillion.toFixed(2)}/M`}</span>
+                  <div className="num" style={{ fontSize: 10, color: 'var(--fg-quiet)', marginTop: 2, display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{model.provider === 'local' ? 'Self-hosted' : `$${model.inputCostPerMillion.toFixed(3)}/M`}</span>
                   </div>
                 </button>
               )
@@ -298,7 +495,7 @@ export function AiPriceCalculator() {
                   <input
                     id="custom-input-cost"
                     type="number"
-                    step="0.01"
+                    step="0.001"
                     min="0"
                     value={customInputCost}
                     onChange={(e) => setCustomInputCost(e.target.value)}
@@ -319,7 +516,7 @@ export function AiPriceCalculator() {
                   <input
                     id="custom-output-cost"
                     type="number"
-                    step="0.01"
+                    step="0.001"
                     min="0"
                     value={customOutputCost}
                     onChange={(e) => setCustomOutputCost(e.target.value)}
@@ -382,7 +579,7 @@ export function AiPriceCalculator() {
                   <span>Local models run for free on your hardware.</span>
                 ) : (
                   <span>
-                    Current rates: <strong style={{ color: 'var(--fg-primary)', fontFamily: 'var(--font-mono)' }}>${selectedModel.inputCostPerMillion.toFixed(3)}/M</strong> input, <strong style={{ color: 'var(--fg-primary)', fontFamily: 'var(--font-mono)' }}>${selectedModel.outputCostPerMillion.toFixed(3)}/M</strong> output
+                    Current rates: <strong className="num" style={{ color: 'var(--fg-primary)' }}>${selectedModel.inputCostPerMillion.toFixed(3)}/M</strong> input, <strong className="num" style={{ color: 'var(--fg-primary)' }}>${selectedModel.outputCostPerMillion.toFixed(3)}/M</strong> output
                   </span>
                 )}
               </div>
@@ -400,6 +597,14 @@ export function AiPriceCalculator() {
           )}
         </div>
 
+        {/* Projection Subtitle Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+          <TrendingUp size={16} style={{ color: 'var(--sky-400)' }} />
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Interactive Cost Projection
+          </span>
+        </div>
+
         {/* Dynamic Sliders / Inputs */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
           {/* Token settings */}
@@ -407,7 +612,7 @@ export function AiPriceCalculator() {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prompt Tokens</span>
-                <span style={{ fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--fg-secondary)' }}>{inputTokens.toLocaleString()}</span>
+                <span className="num" style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-secondary)' }}>{inputTokens.toLocaleString()}</span>
               </div>
               <input
                 type="range"
@@ -427,7 +632,7 @@ export function AiPriceCalculator() {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Response Tokens</span>
-                <span style={{ fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--fg-secondary)' }}>{outputTokens.toLocaleString()}</span>
+                <span className="num" style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-secondary)' }}>{outputTokens.toLocaleString()}</span>
               </div>
               <input
                 type="range"
@@ -481,7 +686,7 @@ export function AiPriceCalculator() {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Calls Per Day</span>
-                <span style={{ fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--fg-secondary)' }}>{callsPerDay}</span>
+                <span className="num" style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-secondary)' }}>{callsPerDay}</span>
               </div>
               <input
                 type="range"
@@ -559,13 +764,13 @@ export function AiPriceCalculator() {
             <div style={{ borderTop: '1px solid var(--glass-edge)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
                 <span style={{ color: 'var(--fg-quiet)' }}>Prompt Input Share:</span>
-                <span style={{ color: 'var(--fg-secondary)', fontFamily: 'var(--font-mono)' }}>
+                <span className="num" style={{ color: 'var(--fg-secondary)' }}>
                   {((inputCostPerCall / costPerCall) * 100).toFixed(0)}% (${inputCostPerCall.toFixed(4)})
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
                 <span style={{ color: 'var(--fg-quiet)' }}>Response Output Share:</span>
-                <span style={{ color: 'var(--fg-secondary)', fontFamily: 'var(--font-mono)' }}>
+                <span className="num" style={{ color: 'var(--fg-secondary)' }}>
                   {((outputCostPerCall / costPerCall) * 100).toFixed(0)}% (${outputCostPerCall.toFixed(4)})
                 </span>
               </div>

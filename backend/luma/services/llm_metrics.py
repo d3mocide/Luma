@@ -72,6 +72,17 @@ class LLMMetricsTracker:
                 pipe.hincrby(METRICS_HASH_KEY, "attempts", 1)
                 pipe.hincrby(METRICS_HASH_KEY, "successes", 1)
                 pipe.hset(METRICS_META_KEY, mapping={"last_success_at": timestamp})
+                
+                # Record global and model-specific token counts
+                if prompt_tokens is not None and prompt_tokens > 0:
+                    pipe.hincrby(METRICS_HASH_KEY, "prompt_tokens", prompt_tokens)
+                    pipe.hincrby(METRICS_HASH_KEY, f"prompt_tokens:{model}", prompt_tokens)
+                if completion_tokens is not None and completion_tokens > 0:
+                    pipe.hincrby(METRICS_HASH_KEY, "completion_tokens", completion_tokens)
+                    pipe.hincrby(METRICS_HASH_KEY, f"completion_tokens:{model}", completion_tokens)
+                if total_tokens is not None and total_tokens > 0:
+                    pipe.hincrby(METRICS_HASH_KEY, "total_tokens", total_tokens)
+                    pipe.hincrby(METRICS_HASH_KEY, f"total_tokens:{model}", total_tokens)
             elif event == "failure":
                 pipe.hincrby(METRICS_HASH_KEY, "attempts", 1)
                 pipe.hincrby(METRICS_HASH_KEY, "failures", 1)
@@ -95,6 +106,14 @@ class LLMMetricsTracker:
             logger.exception("Failed to load LLM metrics from Redis")
             return self._empty_snapshot(source="redis-unavailable")
 
+        model_totals = {}
+        for k, v in totals.items():
+            if k.startswith("prompt_tokens:") or k.startswith("completion_tokens:") or k.startswith("total_tokens:"):
+                try:
+                    model_totals[k] = int(v)
+                except ValueError:
+                    model_totals[k] = 0
+
         return {
             "scope": "redis",
             "resets_on_restart": False,
@@ -104,7 +123,11 @@ class LLMMetricsTracker:
                 "successes": int(totals.get("successes") or 0),
                 "failures": int(totals.get("failures") or 0),
                 "fallback_retries": int(totals.get("fallback_retries") or 0),
+                "prompt_tokens": int(totals.get("prompt_tokens") or 0),
+                "completion_tokens": int(totals.get("completion_tokens") or 0),
+                "total_tokens": int(totals.get("total_tokens") or 0),
             },
+            "model_totals": model_totals,
             "last_success_at": meta.get("last_success_at"),
             "last_failure_at": meta.get("last_failure_at"),
             "recent_events": [json.loads(item) for item in raw_events],
@@ -120,7 +143,11 @@ class LLMMetricsTracker:
                 "successes": 0,
                 "failures": 0,
                 "fallback_retries": 0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
             },
+            "model_totals": {},
             "last_success_at": None,
             "last_failure_at": None,
             "recent_events": [],

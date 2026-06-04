@@ -87,7 +87,11 @@ export type LlmMetrics = {
     successes: number
     failures: number
     fallback_retries: number
+    prompt_tokens: number
+    completion_tokens: number
+    total_tokens: number
   }
+  model_totals?: Record<string, number>
   last_success_at: string | null
   last_failure_at: string | null
   recent_events: Array<{
