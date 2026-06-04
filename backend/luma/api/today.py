@@ -3,7 +3,7 @@ from datetime import timedelta, datetime, timezone, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from sqlalchemy import select, text
 
 from luma.config import settings
@@ -14,8 +14,16 @@ router = APIRouter()
 
 
 @router.get("/today")
-async def get_today(user: CurrentUser, db: DbDep) -> dict[str, Any]:
-    tz = ZoneInfo(settings.server_timezone)
+async def get_today(
+    user: CurrentUser,
+    db: DbDep,
+    tz: str = Query(default=None, alias="tz"),
+) -> dict[str, Any]:
+    try:
+        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
+    except Exception:
+        resolved_tz = ZoneInfo(settings.server_timezone)
+    tz = resolved_tz
     today_dt = datetime.now(tz).date()
     yesterday_dt = today_dt - timedelta(days=1)
 

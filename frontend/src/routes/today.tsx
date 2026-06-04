@@ -32,9 +32,10 @@ export default function TodayRoute() {
     retry: false,
   })
 
+  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
   const { data: todayApiData, isLoading, error } = useQuery<TodayData>({
-    queryKey: ['today'],
-    queryFn: () => api.get('/today'),
+    queryKey: ['today', browserTz],
+    queryFn: () => api.get(`/today?tz=${encodeURIComponent(browserTz)}`),
     enabled: !forceMockData,
   })
 
