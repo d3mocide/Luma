@@ -72,3 +72,53 @@ async def refresh_all_coach_contexts(ctx: dict) -> None:
             logger.exception("Coach context refresh failed for user %s", user_id)
 
     logger.info("Coach context refresh complete (%d users)", len(user_ids))
+
+
+async def send_daily_nudges(ctx: dict) -> None:
+    """Hourly check: send push to users whose local nudge hour matches now and who haven't logged today."""
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+    from sqlalchemy import text
+    from luma.db.session import AsyncSessionLocal
+    from luma.services.push_dispatcher import send_push_to_user
+
+    now_utc = datetime.now(timezone.utc)
+    logger.info("Daily nudge check at UTC %s", now_utc.isoformat())
+
+    async with AsyncSessionLocal() as db:
+        rows = await db.execute(
+            text("SELECT id, nudge_hour, nudge_tz FROM users WHERE nudge_enabled = TRUE")
+        )
+        nudge_users = rows.fetchall()
+
+    for row in nudge_users:
+        try:
+            tz = ZoneInfo(row.nudge_tz or "UTC")
+        except (ZoneInfoNotFoundError, KeyError):
+            tz = ZoneInfo("UTC")
+
+        local_now = now_utc.astimezone(tz)
+        if local_now.hour != row.nudge_hour:
+            continue
+
+        today_start_local = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start_utc = today_start_local.astimezone(timezone.utc)
+
+        async with AsyncSessionLocal() as db:
+            logged = await db.execute(
+                text("SELECT 1 FROM meal_events WHERE user_id = :uid AND ts >= :today LIMIT 1"),
+                {"uid": str(row.id), "today": today_start_utc},
+            )
+            already_logged = logged.fetchone() is not None
+
+        if not already_logged:
+            try:
+                await send_push_to_user(
+                    str(row.id),
+                    "Time to log your meals",
+                    "You haven't logged anything yet today. Tap to open Luma.",
+                    "/log",
+                )
+                logger.info("Nudge sent to user %s", row.id)
+            except Exception:
+                logger.exception("Nudge failed for user %s", row.id)

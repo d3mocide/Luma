@@ -71,6 +71,15 @@ async def _process_user(user_id: str) -> None:
                 extra={"rule_id": result.rule_id, "severity": result.severity, "user_id": user_id},
             )
 
+            if result.severity == "warning":
+                try:
+                    from luma.services.push_dispatcher import send_push_to_user
+                    title = result.payload.get("title", "Luma health alert")
+                    body = result.payload.get("summary", "A new health insight is waiting for you.")
+                    await send_push_to_user(user_id, title, body, "/insights")
+                except Exception:
+                    logger.exception("Push on alert failed for user %s rule %s", user_id, result.rule_id)
+
         await db.commit()
 
         # Narrate newly created open alerts that have no narrative yet

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Download } from 'lucide-react'
+import { Check, Copy, Share } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import type { ShoppingItem } from './types'
@@ -9,13 +9,42 @@ type Props = {
   shoppingList: ShoppingItem[]
 }
 
+function buildRemindersUrl(items: ShoppingItem[]): string {
+  const notes = items
+    .map((i) => `• ${i.name}${i.quantity ? ` — ${i.quantity} ${i.unit ?? ''}`.trim() : ''}`)
+    .join('\n')
+  const title = encodeURIComponent('Shopping List')
+  const body = encodeURIComponent(notes)
+  return `x-apple-reminderkit://add?title=${title}&notes=${body}`
+}
+
+function buildPlainText(items: ShoppingItem[]): string {
+  return items
+    .map((i) => `${i.name}${i.quantity ? ` — ${i.quantity} ${i.unit ?? ''}`.trim() : ''}`)
+    .join('\n')
+}
+
 export function ShoppingListView({ planId, shoppingList }: Props) {
   const [toggledItems, setToggledItems] = useState<Record<string, boolean>>({})
+  const [copied, setCopied] = useState(false)
 
   const togglePurchasedMutation = useMutation({
     mutationFn: ({ foodId, purchased }: { foodId: string; purchased: boolean }) =>
       api.patch(`/plan/${planId}/shopping-list/${foodId}`, { purchased }),
   })
+
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent)
+
+  const handleExport = () => {
+    if (isIos) {
+      window.location.href = buildRemindersUrl(shoppingList)
+    } else {
+      navigator.clipboard.writeText(buildPlainText(shoppingList)).then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+    }
+  }
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto' }}>
@@ -25,12 +54,9 @@ export function ShoppingListView({ planId, shoppingList }: Props) {
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 400, color: 'var(--fg-primary)' }}>Shopping List</h2>
             <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--fg-quiet)' }}>Auto-compiled from this week's plan</p>
           </div>
-          <button className="btn" style={{ padding: '8px 14px', fontSize: 12 }}
-            onClick={async () => {
-              const res: Record<string, string> = await api.post(`/plan/${planId}/shopping-list/export-reminders`)
-              alert(res.message || 'Exported!')
-            }}>
-            <Download size={12} /> Export
+          <button className="btn" style={{ padding: '8px 14px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }} onClick={handleExport}>
+            {isIos ? <Share size={12} /> : <Copy size={12} />}
+            {isIos ? 'Reminders' : copied ? 'Copied!' : 'Copy list'}
           </button>
         </div>
 

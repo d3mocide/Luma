@@ -1,7 +1,8 @@
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 import uuid
-from datetime import datetime, timezone
+from collections import defaultdict
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy import select
@@ -376,3 +377,47 @@ async def list_meals(
     res = await db.execute(stmt)
     events = res.scalars().all()
     return {"meals": [_format_event_response(e) for e in events]}
+
+
+@router.get("/meals/frequent")
+async def get_frequent_meals(
+    db: DbDep,
+    current_user: CurrentUser,
+    days: int = 7,
+) -> dict:
+    """Return the most frequently logged meal per slot over the past N days."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    stmt = (
+        select(MealEvent)
+        .where(MealEvent.user_id == current_user.id, MealEvent.ts >= cutoff)
+        .order_by(MealEvent.ts.desc())
+    )
+    res = await db.execute(stmt)
+    events = res.scalars().all()
+
+    # Group by slot, then by canonical items hash (sorted food names + rounded weights)
+    slot_buckets: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(list))
+    for event in events:
+        items = event.items or []
+        key = str(tuple(sorted(
+            (item.get("name", ""), round(item.get("estimated_weight_g", 0)))
+            for item in items
+        )))
+        slot_buckets[event.slot][key].append(event)
+
+    slot_order = ["breakfast", "lunch", "dinner", "snack"]
+    suggestions = []
+    for slot, buckets in slot_buckets.items():
+        best_key = max(buckets, key=lambda k: len(buckets[k]))
+        best_events = buckets[best_key]
+        most_recent = best_events[0]
+        suggestions.append({
+            "slot": slot,
+            "items": most_recent.items,
+            "nutrition": most_recent.nutrition,
+            "count": len(best_events),
+            "last_logged": most_recent.ts.isoformat(),
+        })
+
+    suggestions.sort(key=lambda s: slot_order.index(s["slot"]) if s["slot"] in slot_order else 99)
+    return {"suggestions": suggestions}

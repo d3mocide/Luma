@@ -38,6 +38,7 @@ dependencies = [
     "orjson==3.11.9",
     "litellm==1.86.0",
     "tzdata==2025.2",
+    "pywebpush==2.0.0",
 ]
 
 [project.optional-dependencies]
