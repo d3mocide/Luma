@@ -26,6 +26,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const isVisible = isPageMode || isOpen
 
   const handleClose = () => {
+    setMealName('')
     if (isPageMode) { onClose?.(); return }
     close()
   }
@@ -37,6 +38,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const [slot, setSlot] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(getCurrentSlot)
   const [draftItems, setDraftItems] = useState<DraftItem[]>([])
   const [transcription, setTranscription] = useState('')
+  const [mealName, setMealName] = useState('')
   const [savingFav, setSavingFav] = useState(false)
   const [favName, setFavName] = useState('')
 
@@ -104,13 +106,14 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
         source: activeTab,
         items: draftItems,
         nutrition: totals,
-        raw_input: transcription || 'Manual log',
+        raw_input: mealName.trim() || transcription || 'Manual log',
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['today'] })
       queryClient.invalidateQueries({ queryKey: ['meals'] })
       setDraftItems([])
       setTranscription('')
+      setMealName('')
       handleClose()
     },
     onError: (err) => {
@@ -276,6 +279,18 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
                 </div>
               ))}
             </div>
+            <input
+              type="text"
+              value={mealName}
+              onChange={(e) => setMealName(e.target.value)}
+              placeholder="Name this meal… (optional)"
+              className="field-input"
+              style={{
+                width: '100%', padding: '9px 12px', fontSize: 13,
+                background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+                borderRadius: 8, color: 'var(--fg-primary)', boxSizing: 'border-box',
+              }}
+            />
             {savingFav ? (
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
