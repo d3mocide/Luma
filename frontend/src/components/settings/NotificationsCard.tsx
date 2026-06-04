@@ -151,12 +151,31 @@ export function NotificationsCard() {
     return () => clearTimeout(t)
   }, [swState])
 
+  // Optimistically write the new prefs into the query cache so the controlled
+  // checkbox/select reflect the tap immediately. Without this the native control
+  // flips, React re-renders it back to the (unchanged) server value before the
+  // PUT round-trips, and the toggle appears dead — especially on iOS.
   const prefsMutation = useMutation({
-    mutationFn: (update: NotifPrefs) => api.put('/notifications/preferences', update),
+    mutationFn: (update: NotifPrefs) => api.put<NotifPrefs>('/notifications/preferences', update),
+    onMutate: async (update) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications', 'preferences'] })
+      const previous = queryClient.getQueryData<NotifPrefs>(['notifications', 'preferences'])
+      queryClient.setQueryData(['notifications', 'preferences'], update)
+      return { previous }
+    },
+    onError: (_err, _update, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['notifications', 'preferences'], context.previous)
+      }
+      setStatusMsg("Couldn't save — try again.")
+      setTimeout(() => setStatusMsg(null), 3000)
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'preferences'] })
       setStatusMsg('Saved')
       setTimeout(() => setStatusMsg(null), 2000)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'preferences'] })
     },
   })
 
@@ -337,7 +356,20 @@ export function NotificationsCard() {
               </label>
 
               <label style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-                <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Timezone</span>
+                <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  <span>Timezone</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+                      if (tz && tz !== prefs.nudge_tz) prefsMutation.mutate({ ...prefs, nudge_tz: tz })
+                      setLocalTz(null)
+                    }}
+                    style={{ background: 'none', border: 'none', padding: 0, fontSize: 10, letterSpacing: '0.06em', color: 'var(--sky-400)', cursor: 'pointer', textTransform: 'uppercase' }}
+                  >
+                    Detect
+                  </button>
+                </span>
                 <input
                   type="text"
                   value={localTz ?? prefs.nudge_tz}

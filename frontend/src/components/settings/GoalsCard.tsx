@@ -84,7 +84,7 @@ export function GoalsCard({ goalForm, onFieldChange, goalSaveError, goalSaveSucc
             />
           </Field>
         ))}
-        <Field label="LDL drawn" unit="date">
+        <Field label="Last LDL test" unit="date drawn">
           <input
             value={goalForm.current_ldl_drawn_at}
             onChange={(e) => onFieldChange('current_ldl_drawn_at', e.target.value)}

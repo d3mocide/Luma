@@ -1,4 +1,5 @@
-import { type CSSProperties, useEffect, useState } from 'react'
+import { type CSSProperties, useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, User } from '../lib/api'
@@ -51,6 +52,94 @@ function Row({ label, value, last }: { label: string; value: string; last?: bool
   )
 }
 
+function DisplayNameRow({ user, last }: { user: User; last?: boolean }) {
+  const queryClient = useQueryClient()
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState(user.display_name)
+  const [error, setError] = useState<string | null>(null)
+
+  const mutation = useMutation({
+    mutationFn: (display_name: string) => api.patch<User>('/auth/me', { display_name }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['me'], updated)
+      setEditing(false)
+      setError(null)
+    },
+    onError: (err: Error) => setError(err.message || 'Could not update name.'),
+  })
+
+  const beginEdit = () => {
+    setName(user.display_name)
+    setError(null)
+    setEditing(true)
+  }
+
+  const save = () => {
+    const trimmed = name.trim()
+    if (!trimmed) {
+      setError('Name cannot be empty.')
+      return
+    }
+    if (trimmed === user.display_name) {
+      setEditing(false)
+      return
+    }
+    mutation.mutate(trimmed)
+  }
+
+  const rowStyle = { padding: '12px 0', borderBottom: last ? 'none' : '1px solid var(--glass-edge)' }
+  const smallBtn = {
+    background: 'var(--glass-2, rgba(255, 255, 255, 0.05))',
+    border: '1px solid var(--glass-edge, rgba(255, 255, 255, 0.1))',
+    fontSize: 11,
+    color: 'var(--fg-tertiary)',
+    cursor: 'pointer',
+    padding: '3px 8px',
+    borderRadius: 6,
+  } as const
+
+  if (!editing) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', ...rowStyle }}>
+        <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>Name</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{user.display_name}</span>
+          <button type="button" onClick={beginEdit} style={smallBtn}>Edit</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={rowStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>Name</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') save()
+              if (e.key === 'Escape') { setEditing(false); setError(null) }
+            }}
+            maxLength={100}
+            className="field-input"
+            style={{ fontSize: 13, padding: '4px 8px', width: 160, textAlign: 'right' }}
+          />
+          <button type="button" onClick={save} disabled={mutation.isPending} style={{ ...smallBtn, color: 'var(--sky-400)', borderColor: 'rgba(14,165,233,0.3)' }}>
+            {mutation.isPending ? '…' : 'Save'}
+          </button>
+          <button type="button" onClick={() => { setEditing(false); setError(null) }} style={smallBtn}>Cancel</button>
+        </div>
+      </div>
+      {error && (
+        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--bad)', textAlign: 'right' }}>{error}</div>
+      )}
+    </div>
+  )
+}
+
 function CopyRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
   const [copied, setCopied] = useState(false)
   const handleCopy = async () => {
@@ -96,6 +185,7 @@ function AccessDenied() {
 
 function AccountTab({
   user,
+  userLoading,
   goalForm,
   onFieldChange,
   goalSaveError,
@@ -109,6 +199,7 @@ function AccountTab({
   onApplyRecommendations,
 }: {
   user: User | undefined
+  userLoading: boolean
   goalForm: GoalFormState
   onFieldChange: (field: keyof GoalFormState, value: string) => void
   goalSaveError: string | null
@@ -129,11 +220,13 @@ function AccountTab({
           <div className="eyebrow" style={{ marginBottom: 16 }}>Account</div>
           {user ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <Row label="Name"  value={user.display_name} />
+              <DisplayNameRow user={user} />
               <Row label="Email" value={user.email} />
               <Row label="Role"  value={user.role} />
               <CopyRow label="User ID" value={user.id} last />
             </div>
+          ) : userLoading ? (
+            <p style={{ color: 'var(--fg-quiet)', fontSize: 14, margin: 0 }}>Loading your account…</p>
           ) : (
             <p style={{ color: 'var(--fg-quiet)', fontSize: 14, margin: 0 }}>Not signed in</p>
           )}
@@ -586,26 +679,33 @@ function AdminTab({ currentUserId }: { currentUserId: string }) {
 export default function SettingsRoute() {
   const queryClient = useQueryClient()
   const measurementSystem = useMeasurementSystem()
-  const [activeTab, setActiveTab] = useState<SettingsTab>('account')
+  const [searchParams, setSearchParams] = useSearchParams()
   const [loggingOut, setLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState<string | null>(null)
   const [goalSaveError, setGoalSaveError] = useState<string | null>(null)
   const [goalSaveSuccess, setGoalSaveSuccess] = useState<string | null>(null)
   const [goalForm, setGoalForm] = useState<GoalFormState>(emptyGoalForm)
 
-  const { data: user } = useQuery<User>({
+  const tabParam = searchParams.get('tab')
+  const activeTab: SettingsTab = tabParam && tabParam in TAB_META ? (tabParam as SettingsTab) : 'account'
+
+  const setActiveTab = useCallback((id: SettingsTab) => {
+    const next = new URLSearchParams(searchParams)
+    if (id === 'account') next.delete('tab')
+    else next.set('tab', id)
+    setSearchParams(next)
+  }, [searchParams, setSearchParams])
+
+  const { data: user, isLoading: userLoading } = useQuery<User>({
     queryKey: ['me'],
     queryFn: () => api.get('/auth/me'),
   })
 
   useEffect(() => {
-    if (user) {
-      const { minRole } = TAB_META[activeTab]
-      if (!hasRole(user, minRole)) {
-        setActiveTab('account')
-      }
+    if (user && !hasRole(user, TAB_META[activeTab].minRole)) {
+      setActiveTab('account')
     }
-  }, [user, activeTab])
+  }, [user, activeTab, setActiveTab])
 
   const { data: goalSettings } = useQuery<Partial<GoalSettings>>({
     queryKey: ['settings', 'goals'],
@@ -685,6 +785,7 @@ export default function SettingsRoute() {
 
   const isOperator = hasRole(user, 'operator')
   const tabs: SettingsTab[] = ['account', 'health-import', 'ai-routing', 'admin']
+  const visibleTabs = tabs.filter((id) => hasRole(user, TAB_META[id].minRole))
 
   return (
     <div className="thin-scroll settings-page" style={{ height: '100%', overflowY: 'auto', padding: '32px 40px 40px' }}>
@@ -701,55 +802,79 @@ export default function SettingsRoute() {
       </header>
 
       {/* Tab strip */}
-      <div className="settings-tabs" role="tablist">
-        {tabs
-          .filter((id) => hasRole(user, TAB_META[id].minRole))
-          .map((id) => {
-            const { label } = TAB_META[id]
-            return (
-              <button
-                key={id}
-                role="tab"
-                aria-selected={activeTab === id}
-                className="settings-tab"
-                onClick={() => setActiveTab(id)}
-              >
-                {label}
-              </button>
-            )
-          })}
+      <div className="settings-tabs" role="tablist" aria-label="Settings sections">
+        {visibleTabs.map((id, idx) => {
+          const { label } = TAB_META[id]
+          const selected = activeTab === id
+          return (
+            <button
+              key={id}
+              id={`settings-tab-${id}`}
+              role="tab"
+              aria-selected={selected}
+              aria-controls={`settings-panel-${id}`}
+              tabIndex={selected ? 0 : -1}
+              className="settings-tab"
+              onClick={() => setActiveTab(id)}
+              onKeyDown={(e) => {
+                let nextIdx: number | null = null
+                if (e.key === 'ArrowRight') nextIdx = (idx + 1) % visibleTabs.length
+                else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + visibleTabs.length) % visibleTabs.length
+                else if (e.key === 'Home') nextIdx = 0
+                else if (e.key === 'End') nextIdx = visibleTabs.length - 1
+                if (nextIdx !== null) {
+                  e.preventDefault()
+                  const nextId = visibleTabs[nextIdx]
+                  setActiveTab(nextId)
+                  document.getElementById(`settings-tab-${nextId}`)?.focus()
+                }
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
       </div>
 
       {/* Tab panels */}
       {activeTab === 'account' && (
-        <AccountTab
-          user={user}
-          goalForm={goalForm}
-          onFieldChange={handleGoalChange}
-          goalSaveError={goalSaveError}
-          goalSaveSuccess={goalSaveSuccess}
-          onSubmit={handleGoalSubmit}
-          isPending={goalMutation.isPending}
-          measurementSystem={measurementSystem}
-          loggingOut={loggingOut}
-          logoutError={logoutError}
-          onLogout={handleLogout}
-          onApplyRecommendations={handleApplyRecommendations}
-        />
+        <div role="tabpanel" id="settings-panel-account" aria-labelledby="settings-tab-account">
+          <AccountTab
+            user={user}
+            userLoading={userLoading}
+            goalForm={goalForm}
+            onFieldChange={handleGoalChange}
+            goalSaveError={goalSaveError}
+            goalSaveSuccess={goalSaveSuccess}
+            onSubmit={handleGoalSubmit}
+            isPending={goalMutation.isPending}
+            measurementSystem={measurementSystem}
+            loggingOut={loggingOut}
+            logoutError={logoutError}
+            onLogout={handleLogout}
+            onApplyRecommendations={handleApplyRecommendations}
+          />
+        </div>
       )}
 
       {activeTab === 'health-import' && (
-        <HealthImportTab isOperator={isOperator} />
+        <div role="tabpanel" id="settings-panel-health-import" aria-labelledby="settings-tab-health-import">
+          <HealthImportTab isOperator={isOperator} />
+        </div>
       )}
 
       {activeTab === 'ai-routing' && (
-        <AiRoutingTab isOperator={isOperator} />
+        <div role="tabpanel" id="settings-panel-ai-routing" aria-labelledby="settings-tab-ai-routing">
+          <AiRoutingTab isOperator={isOperator} />
+        </div>
       )}
 
       {activeTab === 'admin' && (
-        hasRole(user, 'admin')
-          ? <AdminTab currentUserId={user?.id ?? ''} />
-          : <AccessDenied />
+        <div role="tabpanel" id="settings-panel-admin" aria-labelledby="settings-tab-admin">
+          {hasRole(user, 'admin')
+            ? <AdminTab currentUserId={user?.id ?? ''} />
+            : <AccessDenied />}
+        </div>
       )}
     </div>
   )
