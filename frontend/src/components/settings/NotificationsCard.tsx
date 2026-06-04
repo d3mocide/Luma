@@ -21,6 +21,15 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
   return { value: i, label: `${h}:00 ${period}` }
 })
 
+function swReady(): Promise<ServiceWorkerRegistration> {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Service worker is not ready. Close the app completely, reopen it, and try again.')), 10000)
+    ),
+  ])
+}
+
 export function NotificationsCard() {
   const queryClient = useQueryClient()
   const [subscribed, setSubscribed] = useState(false)
@@ -52,6 +61,26 @@ export function NotificationsCard() {
         reg.pushManager.getSubscription().then((sub) => setSubscribed(!!sub))
       })
     }
+    // Watch for OS-level permission changes so the UI updates without a reload.
+    // On iOS, the user enables notifications via Settings → Notifications → Luma,
+    // and this fires when they return to the app.
+    let permStatus: PermissionStatus | null = null
+    if ('permissions' in navigator) {
+      navigator.permissions.query({ name: 'notifications' as PermissionName }).then((status) => {
+        permStatus = status
+        status.addEventListener('change', () => {
+          setPermissionState(
+            status.state === 'granted' ? 'granted'
+            : status.state === 'denied' ? 'denied'
+            : 'default'
+          )
+        })
+      }).catch(() => { /* permissions API not available on this platform */ })
+    }
+    return () => {
+      // permStatus cleanup is best-effort; removing a listener on a GC'd object is a no-op
+      permStatus?.removeEventListener('change', () => {})
+    }
   }, [])
 
   const prefsMutation = useMutation({
@@ -73,7 +102,22 @@ export function NotificationsCard() {
       return
     }
 
-    const reg = await navigator.serviceWorker.ready
+    // Always re-read live permission on click — iOS persists this at the OS level
+    // and it can differ from the last-read state without any page reload.
+    const live = 'Notification' in window ? Notification.permission : 'denied'
+    if (live !== permissionState) setPermissionState(live)
+    if (live === 'denied') {
+      setStatusMsg('Notifications are blocked. On iOS: Settings → Notifications → Luma → Allow, then return here.')
+      return
+    }
+
+    let reg: ServiceWorkerRegistration
+    try {
+      reg = await swReady()
+    } catch (err) {
+      setStatusMsg(err instanceof Error ? err.message : 'Service worker error.')
+      return
+    }
 
     if (subscribed) {
       const sub = await reg.pushManager.getSubscription()
@@ -91,14 +135,14 @@ export function NotificationsCard() {
       return
     }
 
-    let permission = Notification.permission
-    if (permission === 'default') {
-      permission = await Notification.requestPermission()
-      setPermissionState(permission)
-    }
-    if (permission !== 'granted') {
-      setStatusMsg('Notification permission denied. Enable it in browser settings.')
-      return
+    // live is 'default' or 'granted' here — we already returned if 'denied' above
+    if (live === 'default') {
+      const granted = await Notification.requestPermission()
+      setPermissionState(granted)
+      if (granted !== 'granted') {
+        setStatusMsg('Notification permission denied. On iOS: Settings → Notifications → Luma → Allow.')
+        return
+      }
     }
 
     try {
@@ -141,7 +185,7 @@ export function NotificationsCard() {
 
       {isBlocked && (
         <div style={{ padding: '12px 14px', background: 'rgba(251,113,133,0.08)', border: '1px solid rgba(251,113,133,0.22)', borderRadius: 8, fontSize: 13, color: 'var(--bad)', marginBottom: 16 }}>
-          Notifications are blocked in your browser settings. Allow them and reload to continue.
+          Notifications are blocked. On iOS: <strong>Settings → Notifications → Luma → Allow</strong>, then return here. On other browsers: check site permissions and reload.
         </div>
       )}
 
@@ -154,7 +198,7 @@ export function NotificationsCard() {
         </div>
         <button
           onClick={handleToggleSubscription}
-          disabled={!isPushSupported || isBlocked}
+          disabled={!isPushSupported}
           className="btn"
           style={{
             padding: '8px 16px',
@@ -162,7 +206,7 @@ export function NotificationsCard() {
             background: subscribed ? 'rgba(251,113,133,0.12)' : 'rgba(14,165,233,0.15)',
             color: subscribed ? 'var(--bad)' : 'var(--sky-400)',
             border: `1px solid ${subscribed ? 'rgba(251,113,133,0.3)' : 'rgba(14,165,233,0.3)'}`,
-            opacity: (!isPushSupported || isBlocked) ? 0.4 : 1,
+            opacity: !isPushSupported ? 0.4 : 1,
           }}
         >
           {subscribed ? 'Unsubscribe' : 'Subscribe'}
