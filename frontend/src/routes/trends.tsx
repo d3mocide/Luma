@@ -6,6 +6,7 @@ import {
 import { Heart, Activity, Moon, Flame, TrendingUp, TrendingDown, X, Timer, Wind, Sun, Thermometer, Leaf, type LucideIcon } from 'lucide-react'
 import { api, TrendSeries } from '../lib/api'
 import { convertWeight, measurementWeightUnit, type MeasurementSystem, useMeasurementSystem } from '../lib/measurements'
+import { useHiddenMetrics } from '../lib/hidden-metrics'
 import Spark from '../components/ui/Spark'
 
 const RANGES = ['7d', '30d', '90d', '1y'] as const
@@ -225,6 +226,7 @@ export default function TrendsRoute() {
   const [activeTab, setActiveTab] = useState<TabId>('vitals')
   const [drillDate, setDrillDate] = useState<string | null>(null)
   const measurementSystem = useMeasurementSystem()
+  const { hidden: hiddenMetrics } = useHiddenMetrics()
 
   const swipeStartX = useRef<number | null>(null)
   const swipeStartY = useRef<number | null>(null)
@@ -351,26 +353,39 @@ export default function TrendsRoute() {
       <div onTouchStart={handleSwipeStart} onTouchEnd={handleSwipeEnd}>
         {activeTab === 'wellbeing' ? (
           <WellbeingTab />
-        ) : (
-          <div className="trends-metric-grid">
-            {METRICS.filter(m => m.tab === activeTab).map((m) => (
-              <MetricChart
-                key={m.id}
-                metricId={m.id}
-                label={m.label}
-                unit={m.unit}
-                color={m.color}
-                range={range}
-                measurementSystem={measurementSystem}
-                alerts={alerts}
-                insight={m.insight}
-                invert={m.invert}
-                onDrillDown={setDrillDate}
-                Icon={m.Icon}
-              />
-            ))}
-          </div>
-        )}
+        ) : (() => {
+          const visible = METRICS.filter(m => m.tab === activeTab && !hiddenMetrics.has(m.id))
+          if (visible.length === 0) {
+            return (
+              <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--fg-tertiary)', fontSize: 14 }}>
+                All metrics in this category are hidden.{' '}
+                <a href="/settings" style={{ color: 'var(--sky-400)', textDecoration: 'none' }}>
+                  Manage visibility in Settings.
+                </a>
+              </div>
+            )
+          }
+          return (
+            <div className="trends-metric-grid">
+              {visible.map((m) => (
+                <MetricChart
+                  key={m.id}
+                  metricId={m.id}
+                  label={m.label}
+                  unit={m.unit}
+                  color={m.color}
+                  range={range}
+                  measurementSystem={measurementSystem}
+                  alerts={alerts}
+                  insight={m.insight}
+                  invert={m.invert}
+                  onDrillDown={setDrillDate}
+                  Icon={m.Icon}
+                />
+              ))}
+            </div>
+          )
+        })()}
       </div>
 
       {drillDate && (

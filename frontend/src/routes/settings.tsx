@@ -19,6 +19,7 @@ import { HaeMetricsCard } from '../components/settings/HaeMetricsCard'
 import { HaeImportCard } from '../components/settings/HaeImportCard'
 import { HaeDiagnosticCard } from '../components/settings/HaeDiagnosticCard'
 import { HaeAnalyzeCard } from '../components/settings/HaeAnalyzeCard'
+import { MetricVisibilityCard } from '../components/settings/MetricVisibilityCard'
 import { useMeasurementSystem, convertWeightToKg } from '../lib/measurements'
 
 const KG_TO_LB = 2.2046226218
@@ -139,6 +140,7 @@ function AccountTab({
         </div>
 
         <MeasurementsCard />
+        <MetricVisibilityCard />
         <NotificationsCard />
         <PasswordCard />
 
