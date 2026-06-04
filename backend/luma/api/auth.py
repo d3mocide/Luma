@@ -133,6 +133,34 @@ async def me(user: CurrentUser) -> UserOut:
     return UserOut.model_validate(user)
 
 
+class UpdateProfileRequest(BaseModel):
+    display_name: str
+
+
+@router.patch("/me")
+async def update_me(body: UpdateProfileRequest, user: CurrentUser, db: DbDep) -> UserOut:
+    name = body.display_name.strip()
+    if not name:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Display name cannot be empty.",
+        )
+    if len(name) > 100:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Display name must be 100 characters or fewer.",
+        )
+
+    user.display_name = name
+    try:
+        await db.commit()
+        await db.refresh(user)
+    except SQLAlchemyError as exc:
+        _raise_auth_db_http_error(exc)
+
+    return UserOut.model_validate(user)
+
+
 @router.post("/refresh")
 async def refresh(
     response: Response,

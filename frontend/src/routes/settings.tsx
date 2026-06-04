@@ -51,6 +51,94 @@ function Row({ label, value, last }: { label: string; value: string; last?: bool
   )
 }
 
+function DisplayNameRow({ user, last }: { user: User; last?: boolean }) {
+  const queryClient = useQueryClient()
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState(user.display_name)
+  const [error, setError] = useState<string | null>(null)
+
+  const mutation = useMutation({
+    mutationFn: (display_name: string) => api.patch<User>('/auth/me', { display_name }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['me'], updated)
+      setEditing(false)
+      setError(null)
+    },
+    onError: (err: Error) => setError(err.message || 'Could not update name.'),
+  })
+
+  const beginEdit = () => {
+    setName(user.display_name)
+    setError(null)
+    setEditing(true)
+  }
+
+  const save = () => {
+    const trimmed = name.trim()
+    if (!trimmed) {
+      setError('Name cannot be empty.')
+      return
+    }
+    if (trimmed === user.display_name) {
+      setEditing(false)
+      return
+    }
+    mutation.mutate(trimmed)
+  }
+
+  const rowStyle = { padding: '12px 0', borderBottom: last ? 'none' : '1px solid var(--glass-edge)' }
+  const smallBtn = {
+    background: 'var(--glass-2, rgba(255, 255, 255, 0.05))',
+    border: '1px solid var(--glass-edge, rgba(255, 255, 255, 0.1))',
+    fontSize: 11,
+    color: 'var(--fg-tertiary)',
+    cursor: 'pointer',
+    padding: '3px 8px',
+    borderRadius: 6,
+  } as const
+
+  if (!editing) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', ...rowStyle }}>
+        <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>Name</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{user.display_name}</span>
+          <button type="button" onClick={beginEdit} style={smallBtn}>Edit</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={rowStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>Name</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') save()
+              if (e.key === 'Escape') { setEditing(false); setError(null) }
+            }}
+            maxLength={100}
+            className="field-input"
+            style={{ fontSize: 13, padding: '4px 8px', width: 160, textAlign: 'right' }}
+          />
+          <button type="button" onClick={save} disabled={mutation.isPending} style={{ ...smallBtn, color: 'var(--sky-400)', borderColor: 'rgba(14,165,233,0.3)' }}>
+            {mutation.isPending ? '…' : 'Save'}
+          </button>
+          <button type="button" onClick={() => { setEditing(false); setError(null) }} style={smallBtn}>Cancel</button>
+        </div>
+      </div>
+      {error && (
+        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--bad)', textAlign: 'right' }}>{error}</div>
+      )}
+    </div>
+  )
+}
+
 function CopyRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
   const [copied, setCopied] = useState(false)
   const handleCopy = async () => {
@@ -129,7 +217,7 @@ function AccountTab({
           <div className="eyebrow" style={{ marginBottom: 16 }}>Account</div>
           {user ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <Row label="Name"  value={user.display_name} />
+              <DisplayNameRow user={user} />
               <Row label="Email" value={user.email} />
               <Row label="Role"  value={user.role} />
               <CopyRow label="User ID" value={user.id} last />

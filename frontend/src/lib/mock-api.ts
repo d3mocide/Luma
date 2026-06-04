@@ -254,6 +254,20 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     return MOCK_USER
   }
 
+  if (method === 'PATCH' && pathname === '/auth/me') {
+    requireAuth()
+    const body = parseBody(init)
+    const name = typeof body?.display_name === 'string' ? body.display_name.trim() : ''
+    if (!name) {
+      throw new MockApiError(422, 'Display name cannot be empty.')
+    }
+    if (name.length > 100) {
+      throw new MockApiError(422, 'Display name must be 100 characters or fewer.')
+    }
+    MOCK_USER.display_name = name
+    return MOCK_USER
+  }
+
   if (method === 'GET' && pathname === '/settings/measurements') {
     requireAuth()
     return { system: measurementSystem }
