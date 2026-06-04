@@ -114,12 +114,11 @@ Fully implemented, verified, stabilized, and bug-fixed.
 ## Phase 3 — Polish  🔓 CURRENT
 
 ### Committed scope
-- [ ] Repeat-meal detection on Log sheet — "Usual breakfast?" one-tap re-log based on last 7-day frequency
-- [ ] Shopping list export to iOS Reminders via `x-apple-reminderkit://` deep link
+- [x] Repeat-meal detection on Log sheet — "Quick" tab; `GET /log/meals/frequent` ranks by 7-day frequency per slot; one-tap re-log adds items directly to draft
+- [x] Shopping list export — iOS: `x-apple-reminderkit://` deep link; other devices: clipboard copy with "Copy list" button
 - [ ] ML anomaly detection (`alerts/ml.py`) — Prophet for weight trend forecasting, IsolationForest for biometric outliers
 - [ ] Multi-user / family support — `role = family | viewer`, read-only sharing link
-- [ ] Web Bluetooth direct scale path — Bluefy integration as HAE alternative for weight
-- [ ] Push notifications — PWA push API for daily nudge at user-configured time
+- [x] Push notifications — VAPID Web Push; `push_subscriptions` table (migration 0014); per-user nudge time + timezone in Settings; daily arq nudge cron; alert engine pushes on `warning` severity; custom SW with push + notificationclick handlers
 
 ### Meal plan overhaul backlog (approved for Phase 3)
 - [x] Slot lock/pin — user pins individual plan slots so they survive regeneration; locked slots passed as constraints to LLM on next generate

@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     coach_fallback_model: str = ""
     insight_narrator_fallback_model: str = ""
 
+    # VAPID keys for Web Push (generate with: python -m py_vapid --gen)
+    vapid_private_key: str = ""
+    vapid_public_key: str = ""
+    vapid_claims_email: str = "admin@example.com"
+
     server_timezone: str = "UTC"
 
     environment: Literal["development", "production"] = "development"

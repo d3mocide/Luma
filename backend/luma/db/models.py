@@ -32,6 +32,9 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     last_login_at = Column(DateTime(timezone=True))
     is_password_temp = Column(Boolean, nullable=False, default=False, server_default='false')
+    nudge_enabled = Column(Boolean, nullable=False, default=False, server_default='false')
+    nudge_hour = Column(Integer, nullable=False, default=19, server_default='19')
+    nudge_tz = Column(Text, nullable=False, default='UTC', server_default="'UTC'")
 
     goals = relationship("Goal", back_populates="user", uselist=False, cascade="all, delete-orphan")
     preferences = relationship("Preference", back_populates="user", cascade="all, delete-orphan")
@@ -39,6 +42,7 @@ class User(Base):
     favorites = relationship("Favorite", back_populates="user", cascade="all, delete-orphan")
     meal_plans = relationship("MealPlan", back_populates="user", cascade="all, delete-orphan")
     coach_threads = relationship("CoachThread", back_populates="user", cascade="all, delete-orphan")
+    push_subscriptions = relationship("PushSubscription", back_populates="user", cascade="all, delete-orphan")
 
 
 class Goal(Base):
@@ -294,3 +298,17 @@ class FavoriteItem(Base):
     nutrients = Column(JSONB, nullable=False, default=dict)
 
     favorite = relationship("Favorite", back_populates="items")
+
+
+class PushSubscription(Base):
+    __tablename__ = "push_subscriptions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    endpoint = Column(Text, unique=True, nullable=False)
+    p256dh = Column(Text, nullable=False)
+    auth = Column(Text, nullable=False)
+    device_label = Column(Text)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    user = relationship("User", back_populates="push_subscriptions")

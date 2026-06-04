@@ -10,6 +10,7 @@ import { GoalsCard } from '../components/settings/GoalsCard'
 import { RecommendGoalsCard } from '../components/settings/RecommendGoalsCard'
 import { MeasurementsCard } from '../components/settings/MeasurementsCard'
 import { PasswordCard } from '../components/settings/PasswordCard'
+import { NotificationsCard } from '../components/settings/NotificationsCard'
 import { LlmMetricsCard } from '../components/settings/LlmMetricsCard'
 import { AiConfigCard } from '../components/settings/AiConfigCard'
 import { AiPerformanceCard } from '../components/settings/AiPerformanceCard'
@@ -138,6 +139,7 @@ function AccountTab({
         </div>
 
         <MeasurementsCard />
+        <NotificationsCard />
         <PasswordCard />
 
         <div className="glass settings-card" style={{ padding: 24 }}>

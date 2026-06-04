@@ -6,27 +6,15 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       injectRegister: false,
       includeAssets: ['icons/*.png', 'icons/*.svg', 'assets/*.svg'],
       manifest: false, // using public/manifest.webmanifest
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // Activate new SW immediately so iOS PWAs pick up fixes on next launch
-        // instead of waiting for every installed instance to be closed.
-        skipWaiting: true,
-        clientsClaim: true,
-        cleanupOutdatedCaches: true,
-        runtimeCaching: [
-          {
-            urlPattern: /^\/api\/v1\/today$/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'today-cache',
-              expiration: { maxAgeSeconds: 3600 },
-            },
-          },
-        ],
       },
     }),
   ],

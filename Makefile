@@ -3,7 +3,7 @@ SHELL := /bin/bash
 COMPOSE := docker compose
 CORE_SERVICES := api postgres redis whisper worker
 
-.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed seed-reference seed-mock seed-build seed-merge clear-hae-data ai-smoke ai-smoke-full clean nuke
+.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed seed-reference seed-mock seed-build seed-merge clear-hae-data ai-smoke ai-smoke-full gen-vapid clean nuke
 
 help:
 	@echo "Luma quick commands"
@@ -31,6 +31,7 @@ help:
 	@echo "  make clear-hae-data - delete all HAE biometric rows for a given user UUID"
 	@echo "  make ai-smoke    - run API E2E smoke tests (skips LLM + plan generation)"
 	@echo "  make ai-smoke-full - run API E2E smoke tests including LLM agents"
+	@echo "  make gen-vapid - print a fresh VAPID key pair to console (add to .env manually)"
 	@echo "  make clean    - remove stopped containers"
 	@echo "  make nuke     - remove containers, volumes, and orphans"
 
@@ -128,6 +129,9 @@ ai-smoke:
 
 ai-smoke-full:
 	cd backend && python verify_api.py $(SMOKE_ARGS)
+
+gen-vapid:
+	$(COMPOSE) exec api python -m luma.scripts.gen_vapid
 
 clean:
 	$(COMPOSE) rm -f

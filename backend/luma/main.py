@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from luma.config import settings
-from luma.api import auth, ingest, today, trends, log, plan, coach, foods, recipes, goals, insights, hae_diagnostic, admin, journal, favorites
+from luma.api import auth, ingest, today, trends, log, plan, coach, foods, recipes, goals, insights, hae_diagnostic, admin, journal, favorites, notifications
 
 logging.basicConfig(
     level=logging.INFO if settings.is_production else logging.DEBUG,
@@ -99,6 +99,7 @@ app.include_router(insights.router, prefix=f"{API_PREFIX}/insights", tags=["insi
 app.include_router(hae_diagnostic.router, prefix=API_PREFIX, tags=["hae-diagnostic"])
 app.include_router(admin.router, prefix=f"{API_PREFIX}/admin", tags=["admin"])
 app.include_router(journal.router, prefix=f"{API_PREFIX}/journal", tags=["journal"])
+app.include_router(notifications.router, prefix=f"{API_PREFIX}/notifications", tags=["notifications"])
 
 
 @app.get("/health")

@@ -7,6 +7,7 @@ import { VoiceTab } from './log-sheet/VoiceTab'
 import { BarcodeTab } from './log-sheet/BarcodeTab'
 import { SearchTab } from './log-sheet/SearchTab'
 import { PhotoTab } from './log-sheet/PhotoTab'
+import { QuickTab } from './log-sheet/QuickTab'
 import type { DraftItem, Favorite } from './log-sheet/types'
 import { getCurrentSlot } from '../lib/format'
 
@@ -25,6 +26,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const isVisible = isPageMode || isOpen
 
   const handleClose = () => {
+    setMealName('')
     if (isPageMode) { onClose?.(); return }
     close()
   }
@@ -32,10 +34,11 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const pendingLogItems = useUIStore((s) => s.pendingLogItems)
   const clearPendingLogItems = useUIStore((s) => s.clearPendingLogItems)
 
-  const [activeTab, setActiveTab] = useState<'voice' | 'barcode' | 'search' | 'photo'>('voice')
+  const [activeTab, setActiveTab] = useState<'quick' | 'voice' | 'barcode' | 'search' | 'photo'>('quick')
   const [slot, setSlot] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(getCurrentSlot)
   const [draftItems, setDraftItems] = useState<DraftItem[]>([])
   const [transcription, setTranscription] = useState('')
+  const [mealName, setMealName] = useState('')
   const [savingFav, setSavingFav] = useState(false)
   const [favName, setFavName] = useState('')
 
@@ -103,13 +106,14 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
         source: activeTab,
         items: draftItems,
         nutrition: totals,
-        raw_input: transcription || 'Manual log',
+        raw_input: mealName.trim() || transcription || 'Manual log',
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['today'] })
       queryClient.invalidateQueries({ queryKey: ['meals'] })
       setDraftItems([])
       setTranscription('')
+      setMealName('')
       handleClose()
     },
     onError: (err) => {
@@ -215,7 +219,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
 
         {/* Tab nav */}
         <div className="log-sheet-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--glass-edge)', position: 'relative', zIndex: 1 }}>
-          {(['voice', 'barcode', 'search', 'photo'] as const).map((tab) => (
+          {(['quick', 'voice', 'barcode', 'search', 'photo'] as const).map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: '12px 4px', background: 'transparent', border: 'none', borderBottom: `2px solid ${activeTab === tab ? 'var(--sky-400)' : 'transparent'}`, color: activeTab === tab ? 'var(--sky-300)' : 'var(--fg-quiet)', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)', textTransform: 'capitalize', transition: 'all 150ms' }}>
               {tab}
             </button>
@@ -224,6 +228,12 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
 
         {/* Tab content */}
         <div className="thin-scroll log-sheet-body" style={{ flex: 1, overflowY: 'auto', padding: '18px 20px calc(env(safe-area-inset-bottom) + 20px)', position: 'relative', zIndex: 1 }}>
+          {activeTab === 'quick' && (
+            <QuickTab
+              currentSlot={slot}
+              onAddItems={(items) => { addItems(items); setActiveTab('search') }}
+            />
+          )}
           {activeTab === 'voice' && (
             <VoiceTab
               onAddItems={addItems}
@@ -269,6 +279,18 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
                 </div>
               ))}
             </div>
+            <input
+              type="text"
+              value={mealName}
+              onChange={(e) => setMealName(e.target.value)}
+              placeholder="Name this meal… (optional)"
+              className="field-input"
+              style={{
+                width: '100%', padding: '9px 12px', fontSize: 13,
+                background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+                borderRadius: 8, color: 'var(--fg-primary)', boxSizing: 'border-box',
+              }}
+            />
             {savingFav ? (
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
