@@ -26,26 +26,32 @@ function isTrustedPwaOrigin(): boolean {
 }
 
 // Resolve an *active* service worker registration without relying on
-// navigator.serviceWorker.ready, which is known to hang indefinitely in iOS
-// standalone PWAs after a reinstall. We defensively (re)register — register()
-// is idempotent for an unchanged script URL, so this is safe alongside the
-// registration in main.tsx — then poll getRegistration() until a worker is
-// active or the deadline passes.
-async function getReadyRegistration(timeoutMs = 25000): Promise<ServiceWorkerRegistration | null> {
+// navigator.serviceWorker.ready, which hangs indefinitely on iOS standalone
+// PWAs after a reinstall. Defensively (re)registers — register() is idempotent
+// for an unchanged script URL — then polls getRegistration() until a worker is
+// active. Throws with a diagnostic message on failure so callers can surface it.
+async function getReadyRegistration(timeoutMs = 25000): Promise<ServiceWorkerRegistration> {
   if (isTrustedPwaOrigin()) {
-    try {
-      await navigator.serviceWorker.register(SW_URL)
-    } catch {
-      /* main.tsx owns primary registration; fall through to polling */
-    }
+    // Do NOT catch — if register() throws (wrong MIME, security error, bad URL)
+    // we want to surface that error rather than poll for 25 s and time out.
+    await navigator.serviceWorker.register(SW_URL)
   }
+
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     const reg = await navigator.serviceWorker.getRegistration().catch(() => null)
     if (reg?.active) return reg
+
+    // SW went redundant — install failed (e.g. precache fetch error). Fail fast
+    // instead of waiting the full timeout.
+    const worker = reg?.installing ?? reg?.waiting
+    if (worker?.state === 'redundant') {
+      throw new Error('SW install failed (redundant). Fully close the app, reopen it, and try again.')
+    }
+
     await new Promise((r) => setTimeout(r, 500))
   }
-  return null
+  throw new Error('SW timed out activating. Fully close the app, reopen it, and try again.')
 }
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
@@ -206,10 +212,12 @@ export function NotificationsCard() {
       }
 
       setStatusMsg('Preparing background service…')
-      const reg = await getReadyRegistration()
-      if (!reg) {
+      let reg: ServiceWorkerRegistration
+      try {
+        reg = await getReadyRegistration()
+      } catch (swErr) {
         setSwState('failed')
-        setStatusMsg('Couldn’t start the background service. Fully close the app (swipe it away), reopen it, and try again.')
+        setStatusMsg(swErr instanceof Error ? swErr.message : 'Background service error - close the app fully and try again.')
         return
       }
       setSwState('ready')
@@ -293,7 +301,7 @@ export function NotificationsCard() {
         <div style={{ marginBottom: 12, fontSize: 12, color: 'var(--fg-tertiary)' }}>
           {swStuck
             ? 'Background service is taking a while. You can still tap Subscribe — if it fails, fully close the app and reopen it.'
-            : 'Preparing background service… you can subscribe as soon as it’s ready.'}
+            : 'Preparing background service — subscribe now and it will activate automatically.'}
         </div>
       )}
 
