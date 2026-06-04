@@ -42,6 +42,9 @@ export function ShoppingListView({ planId, shoppingList }: Props) {
       navigator.clipboard.writeText(buildPlainText(shoppingList)).then(() => {
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
+      }).catch(() => {
+        setCopied(false)
+        alert('Could not copy — clipboard access was denied.')
       })
     }
   }

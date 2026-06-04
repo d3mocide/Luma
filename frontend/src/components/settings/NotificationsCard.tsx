@@ -27,6 +27,7 @@ export function NotificationsCard() {
   const [permissionState, setPermissionState] = useState<NotificationPermission>('default')
   const [vapidKey, setVapidKey] = useState<string | null>(null)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
+  const [localTz, setLocalTz] = useState<string | null>(null)
 
   const { data: prefs } = useQuery<NotifPrefs>({
     queryKey: ['notifications', 'preferences'],
@@ -203,8 +204,14 @@ export function NotificationsCard() {
                 <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Timezone</span>
                 <input
                   type="text"
-                  value={prefs.nudge_tz}
-                  onChange={(e) => prefsMutation.mutate({ ...prefs, nudge_tz: e.target.value })}
+                  value={localTz ?? prefs.nudge_tz}
+                  onChange={(e) => setLocalTz(e.target.value)}
+                  onBlur={(e) => {
+                    const tz = e.target.value.trim()
+                    if (tz && tz !== prefs.nudge_tz) prefsMutation.mutate({ ...prefs, nudge_tz: tz })
+                    setLocalTz(null)
+                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                   placeholder="America/New_York"
                   className="field-input"
                   style={{ padding: '8px 10px', fontSize: 13, background: 'var(--glass-1)', border: '1px solid var(--glass-edge)', borderRadius: 8, color: 'var(--fg-primary)' }}

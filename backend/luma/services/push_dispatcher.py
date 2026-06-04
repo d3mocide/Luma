@@ -52,7 +52,7 @@ async def send_push_to_user(user_id: str, title: str, body: str, url: str = "/")
         return
 
     payload = json.dumps({"title": title, "body": body, "url": url})
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     expired_endpoints: list[str] = []
 
     for sub in subscriptions:
