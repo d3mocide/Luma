@@ -11,7 +11,6 @@ export default defineConfig({
       filename: 'sw.ts',
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['icons/*.png', 'icons/*.svg', 'assets/*.svg'],
       manifest: false, // using public/manifest.webmanifest
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
