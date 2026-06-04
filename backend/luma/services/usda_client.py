@@ -18,6 +18,7 @@ Nutrient IDs used (FDC canonical):
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -78,6 +79,12 @@ def _to_luma_food(fdc_food: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# Matches USDA FDC raw-ingredient naming convention: "Beef, loin, steak, raw"
+# (comma-separated descriptors ending in ", raw").  Raw produce uses parentheses
+# ("Carrots (Raw)") and won't match this pattern.
+_RAW_PROTEIN_RE = re.compile(r",\s*raw\s*$", re.IGNORECASE)
+
+
 async def search_foods(query: str, limit: int = 20) -> list[dict[str, Any]]:
     """Search USDA FoodData Central and return results shaped for the local foods table."""
     if not settings.usda_api_key:
@@ -100,4 +107,18 @@ async def search_foods(query: str, limit: int = 20) -> list[dict[str, Any]]:
         logger.warning("USDA search failed: %s", exc)
         return []
 
-    return [_to_luma_food(f) for f in data.get("foods", [])]
+    results = []
+    for f in data.get("foods", []):
+        food = _to_luma_food(f)
+        # Drop zero-calorie entries — the search endpoint returns incomplete
+        # foodNutrients for many Branded/Survey foods, defaulting calories to 0.
+        if food["nutrients_per_100g"].get("calories", 0) == 0:
+            continue
+        # Drop raw-protein entries (USDA naming: "Beef, tenderloin steak, raw").
+        # These are lab measurements, not meal-log values. Raw produce (fruits,
+        # vegetables) is fine — those don't use the comma-descriptor convention.
+        name = food.get("name", "")
+        if _RAW_PROTEIN_RE.search(name):
+            continue
+        results.append(food)
+    return results
