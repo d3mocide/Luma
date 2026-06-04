@@ -31,6 +31,7 @@ export function NotificationsCard() {
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [localTz, setLocalTz] = useState<string | null>(null)
   const [swState, setSwState] = useState<SwState>('checking')
+  const [swStuck, setSwStuck] = useState(false)
 
   const { data: prefs } = useQuery<NotifPrefs>({
     queryKey: ['notifications', 'preferences'],
@@ -91,6 +92,18 @@ export function NotificationsCard() {
       permStatus?.removeEventListener('change', () => {})
     }
   }, [])
+
+  // If the SW hasn't activated after 20 s, surface a "close and reopen" hint.
+  // This catches the iOS standalone PWA quirk where ready never resolves after
+  // clearing site data.
+  useEffect(() => {
+    if (swState === 'ready') {
+      setSwStuck(false)
+      return
+    }
+    const t = setTimeout(() => setSwStuck(true), 20_000)
+    return () => clearTimeout(t)
+  }, [swState])
 
   const prefsMutation = useMutation({
     mutationFn: (update: NotifPrefs) => api.put('/notifications/preferences', update),
@@ -234,6 +247,12 @@ export function NotificationsCard() {
           {buttonLabel}
         </button>
       </div>
+
+      {swStuck && swState !== 'ready' && (
+        <div style={{ marginBottom: 12, fontSize: 12, color: 'var(--fg-tertiary)' }}>
+          Taking longer than expected. Close the app fully, reopen it, and wait a few seconds before trying.
+        </div>
+      )}
 
       {subscribed && prefs && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
