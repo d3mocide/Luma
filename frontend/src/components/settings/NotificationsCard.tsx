@@ -8,6 +8,8 @@ type NotifPrefs = {
   nudge_tz: string
 }
 
+type SwState = 'checking' | 'installing' | 'ready' | 'failed'
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -21,15 +23,6 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
   return { value: i, label: `${h}:00 ${period}` }
 })
 
-function swReady(): Promise<ServiceWorkerRegistration> {
-  return Promise.race([
-    navigator.serviceWorker.ready,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('_SW_TIMEOUT')), 30000)
-    ),
-  ])
-}
-
 export function NotificationsCard() {
   const queryClient = useQueryClient()
   const [subscribed, setSubscribed] = useState(false)
@@ -37,6 +30,7 @@ export function NotificationsCard() {
   const [vapidKey, setVapidKey] = useState<string | null>(null)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [localTz, setLocalTz] = useState<string | null>(null)
+  const [swState, setSwState] = useState<SwState>('checking')
 
   const { data: prefs } = useQuery<NotifPrefs>({
     queryKey: ['notifications', 'preferences'],
@@ -56,14 +50,29 @@ export function NotificationsCard() {
     if ('Notification' in window) {
       setPermissionState(Notification.permission)
     }
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then((reg) => {
-        reg.pushManager.getSubscription().then((sub) => setSubscribed(!!sub))
-      })
+
+    if (!('serviceWorker' in navigator)) {
+      setSwState('failed')
+      return
     }
+
+    // Immediate state snapshot so the button shows 'installing' right away
+    // if the SW is mid-install (e.g. fresh launch after clearing site data)
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      if (!reg) return
+      if (reg.active) setSwState('ready')
+      else if (reg.installing) setSwState('installing')
+    }).catch(() => {})
+
+    // Definitive resolver — fires once the SW is confirmed active.
+    // Also sets up the push subscription check here so it runs exactly once.
+    navigator.serviceWorker.ready.then((reg) => {
+      setSwState('ready')
+      reg.pushManager.getSubscription().then((sub) => setSubscribed(!!sub))
+    })
+
     // Watch for OS-level permission changes so the UI updates without a reload.
-    // On iOS, the user enables notifications via Settings → Notifications → Luma,
-    // and this fires when they return to the app.
+    // On iOS, the user enables notifications via Settings → Notifications → Luma.
     let permStatus: PermissionStatus | null = null
     if ('permissions' in navigator) {
       navigator.permissions.query({ name: 'notifications' as PermissionName }).then((status) => {
@@ -71,14 +80,14 @@ export function NotificationsCard() {
         status.addEventListener('change', () => {
           setPermissionState(
             status.state === 'granted' ? 'granted'
-            : status.state === 'denied' ? 'denied'
-            : 'default'
+              : status.state === 'denied' ? 'denied'
+              : 'default'
           )
         })
-      }).catch(() => { /* permissions API not available on this platform */ })
+      }).catch(() => {})
     }
+
     return () => {
-      // permStatus cleanup is best-effort; removing a listener on a GC'd object is a no-op
       permStatus?.removeEventListener('change', () => {})
     }
   }, [])
@@ -111,31 +120,17 @@ export function NotificationsCard() {
       return
     }
 
-    // Give immediate feedback based on actual SW state rather than waiting silently
-    const existingReg = await navigator.serviceWorker.getRegistration()
-    if (!existingReg) {
-      setStatusMsg('App is still setting up — wait a few seconds and try again.')
-      return
-    }
-    if (existingReg.installing) {
-      setStatusMsg('Installing in the background — wait a moment and try again.')
-      return
-    }
-    if (existingReg.waiting && !existingReg.active) {
-      setStatusMsg('Update pending — close the app fully, reopen it, and try again.')
+    // swState is tracked proactively, so this is a rare edge case (state changed
+    // between mount and click). Button is disabled while swLoading, so this only
+    // fires if someone bypasses the disabled state.
+    if (swState !== 'ready') {
+      setStatusMsg(swState === 'installing'
+        ? 'Still installing — wait a moment and try again.'
+        : 'Service worker not ready. Close the app fully, reopen it, and try again.')
       return
     }
 
-    let reg: ServiceWorkerRegistration
-    try {
-      reg = await swReady()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : ''
-      setStatusMsg(msg === '_SW_TIMEOUT'
-        ? 'Still loading — close the app fully, reopen it, wait a few seconds, then try again.'
-        : `Service worker error: ${msg}`)
-      return
-    }
+    const reg = await navigator.serviceWorker.ready
 
     if (subscribed) {
       const sub = await reg.pushManager.getSubscription()
@@ -153,7 +148,6 @@ export function NotificationsCard() {
       return
     }
 
-    // live is 'default' or 'granted' here — we already returned if 'denied' above
     if (live === 'default') {
       const granted = await Notification.requestPermission()
       setPermissionState(granted)
@@ -185,6 +179,10 @@ export function NotificationsCard() {
 
   const isPushSupported = 'PushManager' in window && 'serviceWorker' in navigator
   const isBlocked = permissionState === 'denied'
+  const swLoading = swState === 'checking' || swState === 'installing'
+
+  const buttonLabel = swLoading ? 'Setting up…' : subscribed ? 'Unsubscribe' : 'Subscribe'
+  const buttonDisabled = !isPushSupported || swLoading
 
   return (
     <div className="glass settings-card" style={{ padding: 24 }}>
@@ -198,6 +196,12 @@ export function NotificationsCard() {
       {!isPushSupported && (
         <div style={{ padding: '12px 14px', background: 'rgba(251,113,133,0.08)', border: '1px solid rgba(251,113,133,0.22)', borderRadius: 8, fontSize: 13, color: 'var(--bad)', marginBottom: 16 }}>
           Push notifications require installing Luma as a PWA on a supported device.
+        </div>
+      )}
+
+      {swState === 'failed' && isPushSupported && (
+        <div style={{ padding: '12px 14px', background: 'rgba(251,113,133,0.08)', border: '1px solid rgba(251,113,133,0.22)', borderRadius: 8, fontSize: 13, color: 'var(--bad)', marginBottom: 16 }}>
+          Background service failed to start. Close the app fully, reopen it, and try again.
         </div>
       )}
 
@@ -216,18 +220,18 @@ export function NotificationsCard() {
         </div>
         <button
           onClick={handleToggleSubscription}
-          disabled={!isPushSupported}
-          className="btn"
+          disabled={buttonDisabled}
+          className={`btn${swLoading ? ' animate-pulse' : ''}`}
           style={{
             padding: '8px 16px',
             fontSize: 12,
             background: subscribed ? 'rgba(251,113,133,0.12)' : 'rgba(14,165,233,0.15)',
             color: subscribed ? 'var(--bad)' : 'var(--sky-400)',
             border: `1px solid ${subscribed ? 'rgba(251,113,133,0.3)' : 'rgba(14,165,233,0.3)'}`,
-            opacity: !isPushSupported ? 0.4 : 1,
+            opacity: buttonDisabled ? 0.5 : 1,
           }}
         >
-          {subscribed ? 'Unsubscribe' : 'Subscribe'}
+          {buttonLabel}
         </button>
       </div>
 
