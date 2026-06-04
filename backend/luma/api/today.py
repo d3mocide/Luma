@@ -102,7 +102,13 @@ async def get_today(
         items = event.items if isinstance(event.items, list) else []
         first_item = items[0].get("name") if items and isinstance(items[0], dict) else None
         nutrition = event.nutrition if isinstance(event.nutrition, dict) else {}
-        headline = event.raw_input if event.source in ("favorite", "favorites") and event.raw_input else (first_item or "Logged meal")
+        raw = event.raw_input or ""
+        if event.source in ("favorite", "favorites") and raw:
+            headline = raw
+        elif event.source == "plan" and raw.startswith("Planned: "):
+            headline = raw[len("Planned: "):]
+        else:
+            headline = first_item or "Logged meal"
         recent_meals.append(
             {
                 "id": str(event.id),
