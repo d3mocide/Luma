@@ -356,7 +356,20 @@ export function NotificationsCard() {
               </label>
 
               <label style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-                <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Timezone</span>
+                <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  <span>Timezone</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+                      if (tz && tz !== prefs.nudge_tz) prefsMutation.mutate({ ...prefs, nudge_tz: tz })
+                      setLocalTz(null)
+                    }}
+                    style={{ background: 'none', border: 'none', padding: 0, fontSize: 10, letterSpacing: '0.06em', color: 'var(--sky-400)', cursor: 'pointer', textTransform: 'uppercase' }}
+                  >
+                    Detect
+                  </button>
+                </span>
                 <input
                   type="text"
                   value={localTz ?? prefs.nudge_tz}

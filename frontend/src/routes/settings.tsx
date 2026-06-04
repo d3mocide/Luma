@@ -1,4 +1,5 @@
-import { type CSSProperties, useEffect, useState } from 'react'
+import { type CSSProperties, useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, User } from '../lib/api'
@@ -184,6 +185,7 @@ function AccessDenied() {
 
 function AccountTab({
   user,
+  userLoading,
   goalForm,
   onFieldChange,
   goalSaveError,
@@ -197,6 +199,7 @@ function AccountTab({
   onApplyRecommendations,
 }: {
   user: User | undefined
+  userLoading: boolean
   goalForm: GoalFormState
   onFieldChange: (field: keyof GoalFormState, value: string) => void
   goalSaveError: string | null
@@ -222,6 +225,8 @@ function AccountTab({
               <Row label="Role"  value={user.role} />
               <CopyRow label="User ID" value={user.id} last />
             </div>
+          ) : userLoading ? (
+            <p style={{ color: 'var(--fg-quiet)', fontSize: 14, margin: 0 }}>Loading your account…</p>
           ) : (
             <p style={{ color: 'var(--fg-quiet)', fontSize: 14, margin: 0 }}>Not signed in</p>
           )}
@@ -674,26 +679,33 @@ function AdminTab({ currentUserId }: { currentUserId: string }) {
 export default function SettingsRoute() {
   const queryClient = useQueryClient()
   const measurementSystem = useMeasurementSystem()
-  const [activeTab, setActiveTab] = useState<SettingsTab>('account')
+  const [searchParams, setSearchParams] = useSearchParams()
   const [loggingOut, setLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState<string | null>(null)
   const [goalSaveError, setGoalSaveError] = useState<string | null>(null)
   const [goalSaveSuccess, setGoalSaveSuccess] = useState<string | null>(null)
   const [goalForm, setGoalForm] = useState<GoalFormState>(emptyGoalForm)
 
-  const { data: user } = useQuery<User>({
+  const tabParam = searchParams.get('tab')
+  const activeTab: SettingsTab = tabParam && tabParam in TAB_META ? (tabParam as SettingsTab) : 'account'
+
+  const setActiveTab = useCallback((id: SettingsTab) => {
+    const next = new URLSearchParams(searchParams)
+    if (id === 'account') next.delete('tab')
+    else next.set('tab', id)
+    setSearchParams(next)
+  }, [searchParams, setSearchParams])
+
+  const { data: user, isLoading: userLoading } = useQuery<User>({
     queryKey: ['me'],
     queryFn: () => api.get('/auth/me'),
   })
 
   useEffect(() => {
-    if (user) {
-      const { minRole } = TAB_META[activeTab]
-      if (!hasRole(user, minRole)) {
-        setActiveTab('account')
-      }
+    if (user && !hasRole(user, TAB_META[activeTab].minRole)) {
+      setActiveTab('account')
     }
-  }, [user, activeTab])
+  }, [user, activeTab, setActiveTab])
 
   const { data: goalSettings } = useQuery<Partial<GoalSettings>>({
     queryKey: ['settings', 'goals'],
@@ -773,6 +785,7 @@ export default function SettingsRoute() {
 
   const isOperator = hasRole(user, 'operator')
   const tabs: SettingsTab[] = ['account', 'health-import', 'ai-routing', 'admin']
+  const visibleTabs = tabs.filter((id) => hasRole(user, TAB_META[id].minRole))
 
   return (
     <div className="thin-scroll settings-page" style={{ height: '100%', overflowY: 'auto', padding: '32px 40px 40px' }}>
@@ -789,55 +802,79 @@ export default function SettingsRoute() {
       </header>
 
       {/* Tab strip */}
-      <div className="settings-tabs" role="tablist">
-        {tabs
-          .filter((id) => hasRole(user, TAB_META[id].minRole))
-          .map((id) => {
-            const { label } = TAB_META[id]
-            return (
-              <button
-                key={id}
-                role="tab"
-                aria-selected={activeTab === id}
-                className="settings-tab"
-                onClick={() => setActiveTab(id)}
-              >
-                {label}
-              </button>
-            )
-          })}
+      <div className="settings-tabs" role="tablist" aria-label="Settings sections">
+        {visibleTabs.map((id, idx) => {
+          const { label } = TAB_META[id]
+          const selected = activeTab === id
+          return (
+            <button
+              key={id}
+              id={`settings-tab-${id}`}
+              role="tab"
+              aria-selected={selected}
+              aria-controls={`settings-panel-${id}`}
+              tabIndex={selected ? 0 : -1}
+              className="settings-tab"
+              onClick={() => setActiveTab(id)}
+              onKeyDown={(e) => {
+                let nextIdx: number | null = null
+                if (e.key === 'ArrowRight') nextIdx = (idx + 1) % visibleTabs.length
+                else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + visibleTabs.length) % visibleTabs.length
+                else if (e.key === 'Home') nextIdx = 0
+                else if (e.key === 'End') nextIdx = visibleTabs.length - 1
+                if (nextIdx !== null) {
+                  e.preventDefault()
+                  const nextId = visibleTabs[nextIdx]
+                  setActiveTab(nextId)
+                  document.getElementById(`settings-tab-${nextId}`)?.focus()
+                }
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
       </div>
 
       {/* Tab panels */}
       {activeTab === 'account' && (
-        <AccountTab
-          user={user}
-          goalForm={goalForm}
-          onFieldChange={handleGoalChange}
-          goalSaveError={goalSaveError}
-          goalSaveSuccess={goalSaveSuccess}
-          onSubmit={handleGoalSubmit}
-          isPending={goalMutation.isPending}
-          measurementSystem={measurementSystem}
-          loggingOut={loggingOut}
-          logoutError={logoutError}
-          onLogout={handleLogout}
-          onApplyRecommendations={handleApplyRecommendations}
-        />
+        <div role="tabpanel" id="settings-panel-account" aria-labelledby="settings-tab-account">
+          <AccountTab
+            user={user}
+            userLoading={userLoading}
+            goalForm={goalForm}
+            onFieldChange={handleGoalChange}
+            goalSaveError={goalSaveError}
+            goalSaveSuccess={goalSaveSuccess}
+            onSubmit={handleGoalSubmit}
+            isPending={goalMutation.isPending}
+            measurementSystem={measurementSystem}
+            loggingOut={loggingOut}
+            logoutError={logoutError}
+            onLogout={handleLogout}
+            onApplyRecommendations={handleApplyRecommendations}
+          />
+        </div>
       )}
 
       {activeTab === 'health-import' && (
-        <HealthImportTab isOperator={isOperator} />
+        <div role="tabpanel" id="settings-panel-health-import" aria-labelledby="settings-tab-health-import">
+          <HealthImportTab isOperator={isOperator} />
+        </div>
       )}
 
       {activeTab === 'ai-routing' && (
-        <AiRoutingTab isOperator={isOperator} />
+        <div role="tabpanel" id="settings-panel-ai-routing" aria-labelledby="settings-tab-ai-routing">
+          <AiRoutingTab isOperator={isOperator} />
+        </div>
       )}
 
       {activeTab === 'admin' && (
-        hasRole(user, 'admin')
-          ? <AdminTab currentUserId={user?.id ?? ''} />
-          : <AccessDenied />
+        <div role="tabpanel" id="settings-panel-admin" aria-labelledby="settings-tab-admin">
+          {hasRole(user, 'admin')
+            ? <AdminTab currentUserId={user?.id ?? ''} />
+            : <AccessDenied />}
+        </div>
       )}
     </div>
   )
