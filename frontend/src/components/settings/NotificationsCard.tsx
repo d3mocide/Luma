@@ -52,6 +52,21 @@ export function NotificationsCard() {
         reg.pushManager.getSubscription().then((sub) => setSubscribed(!!sub))
       })
     }
+    // Watch for OS-level permission changes so the UI updates without a reload
+    // (needed on iOS when user enables notifications via Settings → Notifications)
+    if ('permissions' in navigator) {
+      navigator.permissions.query({ name: 'notifications' as PermissionName }).then((status) => {
+        const onchange = () => {
+          setPermissionState(
+            status.state === 'granted' ? 'granted'
+            : status.state === 'denied' ? 'denied'
+            : 'default'
+          )
+        }
+        status.addEventListener('change', onchange)
+        return () => status.removeEventListener('change', onchange)
+      }).catch(() => { /* permissions API not available */ })
+    }
   }, [])
 
   const prefsMutation = useMutation({
@@ -71,6 +86,17 @@ export function NotificationsCard() {
     if (!vapidKey) {
       setStatusMsg('Push notifications are not configured on this server.')
       return
+    }
+
+    // Always re-read live permission on click — iOS stores this at OS level and
+    // it can change without a page reload (e.g. user just enabled in Settings)
+    if ('Notification' in window) {
+      const live = Notification.permission
+      if (live !== permissionState) setPermissionState(live)
+      if (live === 'denied') {
+        setStatusMsg('Notifications are blocked. On iOS: Settings → Notifications → Luma → Allow.')
+        return
+      }
     }
 
     const reg = await navigator.serviceWorker.ready
@@ -141,7 +167,7 @@ export function NotificationsCard() {
 
       {isBlocked && (
         <div style={{ padding: '12px 14px', background: 'rgba(251,113,133,0.08)', border: '1px solid rgba(251,113,133,0.22)', borderRadius: 8, fontSize: 13, color: 'var(--bad)', marginBottom: 16 }}>
-          Notifications are blocked in your browser settings. Allow them and reload to continue.
+          Notifications are blocked. On iOS: <strong>Settings → Notifications → Luma → Allow</strong>, then return here. On other browsers: check site permissions and reload.
         </div>
       )}
 
