@@ -140,7 +140,6 @@ function AccountTab({
         </div>
 
         <MeasurementsCard />
-        <MetricVisibilityCard />
         <NotificationsCard />
         <PasswordCard />
 
@@ -191,6 +190,7 @@ function HealthImportTab({ isOperator }: { isOperator: boolean }) {
       <div className="settings-stack settings-primary">
         <HaeImportCard />
         <HaeMetricsCard />
+        <MetricVisibilityCard />
       </div>
 
       {/* Right: diagnostic tools (operator only) */}

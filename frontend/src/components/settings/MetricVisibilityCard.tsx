@@ -36,13 +36,13 @@ const GROUPS = [
   {
     label: 'Activity & Energy',
     metrics: [
-      { id: 'steps',       label: 'Steps' },
-      { id: 'active_kcal', label: 'Active Calories' },
+      { id: 'steps',        label: 'Steps' },
+      { id: 'active_kcal',  label: 'Active Calories' },
       { id: 'exercise_min', label: 'Exercise' },
-      { id: 'distance_km', label: 'Distance' },
-      { id: 'stand_hours', label: 'Stand Hours' },
+      { id: 'distance_km',  label: 'Distance' },
+      { id: 'stand_hours',  label: 'Stand Hours' },
       { id: 'daylight_min', label: 'Daylight Exposure' },
-      { id: 'mindful_min', label: 'Mindfulness' },
+      { id: 'mindful_min',  label: 'Mindfulness' },
     ],
   },
   {
@@ -71,13 +71,15 @@ export function MetricVisibilityCard() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {GROUPS.map(group => (
           <div key={group.label}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--fg-tertiary)', marginBottom: 8 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: 'var(--fg-tertiary)', marginBottom: 8,
+            }}>
               {group.label}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {group.metrics.map((m, i) => {
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+              {group.metrics.map((m) => {
                 const isHidden = hidden.has(m.id)
-                const isLast = i === group.metrics.length - 1
                 return (
                   <label
                     key={m.id}
@@ -85,23 +87,24 @@ export function MetricVisibilityCard() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '10px 0',
-                      borderBottom: isLast ? 'none' : '1px solid var(--glass-edge)',
+                      padding: '9px 0',
+                      borderBottom: '1px solid var(--glass-edge)',
                       cursor: isLoading ? 'not-allowed' : 'pointer',
                       opacity: isLoading ? 0.6 : 1,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 13, color: isHidden ? 'var(--fg-tertiary)' : 'var(--fg-primary)' }}>
                         {m.label}
                       </span>
                       {TODAY_PANEL_IDS.has(m.id) && (
                         <span style={{
                           fontSize: 10, fontWeight: 600, letterSpacing: '0.06em',
-                          textTransform: 'uppercase', padding: '2px 6px',
+                          textTransform: 'uppercase', padding: '2px 5px',
                           borderRadius: 4, background: 'var(--glass-2)',
                           border: '1px solid var(--glass-edge)',
                           color: 'var(--fg-tertiary)',
+                          flexShrink: 0,
                         }}>
                           Today
                         </span>
