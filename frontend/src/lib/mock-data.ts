@@ -57,8 +57,8 @@ export function createMockTodayData(): TodayData {
     active_insight: {
       id: 'mock-insight-1',
       severity: 'gentle nudge',
-      headline: 'Great fiber momentum this week. Keep saturated fat under 18g today to reinforce LDL progress.',
-      cta: 'Ask Luma',
+      headline: 'Great fiber momentum.',
+      cta: 'You have excellent fiber momentum this week. Keep saturated fat under 18g today to reinforce LDL progress.',
       thread_seed: 'Help me keep sat fat lower at dinner tonight.',
     },
   }

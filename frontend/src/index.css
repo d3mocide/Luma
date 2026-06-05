@@ -625,7 +625,7 @@
 
 .mobile-profile-panel {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 20px);
   right: 0;
   width: min(250px, calc(100vw - 28px));
   padding: 16px;

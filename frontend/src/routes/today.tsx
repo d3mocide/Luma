@@ -308,6 +308,11 @@ export default function TodayRoute() {
               <p style={{ margin: 0, fontSize: 18, lineHeight: 1.45, fontFamily: 'var(--font-sans)', fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--fg-primary)' }}>
                 {data.active_insight.headline}
               </p>
+              {data.active_insight.cta && (
+                <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.5, color: 'var(--fg-secondary)' }}>
+                  {data.active_insight.cta}
+                </p>
+              )}
               <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
                 <button
                   className="btn today-insight-cta"
@@ -458,7 +463,10 @@ export default function TodayRoute() {
                 <Sparkles size={13}/>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.45, color: 'var(--fg-primary)' }}>{data.active_insight.headline}</p>
+                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.45, color: 'var(--fg-primary)', fontWeight: 500 }}>{data.active_insight.headline}</p>
+                {data.active_insight.cta && (
+                  <p style={{ margin: '6px 0 0', fontSize: 13, lineHeight: 1.4, color: 'var(--fg-secondary)' }}>{data.active_insight.cta}</p>
+                )}
                 <button
                   className="btn today-insight-cta"
                   style={{ marginTop: 12, padding: '6px 12px', fontSize: 12, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}
