@@ -256,7 +256,7 @@ export default function TodayRoute() {
                 <div className="eyebrow">Streak</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
                   <Flame size={22} color="var(--sun-300)"/>
-                  <span className="num" style={{ fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>{0}</span>
+                  <span className="num" style={{ fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>{data.streak_days ?? 0}</span>
                   <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>days on track</span>
                 </div>
               </div>
@@ -419,7 +419,7 @@ export default function TodayRoute() {
               <div className="eyebrow">Streak</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
                 <Flame size={18} color="var(--sun-300)"/>
-                <span className="num" style={{ fontSize: 26, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>{0}</span>
+                <span className="num" style={{ fontSize: 26, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>{data.streak_days ?? 0}</span>
                 <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>days on track</span>
               </div>
             </div>
