@@ -55,6 +55,10 @@ _NUTRIENT_MAP: dict[int, str] = {
 
 _EMPTY_NUTRIENTS: dict[str, float] = {v: 0.0 for v in _NUTRIENT_MAP.values()}
 
+# Mirrors usda_client._SOLUBLE_FIBER_FRACTION: FDC rarely reports soluble fiber
+# (1082), so estimate it from total dietary fiber (1079) at ~0.25 when absent.
+_SOLUBLE_FIBER_FRACTION = 0.25
+
 # ---------------------------------------------------------------------------
 # Priority food targets per batch
 #
@@ -225,6 +229,8 @@ def _extract_nutrients_from_fdc(fdc_food: dict[str, Any]) -> dict[str, float]:
         key = _NUTRIENT_MAP.get(nid)
         if key:
             out[key] = float(amount)
+    if not out["soluble_fiber_g"] and out["fiber_g"]:
+        out["soluble_fiber_g"] = round(out["fiber_g"] * _SOLUBLE_FIBER_FRACTION, 1)
     return out
 
 
