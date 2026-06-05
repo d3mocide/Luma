@@ -570,7 +570,7 @@
  * MOBILE NAV
  * ══════════════════════════════════════════════════════════════════════════ */
 .mobile-nav-wrap {
-  background: linear-gradient(180deg, transparent, rgba(5,8,17,0.4) 40%);
+  background: transparent;
   /* GPU layer: prevents iOS PWA from dropping fixed nav during scroll */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
@@ -689,7 +689,7 @@
 }
 
 [data-theme="light"] .mobile-nav-wrap {
-  background: linear-gradient(180deg, transparent, rgba(246, 244, 239, 0.92) 30%);
+  background: transparent;
 }
 
 [data-theme="light"] .mobile-header {
