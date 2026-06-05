@@ -283,7 +283,7 @@ export default function TodayRoute() {
           return (
             <div className="glass" style={{ padding: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <div className="eyebrow">Biometrics · last night</div>
+                <div className="eyebrow">Biometrics · latest</div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
                 {tiles}
