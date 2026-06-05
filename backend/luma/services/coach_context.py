@@ -295,8 +295,15 @@ async def _build_context(user_id: str, db: AsyncSession) -> dict:
     return ctx
 
 
-def format_context_for_prompt(ctx: dict, case_file: str = "") -> str:
-    """Render context blob + case file as a system prompt addendum."""
+def format_context_for_prompt(ctx: dict, case_file: str = "", query: str = "") -> str:
+    """Render context blob + case file as a system prompt addendum, filtering by relevance to the query if provided."""
+    query_lower = query.lower() if query else ""
+    
+    # Determine relevance flags
+    show_nutrition = not query_lower or any(w in query_lower for w in ["diet", "fiber", "fat", "calor", "protein", "eat", "food", "meal", "breakfast", "lunch", "dinner", "snack", "nutrition", "sat", "carb", "sugar"])
+    show_biometrics = not query_lower or any(w in query_lower for w in ["weight", "kg", "scale", "hrv", "rhr", "sleep", "heart", "pulse", "bpm", "ms", "fit", "health", "biometric"])
+    show_alerts = not query_lower or any(w in query_lower for w in ["alert", "insight", "narrat", "notification", "warning"])
+    
     lines = ["## User snapshot (auto-updated every 2 hours)"]
 
     if goals := ctx.get("goals"):
@@ -314,39 +321,42 @@ def format_context_for_prompt(ctx: dict, case_file: str = "") -> str:
         if parts:
             lines.append("**Goals:** " + ", ".join(parts))
 
-    if nutr := ctx.get("nutrition_7d_avg"):
-        parts = []
-        if nutr.get("calories"):
-            parts.append(f"{int(nutr['calories'])} kcal avg")
-        if nutr.get("sat_fat_g"):
-            parts.append(f"{nutr['sat_fat_g']}g sat fat avg")
-        if nutr.get("fiber_g"):
-            parts.append(f"{nutr['fiber_g']}g fiber avg")
-        if parts:
-            lines.append("**Last 7d nutrition:** " + ", ".join(parts))
+    if show_nutrition:
+        if nutr := ctx.get("nutrition_7d_avg"):
+            parts = []
+            if nutr.get("calories"):
+                parts.append(f"{int(nutr['calories'])} kcal avg")
+            if nutr.get("sat_fat_g"):
+                parts.append(f"{nutr['sat_fat_g']}g sat fat avg")
+            if nutr.get("fiber_g"):
+                parts.append(f"{nutr['fiber_g']}g fiber avg")
+            if parts:
+                lines.append("**Last 7d nutrition:** " + ", ".join(parts))
 
-    if bio := ctx.get("biometrics_latest"):
-        parts = []
-        if bio.get("weight_kg"):
-            parts.append(f"weight {bio['weight_kg']} kg")
-        if bio.get("hrv_ms"):
-            parts.append(f"HRV {bio['hrv_ms']} ms")
-        if bio.get("sleep_score"):
-            parts.append(f"sleep score {bio['sleep_score']}")
-        if parts:
-            lines.append("**Latest biometrics:** " + ", ".join(parts))
+    if show_biometrics:
+        if bio := ctx.get("biometrics_latest"):
+            parts = []
+            if bio.get("weight_kg"):
+                parts.append(f"weight {bio['weight_kg']} kg")
+            if bio.get("hrv_ms"):
+                parts.append(f"HRV {bio['hrv_ms']} ms")
+            if bio.get("sleep_score"):
+                parts.append(f"sleep score {bio['sleep_score']}")
+            if parts:
+                lines.append("**Latest biometrics:** " + ", ".join(parts))
 
-    if (slope := ctx.get("weight_trend_kg_per_week")) is not None:
-        direction = "↓" if slope < 0 else "↑" if slope > 0 else "→"
-        lines.append(f"**Weight trend (28d):** {direction} {abs(slope):.2f} kg/week")
+        if (slope := ctx.get("weight_trend_kg_per_week")) is not None:
+            direction = "↓" if slope < 0 else "↑" if slope > 0 else "→"
+            lines.append(f"**Weight trend (28d):** {direction} {abs(slope):.2f} kg/week")
 
     if ctx.get("recent_logging_days_30d") is not None:
         lines.append(f"**Logging consistency:** {ctx['recent_logging_days_30d']}/30 days logged")
 
-    if alerts := ctx.get("recent_alerts"):
-        lines.append("**Recent alerts:** " + "; ".join(
-            f"[{a['severity']}] {a['headline']}" for a in alerts
-        ))
+    if show_alerts:
+        if alerts := ctx.get("recent_alerts"):
+            lines.append("**Recent alerts:** " + "; ".join(
+                f"[{a['severity']}] {a['headline']}" for a in alerts
+            ))
 
     # Rolling case file — injected as a separate section
     if case_file and case_file != _CASE_FILE_EMPTY_NOTE:

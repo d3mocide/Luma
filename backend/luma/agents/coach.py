@@ -16,13 +16,9 @@ from luma.services.llm_metrics import tracker as llm_metrics_tracker
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM_BASE = (
-    "You are Luma, a personal nutrition and health coach. "
-    "You have access to the user's biometric trends, meal history, and nutrition data via tools. "
-    "Use tools to ground your answers in real data before responding. "
-    "Be concise, warm, and clinically grounded. Never diagnose — always frame as patterns and options. "
-    "When you've gathered enough data, respond directly to the user."
-)
+from luma.agents.prompt_loader import load_prompt
+
+_SYSTEM_BASE = load_prompt("coach_system")
 
 # Compress oldest N messages in a thread when count exceeds this
 _COMPRESS_THRESHOLD = 30
@@ -379,56 +375,41 @@ async def coach_stream(
         from luma.services.coach_context import get_coach_context, get_case_file, format_context_for_prompt
         ctx = await get_coach_context(user_id, db)
         case_file = await get_case_file(user_id, db)
-        context_block = format_context_for_prompt(ctx, case_file)
+        
+        # Get the latest user query for dynamic context selection
+        user_query = ""
+        for m in reversed(messages):
+            if m.get("role") == "user":
+                user_query = m.get("content", "")
+                break
+                
+        context_block = format_context_for_prompt(ctx, case_file, user_query)
         if context_block:
             system_content = _SYSTEM_BASE + "\n\n" + context_block
     except Exception:
         logger.exception("Failed to load coach context for user %s", user_id)
         await db.rollback()
 
-    full_messages = [{"role": "system", "content": system_content}, *messages]
-    target = build_litellm_target(settings.coach_model)
-    _coach_provider = settings.coach_model.split("/")[0] if "/" in settings.coach_model else "native"
-
-    def is_transient_error(exc: Exception) -> bool:
-        msg = str(exc).lower()
-        transient_markers = ["timeout", "connection", "rate limit", "temporarily", "unavailable", "502", "503", "504"]
-        return any(marker in msg for marker in transient_markers)
+    full_messages = [
+        {"role": "system", "content": system_content, "cache_control": {"type": "ephemeral"}},
+        *messages
+    ]
 
     max_retries = 3
     for attempt in range(max_retries):
-        _started = perf_counter()
         try:
-            response = await litellm.acompletion(
-                **target,
+            response = await call_llm(
+                primary_model=settings.coach_model,
+                fallback_model=settings.coach_fallback_model,
                 messages=full_messages,
                 tools=TOOLS,
                 tool_choice="auto",
                 temperature=1.0,
                 timeout=60.0,
-            )
-            await llm_metrics_tracker.record_event(
-                event="success",
-                model=settings.coach_model,
-                provider=_coach_provider,
-                attempt="primary",
-                elapsed_ms=round((perf_counter() - _started) * 1000, 1),
                 trigger="coach_tool_call",
             )
-        except Exception as e:
-            await llm_metrics_tracker.record_event(
-                event="failure",
-                model=settings.coach_model,
-                provider=_coach_provider,
-                attempt="primary",
-                elapsed_ms=round((perf_counter() - _started) * 1000, 1),
-                error_type=type(e).__name__,
-                trigger="coach_tool_call",
-            )
-            if is_transient_error(e) and attempt < max_retries - 1:
-                logger.warning("Coach LLM call transient error (attempt %d/%d): %s", attempt + 1, max_retries, e)
-                continue
-            logger.exception("Coach LLM call failed (permanent or max retries)")
+        except Exception:
+            logger.exception("Coach LLM call failed")
             yield "data: " + json.dumps({"type": "error", "text": "Coach temporarily unavailable."}) + "\n\n"
             return
 
@@ -444,68 +425,48 @@ async def coach_stream(
                     for tc in msg.tool_calls
                 ],
             })
-            for tc in msg.tool_calls:
+            
+            # Execute all tool calls in parallel using asyncio.gather
+            import asyncio
+            async def _run_tool_db_safe(tc):
                 fn_name = tc.function.name
                 try:
                     fn_args = json.loads(tc.function.arguments)
                 except json.JSONDecodeError:
                     fn_args = {}
-                yield "data: " + json.dumps({"type": "tool_call", "name": fn_name}) + "\n\n"
                 try:
-                    result = await _execute_tool(fn_name, fn_args, user_id, db)
+                    res = await _execute_tool(fn_name, fn_args, user_id, db)
                 except KeyError as e:
                     logger.warning("Tool %s missing required argument: %s", fn_name, e)
                     await db.rollback()
-                    result = json.dumps({"error": f"missing argument: {e}"})
+                    res = json.dumps({"error": f"missing argument: {e}"})
                 except ValueError as e:
                     logger.warning("Tool %s invalid argument: %s", fn_name, e)
                     await db.rollback()
-                    result = json.dumps({"error": f"invalid argument: {e}"})
+                    res = json.dumps({"error": f"invalid argument: {e}"})
                 except Exception:
                     logger.exception("Tool %s execution failed", fn_name)
                     await db.rollback()
-                    result = json.dumps({"error": "tool execution failed"})
+                    res = json.dumps({"error": "tool execution failed"})
+                return tc, fn_name, res
+
+            tasks = [_run_tool_db_safe(tc) for tc in msg.tool_calls]
+            results = await asyncio.gather(*tasks)
+
+            for tc, fn_name, result in results:
+                yield "data: " + json.dumps({"type": "tool_call", "name": fn_name}) + "\n\n"
                 yield "data: " + json.dumps({"type": "tool_result", "name": fn_name}) + "\n\n"
                 full_messages.append({"role": "tool", "tool_call_id": tc.id, "content": result})
             continue
 
+        # No more tool calls: stream final text from memory in chunks to simulate streaming instantly
         final_text = msg.content or ""
-        _stream_started = perf_counter()
-        try:
-            stream = await litellm.acompletion(
-                **target,
-                messages=full_messages,
-                tools=TOOLS,
-                tool_choice="auto",
-                stream=True,
-                temperature=1.0,
-                timeout=60.0,
-            )
-            await llm_metrics_tracker.record_event(
-                event="success",
-                model=settings.coach_model,
-                provider=_coach_provider,
-                attempt="primary",
-                elapsed_ms=round((perf_counter() - _stream_started) * 1000, 1),
-                trigger="coach_stream",
-            )
-            async for chunk in stream:
-                delta = chunk.choices[0].delta.content or ""
-                if delta:
-                    yield "data: " + json.dumps({"type": "token", "text": delta}) + "\n\n"
-        except Exception:
-            await llm_metrics_tracker.record_event(
-                event="failure",
-                model=settings.coach_model,
-                provider=_coach_provider,
-                attempt="primary",
-                elapsed_ms=round((perf_counter() - _stream_started) * 1000, 1),
-                error_type="StreamError",
-                trigger="coach_stream",
-            )
-            for token in final_text.split(" "):
-                if token:
-                    yield "data: " + json.dumps({"type": "token", "text": token + " "}) + "\n\n"
+        import asyncio
+        chunk_size = 4
+        for i in range(0, len(final_text), chunk_size):
+            chunk = final_text[i:i+chunk_size]
+            yield "data: " + json.dumps({"type": "token", "text": chunk}) + "\n\n"
+            await asyncio.sleep(0.005)
 
         yield "data: " + json.dumps({"type": "done"}) + "\n\n"
         return

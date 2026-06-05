@@ -329,7 +329,7 @@ async def log_meal_photo(
             trigger="photo_log",
             messages=messages,
             temperature=0.1,
-            timeout=60.0,
+            timeout=25.0,
         )
         content = resp["choices"][0]["message"]["content"].strip()
         extracted_items = _parse_vision_json(content)

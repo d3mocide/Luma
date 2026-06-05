@@ -4,20 +4,20 @@ from __future__ import annotations
 import json
 import logging
 import re
+from pydantic import BaseModel, Field
 
 from luma.config import settings
 from luma.services.llm_client import call_llm
+from luma.agents.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM = (
-    "You are Luma's insight narrator. You receive a health alert and produce a brief, "
-    "warm, clinically grounded insight for the user. "
-    "Respond with ONLY a minified JSON object with three keys: "
-    '"headline" (≤8 words), "body" (1-2 sentences, actionable), '
-    '"thread_seed" (a follow-up question the user might ask the coach, ≤12 words). '
-    "Never use jargon. Be encouraging, not alarming."
-)
+
+class InsightResponse(BaseModel):
+    headline: str = Field(description="Headline summarizing the insight (8 words or less)")
+    body: str = Field(description="Warm, clinically grounded, actionable description (1-2 sentences)")
+    thread_seed: str = Field(description="Follow-up question the user might ask the coach (12 words or less)")
+
 
 _RULE_CONTEXT = {
     "sat_fat_rolling": "saturated fat intake has been elevated over the last 7 days",
@@ -45,16 +45,19 @@ async def narrate_alert(
         "Generate the insight JSON."
     )
 
+    system_prompt = load_prompt("insight_narrator_system")
+
     resp = await call_llm(
         primary_model=settings.insight_narrator_model,
         fallback_model=settings.insight_narrator_fallback_model,
         trigger="insight_narrate",
         messages=[
-            {"role": "system", "content": _SYSTEM},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
         temperature=0.4,
         timeout=30.0,
+        response_format=InsightResponse,
     )
 
     content = resp["choices"][0]["message"]["content"].strip()

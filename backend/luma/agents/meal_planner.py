@@ -1,15 +1,54 @@
 import json
 import logging
 import re
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from pydantic import BaseModel, Field
+from fastapi import HTTPException
+
 from luma.config import settings
 from luma.db.models import Food, Goal, Preference
 from luma.services.llm_client import call_llm
-from fastapi import HTTPException
+from luma.agents.prompt_loader import load_prompt
 
 logger = logging.getLogger("meal_planner")
+
+
+class SlotNutrientsSchema(BaseModel):
+    calories: float = Field(description="Calories in kcal")
+    saturated_fat_g: float = Field(description="Saturated fat in grams")
+    soluble_fiber_g: float = Field(description="Soluble fiber in grams")
+    protein_g: float = Field(description="Protein in grams")
+    carbohydrates_g: float = Field(description="Carbohydrates in grams")
+    fat_g: float = Field(description="Total fat in grams")
+    fiber_g: float = Field(description="Total fiber in grams")
+    sodium_mg: float = Field(description="Sodium in milligrams")
+
+
+class MealSlotSchema(BaseModel):
+    slot: str = Field(description="Meal slot (e.g. breakfast, lunch, dinner, snack)")
+    custom_name: str = Field(description="Specific description of the meal")
+    notes: str = Field(description="Nutritional or clinical notes")
+    nutrients: SlotNutrientsSchema
+
+
+class DailyPlanSchema(BaseModel):
+    date: str = Field(description="ISO Date string YYYY-MM-DD")
+    slots: List[MealSlotSchema] = Field(description="Meal slots for this day")
+
+
+class ShoppingItemSchema(BaseModel):
+    food_id: Optional[str] = Field(description="UUID of matching local food item, or null if none")
+    name: str = Field(description="Name of the food item")
+    quantity: float = Field(description="Quantity required")
+    unit: str = Field(description="Unit of measurement (e.g., g, items)")
+    aisle: str = Field(description="Grocery aisle name")
+
+
+class MealPlanResponse(BaseModel):
+    plan: List[DailyPlanSchema] = Field(description="7-day meal plan")
+    shopping_list: List[ShoppingItemSchema] = Field(description="Aggregate shopping list")
 
 
 async def generate_meal_plan(
@@ -57,56 +96,18 @@ async def generate_meal_plan(
         for f in foods
     ])
     
+    system_prompt_template = load_prompt("meal_planner_system")
+    
     system_prompt = (
-        "You are Luma's clinical nutrition orchestrator. "
-        "Your task is to generate a highly detailed 7-day heart-healthy meal plan and shopping list "
-        "tailored specifically to the user's cardiovascular, LDL cholesterol-lowering, and fiber targets.\n\n"
-        "Core Objectives:\n"
-        f"- Prioritize soluble fiber (aim for > {soluble_fiber_target}g daily) to bind and eliminate LDL cholesterol.\n"
-        f"- Strictly cap saturated fat (limit to < {sat_fat_max}g daily).\n"
-        f"- Meet calorie goal of approximately {calorie_target} kcal daily.\n"
-        f"- Adhere to a {dietary_pattern} dietary pattern.\n\n"
-        "Input Constraints:\n"
-        f"- Exclude these dislikes: {', '.join(dislikes) if dislikes else 'None'}\n"
-        f"- Exclude these allergies: {', '.join(allergies) if allergies else 'None'}\n"
-        f"- Custom requests: {json.dumps(constraints) if constraints else 'None'}\n\n"
-        "Reference Local Foods list to match ingredients for the shopping list:\n"
-        f"{available_foods_text}\n\n"
-        "Output: You must return a strict, minified JSON object containing 'plan' and 'shopping_list'. "
-        "Do not wrap in markdown or include any introductory text. Format precisely:\n"
-        "{\n"
-        "  \"plan\": [\n"
-        "    {\n"
-        "      \"date\": \"2026-05-26\",\n"
-        "      \"slots\": [\n"
-        "        {\n"
-        "          \"slot\": \"breakfast\",\n"
-        "          \"custom_name\": \"Steel Cut Oatmeal with Ground Flax & Blueberries\",\n"
-        "          \"notes\": \"Soluble fiber powerhouse designed to lower serum LDL.\",\n"
-        "          \"nutrients\": {\n"
-        "            \"calories\": 320.0,\n"
-        "            \"saturated_fat_g\": 0.8,\n"
-        "            \"soluble_fiber_g\": 6.0,\n"
-        "            \"protein_g\": 12.0,\n"
-        "            \"carbohydrates_g\": 48.0,\n"
-        "            \"fat_g\": 6.0,\n"
-        "            \"fiber_g\": 11.0,\n"
-        "            \"sodium_mg\": 5.0\n"
-        "          }\n"
-        "        }\n"
-        "      ]\n"
-        "    }\n"
-        "  ],\n"
-        "  \"shopping_list\": [\n"
-        "    {\n"
-        "      \"food_id\": \"uuid-matching-reference-food-or-null\",\n"
-        "      \"name\": \"Steel Cut Oats\",\n"
-        "      \"quantity\": 280.0,\n"
-        "      \"unit\": \"g\",\n"
-        "      \"aisle\": \"Grains\"\n"
-        "    }\n"
-        "  ]\n"
-        "}"
+        system_prompt_template
+        .replace("{soluble_fiber_target}", str(soluble_fiber_target))
+        .replace("{sat_fat_max}", str(sat_fat_max))
+        .replace("{calorie_target}", str(calorie_target))
+        .replace("{dietary_pattern}", str(dietary_pattern))
+        .replace("{dislikes}", ', '.join(dislikes) if dislikes else 'None')
+        .replace("{allergies}", ', '.join(allergies) if allergies else 'None')
+        .replace("{constraints}", json.dumps(constraints) if constraints else 'None')
+        .replace("{available_foods_text}", available_foods_text)
     )
     
     user_prompt = f"Generate 7-day meal plan starting from week: {week_start}"
@@ -124,6 +125,7 @@ async def generate_meal_plan(
             messages=messages,
             temperature=0.2,
             timeout=600.0,
+            response_format=MealPlanResponse,
         )
         
         content = resp["choices"][0]["message"]["content"].strip()
