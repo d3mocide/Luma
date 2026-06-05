@@ -570,10 +570,25 @@
  * MOBILE NAV
  * ══════════════════════════════════════════════════════════════════════════ */
 .mobile-nav-wrap {
-  background: linear-gradient(180deg, transparent, rgba(5,8,17,0.4) 40%);
+  background: transparent;
+  position: relative;
   /* GPU layer: prevents iOS PWA from dropping fixed nav during scroll */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
+}
+
+/* Soft fade behind the floating nav: a progressive backdrop blur masked to fade
+ * in from the top, so scrolled content has a soft edge instead of a hard cutoff.
+ * No color tint — keeps the wrapper transparent. Sits behind the pill/FAB. */
+.mobile-nav-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 55%);
+  mask-image: linear-gradient(to bottom, transparent, #000 55%);
 }
 
 .mobile-header {
@@ -689,7 +704,7 @@
 }
 
 [data-theme="light"] .mobile-nav-wrap {
-  background: linear-gradient(180deg, transparent, rgba(246, 244, 239, 0.92) 30%);
+  background: transparent;
 }
 
 [data-theme="light"] .mobile-header {

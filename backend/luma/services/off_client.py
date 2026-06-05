@@ -52,7 +52,13 @@ async def lookup_barcode(barcode: str) -> Optional[Dict[str, Any]]:
                 "sodium_mg": sodium_mg,
                 "potassium_mg": potassium_mg,
             }
-            
+
+            # OFF rarely carries an explicit soluble-fiber value; estimate it from
+            # total fiber so barcode-logged foods feed the LDL-lowering fiber goal.
+            # See usda_client._SOLUBLE_FIBER_FRACTION (~0.25).
+            if not mapped_nutrients["soluble_fiber_g"] and mapped_nutrients["fiber_g"]:
+                mapped_nutrients["soluble_fiber_g"] = round(mapped_nutrients["fiber_g"] * 0.25, 1)
+
             serving_size = prod.get("serving_quantity")
             if serving_size is not None:
                 serving_size = float(serving_size)

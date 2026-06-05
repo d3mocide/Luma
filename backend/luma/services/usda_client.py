@@ -46,6 +46,13 @@ _NUTRIENT_MAP: dict[int, str] = {
 
 _EMPTY_NUTRIENTS: dict[str, float] = {k: 0.0 for k in _NUTRIENT_MAP.values()}
 
+# USDA FDC almost never reports "Fiber, soluble" (nutrient 1082) — foods carry
+# only "Fiber, total dietary" (1079). Soluble fiber is the metric the LDL-lowering
+# goal tracks, so without a fallback every searched food logs 0g fiber. Across our
+# curated reference set the soluble share of total dietary fiber averages ~0.25,
+# so estimate it at that ratio when USDA omits the explicit value.
+_SOLUBLE_FIBER_FRACTION = 0.25
+
 
 def _extract_nutrients(fdc_food: dict[str, Any]) -> dict[str, float]:
     out = dict(_EMPTY_NUTRIENTS)
@@ -57,6 +64,8 @@ def _extract_nutrients(fdc_food: dict[str, Any]) -> dict[str, float]:
         key = _NUTRIENT_MAP.get(nid)
         if key:
             out[key] = float(amount)
+    if not out["soluble_fiber_g"] and out["fiber_g"]:
+        out["soluble_fiber_g"] = round(out["fiber_g"] * _SOLUBLE_FIBER_FRACTION, 1)
     return out
 
 

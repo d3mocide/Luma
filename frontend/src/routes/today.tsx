@@ -241,9 +241,9 @@ export default function TodayRoute() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="eyebrow">Today</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-                <RingLegend color="var(--sky-400)" label="Calories" value={`${adherence?.calories?.logged ?? '—'} / ${adherence?.calories?.target ?? '—'}`} pct={adherence?.calories?.pct ?? 0}/>
-                <RingLegend color="var(--sun-400)" label="Sat fat" value={`${adherence?.sat_fat_g?.logged ?? '—'}g / ${adherence?.sat_fat_g?.target ?? '—'}g`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
-                <RingLegend color="var(--good)" label="Fiber" value={`${adherence?.soluble_fiber_g?.logged ?? '—'}g / ${adherence?.soluble_fiber_g?.target ?? '—'}g`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
+                <RingLegend color="var(--sky-400)" label="Calories" value={`${fmt(adherence?.calories?.logged, 0)} / ${fmt(adherence?.calories?.target, 0)}`} pct={adherence?.calories?.pct ?? 0}/>
+                <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
+                <RingLegend color="var(--good)" label="Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
               </div>
             </div>
           </div>
@@ -256,7 +256,7 @@ export default function TodayRoute() {
                 <div className="eyebrow">Streak</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
                   <Flame size={22} color="var(--sun-300)"/>
-                  <span className="num" style={{ fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>{0}</span>
+                  <span className="num" style={{ fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>{data.streak_days ?? 0}</span>
                   <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>days on track</span>
                 </div>
               </div>
@@ -283,7 +283,7 @@ export default function TodayRoute() {
           return (
             <div className="glass" style={{ padding: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <div className="eyebrow">Biometrics · last night</div>
+                <div className="eyebrow">Biometrics · latest</div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
                 {tiles}
@@ -371,7 +371,7 @@ export default function TodayRoute() {
         <div className="glass" style={{ padding: 20, marginBottom: 14, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: -115, right: -130, width: 320, height: 280, background: 'radial-gradient(ellipse 60% 56% at 68% 34%, rgba(56,189,248,0.24), transparent 70%), radial-gradient(ellipse 54% 56% at 88% 78%, rgba(56,189,248,0.10), transparent 72%)', filter: 'blur(14px)', opacity: 0.88, pointerEvents: 'none' }}/>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div className="eyebrow">Yesterday</div>
+            <div className="eyebrow">Today</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -384,9 +384,9 @@ export default function TodayRoute() {
               <div style={{ marginTop: 7, fontSize: 9, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
             </div>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <RingLegend color="var(--sky-400)" label="Calories" value={`${adherence?.calories?.logged ?? '—'}`} pct={adherence?.calories?.pct ?? 0}/>
-              <RingLegend color="var(--sun-400)" label="Sat fat" value={`${adherence?.sat_fat_g?.logged ?? '—'}g`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
-              <RingLegend color="var(--good)" label="Fiber" value={`${adherence?.soluble_fiber_g?.logged ?? '—'}g`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
+              <RingLegend color="var(--sky-400)" label="Calories" value={fmt(adherence?.calories?.logged, 0)} pct={adherence?.calories?.pct ?? 0}/>
+              <RingLegend color="var(--sun-400)" label="Sat fat" value={fmt(adherence?.sat_fat_g?.logged, 1, 'g')} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
+              <RingLegend color="var(--good)" label="Fiber" value={fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
             </div>
           </div>
         </div>
@@ -419,7 +419,7 @@ export default function TodayRoute() {
               <div className="eyebrow">Streak</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
                 <Flame size={18} color="var(--sun-300)"/>
-                <span className="num" style={{ fontSize: 26, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>{0}</span>
+                <span className="num" style={{ fontSize: 26, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>{data.streak_days ?? 0}</span>
                 <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>days on track</span>
               </div>
             </div>
