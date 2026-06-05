@@ -22,16 +22,22 @@ class InsightResponse(BaseModel):
 def _parse_insight(content: str) -> dict | None:
     """Extract and validate the narrator's JSON payload, or return None.
 
-    A local model handed a json_schema response_format sometimes echoes the
-    schema (or wraps the object in prose) instead of returning a bare instance,
-    so validate against InsightResponse rather than trusting dict.get() defaults —
-    otherwise a malformed payload silently surfaces as the "New insight" default.
+    Reasoning models (the local narrator runs with reasoning enabled) prefill a
+    <think> block before the JSON answer, so json.loads() on the raw content
+    fails and the old code silently fell back to the "New insight" default. Strip
+    any reasoning wrapper, recover the JSON object, and validate against
+    InsightResponse rather than trusting dict.get() defaults.
     """
+    content = content.strip()
+    # Drop reasoning blocks (closed or dangling) so they don't shadow the answer.
+    content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
+    content = re.sub(r"^.*</think>", "", content, flags=re.DOTALL)
     content = content.strip()
     content = re.sub(r"^```(?:json)?\n?", "", content)
     content = re.sub(r"\n?```$", "", content).strip()
 
     candidates = [content]
+    # Prefer the last balanced object — the answer follows any reasoning text.
     embedded = re.search(r"\{.*\}", content, re.DOTALL)
     if embedded:
         candidates.append(embedded.group(0))

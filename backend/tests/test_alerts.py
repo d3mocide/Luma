@@ -229,6 +229,38 @@ def test_parse_insight_strips_code_fences_and_prose():
     assert parsed["headline"] == "Hi"
 
 
+def test_parse_insight_strips_reasoning_block():
+    """The local narrator runs with reasoning enabled and prefills a <think> block."""
+    raw = (
+        "<think>The user broke a 3-day streak. Keep it warm and encouraging, "
+        "not alarming.</think>\n"
+        '{"body": "It\'s okay to miss a day! Consistency, not perfection, is key.", '
+        '"headline": "Restarting Your Logging Streak Is Easy", '
+        '"thread_seed": "What\'s the easiest way to get back into logging?"}'
+    )
+    parsed = _parse_insight(raw)
+    assert parsed is not None
+    assert parsed["headline"] == "Restarting Your Logging Streak Is Easy"
+    assert parsed["body"].startswith("It's okay to miss a day")
+
+
+def test_parse_insight_strips_dangling_reasoning_close_tag():
+    raw = 'reasoning the model emitted</think>\n{"headline": "H", "body": "B", "thread_seed": "S"}'
+    parsed = _parse_insight(raw)
+    assert parsed is not None
+    assert parsed["headline"] == "H"
+
+
+def test_parse_insight_handles_braces_in_reasoning():
+    raw = (
+        '<think>Data was {"days": 1}, so be gentle.</think>'
+        '{"headline": "H", "body": "B", "thread_seed": "S"}'
+    )
+    parsed = _parse_insight(raw)
+    assert parsed is not None
+    assert parsed["body"] == "B"
+
+
 def test_parse_insight_rejects_schema_echo():
     """A local model handed json_schema sometimes echoes the schema itself.
 
