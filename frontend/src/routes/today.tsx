@@ -371,7 +371,7 @@ export default function TodayRoute() {
         <div className="glass" style={{ padding: 20, marginBottom: 14, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: -115, right: -130, width: 320, height: 280, background: 'radial-gradient(ellipse 60% 56% at 68% 34%, rgba(56,189,248,0.24), transparent 70%), radial-gradient(ellipse 54% 56% at 88% 78%, rgba(56,189,248,0.10), transparent 72%)', filter: 'blur(14px)', opacity: 0.88, pointerEvents: 'none' }}/>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div className="eyebrow">Yesterday</div>
+            <div className="eyebrow">Today</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
