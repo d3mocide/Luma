@@ -97,7 +97,6 @@ async def narrate_alert(
         temperature=0.4,
         timeout=30.0,
         response_format=InsightResponse,
-        reasoning_effort="none",
     )
 
     content = resp["choices"][0]["message"]["content"]
@@ -128,7 +127,6 @@ async def narrate_alert(
             temperature=0.4,
             timeout=60.0,
             response_format=InsightResponse,
-            reasoning_effort="none",
         )
         insight = _parse_insight(retry_resp["choices"][0]["message"]["content"])
         if insight is not None:
