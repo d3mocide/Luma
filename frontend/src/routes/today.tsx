@@ -414,8 +414,14 @@ export default function TodayRoute() {
 
         {/* Weight */}
         <div className="glass" style={{ padding: 18, marginBottom: 14 }}>
-          <div className="eyebrow">Weight</div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="eyebrow">Weight</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <SlopeChip label="7d" value={trend7d} unit={slopeUnit}/>
+              <SlopeChip label="28d" value={trend28d} unit={slopeUnit}/>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
             <span className="num" style={{ fontSize: 38, fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--fg-primary)' }}>
               {latestWeight?.toFixed(1) ?? '—'}
             </span>
@@ -425,10 +431,6 @@ export default function TodayRoute() {
                 target <span className="num" style={{ color: 'var(--fg-tertiary)' }}>{targetWeight.toFixed(1)} {weightUnit}</span>
               </span>
             )}
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <SlopeChip label="7d" value={trend7d} unit={slopeUnit}/>
-            <SlopeChip label="28d" value={trend28d} unit={slopeUnit}/>
           </div>
           <div style={{ marginTop: 14, marginLeft: -6, marginRight: -6 }}>
             <WeightChart data={weightSeries} width={340} height={70} showAxis={false}/>
