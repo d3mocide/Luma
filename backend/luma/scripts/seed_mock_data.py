@@ -113,6 +113,26 @@ async def seed_data(user_id_str: str) -> None:
             # Sleep respiratory rate: around 14-18 breaths per min
             resp_rate = 15.5 + random.uniform(-1.5, 1.5)
 
+            # SpO2: around 95-99%
+            spo2 = 98.2 + random.uniform(-1.5, 1.3)
+            # Body temp: around 36.5 - 37.1 °C
+            body_temp = 36.7 + random.uniform(-0.3, 0.4)
+            # Blood pressure: around 110-125 / 70-80
+            systolic_bp = 117.0 + random.uniform(-5.0, 7.0)
+            diastolic_bp = 75.0 + random.uniform(-4.0, 5.0)
+            # Mindfulness minutes: 0 to 20 mins
+            mindful = random.choice([0.0, 0.0, 10.0, 15.0, 20.0])
+            # Flights climbed: 2 to 12
+            flights = random.randint(2, 12)
+            # Stand minutes: 40 to 90
+            stand_min = random.uniform(40.0, 90.0)
+            # BMR: around 1600-1700
+            bmr = 1650.0 + random.uniform(-50.0, 50.0)
+            # Audio exposure: around 45-65 dB
+            audio_exp = 52.0 + random.uniform(-8.0, 12.0)
+            # Six minute walking distance: around 500-650 m
+            six_min_walk = 580.0 + random.uniform(-50.0, 70.0)
+
             # --- Extended Longevity & Gait Metrics ---
             bmi = weight / (1.78 ** 2)
             body_fat_pct = 22.0 - (2.5 * (i / 30.0)) + random.uniform(-0.15, 0.15)
@@ -142,11 +162,25 @@ async def seed_data(user_id_str: str) -> None:
                 Biometric(user_id=user_uuid, ts=day_ts, metric="exercise_min", value=round(exercise, 0), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="respiratory_rate_bpm", value=round(resp_rate, 1), source="apple_health"),
                 
-                # Longevity & Vitals
+                # Vitals
                 Biometric(user_id=user_uuid, ts=day_ts, metric="bmi", value=round(bmi, 2), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="body_fat_pct", value=round(body_fat_pct, 2), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="lean_body_mass_kg", value=round(weight * (1.0 - body_fat_pct / 100.0), 2), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="heart_rate_avg_bpm", value=round(avg_hr, 0), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="walking_hr_bpm", value=round(walking_hr, 0), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="spo2_pct", value=round(min(100.0, spo2), 1), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="body_temp_c", value=round(body_temp, 2), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="bp_systolic_mmhg", value=round(systolic_bp, 0), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="bp_diastolic_mmhg", value=round(diastolic_bp, 0), source="apple_health"),
+                
+                # Activity & Energy extras
+                Biometric(user_id=user_uuid, ts=day_ts, metric="mindful_min", value=round(mindful, 0), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="flights_climbed", value=float(flights), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="stand_min", value=round(stand_min, 0), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="bmr_kcal", value=round(bmr, 0), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="audio_exposure_db", value=round(audio_exp, 1), source="apple_health"),
+                
+                # Longevity & Gait
                 Biometric(user_id=user_uuid, ts=day_ts, metric="distance_km", value=round(distance, 2), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="stand_hours", value=float(stand_hours), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="daylight_min", value=round(daylight, 1), source="apple_health"),
@@ -158,6 +192,7 @@ async def seed_data(user_id_str: str) -> None:
                 Biometric(user_id=user_uuid, ts=day_ts, metric="double_support_pct", value=round(double_support, 2), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="stair_speed_up_mps", value=round(stair_up, 3), source="apple_health"),
                 Biometric(user_id=user_uuid, ts=day_ts, metric="stair_speed_down_mps", value=round(stair_down, 3), source="apple_health"),
+                Biometric(user_id=user_uuid, ts=day_ts, metric="six_min_walk_m", value=round(six_min_walk, 1), source="apple_health"),
             ])
 
         db.add_all(biometrics_to_add)
@@ -261,7 +296,7 @@ async def seed_data(user_id_str: str) -> None:
     print("\n🎉 Done! High-fidelity mock data successfully generated!")
     print(f"  - 31 days of weight logs (~81.5 kg -> ~76.2 kg)")
     print(f"  - 31 days of LDL logs (~145 mg/dL -> ~108 mg/dL)")
-    print(f"  - 31 days of 17+ longevity & gait metrics (walking speed, asymmetry, step length, breathing, etc.)")
+    print(f"  - 31 days of 27+ HAE, longevity & gait metrics (blood oxygen, body temp, blood pressure, walking speed, asymmetry, step length, breathing, etc.)")
     print(f"  - 15 days of breakfasts, lunches, and dinners")
     print(f"  - Calorie, fat, and fiber goals properly wired.")
     print(f"  - Four categorized hubs: Recovery, Activity, Gait & Posture, Vitals")
