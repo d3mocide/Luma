@@ -80,6 +80,47 @@ export function NutritionCalculatorCard({
   const [selectedFood, setSelectedFood] = useState<FoodResult | null>(null)
   const [servingG, setServingG] = useState('150')
 
+  const renderPresetChip = (preset: string) => {
+    const active = servingG === preset
+    return (
+      <button
+        key={preset}
+        type="button"
+        onClick={() => setServingG(preset)}
+        className={`serving-chip ${active ? 'active' : ''}`}
+        style={{
+          padding: '4px 10px',
+          borderRadius: 8,
+          background: active ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
+          border: active ? '1px solid rgba(56,189,248,0.45)' : '1px solid var(--glass-edge)',
+          color: active ? 'var(--sky-300)' : 'var(--fg-secondary)',
+          fontSize: 10,
+          fontWeight: active ? 600 : 400,
+          fontFamily: 'var(--font-mono)',
+          cursor: 'pointer',
+          transition: 'all 120ms ease-out',
+          outline: 'none',
+        }}
+        onMouseEnter={(e) => {
+          if (!active) {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+            e.currentTarget.style.color = 'var(--fg-primary)'
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!active) {
+            e.currentTarget.style.background = 'var(--glass-1)'
+            e.currentTarget.style.borderColor = 'var(--glass-edge)'
+            e.currentTarget.style.color = 'var(--fg-secondary)'
+          }
+        }}
+      >
+        {preset}g
+      </button>
+    )
+  }
+
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 350)
     return () => clearTimeout(t)
@@ -308,7 +349,7 @@ export function NutritionCalculatorCard({
           </label>
 
           {/* Serving */}
-          <div style={{ display: 'grid', gap: 6, width: compact ? '100%' : '260px' }}>
+          <div style={{ display: 'grid', gap: 6, width: compact ? '100%' : '275px' }}>
             <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
               Serving (g)
             </span>
@@ -326,95 +367,63 @@ export function NutritionCalculatorCard({
               onFocus={(e) => (e.target.style.borderColor = 'rgba(56,189,248,0.5)')}
               onBlur={(e) => (e.target.style.borderColor = 'var(--glass-edge)')}
             />
-            {/* Preset Chips */}
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-              {['50', '100', '150', '200', '300'].map((preset) => {
-                const active = servingG === preset
-                return (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setServingG(preset)}
-                    className={`serving-chip ${active ? 'active' : ''}`}
-                    style={{
-                      padding: '4px 10px',
-                      borderRadius: 8,
-                      background: active ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
-                      border: active ? '1px solid rgba(56,189,248,0.45)' : '1px solid var(--glass-edge)',
-                      color: active ? 'var(--sky-300)' : 'var(--fg-secondary)',
-                      fontSize: 10,
-                      fontWeight: active ? 600 : 400,
-                      fontFamily: 'var(--font-mono)',
-                      cursor: 'pointer',
-                      transition: 'all 120ms ease-out',
-                      outline: 'none',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
-                        e.currentTarget.style.color = 'var(--fg-primary)'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.background = 'var(--glass-1)'
-                        e.currentTarget.style.borderColor = 'var(--glass-edge)'
-                        e.currentTarget.style.color = 'var(--fg-secondary)'
-                      }
-                    }}
-                  >
-                    {preset}g
-                  </button>
-                )
-              })}
+            {/* Preset Chips & Add to log button */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              gap: 12,
+              marginTop: 4,
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['50', '100', '150'].map(renderPresetChip)}
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['200', '300'].map(renderPresetChip)}
+                </div>
+              </div>
+              <button
+                className="btn"
+                onClick={handleAdd}
+                disabled={!selectedFood || !!isAdding}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: 12,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  height: 28,
+                }}
+              >
+                <Plus size={12} strokeWidth={2} /> {isAdding ? 'Adding…' : 'Add to log'}
+              </button>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div style={{
-          display: 'flex',
-          flexDirection: compact ? 'column' : 'row',
-          justifyContent: 'space-between',
-          alignItems: compact ? 'stretch' : 'center',
-          gap: (compact && !hasFood) ? 0 : 10,
-        }}>
-          {(hasFood || !compact) && (
-            <div>
-              {hasFood ? (
-                <>
-                  <div style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>
-                    Adds <span className="num">{addCalories}</span> kcal · <span className="num">{addSatFat}</span>g sat fat · <span className="num">{addSolFiber}</span>g soluble fiber
-                  </div>
-                  {fitSignal && (
-                    <div style={{ marginTop: 4, fontSize: 12, fontWeight: 500, color: fitColor }}>
-                      {fitLabel}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>
-                  Search for a food to check your budget.
+        {(hasFood || !compact) && (
+          <div style={{ marginTop: 12, borderTop: '1px solid var(--glass-edge)', paddingTop: 10 }}>
+            {hasFood ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>
+                  Adds <span className="num">{addCalories}</span> kcal · <span className="num">{addSatFat}</span>g sat fat · <span className="num">{addSolFiber}</span>g soluble fiber
                 </div>
-              )}
-            </div>
-          )}
-          <button
-            className="btn"
-            onClick={handleAdd}
-            disabled={!hasFood || !!isAdding}
-            style={{
-              padding: '8px 12px',
-              fontSize: 12,
-              flexShrink: 0,
-              alignSelf: compact ? 'flex-end' : 'center',
-              marginTop: (compact && hasFood) ? 4 : 0,
-            }}
-          >
-            <Plus size={12} strokeWidth={2} /> {isAdding ? 'Adding…' : 'Add to log'}
-          </button>
-        </div>
+                {fitSignal && (
+                  <div style={{ fontSize: 12, fontWeight: 500, color: fitColor }}>
+                    {fitLabel}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>
+                Search for a food to check your budget.
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
