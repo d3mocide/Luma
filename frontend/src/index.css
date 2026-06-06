@@ -604,7 +604,20 @@
 
 .mobile-shell-main {
   padding-top: 0;
-  padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+}
+
+.today-shell {
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .today-shell {
+    height: auto;
+    min-height: 100%;
+  }
+  .today-mobile-scroll {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+  }
 }
 
 .mobile-profile-trigger {
@@ -2204,7 +2217,9 @@ input[type="search"]::-webkit-search-results-decoration {
 
 @media (max-width: 900px) {
   .trends-page {
-    padding: 16px 16px 24px;
+    height: auto !important;
+    overflow-y: visible !important;
+    padding: 16px 16px calc(92px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .trends-header {
@@ -2319,7 +2334,7 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 
   .coach-composer {
-    padding: 12px 16px 24px !important;
+    padding: 12px 16px calc(92px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
@@ -2351,7 +2366,12 @@ input[type="search"]::-webkit-search-results-decoration {
 
 @media (max-width: 900px) {
   .settings-page {
-    padding: 16px 16px 24px !important;
+    height: auto !important;
+    overflow-y: visible !important;
+    padding: 16px 16px calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .favorites-page {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 

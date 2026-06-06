@@ -176,7 +176,7 @@ export default function FavoritesRoute() {
   }
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '28px 20px 60px' }}>
+    <div className="favorites-page" style={{ maxWidth: 720, margin: '0 auto', padding: '28px 20px 60px' }}>
       {view === 'list' ? (
         <>
           {/* Page header */}
