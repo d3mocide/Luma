@@ -492,7 +492,7 @@ function InsightsTab({ onAsk }: { onAsk: (seed: string) => void }) {
                 <div
                   key={insight.id}
                   className="glass"
-                  style={{ padding: 20, borderRadius: 16, borderLeft: `2px solid ${color}` }}
+                  style={{ padding: 20, borderRadius: 16 }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span style={{ fontSize: 11, color, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>

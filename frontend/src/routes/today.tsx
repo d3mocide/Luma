@@ -312,7 +312,7 @@ export default function TodayRoute() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 20 }}>
           {/* Insight */}
           {data.active_insight ? (
-            <div className="glass" style={{ padding: 24, position: 'relative', overflow: 'hidden', background: 'var(--insight-card-bg)', borderLeft: '2px solid var(--sun-400)' }}>
+            <div className="glass" style={{ display: 'flex', flexDirection: 'column', padding: 24, position: 'relative', overflow: 'hidden', background: 'var(--insight-card-bg)' }}>
               <div style={{ position: 'absolute', top: -80, right: -70, width: 300, height: 240, background: 'radial-gradient(ellipse 56% 52% at 76% 30%, rgba(251,191,36,0.30), transparent 68%), radial-gradient(ellipse 48% 52% at 90% 80%, rgba(251,191,36,0.10), transparent 72%)', filter: 'blur(14px)', opacity: 0.9, pointerEvents: 'none' }}/>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 30, height: 30, borderRadius: 10, background: 'var(--insight-icon-bg)', border: '1px solid var(--insight-icon-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--insight-icon-fg)' }}>
@@ -328,7 +328,7 @@ export default function TodayRoute() {
                   {data.active_insight.cta}
                 </p>
               )}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 24 }}>
                 <button
                   className="btn today-insight-cta"
                   style={{ padding: '8px 14px', fontSize: 13, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}
@@ -477,7 +477,7 @@ export default function TodayRoute() {
 
         {/* Insight */}
         {data.active_insight ? (
-          <div className="glass" style={{ padding: 18, marginBottom: 14, position: 'relative', overflow: 'hidden', background: 'var(--insight-card-bg)', borderLeft: '2px solid var(--sun-400)' }}>
+          <div className="glass" style={{ padding: 18, marginBottom: 14, position: 'relative', overflow: 'hidden', background: 'var(--insight-card-bg)' }}>
             <div style={{ position: 'absolute', top: -80, right: -85, width: 220, height: 190, background: 'radial-gradient(ellipse 56% 52% at 74% 30%, rgba(251,191,36,0.24), transparent 68%), radial-gradient(ellipse 48% 52% at 90% 80%, rgba(251,191,36,0.08), transparent 72%)', filter: 'blur(12px)', opacity: 0.88, pointerEvents: 'none' }}/>
             <div style={{ display: 'flex', gap: 12 }}>
               <div style={{ width: 28, height: 28, borderRadius: 9, background: 'var(--insight-icon-bg)', border: '1px solid var(--insight-icon-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--insight-icon-fg)', flexShrink: 0 }}>
