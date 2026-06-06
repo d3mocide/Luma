@@ -362,25 +362,22 @@ export default function PlanRoute() {
       {!plan && !isLoading && (
         <>
           {/* AI generate banner */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16,
-            padding: '12px 16px', background: 'var(--glass-1)', borderRadius: 12,
-            border: '1px solid var(--glass-edge)',
-          }}>
-            <Sparkles size={16} style={{ color: 'var(--sky-400)', flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, color: 'var(--fg-primary)', fontWeight: 500 }}>
-                No plan for {isPastWeek ? formatWeekLabel(selectedWeek) : 'this week'} yet.
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginTop: 1 }}>
-                Click any slot to add a meal, or generate a full week with AI.
+          <div className="plan-empty-banner">
+            <div className="plan-empty-banner-content">
+              <Sparkles size={16} className="plan-empty-banner-icon" />
+              <div className="plan-empty-banner-text">
+                <div className="plan-empty-banner-title">
+                  No plan for {isPastWeek ? formatWeekLabel(selectedWeek) : 'this week'} yet.
+                </div>
+                <div className="plan-empty-banner-sub">
+                  Click any slot to add a meal, or generate a full week with AI.
+                </div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <div className="plan-empty-banner-actions">
               {prevWeekHasPlan && !isPastWeek && (
                 <button
                   className="btn"
-                  style={{ fontSize: 12, padding: '7px 12px' }}
                   onClick={handleUseLastWeekTemplate}
                   disabled={generateMutation.isPending}
                 >
@@ -389,7 +386,6 @@ export default function PlanRoute() {
               )}
               <button
                 className="btn"
-                style={{ fontSize: 12, padding: '7px 12px' }}
                 onClick={() => handleGenerate(selectedWeek, customConstraints)}
                 disabled={generateMutation.isPending}
               >
