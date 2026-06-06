@@ -834,6 +834,15 @@ function CalculatorTab() {
   return (
     <div style={{ paddingTop: 24, paddingBottom: 60, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
+      {/* Ingredient builder */}
+      <IngredientBuilder
+        draftItems={items}
+        onAddItem={addItem}
+        onRemoveItem={removeItem}
+        onUpdateWeight={updateWeight}
+        emptyStateMessage="Search above to add ingredients. No logging — just numbers."
+      />
+
       {/* Meal name + reset row */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
         <div style={{ flex: 1 }}>
@@ -868,15 +877,6 @@ function CalculatorTab() {
           </button>
         )}
       </div>
-
-      {/* Ingredient builder */}
-      <IngredientBuilder
-        draftItems={items}
-        onAddItem={addItem}
-        onRemoveItem={removeItem}
-        onUpdateWeight={updateWeight}
-        emptyStateMessage="Search above to add ingredients. No logging — just numbers."
-      />
 
       {/* Servings + results — only shown when there are items */}
       {hasItems && (

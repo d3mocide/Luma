@@ -146,33 +146,6 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-      {/* ── Filter chips ── */}
-      <div style={{ display: 'flex', gap: '6px 4px', flexWrap: 'wrap' }}>
-        {FILTER_CHIPS.map(({ label, flag, color, icon: Icon }) => {
-          const on = activeFlags.includes(flag)
-          return (
-            <button
-              key={flag}
-              onClick={() => toggleFlag(flag)}
-              style={{
-                padding: '4.5px 9px', borderRadius: 999, fontSize: 10, fontWeight: 600,
-                cursor: 'pointer', transition: 'all 150ms', letterSpacing: 0,
-                flexShrink: 0,
-                background: on ? color : 'var(--glass-1)',
-                border: on ? `1px solid ${color.replace('0.15', '0.5')}` : '1px solid var(--glass-edge)',
-                color: on ? 'var(--fg-primary)' : 'var(--fg-secondary)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-              }}
-            >
-              <Icon size={12} strokeWidth={2.2} />
-              {label}
-            </button>
-          )
-        })}
-      </div>
-
       {/* ── Search input or gram picker ── */}
       {pending ? (
         <div className="glass-inset" style={{ padding: 14, borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -267,6 +240,33 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
           )}
         </div>
       )}
+
+      {/* ── Filter chips ── */}
+      <div style={{ display: 'flex', gap: '6px 4px', flexWrap: 'wrap' }}>
+        {FILTER_CHIPS.map(({ label, flag, color, icon: Icon }) => {
+          const on = activeFlags.includes(flag)
+          return (
+            <button
+              key={flag}
+              onClick={() => toggleFlag(flag)}
+              style={{
+                padding: '4.5px 9px', borderRadius: 999, fontSize: 10, fontWeight: 600,
+                cursor: 'pointer', transition: 'all 150ms', letterSpacing: 0,
+                flexShrink: 0,
+                background: on ? color : 'var(--glass-1)',
+                border: on ? `1px solid ${color.replace('0.15', '0.5')}` : '1px solid var(--glass-edge)',
+                color: on ? 'var(--fg-primary)' : 'var(--fg-secondary)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <Icon size={12} strokeWidth={2.2} />
+              {label}
+            </button>
+          )
+        })}
+      </div>
 
       {/* ── Search results ── */}
       {results.length > 0 && (

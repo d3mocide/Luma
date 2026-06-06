@@ -314,6 +314,17 @@ export default function FavoritesRoute() {
             </div>
           </div>
 
+          {/* Ingredient builder */}
+          <div style={{ marginBottom: 22 }}>
+            <IngredientBuilder
+              draftItems={items}
+              onAddItem={addItem}
+              onRemoveItem={removeItem}
+              onUpdateWeight={updateWeight}
+              emptyStateMessage="Search above to add ingredients to this favorite."
+            />
+          </div>
+
           {/* Name input */}
           <div style={{ marginBottom: 22 }}>
             <div className="eyebrow" style={{ marginBottom: 8, fontSize: 10 }}>Name</div>
@@ -330,15 +341,6 @@ export default function FavoritesRoute() {
               }}
             />
           </div>
-
-          {/* Ingredient builder */}
-          <IngredientBuilder
-            draftItems={items}
-            onAddItem={addItem}
-            onRemoveItem={removeItem}
-            onUpdateWeight={updateWeight}
-            emptyStateMessage="Search above to add ingredients to this favorite."
-          />
 
           {/* Save button */}
           <div style={{ marginTop: 28 }}>

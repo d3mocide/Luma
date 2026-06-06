@@ -1,7 +1,34 @@
 SHELL := /bin/bash
 
-COMPOSE := docker compose
-CORE_SERVICES := api postgres redis whisper worker
+# Load .env if it exists to read environment configs (like WHISPER_URL)
+ifneq (,$(wildcard .env))
+    include .env
+    export
+endif
+
+# Check if we should use the local whisper container in compose.
+# If WHISPER_URL is empty, or set to the default docker/localhost compose network addresses, we enable it.
+# Otherwise, we assume a custom/remote Whisper server is configured and bypass the local service.
+ifeq ($(WHISPER_URL),)
+    USE_LOCAL_WHISPER := true
+else ifeq ($(WHISPER_URL),http://whisper:9000)
+    USE_LOCAL_WHISPER := true
+else ifeq ($(WHISPER_URL),http://localhost:9000)
+    USE_LOCAL_WHISPER := true
+else
+    USE_LOCAL_WHISPER := false
+endif
+
+ifeq ($(USE_LOCAL_WHISPER),true)
+    WHISPER_SERVICE := whisper
+    COMPOSE_WHISPER_PROFILE := --profile whisper
+else
+    WHISPER_SERVICE :=
+    COMPOSE_WHISPER_PROFILE :=
+endif
+
+COMPOSE := docker compose $(COMPOSE_WHISPER_PROFILE)
+CORE_SERVICES := api postgres redis $(WHISPER_SERVICE) worker
 
 .PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed seed-reference seed-mock seed-build seed-merge clear-hae-data ai-smoke ai-smoke-full gen-vapid clean nuke
 

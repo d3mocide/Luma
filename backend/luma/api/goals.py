@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone, time
+from datetime import date, datetime, timedelta, timezone, time
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
@@ -23,7 +23,7 @@ class GoalIn(BaseModel):
     target_weight_kg: float | None = None
     target_ldl_mg_dl: int | None = None
     current_ldl_mg_dl: int | None = None
-    current_ldl_drawn_at: str | None = None
+    current_ldl_drawn_at: date | None = None
     daily_calorie_target: int | None = None
     daily_sat_fat_g_max: float | None = None
     daily_soluble_fiber_g: float | None = None

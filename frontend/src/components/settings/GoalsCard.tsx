@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { type GoalSettings, type GoalFormState, type MeasurementSystem, formatGoalNumber } from './types'
@@ -14,8 +15,8 @@ function SummaryPill({ label, value }: { label: string; value: string }) {
 
 function Field({ label, unit, fullWidth, children }: { label: string; unit: string; fullWidth?: boolean; children: React.ReactNode }) {
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, gridColumn: fullWidth ? '1 / -1' : 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, gridColumn: fullWidth ? '1 / -1' : 'auto' }}>
+      <div className="eyebrow" style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 10 }}>
         <span>{label}</span>
         <span>{unit}</span>
       </div>
@@ -40,6 +41,41 @@ export function GoalsCard({ goalForm, onFieldChange, goalSaveError, goalSaveSucc
     queryKey: ['settings', 'goals'],
     queryFn: () => api.get('/goals'),
   })
+
+  const predefinedOptions = [
+    { value: 'cholesterol-lowering', label: 'Cholesterol-lowering' },
+    { value: 'mediterranean',        label: 'Mediterranean' },
+    { value: 'heart-healthy',         label: 'Heart-healthy' },
+    { value: 'vegetarian',            label: 'Vegetarian' },
+    { value: 'vegan',                 label: 'Vegan' },
+    { value: 'low-carb',              label: 'Low-carb' },
+  ]
+
+  const currentPattern = goalForm.dietary_pattern || 'cholesterol-lowering'
+  const isPredefined = predefinedOptions.some(p => p.value === currentPattern.toLowerCase())
+
+  const [isCustomMode, setIsCustomMode] = useState(false)
+
+  useEffect(() => {
+    const isPre = predefinedOptions.some(p => p.value === (goalForm.dietary_pattern || '').toLowerCase())
+    if (goalForm.dietary_pattern && !isPre) {
+      setIsCustomMode(true)
+    } else {
+      setIsCustomMode(false)
+    }
+  }, [goalForm.dietary_pattern])
+
+  const selectValue = isCustomMode ? 'custom' : (isPredefined ? currentPattern.toLowerCase() : 'custom')
+
+  const handleSelectChange = (val: string) => {
+    if (val === 'custom') {
+      setIsCustomMode(true)
+      onFieldChange('dietary_pattern', '')
+    } else {
+      setIsCustomMode(false)
+      onFieldChange('dietary_pattern', val)
+    }
+  }
 
   return (
     <div className="glass settings-card" style={{ padding: 24 }}>
@@ -75,38 +111,128 @@ export function GoalsCard({ goalForm, onFieldChange, goalSaveError, goalSaveSucc
           ] as { field: keyof GoalFormState; label: string; unit: string; mode: 'decimal' | 'numeric'; placeholder: string }[]
         ).map(({ field, label, unit, mode, placeholder }) => (
           <Field key={field} label={label} unit={unit}>
-            <input
-              value={goalForm[field]}
-              onChange={(e) => onFieldChange(field, e.target.value)}
-              className="field-input"
-              inputMode={mode}
-              placeholder={placeholder}
-            />
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '10px 14px',
+              border: '1px solid var(--glass-edge)',
+              borderRadius: 14,
+              background: 'var(--glass-1)',
+              transition: 'all 150ms ease-out',
+            }} className="field-input">
+              <input
+                value={goalForm[field]}
+                onChange={(e) => onFieldChange(field, e.target.value)}
+                inputMode={mode}
+                placeholder={placeholder}
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  color: 'var(--fg-primary)',
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 14,
+                }}
+              />
+            </div>
           </Field>
         ))}
         <Field label="Last LDL test" unit="date drawn">
-          <input
-            value={goalForm.current_ldl_drawn_at}
-            onChange={(e) => onFieldChange('current_ldl_drawn_at', e.target.value)}
-            className="field-input"
-            type="date"
-          />
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px 14px',
+            border: '1px solid var(--glass-edge)',
+            borderRadius: 14,
+            background: 'var(--glass-1)',
+            transition: 'all 150ms ease-out',
+          }} className="field-input">
+            <input
+              type="date"
+              value={goalForm.current_ldl_drawn_at}
+              onChange={(e) => onFieldChange('current_ldl_drawn_at', e.target.value)}
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: 'var(--fg-primary)',
+                fontFamily: 'var(--font-sans)',
+                fontSize: 14,
+              }}
+            />
+          </div>
         </Field>
-        <Field label="Dietary pattern" unit="text" fullWidth>
-          <input
-            value={goalForm.dietary_pattern}
-            onChange={(e) => onFieldChange('dietary_pattern', e.target.value)}
-            className="field-input"
-            placeholder="Mediterranean, lower-carb, vegetarian…"
-          />
+        <Field label="Dietary pattern" unit="selection" fullWidth>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '10px 14px',
+              border: '1px solid var(--glass-edge)',
+              borderRadius: 14,
+              background: 'var(--glass-1)',
+              transition: 'all 150ms ease-out',
+            }} className="field-input">
+              <select
+                value={selectValue}
+                onChange={(e) => handleSelectChange(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  color: 'var(--fg-primary)',
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 14,
+                  cursor: 'pointer',
+                }}
+              >
+                {predefinedOptions.map(opt => (
+                  <option key={opt.value} value={opt.value} style={{ background: 'var(--bg-2)', color: 'var(--fg-primary)' }}>
+                    {opt.label}
+                  </option>
+                ))}
+                <option value="custom" style={{ background: 'var(--bg-2)', color: 'var(--fg-primary)' }}>Custom...</option>
+              </select>
+            </div>
+
+            {isCustomMode && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '10px 14px',
+                border: '1px solid var(--glass-edge)',
+                borderRadius: 14,
+                background: 'var(--glass-1)',
+                transition: 'all 150ms ease-out',
+              }} className="field-input">
+                <input
+                  value={goalForm.dietary_pattern}
+                  onChange={(e) => onFieldChange('dietary_pattern', e.target.value)}
+                  placeholder="Enter custom dietary pattern (e.g., keto, plant-forward Mediterranean)..."
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: 'var(--fg-primary)',
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: 14,
+                  }}
+                />
+              </div>
+            )}
+          </div>
         </Field>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 14, flexWrap: 'wrap' }}>
-        <div style={{ minHeight: 20, fontSize: 13, color: goalSaveError ? 'var(--bad)' : 'var(--fg-quiet)' }}>
+        <div style={{ minHeight: 20, fontSize: 13, color: goalSaveError ? 'var(--bad)' : goalSaveSuccess ? 'var(--good)' : 'var(--fg-quiet)' }}>
           {goalSaveError ?? goalSaveSuccess ?? 'These targets guide your meal plans and feedback.'}
         </div>
-        <button type="button" className="btn btn-primary" onClick={onSubmit} disabled={isPending} style={{ padding: '10px 14px' }}>
+        <button type="button" className="btn btn-primary" onClick={onSubmit} disabled={isPending} style={{ padding: '8px 20px', fontSize: 13 }}>
           {isPending ? 'Saving…' : 'Save goals'}
         </button>
       </div>

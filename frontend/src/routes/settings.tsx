@@ -218,7 +218,7 @@ function AccountTab({
     <div className="settings-grid">
       {/* Left: identity + device settings */}
       <div className="settings-stack">
-        <div className="glass settings-card" style={{ padding: 24 }}>
+        <div className="glass settings-card settings-order-account" style={{ padding: 24 }}>
           <div className="eyebrow" style={{ marginBottom: 16 }}>Account</div>
           {user ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -234,12 +234,17 @@ function AccountTab({
           )}
         </div>
 
-        <MeasurementsCard />
-        <ProfileCard />
-        <NotificationsCard />
-        <PasswordCard />
+        <div className="settings-order-measurements">
+          <MeasurementsCard />
+        </div>
+        <div className="settings-order-notifications">
+          <NotificationsCard />
+        </div>
+        <div className="settings-order-password">
+          <PasswordCard />
+        </div>
 
-        <div className="glass settings-card" style={{ padding: 24 }}>
+        <div className="glass settings-card settings-order-session" style={{ padding: 24 }}>
           <div className="eyebrow" style={{ marginBottom: 12 }}>Session</div>
           <p style={{ color: 'var(--fg-tertiary)', fontSize: 14, margin: '0 0 16px' }}>
             End your current session on this device.
@@ -263,17 +268,23 @@ function AccountTab({
 
       {/* Right: goals + suggestions */}
       <div className="settings-stack">
-        <RecommendGoalsCard onApply={onApplyRecommendations} />
-
-        <GoalsCard
-          goalForm={goalForm}
-          onFieldChange={onFieldChange}
-          goalSaveError={goalSaveError}
-          goalSaveSuccess={goalSaveSuccess}
-          onSubmit={onSubmit}
-          isPending={isPending}
-          measurementSystem={measurementSystem}
-        />
+        <div className="settings-order-profile">
+          <ProfileCard />
+        </div>
+        <div className="settings-order-suggested">
+          <RecommendGoalsCard onApply={onApplyRecommendations} />
+        </div>
+        <div className="settings-order-goals">
+          <GoalsCard
+            goalForm={goalForm}
+            onFieldChange={onFieldChange}
+            goalSaveError={goalSaveError}
+            goalSaveSuccess={goalSaveSuccess}
+            onSubmit={onSubmit}
+            isPending={isPending}
+            measurementSystem={measurementSystem}
+          />
+        </div>
       </div>
     </div>
   )
@@ -295,7 +306,6 @@ function HealthImportTab({ isOperator }: { isOperator: boolean }) {
           <>
             <HaeDiagnosticCard />
             <HaeAnalyzeCard />
-            <InsightsDiagnosticCard />
           </>
         ) : (
           <div className="glass settings-card" style={{ padding: 24 }}>
@@ -324,6 +334,7 @@ function AiRoutingTab({ isOperator }: { isOperator: boolean }) {
       <div className="settings-stack settings-secondary">
         <AiPerformanceCard />
         <AiConfigCard />
+        <InsightsDiagnosticCard />
       </div>
     </div>
   )

@@ -37,7 +37,7 @@ export const emptyGoalForm: GoalFormState = {
   daily_sat_fat_g_max: '',
   daily_soluble_fiber_g: '',
   daily_protein_g_min: '',
-  dietary_pattern: '',
+  dietary_pattern: 'cholesterol-lowering',
 }
 
 export type GoalRecommendation = {
@@ -120,7 +120,7 @@ export function toGoalFormState(goal?: Partial<GoalSettings>): GoalFormState {
     daily_sat_fat_g_max: goal?.daily_sat_fat_g_max?.toString() ?? '',
     daily_soluble_fiber_g: goal?.daily_soluble_fiber_g?.toString() ?? '',
     daily_protein_g_min: goal?.daily_protein_g_min?.toString() ?? '',
-    dietary_pattern: goal?.dietary_pattern ?? '',
+    dietary_pattern: goal?.dietary_pattern || 'cholesterol-lowering',
   }
 }
 

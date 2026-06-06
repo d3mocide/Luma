@@ -1270,6 +1270,20 @@ input[type="search"]::-webkit-search-results-decoration {
 
 .settings-card {
   min-width: 0;
+  padding: 24px !important;
+}
+
+.profile-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 20px;
+}
+
+.segment-control-sex,
+.segment-control-activity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .settings-goals-summary {
@@ -1391,6 +1405,19 @@ input[type="search"]::-webkit-search-results-decoration {
     max-width: none;
   }
 
+  .settings-grid .settings-stack {
+    display: contents;
+  }
+
+  .settings-order-account { order: 1; }
+  .settings-order-profile { order: 2; }
+  .settings-order-suggested { order: 3; }
+  .settings-order-goals { order: 4; }
+  .settings-order-measurements { order: 5; }
+  .settings-order-notifications { order: 6; }
+  .settings-order-password { order: 7; }
+  .settings-order-session { order: 8; }
+
   .settings-metric-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -1402,6 +1429,30 @@ input[type="search"]::-webkit-search-results-decoration {
 
   .settings-hero {
     margin-bottom: 18px;
+  }
+
+  .settings-card {
+    padding: 16px !important;
+  }
+
+  .profile-form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .segment-control-sex {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .segment-control-sex > button:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .segment-control-activity {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
 }
 
