@@ -62,6 +62,11 @@ class UserOut(BaseModel):
     display_name: str
     role: str
     is_password_temp: bool
+    birth_year: int | None = None
+    biological_sex: str | None = None
+    height_cm: float | None = None
+    activity_level: str | None = None
+    dri: dict | None = None
 
     model_config = {"from_attributes": True}
 
@@ -128,37 +133,78 @@ async def logout(response: Response) -> dict:
     return {"detail": "logged out"}
 
 
+def _user_out(user) -> UserOut:
+    from luma.services.dri import compute_dri
+    weight_kg = None
+    if user.goals and user.goals.target_weight_kg:
+        weight_kg = float(user.goals.target_weight_kg)
+    dri = compute_dri(
+        birth_year=user.birth_year,
+        biological_sex=user.biological_sex,
+        activity_level=user.activity_level,
+        height_cm=float(user.height_cm) if user.height_cm else None,
+        weight_kg=weight_kg,
+    )
+    out = UserOut.model_validate(user)
+    out.dri = dri
+    return out
+
+
 @router.get("/me")
 async def me(user: CurrentUser) -> UserOut:
-    return UserOut.model_validate(user)
+    return _user_out(user)
+
+
+_VALID_SEX = {"male", "female", "prefer_not_to_say"}
+_VALID_ACTIVITY = {"sedentary", "lightly_active", "moderately_active", "very_active"}
 
 
 class UpdateProfileRequest(BaseModel):
-    display_name: str
+    display_name: str | None = None
+    birth_year: int | None = None
+    biological_sex: str | None = None
+    height_cm: float | None = None
+    activity_level: str | None = None
 
 
 @router.patch("/me")
 async def update_me(body: UpdateProfileRequest, user: CurrentUser, db: DbDep) -> UserOut:
-    name = body.display_name.strip()
-    if not name:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Display name cannot be empty.",
-        )
-    if len(name) > 100:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Display name must be 100 characters or fewer.",
-        )
+    if body.display_name is not None:
+        name = body.display_name.strip()
+        if not name:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Display name cannot be empty.")
+        if len(name) > 100:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Display name must be 100 characters or fewer.")
+        user.display_name = name
 
-    user.display_name = name
+    if body.birth_year is not None:
+        current_year = datetime.now(timezone.utc).year
+        if not (1900 <= body.birth_year <= current_year - 13):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid birth year.")
+        user.birth_year = body.birth_year
+
+    if body.biological_sex is not None:
+        if body.biological_sex not in _VALID_SEX:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"biological_sex must be one of {sorted(_VALID_SEX)}.")
+        user.biological_sex = body.biological_sex
+
+    if body.height_cm is not None:
+        if not (50.0 <= body.height_cm <= 280.0):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="height_cm out of range.")
+        user.height_cm = body.height_cm
+
+    if body.activity_level is not None:
+        if body.activity_level not in _VALID_ACTIVITY:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"activity_level must be one of {sorted(_VALID_ACTIVITY)}.")
+        user.activity_level = body.activity_level
+
     try:
         await db.commit()
         await db.refresh(user)
     except SQLAlchemyError as exc:
         _raise_auth_db_http_error(exc)
 
-    return UserOut.model_validate(user)
+    return _user_out(user)
 
 
 @router.post("/refresh")

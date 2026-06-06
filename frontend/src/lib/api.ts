@@ -124,10 +124,23 @@ export interface Insight {
   status: string
 }
 
+export interface DriEntry {
+  rda: number
+  unit: string
+  direction: 'min' | 'max'
+}
+
+export type Dri = Record<string, DriEntry>
+
 export interface User {
   id: string
   email: string
   display_name: string
   role: string
   is_password_temp?: boolean
+  birth_year?: number | null
+  biological_sex?: 'male' | 'female' | 'prefer_not_to_say' | null
+  height_cm?: number | null
+  activity_level?: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | null
+  dri?: Dri | null
 }

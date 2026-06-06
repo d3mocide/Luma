@@ -1,6 +1,6 @@
 # Luma — Status
 
-Last updated: 2026-05-29
+Last updated: 2026-06-06
 
 ## Phase 0 — Foundations
 
@@ -111,13 +111,12 @@ Fully implemented, verified, stabilized, and bug-fixed.
 
 ---
 
-## Phase 3 — Polish  🔓 CURRENT
+## Phase 3 — Polish  ✅ COMPLETE
 
 ### Committed scope
 - [x] Repeat-meal detection on Log sheet — "Quick" tab; `GET /log/meals/frequent` ranks by 7-day frequency per slot; one-tap re-log adds items directly to draft
 - [x] Shopping list export — iOS: `x-apple-reminderkit://` deep link; other devices: clipboard copy with "Copy list" button
-- [ ] ML anomaly detection (`alerts/ml.py`) — Prophet for weight trend forecasting, IsolationForest for biometric outliers
-- [ ] Multi-user / family support — `role = family | viewer`, read-only sharing link
+- [x] ML anomaly detection — IsolationForest biometric outlier clusters (`check_biometric_isolation_forest` in `alerts/ml.py`, fires when ≥3 of last 7 days are outliers across HRV/RHR/sleep_score, 168h dedup); weight trend reversal detection replaced Prophet with a pure-SQL `check_weight_trend_worsening` rule (compares `regr_slope` over 14d vs 28d windows, fires when recent slope shifts >0.15 kg/wk in wrong direction); dep: `scikit-learn==1.6.1` only
 - [x] Push notifications — VAPID Web Push; `push_subscriptions` table (migration 0014); per-user nudge time + timezone in Settings; daily arq nudge cron; alert engine pushes on `warning` severity; custom SW with push + notificationclick handlers
 
 ### Meal plan overhaul backlog (approved for Phase 3)
@@ -128,8 +127,8 @@ Fully implemented, verified, stabilized, and bug-fixed.
 - [x] Drag slot between days — drag-and-drop reorder within plan calendar grid
 
 ### Coach / insights backlog (approved for Phase 3)
-- [ ] Proactive weekly recap — end-of-week coach message summarising LDL-relevant wins and misses; triggered by arq worker on Sunday evening
-- [ ] Trend-aware nudges — if weight or LDL-proxy metrics stall for 2+ weeks, surface a coach prompt suggesting plan adjustments
+- [x] Proactive weekly recap — `send_weekly_recap` arq task; runs hourly, self-filters to Sunday at each user's `nudge_hour` (defaults to 20:00 local); collects 7-day nutrition+weight summary; stores as `weekly_recap` alert (168h dedup); narrates via insight narrator; sends push notification
+- [x] Trend-aware nudges — two new alert rules in `rules.py`: `check_weight_stall` (14-day slope <0.05 kg/wk with >2 kg goal gap, 168h dedup) and `check_ldl_proxy_stall` (14-day sat fat >5% over target AND fiber <80% of target simultaneously, 168h dedup); both wired into `ALL_RULES`
 
 ### Food database backlog (approved for Phase 3)
 - [x] Expand seed pool to ~170 foods covering vegetables, fruits, proteins, dairy, grains, nuts/seeds, condiments
@@ -141,9 +140,12 @@ Fully implemented, verified, stabilized, and bug-fixed.
 - [x] Filter chips in food search (PlateTab) — Heart Healthy, Anti-Inflam, Gluten Free, High Protein, High Fiber, Keto
 - [x] Flag badges on food result cards (PlateTab + ComboTab)
 - [x] `GET /foods/search?flags=` filter param — AND logic across selected flags
-- [ ] **P3 BACKLOG**: Threshold heuristics for `inflammatory` and `processed` auto-flags — define nutrient-based rules (e.g. sodium_mg > 1000 + processed indicator, omega-6:omega-3 ratio > threshold) so live USDA API and OFF barcode results can receive these flags automatically without manual curation
+
+### Food database backlog (completed late Phase 3)
+- [x] Threshold heuristics for `inflammatory` and `processed` auto-flags — compound AND rules added to `_COMPOUND_FLAG_RULES` in `food_flags.py`; `inflammatory` fires when `saturated_fat_g > 5` AND `sugars_g > 10` AND `fiber_g < 2`; `processed` fires when `sodium_mg > 1000` AND `fiber_g < 1`; omega-6/omega-3 omitted (not in USDA or OFF payloads); covers all three ingestion paths: USDA live search cache, OFF barcode lookup, seed script
 
 ### Future enhancement ideas (post-Phase 3)
+- **Multi-user / family support** — `role = family | viewer`, read-only sharing link (deferred from Phase 3 — significant auth/data isolation overhaul)
 - **Wearable-native integrations** — Garmin Connect IQ data bridge, Oura Ring API (HRV, readiness score), Withings scale direct sync
 - **Recipe import** — paste any URL → Claude extracts ingredients + nutrition; store as user recipe
 - **Barcode camera scan** — replace text-entry fallback with `html5-qrcode` live camera in BarcodeTab
