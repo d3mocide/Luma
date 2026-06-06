@@ -98,7 +98,7 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
       const mimeType = ['audio/webm', 'audio/mp4'].find((t) => MediaRecorder.isTypeSupported(t)) ?? ''
       mimeTypeRef.current = mimeType || 'audio/mp4'
       
-      const options: any = { audioBitsPerSecond: 32000 }
+      const options: MediaRecorderOptions = { audioBitsPerSecond: 32000 }
       if (mimeType) {
         options.mimeType = mimeType
       }
