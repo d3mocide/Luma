@@ -71,7 +71,7 @@ export default function AppShell() {
       <DesktopSidebar user={user} isTodayLoading={isTodayLoading} />
 
       {/* Content column — flex column so mobile header/nav are in-flow (not fixed) */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
         {/* Mobile header anchored to top of column */}
         {!isLogRoute && <MobileHeader initials={initials} />}
 
@@ -503,6 +503,7 @@ function MobileNav() {
         padding: '8px 8px',
         borderRadius: 28,
         position: 'relative',
+        pointerEvents: 'auto',
       }}>
         {/* Today + Plan */}
         {NAV_ITEMS.slice(0, 2).map((item) => (
