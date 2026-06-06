@@ -141,9 +141,11 @@ Fully implemented, verified, stabilized, and bug-fixed.
 - [x] Flag badges on food result cards (PlateTab + ComboTab)
 - [x] `GET /foods/search?flags=` filter param — AND logic across selected flags
 
+### Food database backlog (completed late Phase 3)
+- [x] Threshold heuristics for `inflammatory` and `processed` auto-flags — compound AND rules added to `_COMPOUND_FLAG_RULES` in `food_flags.py`; `inflammatory` fires when `saturated_fat_g > 5` AND `sugars_g > 10` AND `fiber_g < 2`; `processed` fires when `sodium_mg > 1000` AND `fiber_g < 1`; omega-6/omega-3 omitted (not in USDA or OFF payloads); covers all three ingestion paths: USDA live search cache, OFF barcode lookup, seed script
+
 ### Future enhancement ideas (post-Phase 3)
 - **Multi-user / family support** — `role = family | viewer`, read-only sharing link (deferred from Phase 3 — significant auth/data isolation overhaul)
-- **Threshold heuristics for `inflammatory`/`processed` auto-flags** — nutrient-based rules (sodium_mg > 1000 + processed indicator, omega-6:omega-3 ratio > threshold) so live USDA API and OFF barcode results receive these flags automatically without manual curation
 - **Wearable-native integrations** — Garmin Connect IQ data bridge, Oura Ring API (HRV, readiness score), Withings scale direct sync
 - **Recipe import** — paste any URL → Claude extracts ingredients + nutrition; store as user recipe
 - **Barcode camera scan** — replace text-entry fallback with `html5-qrcode` live camera in BarcodeTab
