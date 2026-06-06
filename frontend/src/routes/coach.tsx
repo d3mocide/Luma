@@ -35,12 +35,29 @@ export default function CoachRoute() {
   const [streaming, setStreaming] = useState(false)
   const [showThreads, setShowThreads] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const threadsDropdownRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
   const seedSentRef = useRef(false)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages])
+
+  useEffect(() => {
+    if (!showThreads) return
+    const handlePointerDown = (e: PointerEvent) => {
+      if (threadsDropdownRef.current && !threadsDropdownRef.current.contains(e.target as Node)) {
+        setShowThreads(false)
+      }
+    }
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowThreads(false) }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showThreads])
 
   // Pre-populate input from thread_seed when navigating from an insight card
   useEffect(() => {
@@ -202,7 +219,7 @@ export default function CoachRoute() {
         padding: '28px 40px 20px',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         borderBottom: '1px solid rgba(255,255,255,0.04)',
-        position: 'relative', zIndex: 1,
+        position: 'relative', zIndex: 10,
       }}>
         <div className="coach-header-main" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
@@ -226,7 +243,7 @@ export default function CoachRoute() {
           <div style={{ display: 'flex', gap: 8 }}>
             {/* Thread picker */}
             {(threadsData?.threads?.length ?? 0) > 0 && (
-              <div style={{ position: 'relative' }}>
+              <div ref={threadsDropdownRef} style={{ position: 'relative' }}>
                 <button
                   className="btn btn-ghost"
                   style={{ padding: '8px 12px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
@@ -235,9 +252,9 @@ export default function CoachRoute() {
                   History <ChevronDown size={12}/>
                 </button>
                 {showThreads && (
-                  <div className="glass" style={{
+                  <div className="glass-bright" style={{
                     position: 'absolute', right: 0, top: '100%', marginTop: 8,
-                    minWidth: 220, borderRadius: 12, padding: 8, zIndex: 10,
+                    minWidth: 220, borderRadius: 12, padding: 8, zIndex: 50,
                   }}>
                     {threadsData?.threads.map((t) => (
                       <button
@@ -248,7 +265,7 @@ export default function CoachRoute() {
                           padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
                           color: t.id === activeThreadId ? 'var(--fg-primary)' : 'var(--fg-secondary)',
                           fontSize: 13,
-                          background: t.id === activeThreadId ? 'rgba(255,255,255,0.06)' : 'none',
+                          background: t.id === activeThreadId ? 'rgba(255,255,255,0.06)' : 'transparent',
                         }}
                       >
                         {t.title}

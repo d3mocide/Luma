@@ -26,7 +26,14 @@ export default function TodayRoute() {
   const navigate = useNavigate()
   const [loggingMealId, setLoggingMealId] = useState<string | null>(null)
   const [deletingMealId, setDeletingMealId] = useState<string | null>(null)
-  const [nudgeDismissed, setNudgeDismissed] = useState(false)
+  const [dismissedNudgeIds, setDismissedNudgeIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('luma_dismissed_nudges')
+      return raw ? (JSON.parse(raw) as string[]) : []
+    } catch {
+      return []
+    }
+  })
 
   const { data: user } = useQuery<User>({
     queryKey: ['me'],
@@ -54,6 +61,14 @@ export default function TodayRoute() {
     enabled: !forceMockData,
   })
   const pendingMeal = pendingData?.pending?.[0] ?? null
+  const nudgeDismissed = pendingMeal ? dismissedNudgeIds.includes(pendingMeal.meal_event_id) : true
+
+  const handleDismissNudge = () => {
+    if (!pendingMeal) return
+    const newIds = [...dismissedNudgeIds, pendingMeal.meal_event_id]
+    setDismissedNudgeIds(newIds)
+    try { localStorage.setItem('luma_dismissed_nudges', JSON.stringify(newIds)) } catch { /* ignore */ }
+  }
 
   const logPlannedMealMutation = useMutation({
     mutationFn: async (meal: TodayData['plan_today'][number]) => {
@@ -178,7 +193,7 @@ export default function TodayRoute() {
             Log it →
           </button>
           <button
-            onClick={() => setNudgeDismissed(true)}
+            onClick={handleDismissNudge}
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--fg-quiet)', flexShrink: 0 }}
           >
             <X size={14} />
