@@ -1,12 +1,14 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { Search, X, Plus, BookOpen, ArrowLeft, BatteryLow, Battery, BatteryMedium, Zap, Flame, Frown, Meh, Smile, SmilePlus, Laugh, CircleDashed, Circle, CircleDot, Disc, CheckCircle2 } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Search, X, Plus, BookOpen, ArrowLeft, BatteryLow, Battery, BatteryMedium, Zap, Flame, Frown, Meh, Smile, SmilePlus, Laugh, CircleDashed, Circle, CircleDot, Disc, CheckCircle2, RotateCcw, Heart, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { api } from '../lib/api'
 import { type FoodResult } from '../components/plan/types'
 import { FOOD_CATEGORIES, SAT_FAT_COLORS, type FoodCategory } from '../lib/food-categories'
 import { JournalDrawer, type PendingMeal } from '../components/journal/JournalDrawer'
+import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
+import type { DraftItem } from '../components/log-sheet/types'
 import PlanRoute from './plan'
 
 // ── Sat fat level label/badge ─────────────────────────────────────────────────
@@ -690,16 +692,308 @@ function JournalTab({ openWithPrefill }: { openWithPrefill?: PendingMeal | null 
   )
 }
 
+// ── Calculator tab ────────────────────────────────────────────────────────────
+
+type NutrientTotals = DraftItem['nutrients']
+
+function sumNutrients(items: DraftItem[]): NutrientTotals {
+  return items.reduce(
+    (acc, item) => ({
+      calories:        acc.calories        + item.nutrients.calories,
+      protein_g:       acc.protein_g       + item.nutrients.protein_g,
+      carbohydrates_g: acc.carbohydrates_g + item.nutrients.carbohydrates_g,
+      fat_g:           acc.fat_g           + item.nutrients.fat_g,
+      saturated_fat_g: acc.saturated_fat_g + item.nutrients.saturated_fat_g,
+      fiber_g:         acc.fiber_g         + item.nutrients.fiber_g,
+      soluble_fiber_g: acc.soluble_fiber_g + item.nutrients.soluble_fiber_g,
+      sodium_mg:       acc.sodium_mg       + item.nutrients.sodium_mg,
+    }),
+    { calories: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, saturated_fat_g: 0, fiber_g: 0, soluble_fiber_g: 0, sodium_mg: 0 }
+  )
+}
+
+function divideNutrients(totals: NutrientTotals, divisor: number): NutrientTotals {
+  const d = Math.max(1, divisor)
+  return {
+    calories:        totals.calories        / d,
+    protein_g:       totals.protein_g       / d,
+    carbohydrates_g: totals.carbohydrates_g / d,
+    fat_g:           totals.fat_g           / d,
+    saturated_fat_g: totals.saturated_fat_g / d,
+    fiber_g:         totals.fiber_g         / d,
+    soluble_fiber_g: totals.soluble_fiber_g / d,
+    sodium_mg:       totals.sodium_mg       / d,
+  }
+}
+
+type NutrientRow = { label: string; key: keyof NutrientTotals; unit: string; color?: string; indent?: boolean }
+
+const NUTRIENT_ROWS: NutrientRow[] = [
+  { label: 'Calories',      key: 'calories',        unit: 'kcal', color: 'var(--sky-400)' },
+  { label: 'Protein',       key: 'protein_g',       unit: 'g',    color: 'rgba(56,189,248,0.8)' },
+  { label: 'Carbohydrates', key: 'carbohydrates_g', unit: 'g' },
+  { label: 'Total fat',     key: 'fat_g',           unit: 'g' },
+  { label: 'Saturated fat', key: 'saturated_fat_g', unit: 'g',    indent: true },
+  { label: 'Fiber',         key: 'fiber_g',         unit: 'g' },
+  { label: 'Sodium',        key: 'sodium_mg',        unit: 'mg' },
+]
+
+function NutritionPanel({ totals, label }: { totals: NutrientTotals; label: string }) {
+  return (
+    <div className="glass-inset" style={{ borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid var(--glass-edge)' }}>
+        <span className="eyebrow" style={{ fontSize: 10 }}>{label}</span>
+      </div>
+      <div>
+        {NUTRIENT_ROWS.map(({ label: rowLabel, key, unit, color, indent }) => {
+          const val = totals[key]
+          const formatted = key === 'sodium_mg'
+            ? Math.round(val)
+            : key === 'calories'
+              ? Math.round(val)
+              : val.toFixed(1)
+          return (
+            <div
+              key={key}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '7px 14px', borderBottom: '1px solid var(--glass-edge)',
+                paddingLeft: indent ? 26 : 14,
+              }}
+            >
+              <span style={{ fontSize: 13, color: indent ? 'var(--fg-quiet)' : 'var(--fg-secondary)' }}>
+                {rowLabel}
+              </span>
+              <span
+                className="num"
+                style={{ fontSize: 13, fontWeight: 600, color: color ?? 'var(--fg-primary)' }}
+              >
+                {formatted} <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--fg-tertiary)' }}>{unit}</span>
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function CalculatorTab() {
+  const queryClient = useQueryClient()
+  const [items, setItems] = useState<DraftItem[]>([])
+  const [servings, setServings] = useState(1)
+  const [mealName, setMealName] = useState('')
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [showPerServing, setShowPerServing] = useState(true)
+
+  const total = useMemo(() => sumNutrients(items), [items])
+  const perServing = useMemo(() => divideNutrients(total, servings), [total, servings])
+  const hasItems = items.length > 0
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      api.post('/favorites', {
+        name: mealName.trim() || 'Calculator meal',
+        items: items.map((item) => ({
+          food_name: item.name,
+          brand: item.brand ?? null,
+          quantity_g: item.estimated_weight_g,
+          nutrients: item.nutrients,
+        })),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorites'] })
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
+    },
+  })
+
+  function addItem(item: DraftItem) { setItems((prev) => [...prev, item]) }
+  function removeItem(index: number) { setItems((prev) => prev.filter((_, i) => i !== index)) }
+  function updateWeight(index: number, newWeight: number) {
+    setItems((prev) => {
+      const updated = [...prev]
+      const item = { ...updated[index] }
+      const ratio = newWeight / item.estimated_weight_g
+      item.estimated_weight_g = newWeight
+      item.nutrients = {
+        calories:        item.nutrients.calories        * ratio,
+        saturated_fat_g: item.nutrients.saturated_fat_g * ratio,
+        soluble_fiber_g: item.nutrients.soluble_fiber_g * ratio,
+        protein_g:       item.nutrients.protein_g       * ratio,
+        carbohydrates_g: item.nutrients.carbohydrates_g * ratio,
+        fat_g:           item.nutrients.fat_g           * ratio,
+        fiber_g:         item.nutrients.fiber_g         * ratio,
+        sodium_mg:       item.nutrients.sodium_mg       * ratio,
+      }
+      updated[index] = item
+      return updated
+    })
+  }
+
+  return (
+    <div style={{ paddingTop: 24, paddingBottom: 60, display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+      {/* Meal name + reset row */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+        <div style={{ flex: 1 }}>
+          <div className="eyebrow" style={{ marginBottom: 6, fontSize: 10 }}>Meal name (optional)</div>
+          <input
+            type="text"
+            value={mealName}
+            onChange={(e) => setMealName(e.target.value)}
+            placeholder="e.g. Chicken meal prep"
+            className="field-input"
+            style={{
+              width: '100%', borderRadius: 10, padding: '9px 12px',
+              fontSize: 13, border: '1px solid var(--glass-edge)',
+              color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)',
+            }}
+          />
+        </div>
+        {hasItems && (
+          <button
+            onClick={() => { setItems([]); setMealName(''); setServings(1) }}
+            style={{
+              padding: '9px 12px', borderRadius: 10, fontSize: 12,
+              background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+              color: 'var(--fg-quiet)', cursor: 'pointer', display: 'flex',
+              alignItems: 'center', gap: 5, flexShrink: 0,
+              marginBottom: 0,
+            }}
+            title="Clear all"
+          >
+            <RotateCcw size={13} strokeWidth={1.75} />
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Ingredient builder */}
+      <IngredientBuilder
+        draftItems={items}
+        onAddItem={addItem}
+        onRemoveItem={removeItem}
+        onUpdateWeight={updateWeight}
+        emptyStateMessage="Search above to add ingredients. No logging — just numbers."
+      />
+
+      {/* Servings + results — only shown when there are items */}
+      {hasItems && (
+        <>
+          {/* Servings control */}
+          <div className="glass-inset" style={{ padding: '14px 16px', borderRadius: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <div className="eyebrow" style={{ fontSize: 10, marginBottom: 3 }}>Servings / portions</div>
+                <div style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>
+                  How many servings does this recipe make?
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                <button
+                  onClick={() => setServings((s) => Math.max(1, s - 1))}
+                  style={{
+                    width: 30, height: 30, borderRadius: 8, fontSize: 16,
+                    background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+                    color: 'var(--fg-primary)', cursor: 'pointer', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}
+                  aria-label="Decrease servings"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={servings}
+                  onChange={(e) => setServings(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="field-input num"
+                  style={{
+                    width: 52, textAlign: 'center', borderRadius: 8, padding: '5px 4px',
+                    fontSize: 16, fontWeight: 700, border: '1px solid var(--glass-edge)',
+                    color: 'var(--sky-400)', fontFamily: 'var(--font-mono)',
+                  }}
+                />
+                <button
+                  onClick={() => setServings((s) => Math.min(100, s + 1))}
+                  style={{
+                    width: 30, height: 30, borderRadius: 8, fontSize: 16,
+                    background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+                    color: 'var(--fg-primary)', cursor: 'pointer', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}
+                  aria-label="Increase servings"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Nutrition results */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <NutritionPanel totals={total} label={`TOTAL RECIPE (${items.length} ingredient${items.length === 1 ? '' : 's'})`} />
+
+            {servings > 1 && (
+              <div>
+                <button
+                  onClick={() => setShowPerServing((v) => !v)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    padding: '4px 0 10px', color: 'var(--fg-secondary)',
+                  }}
+                >
+                  <span className="eyebrow" style={{ fontSize: 10 }}>PER SERVING (÷ {servings})</span>
+                  {showPerServing
+                    ? <ChevronUp size={13} strokeWidth={2} style={{ color: 'var(--fg-quiet)' }} />
+                    : <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--fg-quiet)' }} />
+                  }
+                </button>
+                {showPerServing && (
+                  <NutritionPanel totals={perServing} label={`PER SERVING (÷ ${servings})`} />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Save as favorite */}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending || saveSuccess}
+              className="btn btn-primary"
+              style={{
+                flex: 1, padding: '11px', fontSize: 13, justifyContent: 'center',
+                gap: 7, opacity: saveMutation.isPending ? 0.7 : 1,
+              }}
+            >
+              {saveSuccess
+                ? <><Check size={14} /> Saved to favorites</>
+                : saveMutation.isPending
+                  ? 'Saving…'
+                  : <><Heart size={14} strokeWidth={2} /> Save as favorite</>
+              }
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ── Main Meals route ──────────────────────────────────────────────────────────
 
-type TabKey = 'foods' | 'plan' | 'journal'
+type TabKey = 'foods' | 'plan' | 'journal' | 'calculator'
 
 export default function MealsRoute() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const initialTab: TabKey = (() => {
     const t = searchParams.get('tab')
-    if (t === 'foods' || t === 'journal') return t
+    if (t === 'foods' || t === 'journal' || t === 'calculator') return t
     return 'plan'
   })()
 
@@ -739,16 +1033,17 @@ export default function MealsRoute() {
           </span>
         </h1>
         <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-tertiary)' }}>
-          Browse food groups by saturated fat · search the full database · plan your week.
+          Browse food groups by saturated fat · search the full database · plan your week · calculate portions.
         </p>
       </header>
 
       {/* Tab bar */}
       <div className="settings-tabs" role="tablist">
         {([
-          { key: 'foods',   label: 'Foods'   },
-          { key: 'plan',    label: 'Plan'    },
-          { key: 'journal', label: 'Journal' },
+          { key: 'foods',      label: 'Foods'      },
+          { key: 'plan',       label: 'Plan'       },
+          { key: 'journal',    label: 'Journal'    },
+          { key: 'calculator', label: 'Calculator' },
         ] as const).map(({ key, label }) => (
           <button
             key={key}
@@ -768,6 +1063,7 @@ export default function MealsRoute() {
       {activeTab === 'journal' && (
         <JournalTab openWithPrefill={journalPrefill} />
       )}
+      {activeTab === 'calculator' && <CalculatorTab />}
     </div>
   )
 }

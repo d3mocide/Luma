@@ -12,6 +12,7 @@ logger = logging.getLogger("food_extractor")
 
 
 class NutrientsSchema(BaseModel):
+    # Core macros — LLM estimates these
     calories: float = Field(description="Calories in kcal")
     protein_g: float = Field(description="Protein in grams")
     fat_g: float = Field(description="Total fat in grams")
@@ -22,6 +23,28 @@ class NutrientsSchema(BaseModel):
     soluble_fiber_g: float = Field(description="Soluble fiber in grams")
     sodium_mg: float = Field(description="Sodium in milligrams")
     potassium_mg: float = Field(description="Potassium in milligrams")
+    # Extended nutrients — default 0; populated from USDA/OFF for DB-sourced foods
+    monounsaturated_fat_g: float = 0.0
+    polyunsaturated_fat_g: float = 0.0
+    trans_fat_g: float = 0.0
+    cholesterol_mg: float = 0.0
+    calcium_mg: float = 0.0
+    iron_mg: float = 0.0
+    magnesium_mg: float = 0.0
+    phosphorus_mg: float = 0.0
+    zinc_mg: float = 0.0
+    selenium_mcg: float = 0.0
+    vitamin_a_mcg: float = 0.0
+    vitamin_c_mg: float = 0.0
+    vitamin_d_mcg: float = 0.0
+    vitamin_e_mg: float = 0.0
+    vitamin_k_mcg: float = 0.0
+    thiamin_mg: float = 0.0
+    riboflavin_mg: float = 0.0
+    niacin_mg: float = 0.0
+    vitamin_b6_mg: float = 0.0
+    folate_mcg: float = 0.0
+    vitamin_b12_mcg: float = 0.0
 
 
 class FoodItemSchema(BaseModel):

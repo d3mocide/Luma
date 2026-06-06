@@ -39,6 +39,9 @@ dependencies = [
     "litellm==1.86.0",
     "tzdata==2025.2",
     "pywebpush==2.0.0",
+
+    # ML — anomaly detection
+    "scikit-learn==1.6.1",
 ]
 
 [project.optional-dependencies]
