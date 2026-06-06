@@ -395,7 +395,7 @@ async def coach_stream(
         *messages
     ]
 
-    max_retries = 3
+    max_retries = 8
     for attempt in range(max_retries):
         try:
             response = await call_llm(

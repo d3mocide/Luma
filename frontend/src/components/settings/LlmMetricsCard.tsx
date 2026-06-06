@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { type LlmMetrics, formatMetricsDate } from './types'
@@ -21,6 +22,7 @@ function MiniRow({ label, value }: { label: string; value: string }) {
 }
 
 export function LlmMetricsCard() {
+  const [showAllEvents, setShowAllEvents] = useState(false)
   const { data: llmMetrics, isLoading: llmMetricsLoading, refetch: refetchLlmMetrics } = useQuery<LlmMetrics>({
     queryKey: ['settings', 'llm-metrics'],
     queryFn: () => api.get('/settings/llm-metrics'),
@@ -58,9 +60,20 @@ export function LlmMetricsCard() {
           </div>
 
           <div style={{ borderTop: '1px solid var(--glass-edge)', paddingTop: 12 }}>
-            <div className="eyebrow" style={{ marginBottom: 10 }}>Recent events</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div className="eyebrow">Recent events</div>
+              {llmMetrics.recent_events.length > 5 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllEvents((v) => !v)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 11, color: 'var(--sky-400)' }}
+                >
+                  {showAllEvents ? 'Show less' : `View all ${llmMetrics.recent_events.length}`}
+                </button>
+              )}
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {llmMetrics.recent_events.length ? llmMetrics.recent_events.slice(0, 5).map((event) => (
+              {llmMetrics.recent_events.length ? (showAllEvents ? llmMetrics.recent_events : llmMetrics.recent_events.slice(0, 5)).map((event) => (
                 <div key={`${event.ts}-${event.event}-${event.model}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 12px', borderRadius: 12, background: 'var(--glass-1)', border: '1px solid var(--glass-edge)' }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 13, color: 'var(--fg-primary)', fontWeight: 500 }}>
