@@ -477,33 +477,52 @@ export default function TodayRoute() {
 
         {/* Insight */}
         {data.active_insight ? (
-          <div className="glass" style={{ padding: 18, marginBottom: 14, position: 'relative', overflow: 'hidden', background: 'var(--insight-card-bg)' }}>
+          <div className="glass" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            padding: 18,
+            marginBottom: 14,
+            position: 'relative',
+            overflow: 'hidden',
+            background: 'var(--insight-card-bg)',
+          }}>
             <div style={{ position: 'absolute', top: -80, right: -85, width: 220, height: 190, background: 'radial-gradient(ellipse 56% 52% at 74% 30%, rgba(251,191,36,0.24), transparent 68%), radial-gradient(ellipse 48% 52% at 90% 80%, rgba(251,191,36,0.08), transparent 72%)', filter: 'blur(12px)', opacity: 0.88, pointerEvents: 'none' }}/>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 9, background: 'var(--insight-icon-bg)', border: '1px solid var(--insight-icon-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--insight-icon-fg)', flexShrink: 0 }}>
-                <Sparkles size={13}/>
+            
+            {/* Header Severity Row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <div style={{ width: 26, height: 26, borderRadius: 8, background: 'var(--insight-icon-bg)', border: '1px solid var(--insight-icon-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--insight-icon-fg)', flexShrink: 0 }}>
+                <Sparkles size={12}/>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.45, color: 'var(--fg-primary)', fontWeight: 500 }}>{data.active_insight.headline}</p>
-                {data.active_insight.cta && (
-                  <p style={{ margin: '6px 0 0', fontSize: 13, lineHeight: 1.4, color: 'var(--fg-secondary)' }}>{data.active_insight.cta}</p>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
-                  <button
-                    className="btn today-insight-cta"
-                    style={{ padding: '6px 12px', fontSize: 12, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}
-                    onClick={() => navigate('/coach', { state: { thread_seed: data.active_insight?.thread_seed } })}
-                  >
-                    <Sparkles size={11}/> Ask Luma
-                  </button>
-                  <button
-                    onClick={() => navigate('/coach?tab=insights')}
-                    style={{ fontSize: 11, color: 'var(--fg-quiet)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                  >
-                    See all →
-                  </button>
-                </div>
-              </div>
+              <span className="eyebrow" style={{ color: 'var(--insight-icon-fg)', fontSize: 10 }}>
+                {data.active_insight.severity || 'Insight'}
+              </span>
+            </div>
+
+            {/* Text Content */}
+            <p style={{ margin: 0, fontSize: 15, lineHeight: 1.45, color: 'var(--fg-primary)', fontWeight: 500 }}>
+              {data.active_insight.headline}
+            </p>
+            {data.active_insight.cta && (
+              <p style={{ margin: '6px 0 0', fontSize: 13, lineHeight: 1.4, color: 'var(--fg-secondary)' }}>
+                {data.active_insight.cta}
+              </p>
+            )}
+
+            {/* Action Row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
+              <button
+                className="btn today-insight-cta"
+                style={{ padding: '6px 12px', fontSize: 12, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}
+                onClick={() => navigate('/coach', { state: { thread_seed: data.active_insight?.thread_seed } })}
+              >
+                <Sparkles size={11}/> Ask Luma
+              </button>
+              <button
+                onClick={() => navigate('/coach?tab=insights')}
+                style={{ fontSize: 11, color: 'var(--fg-quiet)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                See all →
+              </button>
             </div>
           </div>
         ) : (
