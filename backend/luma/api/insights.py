@@ -73,9 +73,13 @@ async def ack_insight(
 @router.post("/trigger")
 async def trigger_insights(
     user: CurrentUser,
+    db: DbDep,
     bypass_dedup: bool = False,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     from luma.alerts.engine import _process_user
+    from datetime import datetime, timezone, timedelta
+    
+    start_time = datetime.now(timezone.utc) - timedelta(seconds=2)
     try:
         await _process_user(str(user.id), bypass_dedup=bypass_dedup)
     except Exception as exc:
@@ -83,4 +87,34 @@ async def trigger_insights(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Alert engine execution failed: {str(exc)}",
         )
-    return {"status": "ok"}
+        
+    # Fetch alerts created during this execution
+    rows = await db.execute(
+        text("""
+            SELECT id, ts, rule_id, severity, payload, narrative, status
+            FROM alerts
+            WHERE user_id = :uid AND ts >= :start
+            ORDER BY ts DESC
+        """),
+        {"uid": str(user.id), "start": start_time},
+    )
+    items = []
+    for r in rows:
+        narrative = {}
+        if r.narrative:
+            try:
+                narrative = json.loads(r.narrative) if isinstance(r.narrative, str) else r.narrative
+            except (json.JSONDecodeError, TypeError):
+                pass
+        items.append({
+            "id": str(r.id),
+            "ts": r.ts.isoformat(),
+            "rule_id": r.rule_id,
+            "severity": r.severity,
+            "payload": r.payload,
+            "headline": narrative.get("headline", ""),
+            "body": narrative.get("body", ""),
+            "thread_seed": narrative.get("thread_seed", ""),
+            "status": r.status,
+        })
+    return {"insights": items}

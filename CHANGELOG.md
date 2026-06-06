@@ -5,7 +5,7 @@ All notable changes to the Luma health tracking and meal-planning PWA will be do
 ## [Phase 3] - Polish (Active)
 
 ### Added
-- **On-Demand Health Insights Trigger Card**: Added a diagnostic card `InsightsDiagnosticCard.tsx` under the Settings page's Health Import tab for operators. It connects to a new backend `/api/v1/insights/trigger` POST endpoint that executes the alert engine immediately on-demand. Includes a toggle to bypass rule deduplication windows, forcing prompt re-evaluation and narration.
+- **On-Demand Health Insights Trigger Card**: Added a diagnostic card `InsightsDiagnosticCard.tsx` under the Settings page's Health Import tab for operators. It connects to a new backend `/api/v1/insights/trigger` POST endpoint that executes the alert engine immediately on-demand, fetches and displays the newly generated insights (headlines, descriptions, and severity badges) directly in the UI upon completion. Includes a toggle to bypass rule deduplication windows, forcing prompt re-evaluation and narration.
 
 ### Fixed
 - **Authentication Current User Goals Query**: Fixed a `500 Internal Server Error` on the `/api/v1/auth/me` endpoint. Accessing `user.goals` inside the `_user_out` helper triggered a `MissingGreenlet` error because the `goals` relationship is lazy-loaded by default and accessed in an asynchronous session context. Preloaded the relationship using `selectinload` inside the `get_current_user` dependency ([deps.py](file:///d:/Projects/Luma/backend/luma/deps.py)), restoring successful login and user profile retrieval workflows.
