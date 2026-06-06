@@ -84,9 +84,9 @@ _RULE_CONTEXT = {
         "saturated fat has been above target and soluble fiber has been below target for 14 consecutive days — "
         "a persistent pattern that is unfavorable for LDL cholesterol management"
     ),
-    "weight_forecast_diverging": (
-        "a Prophet time-series forecast projects weight moving away from the user's goal over the next 14 days "
-        "based on the recent trend — a course correction may be needed"
+    "weight_trend_worsening": (
+        "the recent 14-day weight trend has reversed or significantly worsened compared to the prior 28-day trend — "
+        "progress that was being made has stalled or reversed, and a course correction may be needed"
     ),
     "biometric_cluster_anomaly": (
         "multiple biometric signals (HRV, resting heart rate, sleep score) have been simultaneously abnormal "

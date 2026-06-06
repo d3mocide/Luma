@@ -116,7 +116,7 @@ Fully implemented, verified, stabilized, and bug-fixed.
 ### Committed scope
 - [x] Repeat-meal detection on Log sheet — "Quick" tab; `GET /log/meals/frequent` ranks by 7-day frequency per slot; one-tap re-log adds items directly to draft
 - [x] Shopping list export — iOS: `x-apple-reminderkit://` deep link; other devices: clipboard copy with "Copy list" button
-- [x] ML anomaly detection (`alerts/ml.py`) — Prophet for weight trend forecasting (`check_weight_forecast_anomaly`, 168h dedup); IsolationForest for biometric outlier clusters (`check_biometric_isolation_forest`, fires when ≥3 of last 7 days are outliers across HRV/RHR/sleep_score); both wired into `ALL_RULES` via `engine.py`; deps: `prophet==1.1.6`, `scikit-learn==1.6.1`, `pandas==2.3.0`
+- [x] ML anomaly detection — IsolationForest biometric outlier clusters (`check_biometric_isolation_forest` in `alerts/ml.py`, fires when ≥3 of last 7 days are outliers across HRV/RHR/sleep_score, 168h dedup); weight trend reversal detection replaced Prophet with a pure-SQL `check_weight_trend_worsening` rule (compares `regr_slope` over 14d vs 28d windows, fires when recent slope shifts >0.15 kg/wk in wrong direction); dep: `scikit-learn==1.6.1` only
 - [x] Push notifications — VAPID Web Push; `push_subscriptions` table (migration 0014); per-user nudge time + timezone in Settings; daily arq nudge cron; alert engine pushes on `warning` severity; custom SW with push + notificationclick handlers
 
 ### Meal plan overhaul backlog (approved for Phase 3)

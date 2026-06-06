@@ -41,9 +41,7 @@ dependencies = [
     "pywebpush==2.0.0",
 
     # ML — anomaly detection
-    "prophet==1.1.6",
     "scikit-learn==1.6.1",
-    "pandas==2.3.0",
 ]
 
 [project.optional-dependencies]
