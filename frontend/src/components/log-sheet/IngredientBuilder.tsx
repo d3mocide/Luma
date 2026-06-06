@@ -1,7 +1,15 @@
-import { useState, useEffect, useRef } from 'react'
-import { Search, Plus, X, Utensils, Heart, Shield, Wheat, Dumbbell, Sprout, Flame } from 'lucide-react'
+import { useState, useEffect, useRef, useId } from 'react'
+import { Search, Plus, X, Utensils, Heart, Shield, Wheat, Dumbbell, Sprout, Flame, Camera } from 'lucide-react'
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api } from '../../lib/api'
 import type { DraftItem } from './types'
+
+const FOOD_FORMATS = [
+  Html5QrcodeSupportedFormats.EAN_13,
+  Html5QrcodeSupportedFormats.EAN_8,
+  Html5QrcodeSupportedFormats.UPC_A,
+  Html5QrcodeSupportedFormats.UPC_E,
+]
 
 type FoodResult = {
   id: string
@@ -91,7 +99,12 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   const [activeFlags, setActiveFlags]   = useState<string[]>([])
   const [pending, setPending]           = useState<FoodResult | null>(null)
   const [pendingGrams, setPendingGrams] = useState('')
+  const [isScanning, setIsScanning]     = useState(false)
+  const [barcodeError, setBarcodeError] = useState('')
   const gramsRef = useRef<HTMLInputElement>(null)
+  const selectFoodRef = useRef<(food: FoodResult) => void>(() => {})
+  const uid = useId()
+  const scannerDomId = `ingredient-scanner-${uid.replace(/:/g, '')}`
 
   function toggleFlag(flag: string) {
     setActiveFlags((prev) => prev.includes(flag) ? prev.filter((f) => f !== flag) : [...prev, flag])
@@ -121,8 +134,54 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
     setPendingGrams(String(Math.round(food.serving_size_g || 100)))
     setQuery('')
     setResults([])
+    setIsScanning(false)
     setTimeout(() => gramsRef.current?.select(), 60)
   }
+  selectFoodRef.current = selectFood
+
+  useEffect(() => {
+    if (!isScanning) return
+    const scanner = new Html5Qrcode(scannerDomId, { formatsToSupport: FOOD_FORMATS, verbose: false })
+    let fired = false
+    let startResolved = false
+    let stopRequested = false
+
+    scanner
+      .start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 130 } },
+        async (code: string) => {
+          if (fired) return
+          fired = true
+          setBarcodeError('')
+          try {
+            const food = await api.post<Record<string, unknown>>('/log/meal/barcode', { barcode: code })
+            selectFoodRef.current({
+              id: food.id as string,
+              name: food.name as string,
+              brand: food.brand as string | undefined,
+              serving_size_g: food.serving_size_g as number | undefined,
+              nutrients_per_100g: food.nutrients_per_100g as Record<string, number>,
+              flags: food.flags as string[] | undefined,
+            })
+          } catch {
+            setBarcodeError('Product not found')
+            setIsScanning(false)
+          }
+        },
+        () => {},
+      )
+      .then(() => {
+        startResolved = true
+        if (stopRequested) scanner.stop().catch(() => {})
+      })
+      .catch(() => setIsScanning(false))
+
+    return () => {
+      stopRequested = true
+      if (startResolved) scanner.stop().catch(() => {})
+    }
+  }, [isScanning, scannerDomId])
 
   function confirmAdd() {
     if (!pending) return
@@ -221,22 +280,56 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
           </button>
         </div>
       ) : (
-        <div style={{ position: 'relative' }}>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search oats, salmon, chicken breast…"
-            className="field-input"
-            style={{
-              width: '100%', borderRadius: 10, padding: '9px 34px', fontSize: 13,
-              border: '1px solid var(--glass-edge)', color: 'var(--fg-primary)',
-              fontFamily: 'var(--font-sans)',
-            }}
-          />
-          <Search size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-quiet)', pointerEvents: 'none' }} />
-          {isSearching && (
-            <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, border: '2px solid var(--sky-400)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'block' }} />
+        <div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '0 10px 0 34px', borderRadius: 10, position: 'relative',
+            border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
+          }}>
+            <Search size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-quiet)', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search oats, salmon, chicken breast…"
+              className="field-input"
+              style={{
+                flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                padding: '9px 0', fontSize: 13,
+                color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)',
+              }}
+            />
+            {isSearching && (
+              <span style={{ width: 14, height: 14, border: '2px solid var(--sky-400)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'block', flexShrink: 0 }} />
+            )}
+            <button
+              type="button"
+              onClick={() => { setBarcodeError(''); setIsScanning((v) => !v) }}
+              title="Scan barcode"
+              style={{
+                background: isScanning ? 'rgba(56,189,248,0.15)' : 'none',
+                border: 'none', padding: '2px 4px', cursor: 'pointer',
+                color: isScanning ? 'var(--sky-400)' : 'var(--fg-quiet)',
+                display: 'flex', alignItems: 'center', flexShrink: 0,
+                borderRadius: 6, transition: 'color 150ms, background 150ms',
+              }}
+            >
+              <Camera size={15} />
+            </button>
+          </div>
+          {isScanning && (
+            <div style={{ marginTop: 8 }}>
+              <div
+                id={scannerDomId}
+                style={{ borderRadius: 12, overflow: 'hidden', minHeight: 220, background: '#000' }}
+              />
+              <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--fg-quiet)', textAlign: 'center' }}>
+                Hold steady over the barcode
+              </p>
+            </div>
+          )}
+          {barcodeError && !isScanning && (
+            <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--bad)' }}>{barcodeError}</p>
           )}
         </div>
       )}

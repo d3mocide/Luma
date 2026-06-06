@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, Search, Barcode } from 'lucide-react'
+import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check } from 'lucide-react'
 import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
-import { BarcodeTab } from '../components/log-sheet/BarcodeTab'
 import { getCurrentSlot } from '../lib/format'
 import type { DraftItem, Favorite, FavoriteItem } from '../components/log-sheet/types'
 
@@ -46,7 +45,6 @@ export default function FavoritesRoute() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [favName, setFavName] = useState('')
   const [items, setItems] = useState<DraftItem[]>([])
-  const [inputMode, setInputMode] = useState<'search' | 'barcode'>('search')
   const [successModal, setSuccessModal] = useState<{ name: string; slot: string } | null>(null)
 
   const { data: favoritesData, isLoading } = useQuery<{ favorites: Favorite[] }>({
@@ -96,7 +94,6 @@ export default function FavoritesRoute() {
     setEditingId(null)
     setFavName('')
     setItems([])
-    setInputMode('search')
     setView('building')
   }
 
@@ -104,7 +101,6 @@ export default function FavoritesRoute() {
     setEditingId(fav.id)
     setFavName(fav.name)
     setItems(fav.items.map(mapFavoriteItemToDraft))
-    setInputMode('search')
     setView('building')
   }
 
@@ -318,54 +314,15 @@ export default function FavoritesRoute() {
             </div>
           </div>
 
-          {/* Input mode tabs */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <button
-              onClick={() => setInputMode('search')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                cursor: 'pointer', transition: 'all 150ms',
-                background: inputMode === 'search' ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
-                border: inputMode === 'search' ? '1px solid rgba(56,189,248,0.45)' : '1px solid var(--glass-edge)',
-                color: inputMode === 'search' ? 'var(--sky-300)' : 'var(--fg-secondary)',
-              }}
-            >
-              <Search size={12} strokeWidth={2} />
-              Search
-            </button>
-            <button
-              onClick={() => setInputMode('barcode')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                cursor: 'pointer', transition: 'all 150ms',
-                background: inputMode === 'barcode' ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
-                border: inputMode === 'barcode' ? '1px solid rgba(56,189,248,0.45)' : '1px solid var(--glass-edge)',
-                color: inputMode === 'barcode' ? 'var(--sky-300)' : 'var(--fg-secondary)',
-              }}
-            >
-              <Barcode size={12} strokeWidth={2} />
-              Barcode
-            </button>
-          </div>
-
-          {/* Ingredient builder / barcode scanner */}
+          {/* Ingredient builder */}
           <div style={{ marginBottom: 22 }}>
-            {inputMode === 'barcode' ? (
-              <BarcodeTab
-                onAddItem={(item) => { addItem(item); setInputMode('search') }}
-                onSwitchToPlate={() => setInputMode('search')}
-              />
-            ) : (
-              <IngredientBuilder
-                draftItems={items}
-                onAddItem={addItem}
-                onRemoveItem={removeItem}
-                onUpdateWeight={updateWeight}
-                emptyStateMessage="Search above to add ingredients to this favorite."
-              />
-            )}
+            <IngredientBuilder
+              draftItems={items}
+              onAddItem={addItem}
+              onRemoveItem={removeItem}
+              onUpdateWeight={updateWeight}
+              emptyStateMessage="Search above to add ingredients to this favorite."
+            />
           </div>
 
           {/* Name input */}
