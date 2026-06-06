@@ -2446,3 +2446,26 @@ input[type="search"]::-webkit-search-results-decoration {
   border-bottom-color: rgba(15, 23, 42, 0.08);
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+ * PWA INSTALL PROMPT
+ * ══════════════════════════════════════════════════════════════════════════ */
+.install-prompt-wrap {
+  position: fixed;
+  bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+  left: 16px;
+  right: 16px;
+  z-index: 9998;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .install-prompt-wrap {
+    bottom: auto;
+    left: auto;
+    right: 24px;
+    top: 20px;
+    margin: 0;
+  }
+}
+

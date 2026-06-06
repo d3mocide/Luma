@@ -51,9 +51,8 @@ export function InstallPrompt() {
     const dismissed = localStorage.getItem(DISMISSED_KEY) === '1'
     if (dismissed) return
 
-    // Only show on mobile-ish screens after 3+ visits
-    const isMobile = window.innerWidth < 768
-    if (!isMobile || count < 3) return
+    // Only show after 3+ visits
+    if (count < 3) return
 
     const handler = (e: Event) => {
       e.preventDefault()
@@ -79,10 +78,7 @@ export function InstallPrompt() {
   if (!show) return null
 
   return (
-    <div style={{
-      position: 'fixed', bottom: 'calc(108px + env(safe-area-inset-bottom, 0px))', left: 16, right: 16, zIndex: 9998,
-      maxWidth: 400, margin: '0 auto',
-    }}>
+    <div className="install-prompt-wrap">
       <div className="glass" style={{
         padding: '16px 20px',
         display: 'flex', alignItems: 'center', gap: 14,
@@ -98,7 +94,7 @@ export function InstallPrompt() {
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg-primary)' }}>Add Luma to Home Screen</div>
-          <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginTop: 2 }}>Works offline, loads instantly</div>
+          <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginTop: 2 }}>Launch instantly from your home screen</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-primary" style={{ padding: '8px 14px', fontSize: 12 }} onClick={install}>
