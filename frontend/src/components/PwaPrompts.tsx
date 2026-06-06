@@ -80,7 +80,7 @@ export function InstallPrompt() {
 
   return (
     <div style={{
-      position: 'fixed', bottom: 80, left: 16, right: 16, zIndex: 9998,
+      position: 'fixed', bottom: 'calc(108px + env(safe-area-inset-bottom, 0px))', left: 16, right: 16, zIndex: 9998,
       maxWidth: 400, margin: '0 auto',
     }}>
       <div className="glass" style={{
