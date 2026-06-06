@@ -35,6 +35,10 @@ class User(Base):
     nudge_enabled = Column(Boolean, nullable=False, default=False, server_default='false')
     nudge_hour = Column(Integer, nullable=False, default=19, server_default='19')
     nudge_tz = Column(Text, nullable=False, default='UTC', server_default="'UTC'")
+    birth_year = Column(Integer)
+    biological_sex = Column(Text)
+    height_cm = Column(Numeric(5, 1))
+    activity_level = Column(Text)
 
     goals = relationship("Goal", back_populates="user", uselist=False, cascade="all, delete-orphan")
     preferences = relationship("Preference", back_populates="user", cascade="all, delete-orphan")

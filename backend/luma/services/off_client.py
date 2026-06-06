@@ -41,16 +41,40 @@ async def lookup_barcode(barcode: str) -> Optional[Dict[str, Any]]:
             potassium_mg = float(potassium_g) * 1000.0 if potassium_g is not None else 0.0
 
             mapped_nutrients = {
-                "calories": float(kcal or 0.0),
-                "saturated_fat_g": float(nutr.get("saturated-fat_100g") or 0.0),
-                "soluble_fiber_g": float(nutr.get("soluble-fiber_100g") or 0.0),
-                "protein_g": float(nutr.get("proteins_100g") or 0.0),
-                "carbohydrates_g": float(nutr.get("carbohydrates_100g") or 0.0),
-                "sugars_g": float(nutr.get("sugars_100g") or 0.0),
-                "fat_g": float(nutr.get("fat_100g") or 0.0),
-                "fiber_g": float(nutr.get("fiber_100g") or 0.0),
-                "sodium_mg": sodium_mg,
-                "potassium_mg": potassium_mg,
+                # Core macros
+                "calories":              float(kcal or 0.0),
+                "protein_g":             float(nutr.get("proteins_100g") or 0.0),
+                "fat_g":                 float(nutr.get("fat_100g") or 0.0),
+                "saturated_fat_g":       float(nutr.get("saturated-fat_100g") or 0.0),
+                "monounsaturated_fat_g": float(nutr.get("monounsaturated-fat_100g") or 0.0),
+                "polyunsaturated_fat_g": float(nutr.get("polyunsaturated-fat_100g") or 0.0),
+                "trans_fat_g":           float(nutr.get("trans-fat_100g") or 0.0),
+                "cholesterol_mg":        float(nutr.get("cholesterol_100g") or 0.0),
+                "carbohydrates_g":       float(nutr.get("carbohydrates_100g") or 0.0),
+                "sugars_g":              float(nutr.get("sugars_100g") or 0.0),
+                "fiber_g":               float(nutr.get("fiber_100g") or 0.0),
+                "soluble_fiber_g":       float(nutr.get("soluble-fiber_100g") or 0.0),
+                "sodium_mg":             sodium_mg,
+                "potassium_mg":          potassium_mg,
+                # Minerals (OFF stores these in mg/100g)
+                "calcium_mg":            float(nutr.get("calcium_100g") or 0.0),
+                "iron_mg":               float(nutr.get("iron_100g") or 0.0),
+                "magnesium_mg":          float(nutr.get("magnesium_100g") or 0.0),
+                "phosphorus_mg":         float(nutr.get("phosphorus_100g") or 0.0),
+                "zinc_mg":               float(nutr.get("zinc_100g") or 0.0),
+                "selenium_mcg":          float(nutr.get("selenium_100g") or 0.0),
+                # Vitamins (mg or mcg per 100g in OFF)
+                "vitamin_a_mcg":         float(nutr.get("vitamin-a_100g") or 0.0),
+                "vitamin_c_mg":          float(nutr.get("vitamin-c_100g") or 0.0),
+                "vitamin_d_mcg":         float(nutr.get("vitamin-d_100g") or 0.0),
+                "vitamin_e_mg":          float(nutr.get("vitamin-e_100g") or 0.0),
+                "vitamin_k_mcg":         float(nutr.get("vitamin-k_100g") or 0.0),
+                "thiamin_mg":            float(nutr.get("vitamin-b1_100g") or 0.0),
+                "riboflavin_mg":         float(nutr.get("vitamin-b2_100g") or 0.0),
+                "niacin_mg":             float(nutr.get("vitamin-pp_100g") or 0.0),
+                "vitamin_b6_mg":         float(nutr.get("vitamin-b6_100g") or 0.0),
+                "folate_mcg":            float(nutr.get("vitamin-b9_100g") or 0.0),
+                "vitamin_b12_mcg":       float(nutr.get("vitamin-b12_100g") or 0.0),
             }
 
             # OFF rarely carries an explicit soluble-fiber value; estimate it from

@@ -9,11 +9,34 @@ Nutrient IDs used (FDC canonical):
   1004 Total lipid (fat)
   1005 Carbohydrate
   2000 Total sugars
-  1079 Fiber
+  1079 Fiber, total dietary
   1258 Fatty acids, total saturated
+  1292 Fatty acids, total monounsaturated
+  1293 Fatty acids, total polyunsaturated
+  1257 Fatty acids, total trans
+  1253 Cholesterol
   1082 Fiber, soluble   (not always present — derived from insoluble if missing)
   1093 Sodium
   1092 Potassium
+  1087 Calcium
+  1089 Iron
+  1090 Magnesium
+  1091 Phosphorus
+  1095 Zinc
+  1098 Copper
+  1101 Manganese
+  1103 Selenium
+  1106 Vitamin A (RAE)
+  1109 Vitamin E
+  1114 Vitamin D
+  1185 Vitamin K
+  1162 Vitamin C
+  1165 Thiamin (B1)
+  1166 Riboflavin (B2)
+  1167 Niacin (B3)
+  1175 Vitamin B6
+  1177 Folate (DFE)
+  1178 Vitamin B12
 """
 from __future__ import annotations
 
@@ -32,6 +55,7 @@ _FDC_BASE = "https://api.nal.usda.gov/fdc/v1"
 
 # FDC nutrient ID → our internal key
 _NUTRIENT_MAP: dict[int, str] = {
+    # Macros
     1008: "calories",
     1003: "protein_g",
     1004: "fat_g",
@@ -39,9 +63,33 @@ _NUTRIENT_MAP: dict[int, str] = {
     2000: "sugars_g",
     1079: "fiber_g",
     1258: "saturated_fat_g",
+    1292: "monounsaturated_fat_g",
+    1293: "polyunsaturated_fat_g",
+    1257: "trans_fat_g",
+    1253: "cholesterol_mg",
     1082: "soluble_fiber_g",
+    # Electrolytes
     1093: "sodium_mg",
     1092: "potassium_mg",
+    # Minerals
+    1087: "calcium_mg",
+    1089: "iron_mg",
+    1090: "magnesium_mg",
+    1091: "phosphorus_mg",
+    1095: "zinc_mg",
+    1103: "selenium_mcg",
+    # Vitamins
+    1106: "vitamin_a_mcg",
+    1109: "vitamin_e_mg",
+    1114: "vitamin_d_mcg",
+    1185: "vitamin_k_mcg",
+    1162: "vitamin_c_mg",
+    1165: "thiamin_mg",
+    1166: "riboflavin_mg",
+    1167: "niacin_mg",
+    1175: "vitamin_b6_mg",
+    1177: "folate_mcg",
+    1178: "vitamin_b12_mcg",
 }
 
 _EMPTY_NUTRIENTS: dict[str, float] = {k: 0.0 for k in _NUTRIENT_MAP.values()}

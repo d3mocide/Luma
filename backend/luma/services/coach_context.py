@@ -183,6 +183,25 @@ async def _upsert_context(user_id: str, ctx: dict, db: AsyncSession) -> None:
 async def _build_context(user_id: str, db: AsyncSession) -> dict:
     ctx: dict = {}
 
+    # Demographic profile — used by meal planner + coach for personalised recommendations
+    from datetime import date
+    profile_row = await db.execute(
+        text("""
+            SELECT birth_year, biological_sex, height_cm, activity_level
+            FROM users WHERE id = :uid
+        """),
+        {"uid": user_id},
+    )
+    p = profile_row.fetchone()
+    if p and any([p.birth_year, p.biological_sex, p.height_cm, p.activity_level]):
+        age = date.today().year - p.birth_year if p.birth_year else None
+        ctx["profile"] = {
+            "age": age,
+            "biological_sex": p.biological_sex,
+            "height_cm": float(p.height_cm) if p.height_cm else None,
+            "activity_level": p.activity_level,
+        }
+
     # Goals
     goals_row = await db.execute(
         text("""

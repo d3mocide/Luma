@@ -118,6 +118,7 @@ async def get_today(
                 "item_count": len(items),
                 "calories": float(nutrition.get("calories") or 0.0),
                 "headline": headline,
+                "nutrition": nutrition,
             }
         )
 

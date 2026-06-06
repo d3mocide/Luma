@@ -15,6 +15,7 @@ import { RingLegend } from '../components/today/RingLegend'
 import { BioTile } from '../components/today/BioTile'
 import { PlanRow } from '../components/today/PlanRow'
 import { RecentMealsCard } from '../components/today/RecentMealsCard'
+import { NutrientBreakdownSheet } from '../components/today/NutrientBreakdownSheet'
 import { NutritionCalculatorCard, type FoodAddPayload } from '../components/today/NutritionCalculatorCard'
 import { useHiddenMetrics } from '../lib/hidden-metrics'
 
@@ -26,6 +27,7 @@ export default function TodayRoute() {
   const navigate = useNavigate()
   const [loggingMealId, setLoggingMealId] = useState<string | null>(null)
   const [deletingMealId, setDeletingMealId] = useState<string | null>(null)
+  const [showDayBreakdown, setShowDayBreakdown] = useState(false)
   const [dismissedNudgeIds, setDismissedNudgeIds] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem('luma_dismissed_nudges')
@@ -126,6 +128,14 @@ export default function TodayRoute() {
 
   const adherence = data.adherence_today
   const bio = data.biometrics_latest
+
+  const dayNutrition = (data.recent_meals ?? []).reduce<Record<string, number>>((acc, meal) => {
+    const n = (meal as Record<string, unknown>).nutrition as Record<string, number> | undefined
+    if (!n) return acc
+    for (const [k, v] of Object.entries(n)) acc[k] = (acc[k] ?? 0) + (v ?? 0)
+    return acc
+  }, {})
+
   const rings: [number, number, number] = [
     (adherence?.calories?.pct ?? 0) / 100,
     (adherence?.sat_fat_g?.pct ?? 0) / 100,
@@ -260,6 +270,15 @@ export default function TodayRoute() {
                 <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
                 <RingLegend color="var(--good)" label="Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
               </div>
+              {Object.keys(dayNutrition).length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowDayBreakdown(true)}
+                  style={{ marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--fg-tertiary)', textDecoration: 'underline', textAlign: 'left' }}
+                >
+                  Full nutrient breakdown →
+                </button>
+              )}
             </div>
           </div>
 
@@ -408,6 +427,15 @@ export default function TodayRoute() {
               <RingLegend color="var(--sky-400)" label="Calories" value={fmt(adherence?.calories?.logged, 0)} pct={adherence?.calories?.pct ?? 0}/>
               <RingLegend color="var(--sun-400)" label="Sat fat" value={fmt(adherence?.sat_fat_g?.logged, 1, 'g')} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
               <RingLegend color="var(--good)" label="Fiber" value={fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
+              {Object.keys(dayNutrition).length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowDayBreakdown(true)}
+                  style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11, color: 'var(--fg-tertiary)', textDecoration: 'underline', textAlign: 'left' }}
+                >
+                  Full breakdown →
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -559,6 +587,14 @@ export default function TodayRoute() {
 
         <RecentMealsCard meals={data.recent_meals ?? []} compact onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} />
       </div>
+
+      {showDayBreakdown && Object.keys(dayNutrition).length > 0 && (
+        <NutrientBreakdownSheet
+          title="Today's Nutrition"
+          nutrition={dayNutrition}
+          onClose={() => setShowDayBreakdown(false)}
+        />
+      )}
 
     </TodayShell>
   )
