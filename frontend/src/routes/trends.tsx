@@ -389,7 +389,7 @@ export default function TrendsRoute() {
       </div>
 
       {drillDate && (
-        <DrillDownSheet date={drillDate} onClose={() => setDrillDate(null)}/>
+        <DrillDownSheet date={drillDate} onClose={() => setDrillDate(null)} alerts={alerts}/>
       )}
     </div>
   )
@@ -622,7 +622,7 @@ function MetricChart({
   )
 }
 
-function DrillDownSheet({ date, onClose }: { date: string; onClose: () => void }) {
+function DrillDownSheet({ date, onClose, alerts }: { date: string; onClose: () => void; alerts: Insight[] }) {
   const { data, isLoading } = useQuery<{ meals: MealSummary[] }>({
     queryKey: ['meals-by-date', date],
     queryFn: async () => {
@@ -640,6 +640,23 @@ function DrillDownSheet({ date, onClose }: { date: string; onClose: () => void }
     },
   })
 
+  const dayAlerts = alerts.filter((a) => a.ts.slice(0, 10) === date)
+
+  const alertColor = (sev: string) => {
+    if (sev === 'positive') return 'var(--good)'
+    if (sev === 'warning') return 'var(--bad)'
+    return 'var(--fg-tertiary)'
+  }
+
+  const formattedDate = (() => {
+    const parts = date.split('-')
+    if (parts.length < 3) return date
+    const [year, month, day] = parts
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const mName = months[parseInt(month, 10) - 1] || month
+    return `${mName} ${parseInt(day, 10)}, ${year}`
+  })()
+
   return (
     <div
       style={{
@@ -651,31 +668,45 @@ function DrillDownSheet({ date, onClose }: { date: string; onClose: () => void }
     >
       <div
         className="glass"
-        style={{ width: '100%', maxWidth: 600, margin: '0 auto', borderRadius: '20px 20px 0 0', padding: 28 }}
+        style={{ width: '100%', maxWidth: 600, margin: '0 auto', borderRadius: '20px 20px 0 0', padding: 28, maxHeight: '80vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
-            <div className="eyebrow">Meals logged</div>
+            <div className="eyebrow">Daily summary</div>
             <h3 style={{ margin: '4px 0 0', fontSize: 20, fontWeight: 400, color: 'var(--fg-primary)' }}>
-              {(() => {
-                const parts = date.split('-')
-                if (parts.length < 3) return date
-                const [year, month, day] = parts
-                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-                const mIdx = parseInt(month, 10) - 1
-                const mName = months[mIdx] || month
-                return `${mName} ${parseInt(day, 10)}, ${year}`
-              })()}
+              {formattedDate}
             </h3>
           </div>
           <button className="btn btn-ghost" style={{ padding: 8 }} onClick={onClose}><X size={16}/></button>
         </div>
 
+        {dayAlerts.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <div className="eyebrow" style={{ marginBottom: 10 }}>Alerts</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {dayAlerts.map((a) => (
+                <div key={a.id} style={{
+                  padding: '12px 16px', borderRadius: 12, background: 'var(--glass-1)',
+                  borderLeft: `3px solid ${alertColor(a.severity)}`,
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: alertColor(a.severity), marginBottom: 4 }}>
+                    {a.headline}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', lineHeight: 1.5 }}>
+                    {a.body}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="eyebrow" style={{ marginBottom: 10 }}>Meals logged</div>
         {isLoading ? (
           <div style={{ height: 80, borderRadius: 12, background: 'var(--glass-1)', animation: 'pulse 1.5s infinite' }}/>
         ) : !data?.meals.length ? (
-          <p style={{ color: 'var(--fg-tertiary)', fontSize: 14 }}>No meals logged on this day.</p>
+          <p style={{ color: 'var(--fg-tertiary)', fontSize: 14, margin: 0 }}>No meals logged on this day.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {data.meals.map((m) => (
