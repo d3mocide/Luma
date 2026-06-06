@@ -414,20 +414,23 @@ export default function TodayRoute() {
 
         {/* Weight */}
         <div className="glass" style={{ padding: 18, marginBottom: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="eyebrow">Weight</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 6 }}>
-                <span className="num" style={{ fontSize: 38, fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--fg-primary)' }}>{latestWeight?.toFixed(1) ?? '—'}</span>
-                <span style={{ fontSize: 14, color: 'var(--fg-tertiary)' }}>{weightUnit}</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-              <SlopeChip label="7d" value={trend7d} unit={slopeUnit}/>
-              <SlopeChip label="28d" value={trend28d} unit={slopeUnit}/>
-            </div>
+          <div className="eyebrow">Weight</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+            <span className="num" style={{ fontSize: 38, fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--fg-primary)' }}>
+              {latestWeight?.toFixed(1) ?? '—'}
+            </span>
+            <span style={{ fontSize: 14, color: 'var(--fg-tertiary)' }}>{weightUnit}</span>
+            {targetWeight != null && (
+              <span style={{ fontSize: 12, color: 'var(--fg-quiet)', marginLeft: 4 }}>
+                target <span className="num" style={{ color: 'var(--fg-tertiary)' }}>{targetWeight.toFixed(1)} {weightUnit}</span>
+              </span>
+            )}
           </div>
-          <div style={{ marginTop: 12, marginLeft: -6, marginRight: -6 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <SlopeChip label="7d" value={trend7d} unit={slopeUnit}/>
+            <SlopeChip label="28d" value={trend28d} unit={slopeUnit}/>
+          </div>
+          <div style={{ marginTop: 14, marginLeft: -6, marginRight: -6 }}>
             <WeightChart data={weightSeries} width={340} height={70} showAxis={false}/>
           </div>
         </div>
