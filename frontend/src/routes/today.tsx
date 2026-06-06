@@ -478,8 +478,6 @@ export default function TodayRoute() {
           )
         })()}
 
-        <NutritionCalculatorCard adherence={data.adherence_today} onAdd={(p) => quickAddMutation.mutate(p)} isAdding={quickAddMutation.isPending} compact/>
-
         {/* Insight */}
         {data.active_insight ? (
           <div className="glass" style={{
@@ -535,6 +533,8 @@ export default function TodayRoute() {
             <p style={{ color: 'var(--fg-quiet)', fontSize: 13, margin: 0 }}>No insights yet.</p>
           </div>
         )}
+
+        <NutritionCalculatorCard adherence={data.adherence_today} onAdd={(p) => quickAddMutation.mutate(p)} isAdding={quickAddMutation.isPending} compact/>
 
         {/* Plan */}
         <div className="glass" style={{ padding: 18, marginBottom: 14 }}>
