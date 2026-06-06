@@ -15,7 +15,10 @@ export default function WeightChart({
 }: WeightChartProps) {
   if (!data || !data.length) return null
 
-  const padL = 40, padR = 16, padT = 12, padB = showAxis ? 28 : 8
+  const padL = showAxis ? 40 : 10
+  const padR = showAxis ? 16 : 12
+  const padT = showAxis ? 12 : 8
+  const padB = showAxis ? 28 : 8
   const w = width, h = height
 
   const xs = data.map((_, i) => padL + (i / (data.length - 1)) * (w - padL - padR))
@@ -28,8 +31,7 @@ export default function WeightChart({
 
   let linePath = `M ${xs[0]} ${ys[0]}`
   for (let i = 1; i < xs.length; i++) {
-    const px = (xs[i - 1] + xs[i]) / 2
-    linePath += ` Q ${px} ${ys[i - 1]}, ${xs[i]} ${ys[i]}`
+    linePath += ` L ${xs[i]} ${ys[i]}`
   }
   const areaPath = linePath + ` L ${xs[xs.length - 1]} ${h - padB} L ${xs[0]} ${h - padB} Z`
 
@@ -76,7 +78,7 @@ export default function WeightChart({
       ))}
 
       <path d={areaPath} fill={`url(#${uid}-fill)`}/>
-      <path d={linePath} fill="none" stroke={`url(#${uid}-stroke)`} strokeWidth="2.5" strokeLinecap="round"/>
+      <path d={linePath} fill="none" stroke={`url(#${uid}-stroke)`} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
 
       {xs.map((x, i) => i % 14 === 0 && (
         <circle key={i} cx={x} cy={ys[i]} r="2.5" fill="#38bdf8" opacity="0.5"/>
