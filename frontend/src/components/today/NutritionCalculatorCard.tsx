@@ -29,6 +29,7 @@ function BudgetStat({
   unit,
   showProjected,
   noTarget,
+  compact,
 }: {
   label: string
   remaining: number
@@ -36,24 +37,27 @@ function BudgetStat({
   unit: string
   showProjected: boolean
   noTarget: boolean
+  compact?: boolean
 }) {
   const over = showProjected && projected < 0
   return (
-    <div className="glass-inset" style={{ padding: '10px 12px' }}>
-      <div style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
+    <div className="glass-inset" style={{ padding: compact ? '10px 8px' : '10px 12px', textAlign: compact ? 'center' : 'left' }}>
+      <div style={{ fontSize: compact ? 10.5 : 11.5, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {label}
       </div>
-      <div style={{ marginTop: 6, display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span className="num" style={{ fontSize: 20, color: over ? 'var(--bad)' : noTarget ? 'var(--fg-quiet)' : 'var(--fg-primary)' }}>
+      <div style={{ marginTop: compact ? 4 : 6, display: 'flex', alignItems: 'baseline', gap: compact ? 4 : 6, justifyContent: compact ? 'center' : 'flex-start' }}>
+        <span className="num" style={{ fontSize: compact ? 18 : 20, color: over ? 'var(--bad)' : noTarget ? 'var(--fg-quiet)' : 'var(--fg-primary)' }}>
           {noTarget ? '—' : remaining}
         </span>
-        {!noTarget && <span style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>{unit}</span>}
+        {!noTarget && <span style={{ fontSize: compact ? 11 : 13, color: 'var(--fg-quiet)' }}>{unit}</span>}
       </div>
-      <div style={{ marginTop: 2, fontSize: 11, color: over ? 'var(--bad)' : 'var(--fg-quiet)' }}>
+      <div style={{ marginTop: 3, fontSize: compact ? 10.5 : 11.5, color: over ? 'var(--bad)' : 'var(--fg-quiet)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {noTarget
-          ? 'no target set'
+          ? compact ? 'no target' : 'no target set'
           : showProjected
-            ? <>after add: <span className="num">{projected}</span> {unit}</>
+            ? compact
+              ? <>proj: <span className="num">{projected}</span></>
+              : <>after add: <span className="num">{projected}</span> {unit}</>
             : 'remaining'}
       </div>
     </div>
@@ -166,10 +170,10 @@ export function NutritionCalculatorCard({
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(3, 1fr)', gap: 10, marginBottom: 12 }}>
-        <BudgetStat label="Calories" remaining={calRemain} projected={calProjected} unit="kcal" showProjected={hasFood} noTarget={calTarget === 0} />
-        <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    showProjected={hasFood} noTarget={satTarget === 0} />
-        <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   showProjected={hasFood} noTarget={solTarget === 0} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: compact ? 8 : 10, marginBottom: 12 }}>
+        <BudgetStat label="Calories" remaining={calRemain} projected={calProjected} unit="kcal" showProjected={hasFood} noTarget={calTarget === 0} compact={compact} />
+        <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    showProjected={hasFood} noTarget={satTarget === 0} compact={compact} />
+        <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   showProjected={hasFood} noTarget={solTarget === 0} compact={compact} />
       </div>
 
       <div className="glass-inset" style={{ padding: compact ? 10 : 12, display: 'grid', gap: 10 }}>
@@ -369,30 +373,44 @@ export function NutritionCalculatorCard({
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div>
-            {hasFood ? (
-              <>
-                <div style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>
-                  Adds <span className="num">{addCalories}</span> kcal · <span className="num">{addSatFat}</span>g sat fat · <span className="num">{addSolFiber}</span>g soluble fiber
-                </div>
-                {fitSignal && (
-                  <div style={{ marginTop: 4, fontSize: 12, fontWeight: 500, color: fitColor }}>
-                    {fitLabel}
+        <div style={{
+          display: 'flex',
+          flexDirection: compact ? 'column' : 'row',
+          justifyContent: 'space-between',
+          alignItems: compact ? 'stretch' : 'center',
+          gap: (compact && !hasFood) ? 0 : 10,
+        }}>
+          {(hasFood || !compact) && (
+            <div>
+              {hasFood ? (
+                <>
+                  <div style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>
+                    Adds <span className="num">{addCalories}</span> kcal · <span className="num">{addSatFat}</span>g sat fat · <span className="num">{addSolFiber}</span>g soluble fiber
                   </div>
-                )}
-              </>
-            ) : (
-              <div style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>
-                Search for a food to check your budget.
-              </div>
-            )}
-          </div>
+                  {fitSignal && (
+                    <div style={{ marginTop: 4, fontSize: 12, fontWeight: 500, color: fitColor }}>
+                      {fitLabel}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>
+                  Search for a food to check your budget.
+                </div>
+              )}
+            </div>
+          )}
           <button
             className="btn"
             onClick={handleAdd}
             disabled={!hasFood || !!isAdding}
-            style={{ padding: '8px 12px', fontSize: 12, flexShrink: 0 }}
+            style={{
+              padding: '8px 12px',
+              fontSize: 12,
+              flexShrink: 0,
+              alignSelf: compact ? 'flex-end' : 'center',
+              marginTop: (compact && hasFood) ? 4 : 0,
+            }}
           >
             <Plus size={12} strokeWidth={2} /> {isAdding ? 'Adding…' : 'Add to log'}
           </button>
