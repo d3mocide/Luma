@@ -199,3 +199,124 @@ async def test_narrate_pending_processes_and_saves_narrative():
         assert params["ts"] == alert.ts
         
         db.commit.assert_called_once()
+
+
+# ── Insight Narrator Parsing ────────────────────────────────────────────────────
+
+from luma.agents.insight_narrator import _parse_insight, narrate_alert
+
+
+def _llm_response(content: str) -> dict:
+    return {"choices": [{"message": {"content": content}}]}
+
+
+def test_parse_insight_accepts_clean_object():
+    parsed = _parse_insight(
+        '{"headline": "Watch Saturated Fat", "body": "Intake was high.", "thread_seed": "How do I cut it?"}'
+    )
+    assert parsed == {
+        "headline": "Watch Saturated Fat",
+        "body": "Intake was high.",
+        "thread_seed": "How do I cut it?",
+    }
+
+
+def test_parse_insight_strips_code_fences_and_prose():
+    parsed = _parse_insight(
+        'Here you go:\n```json\n{"headline": "Hi", "body": "There.", "thread_seed": "Why?"}\n```'
+    )
+    assert parsed is not None
+    assert parsed["headline"] == "Hi"
+
+
+def test_parse_insight_strips_reasoning_block():
+    """The local narrator runs with reasoning enabled and prefills a <think> block."""
+    raw = (
+        "<think>The user broke a 3-day streak. Keep it warm and encouraging, "
+        "not alarming.</think>\n"
+        '{"body": "It\'s okay to miss a day! Consistency, not perfection, is key.", '
+        '"headline": "Restarting Your Logging Streak Is Easy", '
+        '"thread_seed": "What\'s the easiest way to get back into logging?"}'
+    )
+    parsed = _parse_insight(raw)
+    assert parsed is not None
+    assert parsed["headline"] == "Restarting Your Logging Streak Is Easy"
+    assert parsed["body"].startswith("It's okay to miss a day")
+
+
+def test_parse_insight_strips_dangling_reasoning_close_tag():
+    raw = 'reasoning the model emitted</think>\n{"headline": "H", "body": "B", "thread_seed": "S"}'
+    parsed = _parse_insight(raw)
+    assert parsed is not None
+    assert parsed["headline"] == "H"
+
+
+def test_parse_insight_handles_braces_in_reasoning():
+    raw = (
+        '<think>Data was {"days": 1}, so be gentle.</think>'
+        '{"headline": "H", "body": "B", "thread_seed": "S"}'
+    )
+    parsed = _parse_insight(raw)
+    assert parsed is not None
+    assert parsed["body"] == "B"
+
+
+def test_parse_insight_rejects_schema_echo():
+    """A local model handed json_schema sometimes echoes the schema itself.
+
+    That is valid JSON but lacks the required keys, so it must be rejected rather
+    than surfacing as the 'New insight' default with an empty body.
+    """
+    schema_echo = '{"properties": {"headline": {"type": "string"}}, "type": "object"}'
+    assert _parse_insight(schema_echo) is None
+
+
+def test_parse_insight_rejects_missing_keys_and_invalid_json():
+    assert _parse_insight('{"headline": "only headline"}') is None
+    assert _parse_insight("not json at all") is None
+    assert _parse_insight("") is None
+
+
+@pytest.mark.asyncio
+async def test_narrate_alert_returns_parsed_insight():
+    good = _llm_response(
+        '{"headline": "Watch Saturated Fat", "body": "Trending up this week.", "thread_seed": "How do I cut it?"}'
+    )
+    with patch("luma.agents.insight_narrator.call_llm", new_callable=AsyncMock, return_value=good) as mock_llm:
+        result = await narrate_alert("a1", "sat_fat_rolling", "warning", {"avg_7d_g": 22.0})
+
+    assert result["headline"] == "Watch Saturated Fat"
+    assert result["body"] == "Trending up this week."
+    mock_llm.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_narrate_alert_recovers_via_correction_retry():
+    """First call echoes the schema; the correction retry returns a valid object."""
+    schema_echo = _llm_response('{"properties": {"headline": {"type": "string"}}}')
+    good = _llm_response(
+        '{"headline": "Fiber Low", "body": "Aim for more soluble fiber.", "thread_seed": "Best fiber foods?"}'
+    )
+    with patch(
+        "luma.agents.insight_narrator.call_llm",
+        new_callable=AsyncMock,
+        side_effect=[schema_echo, good],
+    ) as mock_llm:
+        result = await narrate_alert("a2", "low_fiber_rolling", "info", {})
+
+    assert result["headline"] == "Fiber Low"
+    assert result["body"] == "Aim for more soluble fiber."
+    assert mock_llm.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_narrate_alert_falls_back_when_retry_also_fails():
+    bad = _llm_response('{"properties": {}}')
+    with patch(
+        "luma.agents.insight_narrator.call_llm",
+        new_callable=AsyncMock,
+        side_effect=[bad, bad],
+    ):
+        result = await narrate_alert("a3", "hrv_drop", "warning", {})
+
+    assert result == {"headline": "New insight", "body": "", "thread_seed": ""}

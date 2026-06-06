@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from luma.config import settings
 from luma.services.llm_client import call_llm
@@ -17,6 +17,44 @@ class InsightResponse(BaseModel):
     headline: str = Field(description="Headline summarizing the insight (8 words or less)")
     body: str = Field(description="Warm, clinically grounded, actionable description (1-2 sentences)")
     thread_seed: str = Field(description="Follow-up question the user might ask the coach (12 words or less)")
+
+
+def _parse_insight(content: str) -> dict | None:
+    """Extract and validate the narrator's JSON payload, or return None.
+
+    Reasoning models (the local narrator runs with reasoning enabled) prefill a
+    <think> block before the JSON answer, so json.loads() on the raw content
+    fails and the old code silently fell back to the "New insight" default. Strip
+    any reasoning wrapper, recover the JSON object, and validate against
+    InsightResponse rather than trusting dict.get() defaults.
+    """
+    content = content.strip()
+    # Drop reasoning blocks (closed or dangling) so they don't shadow the answer.
+    content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
+    content = re.sub(r"^.*</think>", "", content, flags=re.DOTALL)
+    content = content.strip()
+    content = re.sub(r"^```(?:json)?\n?", "", content)
+    content = re.sub(r"\n?```$", "", content).strip()
+
+    candidates = [content]
+    # Prefer the last balanced object — the answer follows any reasoning text.
+    embedded = re.search(r"\{.*\}", content, re.DOTALL)
+    if embedded:
+        candidates.append(embedded.group(0))
+
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(parsed, dict):
+            continue
+        try:
+            return InsightResponse.model_validate(parsed).model_dump()
+        except ValidationError:
+            continue
+
+    return None
 
 
 _RULE_CONTEXT = {
@@ -46,31 +84,57 @@ async def narrate_alert(
     )
 
     system_prompt = load_prompt("insight_narrator_system")
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
 
     resp = await call_llm(
         primary_model=settings.insight_narrator_model,
         fallback_model=settings.insight_narrator_fallback_model,
         trigger="insight_narrate",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+        messages=messages,
         temperature=0.4,
         timeout=30.0,
         response_format=InsightResponse,
+        reasoning_effort="none",
     )
 
-    content = resp["choices"][0]["message"]["content"].strip()
-    content = re.sub(r"^```(?:json)?\n?", "", content)
-    content = re.sub(r"\n?```$", "", content).strip()
+    content = resp["choices"][0]["message"]["content"]
+    insight = _parse_insight(content)
+    if insight is not None:
+        return insight
 
+    # The model returned something other than a valid insight object — send the
+    # bad output back and ask for a clean object before falling back to a stub.
+    logger.warning("Narrator returned no valid insight for alert %s; attempting correction retry", alert_id)
+    correction_messages = messages + [
+        {"role": "assistant", "content": content},
+        {
+            "role": "user",
+            "content": (
+                "That response did not contain the required keys. Respond with ONLY a "
+                'minified JSON object with exactly these keys: "headline", "body", '
+                '"thread_seed". No schema, no commentary, no other text.'
+            ),
+        },
+    ]
     try:
-        parsed = json.loads(content)
-        return {
-            "headline": parsed.get("headline", "New insight"),
-            "body": parsed.get("body", ""),
-            "thread_seed": parsed.get("thread_seed", ""),
-        }
-    except json.JSONDecodeError:
-        logger.error("Narrator returned invalid JSON for alert %s: %s", alert_id, content)
-        return {"headline": "New insight", "body": content[:200], "thread_seed": ""}
+        retry_resp = await call_llm(
+            primary_model=settings.insight_narrator_model,
+            fallback_model=settings.insight_narrator_fallback_model,
+            trigger="insight_narrate",
+            messages=correction_messages,
+            temperature=0.4,
+            timeout=60.0,
+            response_format=InsightResponse,
+            reasoning_effort="none",
+        )
+        insight = _parse_insight(retry_resp["choices"][0]["message"]["content"])
+        if insight is not None:
+            return insight
+    except Exception:
+        logger.exception("Narrator correction retry failed for alert %s", alert_id)
+
+    logger.error("Narrator could not produce a valid insight for alert %s: %s", alert_id, content[:200])
+    return {"headline": "New insight", "body": "", "thread_seed": ""}
