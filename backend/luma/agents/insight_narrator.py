@@ -12,6 +12,10 @@ from luma.agents.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
 
+# Reasoning tags emitted by local models before the answer; gemma uses <think>,
+# other builds use <thinking>/<reasoning>. Matched case-insensitively.
+_REASONING_TAG = r"(?:think(?:ing)?|reason(?:ing)?)"
+
 
 class InsightResponse(BaseModel):
     headline: str = Field(description="Headline summarizing the insight (8 words or less)")
@@ -30,8 +34,9 @@ def _parse_insight(content: str) -> dict | None:
     """
     content = content.strip()
     # Drop reasoning blocks (closed or dangling) so they don't shadow the answer.
-    content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
-    content = re.sub(r"^.*</think>", "", content, flags=re.DOTALL)
+    _flags = re.DOTALL | re.IGNORECASE
+    content = re.sub(rf"<{_REASONING_TAG}>.*?</{_REASONING_TAG}>", "", content, flags=_flags)
+    content = re.sub(rf"^.*</{_REASONING_TAG}>", "", content, flags=_flags)
     content = content.strip()
     content = re.sub(r"^```(?:json)?\n?", "", content)
     content = re.sub(r"\n?```$", "", content).strip()

@@ -251,6 +251,14 @@ def test_parse_insight_strips_dangling_reasoning_close_tag():
     assert parsed["headline"] == "H"
 
 
+@pytest.mark.parametrize("tag", ["think", "thinking", "reasoning", "THINK"])
+def test_parse_insight_strips_reasoning_tag_variants(tag):
+    raw = f'<{tag}>some reasoning</{tag}>{{"headline": "H", "body": "B", "thread_seed": "S"}}'
+    parsed = _parse_insight(raw)
+    assert parsed is not None
+    assert parsed["headline"] == "H"
+
+
 def test_parse_insight_handles_braces_in_reasoning():
     raw = (
         '<think>Data was {"days": 1}, so be gentle.</think>'
