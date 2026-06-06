@@ -66,6 +66,11 @@ _RULE_CONTEXT = {
     "aggressive_deficit": "the average daily calorie deficit has been too aggressive",
     "ldl_risk_day": "yesterday was a high saturated fat and low fiber day, a pattern linked to LDL elevation",
     "positive_milestone": "a positive milestone was reached",
+    "motivational_nudge": (
+        "no health warnings are active today — surface what is genuinely going well "
+        "in the user's nutrition, streak, and weight data, and provide warm, specific encouragement. "
+        "If any metric is below target, acknowledge it briefly and frame it as an opportunity, not a failure."
+    ),
 }
 
 

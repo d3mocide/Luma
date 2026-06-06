@@ -18,6 +18,7 @@ class AlertResult(NamedTuple):
     rule_id: str
     severity: str
     payload: dict
+    dedup_hours: int = 24
 
 
 async def check_sat_fat_rolling(user_id: str, db: AsyncSession) -> AlertResult | None:
@@ -332,6 +333,98 @@ async def check_sodium_potassium_ratio(user_id: str, db: AsyncSession) -> AlertR
     return None
 
 
+async def check_motivational_nudge(user_id: str, db: AsyncSession) -> AlertResult | None:
+    """Fallback positive insight when no real alerts have fired in the last 24 hours.
+
+    Fires at most twice a day (10-hour dedup). Gathers the user's actual nutrition
+    and weight data so the narrator can surface real positives and real negatives
+    rather than generic filler.
+    """
+    real_alerts = await db.execute(
+        text("""
+            SELECT 1 FROM alerts
+            WHERE user_id = :uid
+              AND rule_id != 'motivational_nudge'
+              AND ts >= now() - INTERVAL '24 hours'
+            LIMIT 1
+        """),
+        {"uid": user_id},
+    )
+    if real_alerts.fetchone():
+        return None
+
+    goals = await db.execute(
+        text("""
+            SELECT
+                daily_calorie_target::float  AS cal_target,
+                daily_soluble_fiber_g::float AS fiber_target,
+                daily_sat_fat_g_max::float   AS sat_fat_target,
+                target_weight_kg::float      AS target_weight_kg
+            FROM goals WHERE user_id = :uid LIMIT 1
+        """),
+        {"uid": user_id},
+    )
+    g = goals.fetchone()
+
+    nutr = await db.execute(
+        text("""
+            SELECT
+                AVG(daily_cal)   AS avg_cal,
+                AVG(daily_fiber) AS avg_fiber,
+                AVG(daily_sat)   AS avg_sat,
+                COUNT(*)         AS days_logged
+            FROM (
+                SELECT
+                    DATE(ts AT TIME ZONE :tz)                           AS day,
+                    SUM((nutrition->>'calories')::float)                AS daily_cal,
+                    SUM((nutrition->>'soluble_fiber_g')::float)         AS daily_fiber,
+                    SUM((nutrition->>'saturated_fat_g')::float)         AS daily_sat
+                FROM meal_events
+                WHERE user_id = :uid AND ts >= now() - INTERVAL '7 days'
+                GROUP BY DATE(ts AT TIME ZONE :tz)
+            ) daily
+        """),
+        {"uid": user_id, "tz": settings.server_timezone},
+    )
+    nr = nutr.fetchone()
+    if not nr or nr.avg_cal is None:
+        return None
+
+    payload: dict = {"streak_days": int(nr.days_logged or 0)}
+
+    if g:
+        if g.cal_target and nr.avg_cal:
+            payload["cal_adherence_pct"] = round((nr.avg_cal / g.cal_target) * 100, 1)
+        if g.fiber_target and nr.avg_fiber:
+            payload["fiber_adherence_pct"] = round((nr.avg_fiber / g.fiber_target) * 100, 1)
+        if g.sat_fat_target and nr.avg_sat:
+            payload["sat_fat_pct_of_target"] = round((nr.avg_sat / g.sat_fat_target) * 100, 1)
+        if g.target_weight_kg:
+            payload["target_weight_kg"] = round(g.target_weight_kg, 1)
+
+    wt = await db.execute(
+        text("""
+            SELECT ROUND(
+                (regr_slope(last_value, extract(epoch from day)) * 86400 * 7)::numeric, 2
+            ) AS slope
+            FROM biometrics_daily
+            WHERE user_id = :uid AND metric = 'weight_kg'
+              AND day >= now() - INTERVAL '14 days'
+        """),
+        {"uid": user_id},
+    )
+    wr = wt.fetchone()
+    if wr and wr.slope is not None:
+        payload["weight_slope_kg_per_week"] = float(wr.slope)
+
+    return AlertResult(
+        rule_id="motivational_nudge",
+        severity="positive",
+        payload=payload,
+        dedup_hours=10,
+    )
+
+
 ALL_RULES = [
     check_sat_fat_rolling,
     check_soluble_fiber_rolling,
@@ -342,4 +435,5 @@ ALL_RULES = [
     check_ldl_risk_day,
     check_sodium_potassium_ratio,
     check_positive_milestone,
+    check_motivational_nudge,
 ]

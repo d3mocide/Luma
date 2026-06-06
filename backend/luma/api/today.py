@@ -238,18 +238,44 @@ async def get_today(
 
 async def _get_active_insight(db, user_id: str) -> dict | None:
     import json as _json
-    row = await db.execute(
+    import time as _time
+
+    # Pool up to 3 most recent real (non-nudge) open alerts.
+    real_rows = await db.execute(
         text("""
             SELECT id, rule_id, severity, payload, narrative
             FROM alerts
             WHERE user_id = :uid AND status = 'open' AND narrative IS NOT NULL
-            ORDER BY ts DESC LIMIT 1
+              AND rule_id != 'motivational_nudge'
+            ORDER BY ts DESC LIMIT 3
         """),
         {"uid": user_id},
     )
-    r = row.fetchone()
-    if not r:
+    pool = real_rows.fetchall()
+
+    if not pool:
+        # Fall back to the most recent motivational nudge.
+        nudge_row = await db.execute(
+            text("""
+                SELECT id, rule_id, severity, payload, narrative
+                FROM alerts
+                WHERE user_id = :uid AND status = 'open' AND narrative IS NOT NULL
+                  AND rule_id = 'motivational_nudge'
+                ORDER BY ts DESC LIMIT 1
+            """),
+            {"uid": user_id},
+        )
+        nudge = nudge_row.fetchone()
+        if nudge:
+            pool = [nudge]
+
+    if not pool:
         return None
+
+    # Rotate through the pool every 4 hours so all open insights get airtime.
+    idx = int(_time.time() // (4 * 3600)) % len(pool)
+    r = pool[idx]
+
     try:
         narrative = _json.loads(r.narrative) if isinstance(r.narrative, str) else r.narrative
     except (TypeError, _json.JSONDecodeError):
