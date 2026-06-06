@@ -90,10 +90,65 @@ def _usage_fields(response: Any) -> dict[str, int | None]:
     }
 
 
+def _normalize_reasoning_response(response: Any) -> None:
+    """If the LLM response has an empty/missing content field but has a reasoning
+    field (e.g., from local reasoning models running via LocalAI/Ollama),
+    copy the reasoning content to the content field so existing agents can parse it
+    transparently.
+    """
+    try:
+        choices = []
+        if isinstance(response, dict):
+            choices = response.get("choices") or []
+        else:
+            choices = getattr(response, "choices", []) or []
+
+        for choice in choices:
+            message = None
+            if isinstance(choice, dict):
+                message = choice.get("message")
+            else:
+                message = getattr(choice, "message", None)
+
+            if message is None:
+                continue
+
+            content = None
+            if isinstance(message, dict):
+                content = message.get("content")
+            else:
+                content = getattr(message, "content", None)
+
+            if not content:
+                reasoning = None
+                if isinstance(message, dict):
+                    reasoning = message.get("reasoning") or message.get("reasoning_content")
+                else:
+                    reasoning = getattr(message, "reasoning", None) or getattr(message, "reasoning_content", None)
+
+                if reasoning:
+                    try:
+                        # Try dictionary update
+                        try:
+                            message["content"] = reasoning
+                        except Exception:
+                            pass
+                        # Try attribute update
+                        try:
+                            setattr(message, "content", reasoning)
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
+    except Exception as exc:
+        logger.warning("Failed to normalize reasoning response: %s", exc)
+
+
 async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str, trigger: str | None = None, **kwargs: Any) -> Any:
     started = perf_counter()
     try:
         response = await litellm.acompletion(**target, **kwargs)
+        _normalize_reasoning_response(response)
         elapsed_ms = round((perf_counter() - started) * 1000, 1)
         usage = _usage_fields(response)
         provider = _get_provider(model_alias, target)
