@@ -27,14 +27,19 @@ async def run_alert_engine() -> None:
 
 async def _process_user(user_id: str) -> None:
     async with AsyncSessionLocal() as db:
-        fired_in_last_24h = await db.execute(
+        # Fetch the most recent firing time per rule within the past 24h (the max dedup window).
+        # The engine then checks each result against its own dedup_hours before inserting.
+        fired_recently = await db.execute(
             text("""
-                SELECT rule_id FROM alerts
+                SELECT DISTINCT ON (rule_id) rule_id, ts
+                FROM alerts
                 WHERE user_id = :uid AND ts >= now() - INTERVAL '24 hours'
+                ORDER BY rule_id, ts DESC
             """),
             {"uid": user_id},
         )
-        recent_rules = {r.rule_id for r in fired_in_last_24h}
+        recent_rule_ts: dict[str, datetime] = {r.rule_id: r.ts for r in fired_recently}
+        now = datetime.now(timezone.utc)
 
         for rule_fn in ALL_RULES:
             try:
@@ -45,9 +50,18 @@ async def _process_user(user_id: str) -> None:
 
             if result is None:
                 continue
-            if result.rule_id in recent_rules:
-                logger.debug("Skipping duplicate rule %s for user %s", result.rule_id, user_id)
-                continue
+
+            if result.rule_id in recent_rule_ts:
+                last_ts = recent_rule_ts[result.rule_id]
+                if last_ts.tzinfo is None:
+                    last_ts = last_ts.replace(tzinfo=timezone.utc)
+                age_hours = (now - last_ts).total_seconds() / 3600
+                if age_hours < result.dedup_hours:
+                    logger.debug(
+                        "Skipping duplicate rule %s for user %s (fired %.1fh ago, dedup=%dh)",
+                        result.rule_id, user_id, age_hours, result.dedup_hours,
+                    )
+                    continue
 
             alert_id = uuid.uuid4()
             now = datetime.now(timezone.utc)
@@ -65,7 +79,7 @@ async def _process_user(user_id: str) -> None:
                     "payload": __import__("json").dumps(result.payload),
                 },
             )
-            recent_rules.add(result.rule_id)
+            recent_rule_ts[result.rule_id] = now
             logger.info(
                 "Alert fired",
                 extra={"rule_id": result.rule_id, "severity": result.severity, "user_id": user_id},

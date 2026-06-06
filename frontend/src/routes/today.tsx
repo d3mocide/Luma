@@ -313,13 +313,19 @@ export default function TodayRoute() {
                   {data.active_insight.cta}
                 </p>
               )}
-              <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 18 }}>
                 <button
                   className="btn today-insight-cta"
                   style={{ padding: '8px 14px', fontSize: 13, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}
                   onClick={() => navigate('/coach', { state: { thread_seed: data.active_insight?.thread_seed } })}
                 >
                   <Sparkles size={13}/> Ask Luma
+                </button>
+                <button
+                  onClick={() => navigate('/coach?tab=insights')}
+                  style={{ fontSize: 12, color: 'var(--fg-quiet)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  See all →
                 </button>
               </div>
             </div>
@@ -467,13 +473,21 @@ export default function TodayRoute() {
                 {data.active_insight.cta && (
                   <p style={{ margin: '6px 0 0', fontSize: 13, lineHeight: 1.4, color: 'var(--fg-secondary)' }}>{data.active_insight.cta}</p>
                 )}
-                <button
-                  className="btn today-insight-cta"
-                  style={{ marginTop: 12, padding: '6px 12px', fontSize: 12, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}
-                  onClick={() => navigate('/coach', { state: { thread_seed: data.active_insight?.thread_seed } })}
-                >
-                  <Sparkles size={11}/> Ask Luma
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+                  <button
+                    className="btn today-insight-cta"
+                    style={{ padding: '6px 12px', fontSize: 12, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}
+                    onClick={() => navigate('/coach', { state: { thread_seed: data.active_insight?.thread_seed } })}
+                  >
+                    <Sparkles size={11}/> Ask Luma
+                  </button>
+                  <button
+                    onClick={() => navigate('/coach?tab=insights')}
+                    style={{ fontSize: 11, color: 'var(--fg-quiet)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  >
+                    See all →
+                  </button>
+                </div>
               </div>
             </div>
           </div>
