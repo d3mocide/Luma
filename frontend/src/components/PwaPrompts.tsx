@@ -94,7 +94,6 @@ export function InstallPrompt() {
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg-primary)' }}>Add Luma to Home Screen</div>
-          <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginTop: 2 }}>Launch instantly from your home screen</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-primary" style={{ padding: '8px 14px', fontSize: 12 }} onClick={install}>
