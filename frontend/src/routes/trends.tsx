@@ -452,7 +452,7 @@ function MetricChart({
   }
 
   return (
-    <div className="glass" style={{ padding: large ? 28 : 22, position: 'relative', overflow: 'hidden' }}>
+    <div className={`glass trends-chart-card ${large ? 'trends-chart-card--large' : ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
       {large && (
         <div style={{
           position: 'absolute', inset: 0,
@@ -467,20 +467,13 @@ function MetricChart({
             <>
               <div className="eyebrow">{label}</div>
               {lastVal != null && (
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginTop: 8 }}>
-                  <span className="num" style={{ fontSize: 56, fontWeight: 300, letterSpacing: '-0.04em', lineHeight: 1, color: 'var(--fg-primary)' }}>
+                <div className="trends-chart-val-row">
+                  <span className="num num-large">
                     {formatValue(lastVal)}
                   </span>
-                  <span style={{ fontSize: 18, color: 'var(--fg-tertiary)' }}>{displayUnit}</span>
+                  <span className="unit">{displayUnit}</span>
                   {delta != null && (
-                    <span style={{
-                      fontSize: 13, color: good ? 'var(--good)' : 'var(--bad)',
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      padding: '4px 10px',
-                      background: good ? 'rgba(52,211,153,0.10)' : 'rgba(251,113,133,0.10)',
-                      border: good ? '1px solid rgba(52,211,153,0.25)' : '1px solid rgba(251,113,133,0.25)',
-                      borderRadius: 999, marginLeft: 8,
-                    }}>
+                    <span className={`trends-chart-delta ${good ? 'good' : 'bad'}`}>
                       {delta > 0 ? <TrendingUp size={12}/> : <TrendingDown size={12}/>}
                       <span className="num">
                         {delta > 0 ? '+' : ''}{formatValue(delta)}
@@ -530,89 +523,91 @@ function MetricChart({
 
       <div style={{ marginTop: large ? 14 : 0 }}>
         {isLoading ? (
-          <div style={{ height: large ? 280 : 56, borderRadius: 12, background: 'var(--glass-1)', animation: 'pulse 1.5s ease-in-out infinite' }}/>
+          <div className={large ? "trends-chart-wrapper" : ""} style={{ borderRadius: 12, background: 'var(--glass-1)', animation: 'pulse 1.5s ease-in-out infinite', height: large ? undefined : 56 }}/>
         ) : !hasData ? (
-          <div style={{ height: large ? 280 : 56, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-faint)', fontSize: 13 }}>No data yet</div>
+          <div className={large ? "trends-chart-wrapper" : ""} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-faint)', fontSize: 13, height: large ? undefined : 56 }}>No data yet</div>
         ) : large ? (
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart
-              data={series}
-              margin={{ top: 4, right: 4, bottom: 4, left: -10 }}
-              onClick={(e) => {
-                if (e?.activePayload?.[0]?.payload?.date) {
-                  onDrillDown(e.activePayload[0].payload.date.slice(0, 10))
-                }
-              }}
-            >
-              <defs>
-                <linearGradient id={`fill-${metricId}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={color} stopOpacity="0.45"/>
-                  <stop offset="60%" stopColor={color} stopOpacity="0.10"/>
-                  <stop offset="100%" stopColor={color} stopOpacity="0"/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)"/>
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 10, fill: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}
-                tickFormatter={(v: string) => {
-                  if (!v) return ''
-                  const datePart = v.split(' ')[0]
-                  const parts = datePart.split('-')
-                  if (parts.length < 3) return v
-                  return `${parts[1]}/${parts[2]}`
+          <div className="trends-chart-wrapper">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={series}
+                margin={{ top: 4, right: 4, bottom: 4, left: -10 }}
+                onClick={(e) => {
+                  if (e?.activePayload?.[0]?.payload?.date) {
+                    onDrillDown(e.activePayload[0].payload.date.slice(0, 10))
+                  }
                 }}
-                minTickGap={28}
-                axisLine={false} tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 10, fill: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}
-                domain={['auto', 'auto']}
-                axisLine={false} tickLine={false}
-              />
-              <Tooltip
-                labelFormatter={(label: string) => {
-                  if (!label) return ''
-                  const datePart = label.split(' ')[0]
-                  const parts = datePart.split('-')
-                  if (parts.length < 3) return label
-                  const [year, month, day] = parts
-                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-                  const mIdx = parseInt(month, 10) - 1
-                  const mName = months[mIdx] || month
-                  return `${mName} ${parseInt(day, 10)}, ${year}`
-                }}
-                contentStyle={{
-                  background: 'rgba(8,13,26,0.95)', border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 12, backdropFilter: 'blur(12px)',
-                }}
-                labelStyle={{ color: 'rgba(246,249,255,0.56)', fontSize: 11 }}
-                itemStyle={{ color, fontSize: 13 }}
-              />
-              {alertPins.map((pin) => (
-                <ReferenceLine
-                  key={pin.id}
-                  x={pin.ts.slice(0, 10)}
-                  stroke={severityColor(pin.severity)}
-                  strokeDasharray="3 3"
-                  strokeWidth={1.5}
-                  label={{
-                    value: '●',
-                    fill: severityColor(pin.severity),
-                    fontSize: 10,
-                    position: 'insideTop',
+              >
+                <defs>
+                  <linearGradient id={`fill-${metricId}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity="0.45"/>
+                    <stop offset="60%" stopColor={color} stopOpacity="0.10"/>
+                    <stop offset="100%" stopColor={color} stopOpacity="0"/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.05)"/>
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10, fill: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}
+                  tickFormatter={(v: string) => {
+                    if (!v) return ''
+                    const datePart = v.split(' ')[0]
+                    const parts = datePart.split('-')
+                    if (parts.length < 3) return v
+                    return `${parts[1]}/${parts[2]}`
                   }}
+                  minTickGap={28}
+                  axisLine={false} tickLine={false}
                 />
-              ))}
-              <Area
-                type="monotone" dataKey="last"
-                stroke={color} strokeWidth={2.5}
-                fill={`url(#fill-${metricId})`}
-                dot={false} activeDot={{ r: 5, fill: color, strokeWidth: 0 }}
-                style={{ cursor: 'pointer' }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+                <YAxis
+                  tick={{ fontSize: 10, fill: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}
+                  domain={['auto', 'auto']}
+                  axisLine={false} tickLine={false}
+                />
+                <Tooltip
+                  labelFormatter={(label: string) => {
+                    if (!label) return ''
+                    const datePart = label.split(' ')[0]
+                    const parts = datePart.split('-')
+                    if (parts.length < 3) return label
+                    const [year, month, day] = parts
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                    const mIdx = parseInt(month, 10) - 1
+                    const mName = months[mIdx] || month
+                    return `${mName} ${parseInt(day, 10)}, ${year}`
+                  }}
+                  contentStyle={{
+                    background: 'rgba(8,13,26,0.95)', border: '1px solid rgba(255,255,255,0.12)',
+                    borderRadius: 12, backdropFilter: 'blur(12px)',
+                  }}
+                  labelStyle={{ color: 'rgba(246,249,255,0.56)', fontSize: 11 }}
+                  itemStyle={{ color, fontSize: 13 }}
+                />
+                {alertPins.map((pin) => (
+                  <ReferenceLine
+                    key={pin.id}
+                    x={pin.ts.slice(0, 10)}
+                    stroke={severityColor(pin.severity)}
+                    strokeDasharray="3 3"
+                    strokeWidth={1.5}
+                    label={{
+                      value: '●',
+                      fill: severityColor(pin.severity),
+                      fontSize: 10,
+                      position: 'insideTop',
+                    }}
+                  />
+                ))}
+                <Area
+                  type="monotone" dataKey="last"
+                  stroke={color} strokeWidth={2.5}
+                  fill={`url(#fill-${metricId})`}
+                  dot={false} activeDot={{ r: 5, fill: color, strokeWidth: 0 }}
+                  style={{ cursor: 'pointer' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         ) : (
           <Spark data={series.filter(s => s.last != null) as { last: number }[]} w={420} h={56} color={color}/>
         )}
