@@ -353,52 +353,42 @@ export function NutritionCalculatorCard({
             <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
               Serving (g)
             </span>
-            <input
-              type="number"
-              min={1}
-              value={servingG}
-              onChange={(e) => setServingG(e.target.value)}
-              style={{
-                width: '100%', padding: '10px 12px', borderRadius: 10,
-                border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
-                color: 'var(--fg-primary)', fontSize: 13,
-                outline: 'none', transition: 'border-color 150ms',
-              }}
-              onFocus={(e) => (e.target.style.borderColor = 'rgba(56,189,248,0.5)')}
-              onBlur={(e) => (e.target.style.borderColor = 'var(--glass-edge)')}
-            />
-            {/* Preset Chips & Add to log button */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-end',
-              gap: 12,
-              marginTop: 4,
-            }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {['50', '100', '150'].map(renderPresetChip)}
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {['200', '300'].map(renderPresetChip)}
-                </div>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: 8 }}>
+              <input
+                type="number"
+                min={1}
+                value={servingG}
+                onChange={(e) => setServingG(e.target.value)}
+                style={{
+                  flex: 1, padding: '10px 12px', borderRadius: 10,
+                  border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
+                  color: 'var(--fg-primary)', fontSize: 13,
+                  outline: 'none', transition: 'border-color 150ms',
+                  minWidth: 0,
+                }}
+                onFocus={(e) => (e.target.style.borderColor = 'rgba(56,189,248,0.5)')}
+                onBlur={(e) => (e.target.style.borderColor = 'var(--glass-edge)')}
+              />
               <button
                 className="btn"
                 onClick={handleAdd}
                 disabled={!selectedFood || !!isAdding}
                 style={{
-                  padding: '8px 12px',
+                  padding: '0 12px',
                   fontSize: 12,
                   flexShrink: 0,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 4,
-                  height: 28,
+                  borderRadius: 10,
                 }}
               >
                 <Plus size={12} strokeWidth={2} /> {isAdding ? 'Adding…' : 'Add to log'}
               </button>
+            </div>
+            {/* Preset Chips */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+              {['50', '100', '150', '200', '300'].map(renderPresetChip)}
             </div>
           </div>
         </div>
