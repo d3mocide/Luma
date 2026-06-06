@@ -1,7 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, X, Search } from 'lucide-react'
+import { Plus, X, Search, Camera } from 'lucide-react'
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api, TodayData } from '../../lib/api'
+
+const CALC_SCANNER_ID = 'calc-barcode-scanner'
+const FOOD_FORMATS = [
+  Html5QrcodeSupportedFormats.EAN_13,
+  Html5QrcodeSupportedFormats.EAN_8,
+  Html5QrcodeSupportedFormats.UPC_A,
+  Html5QrcodeSupportedFormats.UPC_E,
+]
 
 function round1(value: number) {
   return Math.round(value * 10) / 10
@@ -79,6 +88,9 @@ export function NutritionCalculatorCard({
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [selectedFood, setSelectedFood] = useState<FoodResult | null>(null)
   const [servingG, setServingG] = useState('150')
+  const [isScanning, setIsScanning] = useState(false)
+  const [barcodeError, setBarcodeError] = useState('')
+  const handleSelectRef = useRef<(food: FoodResult) => void>(() => {})
 
   const renderPresetChip = (preset: string) => {
     const active = servingG === preset
@@ -125,6 +137,50 @@ export function NutritionCalculatorCard({
     const t = setTimeout(() => setDebouncedQuery(query), 350)
     return () => clearTimeout(t)
   }, [query])
+
+  useEffect(() => {
+    if (!isScanning) return
+    const scanner = new Html5Qrcode(CALC_SCANNER_ID, { formatsToSupport: FOOD_FORMATS, verbose: false })
+    let fired = false
+    let startResolved = false
+    let stopRequested = false
+
+    scanner
+      .start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 130 } },
+        async (code: string) => {
+          if (fired) return
+          fired = true
+          setIsScanning(false)
+          setBarcodeError('')
+          try {
+            const food = await api.post<Record<string, unknown>>('/log/meal/barcode', { barcode: code })
+            handleSelectRef.current({
+              id: food.id as string,
+              name: food.name as string,
+              brand: (food.brand as string | null) ?? null,
+              serving_size_g: (food.serving_size_g as number | null) ?? null,
+              nutrients_per_100g: food.nutrients_per_100g as Record<string, number>,
+              source: food.source as string | undefined,
+            })
+          } catch {
+            setBarcodeError('Product not found')
+          }
+        },
+        () => {},
+      )
+      .then(() => {
+        startResolved = true
+        if (stopRequested) scanner.stop().catch(() => {})
+      })
+      .catch(() => setIsScanning(false))
+
+    return () => {
+      stopRequested = true
+      if (startResolved) scanner.stop().catch(() => {})
+    }
+  }, [isScanning])
 
   const { data: results = [], isFetching } = useQuery<FoodResult[]>({
     queryKey: ['foods', 'search', debouncedQuery],
@@ -180,6 +236,7 @@ export function NutritionCalculatorCard({
     setQuery(food.name)
     if (food.serving_size_g) setServingG(String(Math.round(food.serving_size_g)))
   }
+  handleSelectRef.current = handleSelect
 
   const handleClear = () => {
     setSelectedFood(null)
@@ -253,7 +310,36 @@ export function NutritionCalculatorCard({
                 {isFetching && !selectedFood && (
                   <span style={{ fontSize: 10, color: 'var(--fg-quiet)', flexShrink: 0 }}>…</span>
                 )}
+                <button
+                  type="button"
+                  onClick={() => { setBarcodeError(''); setIsScanning((v) => !v) }}
+                  title="Scan barcode"
+                  style={{
+                    background: isScanning ? 'rgba(56,189,248,0.15)' : 'none',
+                    border: 'none', padding: '2px 4px', cursor: 'pointer',
+                    color: isScanning ? 'var(--sky-400)' : 'var(--fg-quiet)',
+                    display: 'flex', alignItems: 'center', flexShrink: 0,
+                    borderRadius: 6, transition: 'color 150ms, background 150ms',
+                  }}
+                >
+                  <Camera size={14} />
+                </button>
               </div>
+              {isScanning && (
+                <div style={{ marginTop: 8, borderRadius: 12, overflow: 'hidden' }}>
+                  <div
+                    id={CALC_SCANNER_ID}
+                    className="w-full bg-black"
+                    style={{ minHeight: 220, borderRadius: 12, overflow: 'hidden' }}
+                  />
+                  <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--fg-quiet)', textAlign: 'center' }}>
+                    Hold steady over the barcode
+                  </p>
+                </div>
+              )}
+              {barcodeError && !isScanning && (
+                <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--bad)' }}>{barcodeError}</p>
+              )}
 
               {/* Results list */}
               {showResults && results.length > 0 && (
