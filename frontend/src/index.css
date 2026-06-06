@@ -1646,11 +1646,11 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 
   .plan-header-controls {
-    justify-content: flex-start;
-    flex-wrap: wrap;
+    display: flex;
+    flex-direction: row;
     gap: 8px;
     width: 100%;
-    align-items: stretch;
+    align-items: center;
   }
 
   .plan-sticky-controls {
@@ -1680,21 +1680,22 @@ input[type="search"]::-webkit-search-results-decoration {
     line-height: 1.45;
   }
 
-  .plan-header .btn,
-  .plan-header .plan-view-toggle {
-    width: 100%;
+  .plan-header-controls .btn,
+  .plan-header-controls .plan-view-toggle {
+    flex: 1;
+    width: auto;
   }
 
-  .plan-header .btn {
+  .plan-header-controls .btn {
     justify-content: center;
   }
 
-  .plan-header .plan-view-toggle {
+  .plan-header-controls .plan-view-toggle {
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
 
-  .plan-header .plan-view-toggle-btn {
+  .plan-header-controls .plan-view-toggle-btn {
     width: 100%;
   }
 
@@ -1923,6 +1924,75 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 }
 
+/* Weekly Avg Card */
+.plan-weekly-avg-card {
+  padding: 14px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 0;
+  align-items: center;
+}
+
+.plan-weekly-avg-title {
+  margin-right: 20px;
+  flex-shrink: 0;
+}
+
+.plan-weekly-avg-metrics {
+  display: flex;
+  flex: 1;
+  gap: 0;
+  align-items: center;
+}
+
+.plan-weekly-avg-col {
+  flex: 1;
+  padding: 0 12px;
+  border-left: 1px solid var(--glass-edge);
+}
+
+.plan-weekly-avg-col:first-of-type {
+  border-left: none;
+}
+
+.plan-weekly-avg-val-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 640px) {
+  .plan-weekly-avg-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+
+  .plan-weekly-avg-title {
+    margin-right: 0;
+  }
+
+  .plan-weekly-avg-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    align-items: start;
+  }
+
+  .plan-weekly-avg-col {
+    padding: 0 !important;
+    border-left: none !important;
+  }
+
+  .plan-weekly-avg-val-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    margin-bottom: 4px;
+  }
+}
 [data-theme="light"] .plan-view-toggle {
   background: rgba(255, 255, 255, 0.72);
   border-color: rgba(15, 23, 42, 0.18);

@@ -439,60 +439,61 @@ export default function PlanRoute() {
           )}
 
           {weeklyAvg && (
-            <div className="glass" style={{ padding: '14px 20px', marginBottom: 16, display: 'flex', gap: 0, alignItems: 'center' }}>
-              <div style={{ marginRight: 20, flexShrink: 0 }}>
-                <div className="eyebrow" style={{ marginBottom: 2 }}>Weekly avg</div>
-                <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>vs daily goal</div>
+            <div className="glass plan-weekly-avg-card">
+              <div className="plan-weekly-avg-title">
+                <div className="eyebrow">Weekly avg</div>
               </div>
-              {[
-                {
-                  label: 'Calories', key: 'calories' as const,
-                  value: Math.round(weeklyAvg.calories),
-                  target: goals?.daily_calorie_target ?? null,
-                  unit: '', color: 'var(--fg-primary)',
-                  fmt: (v: number) => String(Math.round(v)),
-                },
-                {
-                  label: 'Sat Fat', key: 'saturated_fat_g' as const,
-                  value: weeklyAvg.saturated_fat_g,
-                  target: goals?.daily_sat_fat_g_max ?? null,
-                  unit: 'g', color: 'var(--bad)',
-                  fmt: (v: number) => Number(v).toFixed(1) + 'g',
-                  lowerIsBetter: true,
-                },
-                {
-                  label: 'Sol Fiber', key: 'soluble_fiber_g' as const,
-                  value: weeklyAvg.soluble_fiber_g,
-                  target: goals?.daily_soluble_fiber_g ?? null,
-                  unit: 'g', color: 'var(--good)',
-                  fmt: (v: number) => Number(v).toFixed(1) + 'g',
-                },
-              ].map(({ label, value, target, color, fmt, lowerIsBetter }) => {
-                const pct = target ? Math.min((value / target) * 100, 120) : null
-                const good = target
-                  ? lowerIsBetter ? value <= target : value >= target * 0.85
-                  : true
-                return (
-                  <div key={label} style={{ flex: 1, padding: '0 12px', borderLeft: '1px solid var(--glass-edge)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                      <span style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{label}</span>
-                      <span className="num" style={{ fontSize: 13, fontWeight: 600, color: good ? color : 'var(--warn)' }}>
-                        {fmt(value)}
-                        {target && <span style={{ fontSize: 10, color: 'var(--fg-quiet)', fontWeight: 400 }}> / {fmt(target)}</span>}
-                      </span>
-                    </div>
-                    {pct !== null && (
-                      <div style={{ height: 4, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden' }}>
-                        <div style={{
-                          height: '100%', borderRadius: 2, transition: 'width 400ms ease',
-                          width: `${Math.min(pct, 100)}%`,
-                          background: good ? color : 'var(--warn)',
-                        }}/>
+              <div className="plan-weekly-avg-metrics">
+                {[
+                  {
+                    label: 'Calories', key: 'calories' as const,
+                    value: Math.round(weeklyAvg.calories),
+                    target: goals?.daily_calorie_target ?? null,
+                    unit: '', color: 'var(--fg-primary)',
+                    fmt: (v: number) => String(Math.round(v)),
+                  },
+                  {
+                    label: 'Sat Fat', key: 'saturated_fat_g' as const,
+                    value: weeklyAvg.saturated_fat_g,
+                    target: goals?.daily_sat_fat_g_max ?? null,
+                    unit: 'g', color: 'var(--bad)',
+                    fmt: (v: number) => Number(v).toFixed(1) + 'g',
+                    lowerIsBetter: true,
+                  },
+                  {
+                    label: 'Sol Fiber', key: 'soluble_fiber_g' as const,
+                    value: weeklyAvg.soluble_fiber_g,
+                    target: goals?.daily_soluble_fiber_g ?? null,
+                    unit: 'g', color: 'var(--good)',
+                    fmt: (v: number) => Number(v).toFixed(1) + 'g',
+                  },
+                ].map(({ label, value, target, color, fmt, lowerIsBetter }) => {
+                  const pct = target ? Math.min((value / target) * 100, 120) : null
+                  const good = target
+                    ? lowerIsBetter ? value <= target : value >= target * 0.85
+                    : true
+                  return (
+                    <div key={label} className="plan-weekly-avg-col">
+                      <div className="plan-weekly-avg-val-row">
+                        <span style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{label}</span>
+                        <span className="num" style={{ fontSize: 13, fontWeight: 600, color: good ? color : 'var(--warn)' }}>
+                          {fmt(value)}
+                          {target && <span style={{ fontSize: 10, color: 'var(--fg-quiet)', fontWeight: 400 }}> / {fmt(target)}</span>}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                )
-              })}
+                      {pct !== null && (
+                        <div style={{ height: 4, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%', borderRadius: 2, transition: 'width 400ms ease',
+                            width: `${Math.min(pct, 100)}%`,
+                            background: good ? color : 'var(--warn)',
+                          }}/>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
 
