@@ -100,6 +100,85 @@ _RULE_CONTEXT = {
 }
 
 
+_STATIC_FALLBACKS = {
+    "sat_fat_rolling": {
+        "headline": "Saturated Fat Elevated",
+        "body": "Your 7-day rolling average saturated fat intake is currently above your daily limit.",
+        "thread_seed": "How can I reduce saturated fat in my daily meals?",
+    },
+    "low_fiber_rolling": {
+        "headline": "Soluble Fiber Below Target",
+        "body": "Your 7-day rolling average soluble fiber intake is lower than your daily target.",
+        "thread_seed": "What are some easy ways to add more soluble fiber?",
+    },
+    "weight_trend_diverging": {
+        "headline": "Weight Trajectory Diverging",
+        "body": "Your recent weight measurements are moving away from your goal trajectory.",
+        "thread_seed": "How can I adjust my calorie intake to get back on track?",
+    },
+    "hrv_drop": {
+        "headline": "Heart Rate Variability Drop",
+        "body": "Luma detected a noticeable drop in your HRV compared to your recent baseline.",
+        "thread_seed": "What factors could be causing my HRV to drop?",
+    },
+    "logging_streak_broken": {
+        "headline": "Logging Streak Interrupted",
+        "body": "Your consistent daily meal logging streak was interrupted. Let's resume today!",
+        "thread_seed": "Can we look at my logging patterns to help me stay consistent?",
+    },
+    "aggressive_deficit": {
+        "headline": "Calorie Deficit Too Aggressive",
+        "body": "Your average daily deficit is exceeding 500 kcal, which may impact muscle retention.",
+        "thread_seed": "Is a smaller calorie deficit safer for my goals?",
+    },
+    "ldl_risk_day": {
+        "headline": "LDL Cholesterol Risk Pattern",
+        "body": "Yesterday's food log showed elevated saturated fat and low soluble fiber.",
+        "thread_seed": "How can I plan tomorrow's meals to balance fat and fiber?",
+    },
+    "positive_milestone": {
+        "headline": "Consistency Milestone Reached!",
+        "body": "Congratulations on staying consistent with your health goals this week!",
+        "thread_seed": "What is the best way to maintain this positive momentum?",
+    },
+    "sodium_potassium_ratio": {
+        "headline": "Na:K Ratio Above Target",
+        "body": "Your rolling 7-day sodium-to-potassium ratio is unfavorable for cardiovascular health.",
+        "thread_seed": "What foods are high in potassium and low in sodium?",
+    },
+    "motivational_nudge": {
+        "headline": "Keep Up the Great Work!",
+        "body": "Your health metrics are looking stable. Keep focusing on your daily habits.",
+        "thread_seed": "How are my overall trends looking this week?",
+    },
+    "weight_stall": {
+        "headline": "Weight Trend Plateau",
+        "body": "Your weight has stalled over the past 14 days despite being away from your target.",
+        "thread_seed": "Should I adjust my calorie target or activity levels?",
+    },
+    "ldl_proxy_stall": {
+        "headline": "Persistent LDL Risk Pattern",
+        "body": "Saturated fat has remained high and fiber low for two consecutive weeks.",
+        "thread_seed": "What are some heart-healthy meal swaps I can make?",
+    },
+    "weight_trend_worsening": {
+        "headline": "Weight Trajectory Stall",
+        "body": "Your recent 14-day weight trend has stalled or worsened compared to the prior 28 days.",
+        "thread_seed": "How can I break through this weight stall?",
+    },
+    "biometric_cluster_anomaly": {
+        "headline": "Biometric Anomaly Detected",
+        "body": "Multiple biometric signals have been simultaneously abnormal over the last few days.",
+        "thread_seed": "What should I focus on when my biometrics show stress?",
+    },
+    "weekly_recap": {
+        "headline": "Your Weekly Health Recap",
+        "body": "Here is a summary of your LDL-relevant wins and focus areas from the past week.",
+        "thread_seed": "What should I focus on changing for the coming week?",
+    },
+}
+
+
 async def narrate_alert(
     alert_id: str,
     rule_id: str,
@@ -120,36 +199,36 @@ async def narrate_alert(
         {"role": "user", "content": user_prompt},
     ]
 
-    resp = await call_llm(
-        primary_model=settings.insight_narrator_model,
-        fallback_model=settings.insight_narrator_fallback_model,
-        trigger="insight_narrate",
-        messages=messages,
-        temperature=0.4,
-        timeout=30.0,
-        response_format=InsightResponse,
-    )
-
-    content = resp["choices"][0]["message"]["content"]
-    insight = _parse_insight(content)
-    if insight is not None:
-        return insight
-
-    # The model returned something other than a valid insight object — send the
-    # bad output back and ask for a clean object before falling back to a stub.
-    logger.warning("Narrator returned no valid insight for alert %s; attempting correction retry", alert_id)
-    correction_messages = messages + [
-        {"role": "assistant", "content": content},
-        {
-            "role": "user",
-            "content": (
-                "That response did not contain the required keys. Respond with ONLY a "
-                'minified JSON object with exactly these keys: "headline", "body", '
-                '"thread_seed". No schema, no commentary, no other text.'
-            ),
-        },
-    ]
     try:
+        resp = await call_llm(
+            primary_model=settings.insight_narrator_model,
+            fallback_model=settings.insight_narrator_fallback_model,
+            trigger="insight_narrate",
+            messages=messages,
+            temperature=0.4,
+            timeout=30.0,
+            response_format=InsightResponse,
+        )
+
+        content = resp["choices"][0]["message"]["content"]
+        insight = _parse_insight(content)
+        if insight is not None:
+            return insight
+
+        # The model returned something other than a valid insight object — send the
+        # bad output back and ask for a clean object before falling back to a static copy.
+        logger.warning("Narrator returned no valid insight for alert %s; attempting correction retry", alert_id)
+        correction_messages = messages + [
+            {"role": "assistant", "content": content},
+            {
+                "role": "user",
+                "content": (
+                    "That response did not contain the required keys. Respond with ONLY a "
+                    'minified JSON object with exactly these keys: "headline", "body", '
+                    '"thread_seed". No schema, no commentary, no other text.'
+                ),
+            },
+        ]
         retry_resp = await call_llm(
             primary_model=settings.insight_narrator_model,
             fallback_model=settings.insight_narrator_fallback_model,
@@ -162,8 +241,21 @@ async def narrate_alert(
         insight = _parse_insight(retry_resp["choices"][0]["message"]["content"])
         if insight is not None:
             return insight
-    except Exception:
-        logger.exception("Narrator correction retry failed for alert %s", alert_id)
+    except Exception as exc:
+        logger.warning(
+            "Narrator LLM call failed for alert %s (rule: %s): %s. Using static fallback.",
+            alert_id, rule_id, str(exc)
+        )
+        return _STATIC_FALLBACKS.get(rule_id, {
+            "headline": "Health Insight",
+            "body": f"Luma updated your analysis for rule {rule_id}.",
+            "thread_seed": "What does this insight mean for me?",
+        })
 
-    logger.error("Narrator could not produce a valid insight for alert %s: %s", alert_id, content[:200])
-    return {"headline": "New insight", "body": "", "thread_seed": ""}
+    logger.error("Narrator could not produce a valid insight for alert %s. Using static fallback.", alert_id)
+    return _STATIC_FALLBACKS.get(rule_id, {
+        "headline": "Health Insight",
+        "body": f"Luma updated your analysis for rule {rule_id}.",
+        "thread_seed": "What does this insight mean for me?",
+    })
+
