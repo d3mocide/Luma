@@ -4,8 +4,12 @@ All notable changes to the Luma health tracking and meal-planning PWA will be do
 
 ## [Phase 3] - Polish (Active)
 
+### Added
+- **On-Demand Health Insights Trigger Card**: Added a diagnostic card `InsightsDiagnosticCard.tsx` under the Settings page's Health Import tab for operators. It connects to a new backend `/api/v1/insights/trigger` POST endpoint that executes the alert engine immediately on-demand. Includes a toggle to bypass rule deduplication windows, forcing prompt re-evaluation and narration.
+
 ### Fixed
 - **Authentication Current User Goals Query**: Fixed a `500 Internal Server Error` on the `/api/v1/auth/me` endpoint. Accessing `user.goals` inside the `_user_out` helper triggered a `MissingGreenlet` error because the `goals` relationship is lazy-loaded by default and accessed in an asynchronous session context. Preloaded the relationship using `selectinload` inside the `get_current_user` dependency ([deps.py](file:///d:/Projects/Luma/backend/luma/deps.py)), restoring successful login and user profile retrieval workflows.
+- **Local Model Response Format Validation**: Fixed a `failure - local/gemma-4-e4b-it` error with status `UnsupportedParamsError` inside the LLM client handler `_call_target` ([llm_client.py](file:///d:/Projects/Luma/backend/luma/services/llm_client.py)). Local OpenAI-compatible gateways and inference servers (like Ollama, LocalAI, vLLM) do not reliably support Pydantic schema validation objects in `response_format`. Preemptively popped the parameter when routing to local providers, preserving standard text rendering, local system instruction compliance, and regex JSON parsing of reasoning model outputs (avoiding interference with `<think>` tags).
 
 ### Changed
 - **Mobile Bottom Navigation Wrapper Background Polish**: Removed the `.mobile-nav-wrap::before` pseudo-element and positioned the mobile navigation bar wrapper (`.mobile-nav-wrap`) absolutely at the bottom of the viewport to allow page content to scroll behind it. Removed the layout-restricting bottom padding from `.mobile-shell-main` and applied individual bottom paddings directly to individual page scroll containers/views (Today mobile view, Trends page, Coach composer, Settings page, and Favorites page) to resolve the solid black background box under the mobile nav bar across all routes. Removed height constraints from mobile Today and Trends pages to let them scroll naturally.

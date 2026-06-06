@@ -68,3 +68,19 @@ async def ack_insight(
     if result.rowcount == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found or already dismissed")
     return {"status": "dismissed"}
+
+
+@router.post("/trigger")
+async def trigger_insights(
+    user: CurrentUser,
+    bypass_dedup: bool = False,
+) -> dict[str, str]:
+    from luma.alerts.engine import _process_user
+    try:
+        await _process_user(str(user.id), bypass_dedup=bypass_dedup)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Alert engine execution failed: {str(exc)}",
+        )
+    return {"status": "ok"}

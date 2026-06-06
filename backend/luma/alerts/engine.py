@@ -28,7 +28,7 @@ async def run_alert_engine() -> None:
             logger.exception("Alert engine failed for user %s", user_id)
 
 
-async def _process_user(user_id: str) -> None:
+async def _process_user(user_id: str, bypass_dedup: bool = False) -> None:
     async with AsyncSessionLocal() as db:
         # Fetch the most recent firing time per rule within the past 24h (the max dedup window).
         # The engine then checks each result against its own dedup_hours before inserting.
@@ -54,7 +54,7 @@ async def _process_user(user_id: str) -> None:
             if result is None:
                 continue
 
-            if result.rule_id in recent_rule_ts:
+            if not bypass_dedup and result.rule_id in recent_rule_ts:
                 last_ts = recent_rule_ts[result.rule_id]
                 if last_ts.tzinfo is None:
                     last_ts = last_ts.replace(tzinfo=timezone.utc)

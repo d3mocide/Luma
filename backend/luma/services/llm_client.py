@@ -146,6 +146,15 @@ def _normalize_reasoning_response(response: Any) -> None:
 
 async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str, trigger: str | None = None, **kwargs: Any) -> Any:
     started = perf_counter()
+    provider = _get_provider(model_alias, target)
+
+    # Strip response_format for local targets to prevent UnsupportedParamsError in some LiteLLM environments,
+    # as local endpoints (e.g., Ollama/LocalAI/vLLM) do not natively support Pydantic structured outputs,
+    # and forcing JSON mode can interfere with reasoning model output (e.g., <think> tags).
+    if provider == "local" and "response_format" in kwargs:
+        kwargs = kwargs.copy()
+        kwargs.pop("response_format", None)
+
     try:
         response = await litellm.acompletion(**target, **kwargs)
         _normalize_reasoning_response(response)

@@ -20,6 +20,7 @@ import { HaeMetricsCard } from '../components/settings/HaeMetricsCard'
 import { HaeImportCard } from '../components/settings/HaeImportCard'
 import { HaeDiagnosticCard } from '../components/settings/HaeDiagnosticCard'
 import { HaeAnalyzeCard } from '../components/settings/HaeAnalyzeCard'
+import { InsightsDiagnosticCard } from '../components/settings/InsightsDiagnosticCard'
 import { MetricVisibilityCard } from '../components/settings/MetricVisibilityCard'
 import { ProfileCard } from '../components/settings/ProfileCard'
 import { useMeasurementSystem, convertWeightToKg } from '../lib/measurements'
@@ -294,6 +295,7 @@ function HealthImportTab({ isOperator }: { isOperator: boolean }) {
           <>
             <HaeDiagnosticCard />
             <HaeAnalyzeCard />
+            <InsightsDiagnosticCard />
           </>
         ) : (
           <div className="glass settings-card" style={{ padding: 24 }}>
