@@ -76,6 +76,27 @@ _RULE_CONTEXT = {
         "in the user's nutrition, streak, and weight data, and provide warm, specific encouragement. "
         "If any metric is below target, acknowledge it briefly and frame it as an opportunity, not a failure."
     ),
+    "weight_stall": (
+        "weight has plateaued over the past 14 days despite remaining more than 2 kg from goal — "
+        "the current eating and activity pattern is not producing the expected trend"
+    ),
+    "ldl_proxy_stall": (
+        "saturated fat has been above target and soluble fiber has been below target for 14 consecutive days — "
+        "a persistent pattern that is unfavorable for LDL cholesterol management"
+    ),
+    "weight_forecast_diverging": (
+        "a Prophet time-series forecast projects weight moving away from the user's goal over the next 14 days "
+        "based on the recent trend — a course correction may be needed"
+    ),
+    "biometric_cluster_anomaly": (
+        "multiple biometric signals (HRV, resting heart rate, sleep score) have been simultaneously abnormal "
+        "for several recent days, forming a statistical outlier cluster — this may indicate compounding stress or illness"
+    ),
+    "weekly_recap": (
+        "it is the end of the week — provide a warm, personalised summary of the user's LDL-relevant wins "
+        "(days on target for sat fat and fiber, heart-healthy foods eaten, weight direction) and misses "
+        "(days over sat fat, under fiber, missed logging). Be specific about numbers and genuinely encouraging."
+    ),
 }
 
 

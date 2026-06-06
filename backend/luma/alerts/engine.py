@@ -8,6 +8,9 @@ from datetime import datetime, timezone
 from sqlalchemy import text
 
 from luma.alerts.rules import ALL_RULES
+from luma.alerts.ml import check_weight_forecast_anomaly, check_biometric_isolation_forest
+
+ALL_RULES = list(ALL_RULES) + [check_weight_forecast_anomaly, check_biometric_isolation_forest]
 from luma.db.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)

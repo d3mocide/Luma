@@ -425,15 +425,104 @@ async def check_motivational_nudge(user_id: str, db: AsyncSession) -> AlertResul
     )
 
 
+async def check_weight_stall(user_id: str, db: AsyncSession) -> AlertResult | None:
+    """14-day weight plateau when goal gap is >2 kg — no meaningful movement toward target."""
+    row = await db.execute(
+        text("""
+            SELECT
+                g.target_weight_kg::float AS target,
+                ROUND(
+                    (regr_slope(b.last_value, extract(epoch from b.day)) * 86400 * 7)::numeric, 3
+                ) AS weekly_slope,
+                MAX(b.last_value) AS latest_weight
+            FROM goals g
+            JOIN biometrics_daily b ON b.user_id = g.user_id AND b.metric = 'weight_kg'
+            WHERE g.user_id = :uid
+              AND g.target_weight_kg IS NOT NULL
+              AND b.day >= now() - INTERVAL '14 days'
+            GROUP BY g.target_weight_kg
+        """),
+        {"uid": user_id},
+    )
+    r = row.fetchone()
+    if not r or r.target is None or r.latest_weight is None or r.weekly_slope is None:
+        return None
+
+    gap = abs(r.latest_weight - r.target)
+    stalled = abs(float(r.weekly_slope)) < 0.05 and gap > 2.0
+    if not stalled:
+        return None
+
+    return AlertResult(
+        rule_id="weight_stall",
+        severity="warning",
+        payload={
+            "latest_kg": round(r.latest_weight, 1),
+            "target_kg": round(r.target, 1),
+            "gap_kg": round(gap, 1),
+            "weekly_slope_kg": round(float(r.weekly_slope), 3),
+        },
+        dedup_hours=168,
+    )
+
+
+async def check_ldl_proxy_stall(user_id: str, db: AsyncSession) -> AlertResult | None:
+    """14-day persistent LDL-risk pattern: sat fat and fiber simultaneously off-target for 2 weeks."""
+    row = await db.execute(
+        text("""
+            SELECT
+                g.daily_sat_fat_g_max::float   AS sat_target,
+                g.daily_soluble_fiber_g::float AS fiber_target,
+                AVG((me.nutrition->>'saturated_fat_g')::float)  AS avg_sat,
+                AVG((me.nutrition->>'soluble_fiber_g')::float)  AS avg_fiber
+            FROM goals g, meal_events me
+            WHERE g.user_id = :uid
+              AND me.user_id = :uid
+              AND g.daily_sat_fat_g_max IS NOT NULL
+              AND g.daily_soluble_fiber_g IS NOT NULL
+              AND me.ts >= now() - INTERVAL '14 days'
+              AND me.nutrition->>'saturated_fat_g' IS NOT NULL
+              AND me.nutrition->>'soluble_fiber_g' IS NOT NULL
+            GROUP BY g.daily_sat_fat_g_max, g.daily_soluble_fiber_g
+        """),
+        {"uid": user_id},
+    )
+    r = row.fetchone()
+    if not r or r.sat_target is None or r.fiber_target is None:
+        return None
+    if r.avg_sat is None or r.avg_fiber is None:
+        return None
+
+    sat_over = r.avg_sat > r.sat_target * 1.05
+    fiber_under = r.avg_fiber < r.fiber_target * 0.80
+    if not (sat_over and fiber_under):
+        return None
+
+    return AlertResult(
+        rule_id="ldl_proxy_stall",
+        severity="warning",
+        payload={
+            "avg_14d_sat_fat_g": round(r.avg_sat, 1),
+            "sat_fat_target_g": round(r.sat_target, 1),
+            "avg_14d_fiber_g": round(r.avg_fiber, 1),
+            "fiber_target_g": round(r.fiber_target, 1),
+        },
+        dedup_hours=168,
+    )
+
+
 ALL_RULES = [
     check_sat_fat_rolling,
     check_soluble_fiber_rolling,
     check_weight_trend,
+    check_weight_stall,
     check_hrv_anomaly,
     check_logging_gap,
     check_calorie_deficit,
     check_ldl_risk_day,
+    check_ldl_proxy_stall,
     check_sodium_potassium_ratio,
     check_positive_milestone,
     check_motivational_nudge,
 ]
+
