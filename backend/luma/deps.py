@@ -53,8 +53,13 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
     try:
-        result = await db.execute(select(User).where(User.id == UUID(user_id)))
+        result = await db.execute(
+            select(User)
+            .options(selectinload(User.goals))
+            .where(User.id == UUID(user_id))
+        )
         user = result.scalar_one_or_none()
     except SQLAlchemyError:
         logger.exception("Current user lookup failed")

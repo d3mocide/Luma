@@ -4,6 +4,9 @@ All notable changes to the Luma health tracking and meal-planning PWA will be do
 
 ## [Phase 3] - Polish (Active)
 
+### Fixed
+- **Authentication Current User Goals Query**: Fixed a `500 Internal Server Error` on the `/api/v1/auth/me` endpoint. Accessing `user.goals` inside the `_user_out` helper triggered a `MissingGreenlet` error because the `goals` relationship is lazy-loaded by default and accessed in an asynchronous session context. Preloaded the relationship using `selectinload` inside the `get_current_user` dependency ([deps.py](file:///d:/Projects/Luma/backend/luma/deps.py)), restoring successful login and user profile retrieval workflows.
+
 ### Changed
 - **Mobile Bottom Navigation Wrapper Background Polish**: Removed the `.mobile-nav-wrap::before` pseudo-element and positioned the mobile navigation bar wrapper (`.mobile-nav-wrap`) absolutely at the bottom of the viewport to allow page content to scroll behind it. Removed the layout-restricting bottom padding from `.mobile-shell-main` and applied individual bottom paddings directly to individual page scroll containers/views (Today mobile view, Trends page, Coach composer, Settings page, and Favorites page) to resolve the solid black background box under the mobile nav bar across all routes. Removed height constraints from mobile Today and Trends pages to let them scroll naturally.
 - **Mobile Log FAB Button Outline Ring**: Refactored the mobile central log button (`.mobile-fab`) spacer ring from a solid black/cream border to a semi-transparent glassy backdrop shadow ring with a thin, bright outer highlighted edge. This blends perfectly with the glassmorphism aesthetic of the mobile navigation bar and lets scrolling content show through the ring.
