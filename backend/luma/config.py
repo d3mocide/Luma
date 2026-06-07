@@ -48,6 +48,18 @@ class Settings(BaseSettings):
     vapid_public_key: str = ""
     vapid_claims_email: str = "admin@example.com"
 
+    # SMTP — used for family invitation emails.
+    # Leave smtp_host blank to disable email sending (invite tokens still work via manual link share).
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "noreply@example.com"
+    smtp_use_tls: bool = True
+
+    # Base URL used to build links in outbound emails (no trailing slash).
+    app_base_url: str = "http://localhost:5173"
+
     server_timezone: str = "UTC"
 
     environment: Literal["development", "production"] = "development"

@@ -144,3 +144,47 @@ export interface User {
   activity_level?: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | null
   dri?: Dri | null
 }
+
+// ── Family sharing ────────────────────────────────────────────────────────────
+
+export interface FamilyGroup {
+  id: string
+  name: string
+  created_at: string
+  role: 'owner' | 'member'
+  member_count: number
+}
+
+export interface FamilyMember {
+  id: string
+  display_name: string
+  email: string
+  role: 'owner' | 'member'
+  joined_at: string
+}
+
+export interface FamilyGroupDetail {
+  id: string
+  name: string
+  created_at: string
+  members: FamilyMember[]
+}
+
+export type ResourceType = 'recipe' | 'favorite' | 'plan'
+
+export interface GroupShare {
+  id: string
+  resource_type: ResourceType
+  resource_id: string
+  resource_name: string | null
+  note: string | null
+  shared_at: string
+  shared_by_id: string
+  shared_by_name: string
+}
+
+export interface MemberStatus {
+  user_id: string
+  display_name: string
+  calories_pct: number | null
+}
