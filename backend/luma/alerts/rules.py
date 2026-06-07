@@ -170,9 +170,17 @@ async def check_logging_gap(user_id: str, db: AsyncSession) -> AlertResult | Non
     if not sr or not lr or lr.last_day is None:
         return None
 
-    today = datetime.now(ZoneInfo(tz)).date()
+    now_local = datetime.now(ZoneInfo(tz))
+    today = now_local.date()
     days_since = (today - lr.last_day).days
     if sr.days_logged >= 3 and days_since >= 1:
+        # When it's exactly one missed day the date just rolled over at midnight, so the
+        # 30-min engine run at 00:00/00:30 would fire the alert at the *start* of the new
+        # day. Hold it until 8 PM local time so it appears at the end of the day the
+        # streak was broken, not at the beginning of the next one.  For 2+ missed days
+        # the dedup window guarantees the day-1 alert already ran, so fire immediately.
+        if days_since == 1 and now_local.hour < 20:
+            return None
         return AlertResult(
             rule_id="logging_streak_broken",
             severity="info",
