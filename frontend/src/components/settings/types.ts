@@ -47,15 +47,44 @@ export type GoalRecommendation = {
   daily_protein_g_min: number | null
   basis: {
     tdee_kcal: number | null
+    tdee_source?: string
+    mifflin_bmr?: number | null
+    activity_factor?: number | null
+    activity_source?: string
+    measured_tdee_kcal?: number | null
     bmr_7d_avg: number | null
     active_7d_avg: number | null
     current_weight_kg: number | null
     avg_steps_7d: number | null
+    age?: number | null
     data_days: number
     mode: 'deficit' | 'maintenance' | 'insufficient_data'
     data_quality_warning: true | null
+    watch_overreport_warning?: true | null
   }
   rationale: string | null
+}
+
+// When age/sex/height/weight are missing the API can't run the Mifflin–St Jeor
+// formula, so it returns this instead of a target set.
+export type GoalRecommendationIncomplete = {
+  profile_incomplete: true
+  missing_fields: string[]
+}
+
+export type GoalRecommendationResponse = GoalRecommendation | GoalRecommendationIncomplete
+
+export function isProfileIncomplete(
+  res: GoalRecommendationResponse,
+): res is GoalRecommendationIncomplete {
+  return 'profile_incomplete' in res && res.profile_incomplete === true
+}
+
+export const MISSING_FIELD_LABELS: Record<string, string> = {
+  birth_year: 'birth year',
+  biological_sex: 'biological sex',
+  height_cm: 'height',
+  weight: 'a recent weight reading',
 }
 
 export type HaeImportSettings = {

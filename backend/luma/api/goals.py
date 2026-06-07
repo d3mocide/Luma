@@ -68,6 +68,43 @@ async def put_goals(body: GoalIn, user: CurrentUser, db: DbDep) -> dict[str, Any
     return await get_goals(user, db)
 
 
+# Standard Mifflin–St Jeor activity multipliers (BMR → TDEE), keyed by the
+# activity_level values the profile form stores.
+_ACTIVITY_FACTORS: dict[str, float] = {
+    "sedentary": 1.2,
+    "lightly_active": 1.375,
+    "moderately_active": 1.55,
+    "very_active": 1.725,
+}
+
+
+def _activity_factor(activity_level: str | None, steps_avg: float) -> tuple[float, str]:
+    """Pick a Mifflin–St Jeor activity multiplier.
+
+    Prefer the user's self-reported activity level; otherwise infer it from
+    7-day average step count (so the watch still informs the estimate); fall
+    back to sedentary when there's nothing to go on.
+    """
+    if activity_level in _ACTIVITY_FACTORS:
+        return _ACTIVITY_FACTORS[activity_level], "profile"
+    if steps_avg > 0:
+        if steps_avg >= 10_000:
+            return 1.725, "steps"
+        if steps_avg >= 7_500:
+            return 1.55, "steps"
+        if steps_avg >= 5_000:
+            return 1.375, "steps"
+        return 1.2, "steps"
+    return 1.2, "default"
+
+
+def _mifflin_st_jeor_bmr(weight_kg: float, height_cm: float, age: int, sex: str) -> float:
+    """Mifflin–St Jeor resting metabolic rate — the same equation the Mayo
+    Clinic calculator is built on. `sex` must be 'male' or 'female'."""
+    s = 5 if sex == "male" else -161
+    return 10 * weight_kg + 6.25 * height_cm - 5 * age + s
+
+
 @router.get("/goals/recommend")
 async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     tz = ZoneInfo(settings.server_timezone)
@@ -127,26 +164,63 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     bmr_avg = energy_avgs.get("bmr_kcal", 0.0)
     active_avg = energy_avgs.get("active_kcal", 0.0)
     steps_avg = energy_avgs.get("steps", 0.0)
-    tdee = bmr_avg + active_avg
 
-    # Physiological sanity bounds — anything outside 1,200–4,500 kcal indicates
-    # bad data (e.g. bulk export duplication). Flag it and fall back to defaults.
+    # ── Profile-driven (Mifflin–St Jeor) basis ──────────────────────────────
+    # We compute TDEE from the user's profile rather than from measured watch
+    # burn: Apple Watch active-energy is a known over-reporter, so a measured
+    # TDEE inflates the target (the 3,000 vs 2,000 kcal complaint). The watch
+    # numbers are kept only as a cross-check. The formula needs age, sex,
+    # height and a current weight — without them we can't sanity-check anything,
+    # so block and tell the client exactly which fields to collect.
+    age: int | None = (today_dt.year - user.birth_year) if user.birth_year else None
+    sex: str | None = user.biological_sex if user.biological_sex in ("male", "female") else None
+    height_cm: float | None = float(user.height_cm) if user.height_cm else None
+
+    missing_fields: list[str] = []
+    if age is None:
+        missing_fields.append("birth_year")
+    if sex is None:
+        missing_fields.append("biological_sex")
+    if height_cm is None:
+        missing_fields.append("height_cm")
+    if current_weight_kg is None:
+        missing_fields.append("weight")
+    if missing_fields:
+        return {"profile_incomplete": True, "missing_fields": missing_fields}
+
+    # mypy/readability: all four are guaranteed non-None past the guard above.
+    assert age is not None and sex is not None and height_cm is not None and current_weight_kg is not None
+
+    msj_bmr = _mifflin_st_jeor_bmr(current_weight_kg, height_cm, age, sex)
+    activity_factor, activity_source = _activity_factor(user.activity_level, steps_avg)
+    formula_tdee = msj_bmr * activity_factor
+
+    # Physiological sanity bounds — a formula TDEE outside 1,200–4,500 kcal
+    # implies a bad input (e.g. a mis-entered height). Clamp and flag.
     _TDEE_MIN, _TDEE_MAX = 1_200.0, 4_500.0
-    tdee_clamped = not (_TDEE_MIN <= tdee <= _TDEE_MAX)
+    tdee_clamped = not (_TDEE_MIN <= formula_tdee <= _TDEE_MAX)
     if tdee_clamped:
-        logger.warning("TDEE %s out of physiological range for user %s — clamping", round(tdee), user.id)
-        tdee = max(_TDEE_MIN, min(_TDEE_MAX, tdee))
+        logger.warning("Formula TDEE %s out of physiological range for user %s — clamping", round(formula_tdee), user.id)
+        formula_tdee = max(_TDEE_MIN, min(_TDEE_MAX, formula_tdee))
+
+    tdee = formula_tdee
+
+    # Watch cross-check — surface (don't use) the measured burn, and warn when
+    # it runs well above the formula so the user understands the divergence.
+    measured_tdee = bmr_avg + active_avg if bmr_avg > 0 else None
+    watch_overreport = bool(measured_tdee and measured_tdee > formula_tdee * 1.20)
 
     # Calorie target
-    if tdee < 500 or data_days < 2:
-        cal_target = 2000.0
-        mode = "insufficient_data"
-    elif target_weight_kg and current_weight_kg and target_weight_kg < current_weight_kg - 1.0:
-        cal_target = round((tdee - 400) / 50) * 50  # ~0.5 kg/week deficit
+    if target_weight_kg and target_weight_kg < current_weight_kg - 1.0:
+        cal_target = round((tdee - 500) / 50) * 50  # ~500 kcal/day deficit ≈ 0.45 kg (1 lb)/week
         mode = "deficit"
     else:
         cal_target = round(tdee / 50) * 50
         mode = "maintenance"
+
+    # Mayo-style minimum — never recommend below the clinically advised floor.
+    cal_floor = 1_500.0 if sex == "male" else 1_200.0
+    cal_target = max(cal_floor, cal_target)
 
     # Sat fat: ACC/AHA <6% of calories for LDL reduction, <7% general
     sat_fat_pct = 0.06 if target_ldl else 0.07
@@ -156,24 +230,29 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     sol_fiber = 20.0 if target_ldl else 12.0
 
     # Protein floor based on weight and activity
-    protein_g: int | None = None
-    if current_weight_kg:
-        if mode == "deficit":
-            protein_g = round(current_weight_kg * 1.4)
-        elif steps_avg > 7500:
-            protein_g = round(current_weight_kg * 1.2)
-        else:
-            protein_g = round(current_weight_kg * 0.8)
+    if mode == "deficit":
+        protein_g: int | None = round(current_weight_kg * 1.4)
+    elif steps_avg > 7500:
+        protein_g = round(current_weight_kg * 1.2)
+    else:
+        protein_g = round(current_weight_kg * 0.8)
 
     basis = {
-        "tdee_kcal": round(tdee) if tdee >= 500 else None,
+        "tdee_kcal": round(tdee),
+        "tdee_source": "mifflin_st_jeor",
+        "mifflin_bmr": round(msj_bmr),
+        "activity_factor": activity_factor,
+        "activity_source": activity_source,
+        "measured_tdee_kcal": round(measured_tdee) if measured_tdee else None,
         "bmr_7d_avg": round(bmr_avg) if bmr_avg > 0 else None,
         "active_7d_avg": round(active_avg) if active_avg > 0 else None,
-        "current_weight_kg": round(current_weight_kg, 1) if current_weight_kg else None,
+        "current_weight_kg": round(current_weight_kg, 1),
         "avg_steps_7d": round(steps_avg) if steps_avg > 0 else None,
+        "age": age,
         "data_days": data_days,
         "mode": mode,
         "data_quality_warning": tdee_clamped or None,
+        "watch_overreport_warning": watch_overreport or None,
     }
 
     # LLM rationale — non-fatal, best-effort
@@ -181,16 +260,22 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     try:
         from luma.services.llm_client import call_llm
 
-        parts = []
-        if tdee >= 500:
-            parts.append(f"7-day average TDEE {round(tdee)} kcal (BMR {round(bmr_avg)} + active {round(active_avg)})")
-        if current_weight_kg and target_weight_kg:
-            parts.append(f"current weight {current_weight_kg:.1f} kg, target {target_weight_kg:.1f} kg → {mode} mode")
+        parts = [
+            f"Mifflin–St Jeor BMR {round(msj_bmr)} kcal (age {age}, {sex}, {height_cm:.0f} cm, {current_weight_kg:.1f} kg)",
+            f"activity factor {activity_factor} ({activity_source}) → maintenance TDEE {round(tdee)} kcal",
+        ]
+        if target_weight_kg:
+            parts.append(f"target weight {target_weight_kg:.1f} kg → {mode} mode")
         if target_ldl:
             parts.append(f"LDL goal {target_ldl} mg/dL")
         if dietary_pattern:
             parts.append(f"dietary pattern: {dietary_pattern}")
-        context_str = "; ".join(parts) if parts else "limited biometric data available"
+        if watch_overreport and measured_tdee:
+            parts.append(
+                f"(Apple Watch estimated {round(measured_tdee)} kcal/day burned, but that over-reports, "
+                "so the formula estimate is used instead)"
+            )
+        context_str = "; ".join(parts)
 
         rec_str = (
             f"{int(cal_target)} kcal/day, {sat_fat_max}g sat fat max, "
@@ -206,7 +291,7 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
                 {
                     "role": "system",
                     "content": (
-                        "You are a registered dietitian assistant. Given a user's biometric data and "
+                        "You are a registered dietitian assistant. Given a user's profile and "
                         "the nutrition targets calculated from it, write exactly 2-3 sentences explaining "
                         "why these specific targets make sense for this person. Be precise — cite actual "
                         "numbers. No markdown, no bullet points, no medical disclaimers."
@@ -218,20 +303,30 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
                 },
             ],
             temperature=0.3,
-            max_tokens=320,
-            timeout=20.0,
+            # Reasoning models (e.g. gemini-3.5-flash) spend part of the token
+            # budget on hidden thinking, so a tight ceiling clips the visible
+            # answer. Keep effort low and the ceiling generous — actual usage
+            # for 2-3 sentences stays small, this is only headroom. drop_params
+            # lets providers that don't support reasoning_effort ignore it.
+            max_tokens=2048,
+            reasoning_effort="low",
+            drop_params=True,
+            timeout=30.0,
         )
         rationale = (resp.choices[0].message.content or "").strip() or None
-        # If the model hit the token ceiling it stops mid-sentence (e.g.
-        # "…A daily target of 4,1"). Rendering that dangling fragment is the
-        # actual user-visible defect, so drop the trailing incomplete sentence
-        # rather than show a clipped clause.
+        # If the model still stops mid-sentence (e.g. "…A daily target of 4,1"),
+        # trim back to the last complete sentence. Only null the rationale out
+        # when there's genuinely no complete sentence to keep — otherwise a
+        # perfectly good paragraph that simply lacked terminal punctuation (or
+        # came back from a reasoning model) would vanish, which is the bug we're
+        # fixing here.
         if rationale and (
             getattr(resp.choices[0], "finish_reason", None) == "length"
             or rationale[-1] not in ".!?"
         ):
             cutoff = max(rationale.rfind(c) for c in ".!?")
-            rationale = rationale[: cutoff + 1].strip() if cutoff != -1 else None
+            if cutoff != -1:
+                rationale = rationale[: cutoff + 1].strip()
     except Exception:
         logger.warning("Goal recommendation rationale LLM call failed — omitting rationale")
 
