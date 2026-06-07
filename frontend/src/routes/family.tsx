@@ -54,7 +54,6 @@ export default function FamilyRoute() {
   if (view === 'accept' && inviteToken) {
     return (
       <AcceptView
-        token={inviteToken}
         isPending={acceptMutation.isPending}
         error={error}
         onAccept={() => acceptMutation.mutate(inviteToken)}
@@ -170,13 +169,11 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
 }
 
 function AcceptView({
-  token,
   isPending,
   error,
   onAccept,
   onDecline,
 }: {
-  token: string
   isPending: boolean
   error: string | null
   onAccept: () => void
