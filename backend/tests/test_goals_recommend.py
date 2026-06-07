@@ -20,13 +20,15 @@ def test_mifflin_st_jeor_sex_term_difference():
 
 
 def test_activity_factor_trusts_measured_steps_over_stale_profile():
-    # 10k steps but "sedentary" self-report: objective data wins.
-    assert _activity_factor("sedentary", 10000, steps_days=7) == (1.725, "steps")
+    # 10k steps but "sedentary" self-report: objective data wins (conservatively).
+    assert _activity_factor("sedentary", 10000, steps_days=7) == (1.55, "steps")
     assert _activity_factor("very_active", 3000, steps_days=7) == (1.2, "steps")
 
 
-def test_activity_factor_steps_ladder():
+def test_activity_factor_steps_ladder_is_conservative():
+    # 1.725 now requires >=12k steps; a typical 10k lands at moderate (1.55).
     assert _activity_factor(None, 12000, steps_days=5) == (1.725, "steps")
+    assert _activity_factor(None, 10000, steps_days=5) == (1.55, "steps")
     assert _activity_factor(None, 8000, steps_days=5) == (1.55, "steps")
     assert _activity_factor(None, 6000, steps_days=5) == (1.375, "steps")
     assert _activity_factor(None, 3000, steps_days=5) == (1.2, "steps")
@@ -59,8 +61,8 @@ def test_example_active_woman_not_underfed():
     height_cm = 70 * 2.54
     bmr = _mifflin_st_jeor_bmr(weight_kg, height_cm, 28, "female")
     factor, source = _activity_factor("sedentary", 10000, steps_days=7)
-    assert source == "steps" and factor == 1.725
+    assert source == "steps" and factor == 1.55
     tdee = bmr * factor
     target = max(1200.0, round((tdee - 500) / 50) * 50)  # deficit branch + female floor
-    assert target == 2450
+    assert target == 2150
     assert target > bmr  # not eating below resting metabolism

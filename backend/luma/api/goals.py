@@ -84,9 +84,14 @@ _MIN_STEP_DAYS = 3
 
 
 def _steps_factor(steps_avg: float) -> float:
-    """Map a 7-day average daily step count to a Mifflin–St Jeor multiplier
-    (Tudor-Locke step bands → activity tiers)."""
-    if steps_avg >= 10_000:
+    """Map a 7-day average daily step count to a Mifflin–St Jeor multiplier.
+
+    Deliberately conservative for weight loss: we'd rather slightly under-state
+    activity (and bank a real deficit) than over-state it and stall progress,
+    so the higher tiers demand more steps than a generic TDEE estimator would.
+    A typical 10k-steps/day lands at 'moderate' (1.55), not 'very active'.
+    """
+    if steps_avg >= 12_000:
         return 1.725
     if steps_avg >= 7_500:
         return 1.55
