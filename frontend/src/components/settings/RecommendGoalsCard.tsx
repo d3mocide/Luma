@@ -1,11 +1,30 @@
 import { useState } from 'react'
 import { api } from '../../lib/api'
-import type { GoalRecommendation } from './types'
+import {
+  type GoalRecommendation,
+  type GoalRecommendationResponse,
+  isProfileIncomplete,
+  MISSING_FIELD_LABELS,
+} from './types'
 
 const MODE_LABEL: Record<GoalRecommendation['basis']['mode'], string> = {
   deficit: 'Weight-loss mode',
   maintenance: 'Maintenance',
   insufficient_data: 'Estimated — limited data',
+}
+
+const ACTIVITY_LABEL: Record<string, string> = {
+  sedentary: 'Sedentary',
+  lightly_active: 'Lightly active',
+  moderately_active: 'Moderately active',
+  very_active: 'Very active',
+}
+
+function formatMissingFields(fields: string[]): string {
+  const labels = fields.map((f) => MISSING_FIELD_LABELS[f] ?? f.replace(/_/g, ' '))
+  if (labels.length === 1) return labels[0]
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`
+  return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`
 }
 
 function RecPill({ label, value }: { label: string; value: string }) {
@@ -27,15 +46,22 @@ type Props = {
 
 export function RecommendGoalsCard({ onApply }: Props) {
   const [rec, setRec] = useState<GoalRecommendation | null>(null)
+  const [missingFields, setMissingFields] = useState<string[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetch = async () => {
     setLoading(true)
     setError(null)
+    setMissingFields(null)
     try {
-      const data = await api.get<GoalRecommendation>('/goals/recommend')
-      setRec(data)
+      const data = await api.get<GoalRecommendationResponse>('/goals/recommend')
+      if (isProfileIncomplete(data)) {
+        setRec(null)
+        setMissingFields(data.missing_fields)
+      } else {
+        setRec(data)
+      }
     } catch (err) {
       setError((err as Error)?.message ?? 'Could not calculate recommendations.')
     } finally {
@@ -50,8 +76,8 @@ export function RecommendGoalsCard({ onApply }: Props) {
           <div className="eyebrow" style={{ marginBottom: 8 }}>Suggested Targets</div>
           <p style={{ color: 'var(--fg-tertiary)', fontSize: 14, margin: 0 }}>
             {rec
-              ? `Based on ${rec.basis.data_days}-day Apple Watch average · ${MODE_LABEL[rec.basis.mode]}`
-              : 'Auto-calculate targets from your Apple Watch biometric data.'}
+              ? `Based on your profile (Mifflin–St Jeor) · ${MODE_LABEL[rec.basis.mode]}`
+              : 'Calculate targets from your profile, cross-checked against your Apple Watch data.'}
           </p>
         </div>
 
@@ -73,6 +99,14 @@ export function RecommendGoalsCard({ onApply }: Props) {
         <p style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--bad)' }}>{error}</p>
       )}
 
+      {missingFields && (
+        <p style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--sun-400)', lineHeight: 1.5 }}>
+          Add your {formatMissingFields(missingFields)} in the Profile section above so we can
+          calculate accurate targets. We use the Mifflin–St Jeor formula (the same one the Mayo
+          Clinic calculator uses) rather than raw watch calories, which tend to run high.
+        </p>
+      )}
+
       {rec && (
         <>
           <div className="settings-goals-summary">
@@ -86,7 +120,22 @@ export function RecommendGoalsCard({ onApply }: Props) {
 
           {rec.basis.data_quality_warning && (
             <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--sun-400)', lineHeight: 1.5 }}>
-              Biometric data quality issue detected — possibly from a bulk historical export creating duplicate readings. Targets were clamped to a safe range. Clear and re-sync your health data for a more accurate result.
+              Your profile produced an out-of-range estimate, so targets were clamped to a safe range. Double-check your height, weight, and birth year for a more accurate result.
+            </p>
+          )}
+
+          {rec.basis.activity_conflict && rec.basis.avg_steps_7d != null && (
+            <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--sun-400)', lineHeight: 1.5 }}>
+              We based this on your measured activity (~{rec.basis.avg_steps_7d.toLocaleString()} steps/day)
+              {rec.basis.stated_activity_level
+                ? `, not your profile's "${ACTIVITY_LABEL[rec.basis.stated_activity_level] ?? rec.basis.stated_activity_level}" setting, which looks out of date`
+                : ''}. Update your profile if that's not right.
+            </p>
+          )}
+
+          {rec.basis.watch_overreport_warning && rec.basis.measured_tdee_kcal != null && (
+            <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--fg-quiet)', lineHeight: 1.5 }}>
+              Heads up: your Apple Watch estimates ~{rec.basis.measured_tdee_kcal.toLocaleString()} kcal/day burned, which runs higher than the {rec.basis.tdee_kcal?.toLocaleString()} kcal formula estimate we used. Apple Watch active energy commonly over-reports, so these targets are based on the formula to avoid setting calories too high.
             </p>
           )}
 

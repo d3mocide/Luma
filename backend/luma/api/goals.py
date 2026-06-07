@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert
 from luma.config import settings
 from luma.db.models import Goal, Preference, User
 from luma.deps import CurrentUser, DbDep
+from luma.services.body_metrics import _ACTIVITY_FACTORS, _activity_factor, _mifflin_st_jeor_bmr
 from luma.services.hae_metrics import tracker as hae_metrics_tracker
 from luma.services.llm_metrics import tracker as llm_metrics_tracker
 
@@ -83,7 +84,8 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     energy_result = await db.execute(
         text("""
             SELECT metric,
-                   PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY daily_total) AS median_daily
+                   PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY daily_total) AS median_daily,
+                   COUNT(*) AS day_count
             FROM (
                 SELECT metric,
                        date_trunc('day', ts AT TIME ZONE 'UTC') AS day,
@@ -98,7 +100,11 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         """),
         {"uid": str(user.id), "start": start_ts, "end": end_ts},
     )
-    energy_avgs: dict[str, float] = {row.metric: float(row.median_daily) for row in energy_result}
+    energy_avgs: dict[str, float] = {}
+    energy_days: dict[str, int] = {}
+    for row in energy_result:
+        energy_avgs[row.metric] = float(row.median_daily)
+        energy_days[row.metric] = int(row.day_count)
 
     data_days_result = await db.execute(
         text("""
@@ -127,26 +133,74 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     bmr_avg = energy_avgs.get("bmr_kcal", 0.0)
     active_avg = energy_avgs.get("active_kcal", 0.0)
     steps_avg = energy_avgs.get("steps", 0.0)
-    tdee = bmr_avg + active_avg
 
-    # Physiological sanity bounds — anything outside 1,200–4,500 kcal indicates
-    # bad data (e.g. bulk export duplication). Flag it and fall back to defaults.
+    # ── Profile-driven (Mifflin–St Jeor) basis ──────────────────────────────
+    # We compute TDEE from the user's profile rather than from measured watch
+    # burn: Apple Watch active-energy is a known over-reporter, so a measured
+    # TDEE inflates the target (the 3,000 vs 2,000 kcal complaint). The watch
+    # numbers are kept only as a cross-check. The formula needs age, sex,
+    # height and a current weight — without them we can't sanity-check anything,
+    # so block and tell the client exactly which fields to collect.
+    age: int | None = (today_dt.year - user.birth_year) if user.birth_year else None
+    sex: str | None = user.biological_sex if user.biological_sex in ("male", "female") else None
+    height_cm: float | None = float(user.height_cm) if user.height_cm else None
+
+    missing_fields: list[str] = []
+    if age is None:
+        missing_fields.append("birth_year")
+    if sex is None:
+        missing_fields.append("biological_sex")
+    if height_cm is None:
+        missing_fields.append("height_cm")
+    if current_weight_kg is None:
+        missing_fields.append("weight")
+    if missing_fields:
+        return {"profile_incomplete": True, "missing_fields": missing_fields}
+
+    # mypy/readability: all four are guaranteed non-None past the guard above.
+    assert age is not None and sex is not None and height_cm is not None and current_weight_kg is not None
+
+    msj_bmr = _mifflin_st_jeor_bmr(current_weight_kg, height_cm, age, sex)
+    steps_days = energy_days.get("steps", 0)
+    activity_factor, activity_source = _activity_factor(user.activity_level, steps_avg, steps_days)
+
+    # Conflict = we trusted measured steps but the user's self-reported level
+    # disagrees by ≥1 tier. Surface it so they can fix a stale profile setting.
+    stated_factor = _ACTIVITY_FACTORS.get(user.activity_level or "")
+    activity_conflict = bool(
+        activity_source == "steps"
+        and stated_factor is not None
+        and abs(stated_factor - activity_factor) >= 0.15
+    )
+
+    formula_tdee = msj_bmr * activity_factor
+
+    # Physiological sanity bounds — a formula TDEE outside 1,200–4,500 kcal
+    # implies a bad input (e.g. a mis-entered height). Clamp and flag.
     _TDEE_MIN, _TDEE_MAX = 1_200.0, 4_500.0
-    tdee_clamped = not (_TDEE_MIN <= tdee <= _TDEE_MAX)
+    tdee_clamped = not (_TDEE_MIN <= formula_tdee <= _TDEE_MAX)
     if tdee_clamped:
-        logger.warning("TDEE %s out of physiological range for user %s — clamping", round(tdee), user.id)
-        tdee = max(_TDEE_MIN, min(_TDEE_MAX, tdee))
+        logger.warning("Formula TDEE %s out of physiological range for user %s — clamping", round(formula_tdee), user.id)
+        formula_tdee = max(_TDEE_MIN, min(_TDEE_MAX, formula_tdee))
+
+    tdee = formula_tdee
+
+    # Watch cross-check — surface (don't use) the measured burn, and warn when
+    # it runs well above the formula so the user understands the divergence.
+    measured_tdee = bmr_avg + active_avg if bmr_avg > 0 else None
+    watch_overreport = bool(measured_tdee and measured_tdee > formula_tdee * 1.20)
 
     # Calorie target
-    if tdee < 500 or data_days < 2:
-        cal_target = 2000.0
-        mode = "insufficient_data"
-    elif target_weight_kg and current_weight_kg and target_weight_kg < current_weight_kg - 1.0:
-        cal_target = round((tdee - 400) / 50) * 50  # ~0.5 kg/week deficit
+    if target_weight_kg and target_weight_kg < current_weight_kg - 1.0:
+        cal_target = round((tdee - 500) / 50) * 50  # ~500 kcal/day deficit ≈ 0.45 kg (1 lb)/week
         mode = "deficit"
     else:
         cal_target = round(tdee / 50) * 50
         mode = "maintenance"
+
+    # Mayo-style minimum — never recommend below the clinically advised floor.
+    cal_floor = 1_500.0 if sex == "male" else 1_200.0
+    cal_target = max(cal_floor, cal_target)
 
     # Sat fat: ACC/AHA <6% of calories for LDL reduction, <7% general
     sat_fat_pct = 0.06 if target_ldl else 0.07
@@ -156,24 +210,31 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     sol_fiber = 20.0 if target_ldl else 12.0
 
     # Protein floor based on weight and activity
-    protein_g: int | None = None
-    if current_weight_kg:
-        if mode == "deficit":
-            protein_g = round(current_weight_kg * 1.4)
-        elif steps_avg > 7500:
-            protein_g = round(current_weight_kg * 1.2)
-        else:
-            protein_g = round(current_weight_kg * 0.8)
+    if mode == "deficit":
+        protein_g: int | None = round(current_weight_kg * 1.4)
+    elif steps_avg > 7500:
+        protein_g = round(current_weight_kg * 1.2)
+    else:
+        protein_g = round(current_weight_kg * 0.8)
 
     basis = {
-        "tdee_kcal": round(tdee) if tdee >= 500 else None,
+        "tdee_kcal": round(tdee),
+        "tdee_source": "mifflin_st_jeor",
+        "mifflin_bmr": round(msj_bmr),
+        "activity_factor": activity_factor,
+        "activity_source": activity_source,
+        "stated_activity_level": user.activity_level,
+        "activity_conflict": activity_conflict or None,
+        "measured_tdee_kcal": round(measured_tdee) if measured_tdee else None,
         "bmr_7d_avg": round(bmr_avg) if bmr_avg > 0 else None,
         "active_7d_avg": round(active_avg) if active_avg > 0 else None,
-        "current_weight_kg": round(current_weight_kg, 1) if current_weight_kg else None,
+        "current_weight_kg": round(current_weight_kg, 1),
         "avg_steps_7d": round(steps_avg) if steps_avg > 0 else None,
+        "age": age,
         "data_days": data_days,
         "mode": mode,
         "data_quality_warning": tdee_clamped or None,
+        "watch_overreport_warning": watch_overreport or None,
     }
 
     # LLM rationale — non-fatal, best-effort
@@ -181,16 +242,22 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     try:
         from luma.services.llm_client import call_llm
 
-        parts = []
-        if tdee >= 500:
-            parts.append(f"7-day average TDEE {round(tdee)} kcal (BMR {round(bmr_avg)} + active {round(active_avg)})")
-        if current_weight_kg and target_weight_kg:
-            parts.append(f"current weight {current_weight_kg:.1f} kg, target {target_weight_kg:.1f} kg → {mode} mode")
+        parts = [
+            f"Mifflin–St Jeor BMR {round(msj_bmr)} kcal (age {age}, {sex}, {height_cm:.0f} cm, {current_weight_kg:.1f} kg)",
+            f"activity factor {activity_factor} ({activity_source}) → maintenance TDEE {round(tdee)} kcal",
+        ]
+        if target_weight_kg:
+            parts.append(f"target weight {target_weight_kg:.1f} kg → {mode} mode")
         if target_ldl:
             parts.append(f"LDL goal {target_ldl} mg/dL")
         if dietary_pattern:
             parts.append(f"dietary pattern: {dietary_pattern}")
-        context_str = "; ".join(parts) if parts else "limited biometric data available"
+        if watch_overreport and measured_tdee:
+            parts.append(
+                f"(Apple Watch estimated {round(measured_tdee)} kcal/day burned, but that over-reports, "
+                "so the formula estimate is used instead)"
+            )
+        context_str = "; ".join(parts)
 
         rec_str = (
             f"{int(cal_target)} kcal/day, {sat_fat_max}g sat fat max, "
@@ -206,7 +273,7 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
                 {
                     "role": "system",
                     "content": (
-                        "You are a registered dietitian assistant. Given a user's biometric data and "
+                        "You are a registered dietitian assistant. Given a user's profile and "
                         "the nutrition targets calculated from it, write exactly 2-3 sentences explaining "
                         "why these specific targets make sense for this person. Be precise — cite actual "
                         "numbers. No markdown, no bullet points, no medical disclaimers."
@@ -218,20 +285,26 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
                 },
             ],
             temperature=0.3,
-            max_tokens=320,
-            timeout=20.0,
+            # No max_tokens — matching the other agents (insight_narrator, coach,
+            # meal_planner). A tight ceiling was what clipped reasoning models
+            # mid-thought; letting the call finish naturally is both the fix and
+            # the cheap option, since a 2-3 sentence answer is only ~80 tokens.
+            timeout=30.0,
         )
         rationale = (resp.choices[0].message.content or "").strip() or None
-        # If the model hit the token ceiling it stops mid-sentence (e.g.
-        # "…A daily target of 4,1"). Rendering that dangling fragment is the
-        # actual user-visible defect, so drop the trailing incomplete sentence
-        # rather than show a clipped clause.
+        # If the model still stops mid-sentence (e.g. "…A daily target of 4,1"),
+        # trim back to the last complete sentence. Only null the rationale out
+        # when there's genuinely no complete sentence to keep — otherwise a
+        # perfectly good paragraph that simply lacked terminal punctuation (or
+        # came back from a reasoning model) would vanish, which is the bug we're
+        # fixing here.
         if rationale and (
             getattr(resp.choices[0], "finish_reason", None) == "length"
             or rationale[-1] not in ".!?"
         ):
             cutoff = max(rationale.rfind(c) for c in ".!?")
-            rationale = rationale[: cutoff + 1].strip() if cutoff != -1 else None
+            if cutoff != -1:
+                rationale = rationale[: cutoff + 1].strip()
     except Exception:
         logger.warning("Goal recommendation rationale LLM call failed — omitting rationale")
 
