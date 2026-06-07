@@ -1,5 +1,10 @@
 """Unit tests for the Mifflin–St Jeor goal-recommendation math."""
-from luma.services.body_metrics import _activity_factor, _mifflin_st_jeor_bmr, steps_to_activity_level
+from luma.services.body_metrics import (
+    _activity_factor,
+    _mifflin_st_jeor_bmr,
+    resolve_synced_activity_level,
+    steps_to_activity_level,
+)
 
 
 def test_mifflin_st_jeor_male():
@@ -51,6 +56,28 @@ def test_steps_to_activity_level_maps_to_profile_enums():
     assert steps_to_activity_level(6000) == "lightly_active"
     assert steps_to_activity_level(10000) == "moderately_active"
     assert steps_to_activity_level(13000) == "very_active"
+
+
+def test_synced_level_skips_on_sparse_step_data():
+    assert resolve_synced_activity_level(10000, steps_days=2, stated_level="sedentary", weekly_exercise_min=0) is None
+    assert resolve_synced_activity_level(0, steps_days=7, stated_level="very_active", weekly_exercise_min=999) is None
+
+
+def test_synced_level_overwrites_stale_profile_without_exercise():
+    # 3k steps, profile says "very_active", no real exercise → downgrade.
+    assert resolve_synced_activity_level(3000, steps_days=7, stated_level="very_active", weekly_exercise_min=0) == "sedentary"
+    # Steps exceed the self-report → upgrade regardless of exercise.
+    assert resolve_synced_activity_level(13000, steps_days=7, stated_level="sedentary", weekly_exercise_min=0) == "very_active"
+
+
+def test_synced_level_guards_cyclist_with_low_steps():
+    # Cyclist: few steps but self-reports very_active and logs >=150 min/week
+    # exercise → keep the higher self-report, don't downgrade.
+    assert resolve_synced_activity_level(2500, steps_days=7, stated_level="very_active", weekly_exercise_min=200) == "very_active"
+    # Same low steps but below the exercise threshold → downgrade applies.
+    assert resolve_synced_activity_level(2500, steps_days=7, stated_level="very_active", weekly_exercise_min=120) == "sedentary"
+    # Guard never lowers a self-report; if steps already imply more, steps win.
+    assert resolve_synced_activity_level(13000, steps_days=7, stated_level="moderately_active", weekly_exercise_min=300) == "very_active"
 
 
 def test_formula_tdee_stays_near_mayo_not_inflated_watch():

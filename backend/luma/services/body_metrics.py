@@ -22,6 +22,19 @@ _LEVEL_FOR_FACTOR: dict[float, str] = {v: k for k, v in _ACTIVITY_FACTORS.items(
 # self-reported activity level.
 _MIN_STEP_DAYS = 3
 
+# Ordering of the activity tiers, low → high, for comparing measured vs stated.
+_LEVEL_RANK: dict[str, int] = {
+    "sedentary": 0,
+    "lightly_active": 1,
+    "moderately_active": 2,
+    "very_active": 3,
+}
+
+# Weekly Apple "exercise minutes" that mark a regular exerciser (WHO's 150
+# min/week moderate-activity guideline). Above this we won't auto-downgrade
+# below a higher self-reported level, since steps miss non-step workouts.
+_EXERCISE_GUARD_WEEKLY_MIN = 150.0
+
 
 def _steps_factor(steps_avg: float) -> float:
     """Map a 7-day average daily step count to a Mifflin–St Jeor multiplier.
@@ -43,6 +56,34 @@ def _steps_factor(steps_avg: float) -> float:
 def steps_to_activity_level(steps_avg: float) -> str:
     """Step average → stored activity_level enum (e.g. 'moderately_active')."""
     return _LEVEL_FOR_FACTOR[_steps_factor(steps_avg)]
+
+
+def resolve_synced_activity_level(
+    steps_avg: float,
+    steps_days: int,
+    stated_level: str | None,
+    weekly_exercise_min: float,
+) -> str | None:
+    """Decide what activity_level the background sync should write.
+
+    Returns the level to store, or None to leave the profile untouched (we only
+    sync when step data is robust, so we never clobber a profile on sparse data).
+
+    Guard: steps miss non-step exercise (cycling, swimming, rowing), so a
+    regular exerciser can log few steps. When the user's self-reported level is
+    higher than the step-derived one *and* their weekly exercise minutes show
+    real activity, keep the higher self-report rather than auto-downgrading.
+    """
+    if steps_days < _MIN_STEP_DAYS or steps_avg <= 0:
+        return None
+    measured = steps_to_activity_level(steps_avg)
+    if (
+        stated_level in _LEVEL_RANK
+        and _LEVEL_RANK[stated_level] > _LEVEL_RANK[measured]
+        and weekly_exercise_min >= _EXERCISE_GUARD_WEEKLY_MIN
+    ):
+        return stated_level
+    return measured
 
 
 def _activity_factor(activity_level: str | None, steps_avg: float, steps_days: int) -> tuple[float, str]:

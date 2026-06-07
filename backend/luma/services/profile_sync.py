@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from luma.config import settings
 from luma.db.models import User
-from luma.services.body_metrics import _MIN_STEP_DAYS, steps_to_activity_level
+from luma.services.body_metrics import resolve_synced_activity_level
 
 logger = logging.getLogger(__name__)
 
@@ -57,14 +57,31 @@ async def sync_user_profile(user_id: str, db: AsyncSession) -> dict[str, str | N
     steps_avg = float(steps_row.median_daily) if steps_row and steps_row.median_daily is not None else 0.0
     steps_days = int(steps_row.day_count) if steps_row and steps_row.day_count else 0
 
+    # Weekly Apple exercise minutes — corroborates non-step activity (cycling,
+    # swimming) so we don't downgrade a genuine exerciser who logs few steps.
+    weekly_exercise_min = float(
+        (
+            await db.execute(
+                text("""
+                    SELECT COALESCE(SUM(value), 0)
+                    FROM biometrics
+                    WHERE user_id = :uid AND metric = 'exercise_min'
+                      AND ts >= :start AND ts < :end
+                """),
+                {"uid": str(user_id), "start": start_ts, "end": end_ts},
+            )
+        ).scalar()
+        or 0.0
+    )
+
     changes: dict[str, str | None] = {}
 
-    # activity_level — fully automatic overwrite when step data is robust.
-    if steps_days >= _MIN_STEP_DAYS and steps_avg > 0:
-        level = steps_to_activity_level(steps_avg)
-        if user.activity_level != level:
-            changes["activity_level"] = f"{user.activity_level} → {level}"
-            user.activity_level = level
+    # activity_level — fully automatic overwrite when step data is robust, with
+    # an exercise-minutes guard against downgrading regular non-step exercisers.
+    level = resolve_synced_activity_level(steps_avg, steps_days, user.activity_level, weekly_exercise_min)
+    if level is not None and user.activity_level != level:
+        changes["activity_level"] = f"{user.activity_level} → {level}"
+        user.activity_level = level
 
     # height_cm — fill only when the profile value is missing.
     if user.height_cm is None:
