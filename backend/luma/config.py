@@ -66,10 +66,12 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = "noreply@example.com"
     smtp_use_tls: bool = True
-    # M365 OAuth — leave all three blank to use Basic Auth instead
-    smtp_tenant_id: str = ""
-    smtp_client_id: str = ""
-    smtp_client_secret: str = ""
+    # OAuth 2.0 Client Credentials SMTP — leave smtp_oauth_token_url blank to use Basic Auth instead.
+    # Works with any provider that supports SASL XOAUTH2 (M365, Google Workspace, etc.).
+    smtp_oauth_token_url: str = ""
+    smtp_oauth_client_id: str = ""
+    smtp_oauth_client_secret: str = ""
+    smtp_oauth_scope: str = ""
 
     # Base URL used to build links in outbound emails (no trailing slash).
     app_base_url: str = "http://localhost:5173"

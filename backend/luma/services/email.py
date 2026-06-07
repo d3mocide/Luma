@@ -8,29 +8,27 @@ from luma.config import settings
 
 logger = logging.getLogger(__name__)
 
-_M365_TOKEN_URL = "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
-_M365_SMTP_SCOPE = "https://outlook.office365.com/.default"
 
-
-async def _acquire_m365_token() -> str:
+async def _acquire_oauth_token() -> str:
     """
-    Client-credentials token fetch for M365 SMTP AUTH.
-    Requires SMTP.SendMail application permission with admin consent in Azure AD.
+    Client-credentials token fetch for SASL XOAUTH2 SMTP.
+    Works with any OAuth 2.0 provider (M365, Google Workspace, etc.).
+    Requires smtp_oauth_token_url, smtp_oauth_client_id, smtp_oauth_client_secret,
+    and smtp_oauth_scope to be set.
     """
-    url = _M365_TOKEN_URL.format(tenant_id=settings.smtp_tenant_id)
     async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.post(url, data={
+        resp = await client.post(settings.smtp_oauth_token_url, data={
             "grant_type": "client_credentials",
-            "client_id": settings.smtp_client_id,
-            "client_secret": settings.smtp_client_secret,
-            "scope": _M365_SMTP_SCOPE,
+            "client_id": settings.smtp_oauth_client_id,
+            "client_secret": settings.smtp_oauth_client_secret,
+            "scope": settings.smtp_oauth_scope,
         })
         resp.raise_for_status()
         data = resp.json()
 
     if "access_token" not in data:
         raise RuntimeError(
-            f"M365 token error: {data.get('error_description', data.get('error', data))}"
+            f"OAuth token error: {data.get('error_description', data.get('error', data))}"
         )
     return data["access_token"]
 
@@ -44,11 +42,11 @@ def _xoauth2_string(user: str, access_token: str) -> bytes:
     return base64.b64encode(payload.encode())
 
 
-async def _send_m365_oauth(msg: EmailMessage) -> None:
-    """Send via M365 smtp.office365.com using SASL XOAUTH2."""
+async def _send_oauth(msg: EmailMessage) -> None:
+    """Send via SMTP using SASL XOAUTH2 with any OAuth 2.0 provider."""
     import aiosmtplib  # type: ignore[import]
 
-    access_token = await _acquire_m365_token()
+    access_token = await _acquire_oauth_token()
     xoauth2 = _xoauth2_string(settings.smtp_from, access_token)
 
     smtp = aiosmtplib.SMTP(
@@ -62,13 +60,13 @@ async def _send_m365_oauth(msg: EmailMessage) -> None:
     # AUTH XOAUTH2 <base64-initial-response>
     code, response = await smtp.execute_command(b"AUTH", b"XOAUTH2 " + xoauth2)
     if code != 235:
-        # On failure M365 returns a base64-encoded JSON error as the continuation
+        # On failure some providers return a base64-encoded JSON error as the continuation
         try:
             detail = base64.b64decode(response).decode()
         except Exception:
             detail = response.decode(errors="replace")
         await smtp.quit()
-        raise RuntimeError(f"M365 XOAUTH2 auth rejected ({code}): {detail}")
+        raise RuntimeError(f"XOAUTH2 auth rejected ({code}): {detail}")
 
     await smtp.send_message(msg)
     await smtp.quit()
@@ -114,8 +112,8 @@ async def send_family_invite(
     )
 
     try:
-        if settings.smtp_tenant_id:
-            await _send_m365_oauth(msg)
+        if settings.smtp_oauth_token_url:
+            await _send_oauth(msg)
         else:
             await _send_basic_auth(msg)
         logger.info("Invitation email sent to %s", to_email)
