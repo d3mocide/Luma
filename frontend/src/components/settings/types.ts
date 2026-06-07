@@ -149,6 +149,21 @@ export function formatMetricsDate(value: string | null) {
   return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
+export function formatEventTime(value: string | null) {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  const now = new Date()
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  if (sameDay) {
+    return date.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })
+  }
+  return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' })
+}
+
 // ── HAE Diagnostic ────────────────────────────────────────────────────────────
 
 export type HaeDiagnosticStoredMetric = {
