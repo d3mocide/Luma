@@ -48,6 +48,34 @@ class Settings(BaseSettings):
     vapid_public_key: str = ""
     vapid_claims_email: str = "admin@example.com"
 
+    # SMTP — used for family invitation emails.
+    # Leave smtp_host blank to disable email sending (invite tokens still work via manual link share).
+    #
+    # Basic Auth (Mailgun, Postmark, Gmail, etc.):
+    #   Set smtp_host, smtp_port, smtp_user, smtp_password, smtp_from.
+    #   Leave smtp_tenant_id blank.
+    #
+    # Microsoft 365 OAuth (recommended for M365 tenants):
+    #   Set smtp_host=smtp.office365.com, smtp_port=587, smtp_from=<licensed mailbox>.
+    #   Set smtp_tenant_id, smtp_client_id, smtp_client_secret from your Azure AD app registration.
+    #   The app needs the SMTP.SendMail application permission with admin consent.
+    #   Leave smtp_user and smtp_password blank.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "noreply@example.com"
+    smtp_use_tls: bool = True
+    # OAuth 2.0 Client Credentials SMTP — leave smtp_oauth_token_url blank to use Basic Auth instead.
+    # Works with any provider that supports SASL XOAUTH2 (M365, Google Workspace, etc.).
+    smtp_oauth_token_url: str = ""
+    smtp_oauth_client_id: str = ""
+    smtp_oauth_client_secret: str = ""
+    smtp_oauth_scope: str = ""
+
+    # Base URL used to build links in outbound emails (no trailing slash).
+    app_base_url: str = "http://localhost:5173"
+
     server_timezone: str = "UTC"
 
     environment: Literal["development", "production"] = "development"

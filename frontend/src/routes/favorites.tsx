@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { getCurrentSlot } from '../lib/format'
 import type { DraftItem, Favorite, FavoriteItem } from '../components/log-sheet/types'
+import { ShareWithFamilyButton } from '../components/ShareWithFamilyButton'
 
 function mapFavoriteItemToDraft(i: FavoriteItem): DraftItem {
   return {
@@ -256,6 +257,7 @@ export default function FavoritesRoute() {
                         <Heart size={12} strokeWidth={2} />
                         {logFavoriteDirect.isPending && logFavoriteDirect.variables?.id === fav.id ? 'Logging…' : 'Log this'}
                       </button>
+                      <ShareWithFamilyButton resourceType="favorite" resourceId={fav.id} />
                       <button
                         onClick={() => startEdit(fav)}
                         style={{

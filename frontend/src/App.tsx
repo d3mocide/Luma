@@ -9,6 +9,8 @@ import CoachRoute from './routes/coach'
 import SettingsRoute from './routes/settings'
 import LogRoute from './routes/log'
 import FavoritesRoute from './routes/favorites'
+import FamilyRoute from './routes/family'
+import FamilySharedRoute from './routes/family-shared'
 import { OfflineBanner, InstallPrompt } from './components/PwaPrompts'
 
 export default function App() {
@@ -33,6 +35,8 @@ export default function App() {
           <Route path="/settings" element={<SettingsRoute />} />
           <Route path="/log" element={<LogRoute />} />
           <Route path="/favorites" element={<FavoritesRoute />} />
+          <Route path="/family" element={<FamilyRoute />} />
+          <Route path="/family/shared" element={<FamilySharedRoute />} />
         </Route>
       </Routes>
     </BrowserRouter>

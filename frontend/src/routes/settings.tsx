@@ -183,6 +183,75 @@ function AccessDenied() {
   )
 }
 
+// ── Family status sharing card ────────────────────────────────────────────────
+
+interface Preference { kind: string; value: string }
+
+function FamilyStatusCard() {
+  const queryClient = useQueryClient()
+
+  const { data: prefs = [] } = useQuery<Preference[]>({
+    queryKey: ['preferences'],
+    queryFn: () => api.get('/preferences'),
+  })
+
+  const isEnabled = prefs.some((p) => p.kind === 'share_family_status' && p.value === 'true')
+
+  const enableMutation = useMutation({
+    mutationFn: () => api.post('/preferences', { kind: 'share_family_status', value: 'true' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['preferences'] }),
+  })
+
+  const disableMutation = useMutation({
+    mutationFn: () => api.delete(`/preferences/share_family_status/${encodeURIComponent('true')}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['preferences'] }),
+  })
+
+  const isPending = enableMutation.isPending || disableMutation.isPending
+
+  return (
+    <div className="glass settings-card" style={{ padding: 24 }}>
+      <div className="eyebrow" style={{ marginBottom: 12 }}>Family</div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, justifyContent: 'space-between' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg-primary)', marginBottom: 4 }}>
+            Share daily summary
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', lineHeight: 1.5 }}>
+            Let family group members see your daily calorie progress (% of goal). Biometrics and health details are never shared.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => isEnabled ? disableMutation.mutate() : enableMutation.mutate()}
+          disabled={isPending}
+          style={{
+            flexShrink: 0,
+            width: 40, height: 22, borderRadius: 11,
+            background: isEnabled ? 'var(--sky-400)' : 'var(--glass-2)',
+            border: `1px solid ${isEnabled ? 'var(--sky-400)' : 'var(--glass-edge)'}`,
+            cursor: isPending ? 'wait' : 'pointer',
+            position: 'relative',
+            transition: 'background 200ms, border-color 200ms',
+            opacity: isPending ? 0.7 : 1,
+          }}
+          aria-label={isEnabled ? 'Disable daily summary sharing' : 'Enable daily summary sharing'}
+        >
+          <span style={{
+            position: 'absolute',
+            top: 2,
+            left: isEnabled ? 20 : 2,
+            width: 16, height: 16, borderRadius: '50%',
+            background: 'white',
+            transition: 'left 200ms',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+          }} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Tab panels ─────────────────────────────────────────────────────────────────
 
 function AccountTab({
@@ -240,6 +309,7 @@ function AccountTab({
         <div className="settings-order-notifications">
           <NotificationsCard />
         </div>
+        <FamilyStatusCard />
         <div className="settings-order-password">
           <PasswordCard />
         </div>

@@ -4,6 +4,7 @@ import { Plus, Trash2, ChevronLeft, Search, X, Utensils } from 'lucide-react'
 import { api } from '../lib/api'
 import type { Recipe, RecipeIngredient, FoodResult } from '../components/plan/types'
 import { KEY_NUTRIENTS, fmtNutr } from '../components/plan/types'
+import { ShareWithFamilyButton } from '../components/ShareWithFamilyButton'
 
 interface RecipeIngredientDraft {
   food: FoodResult
@@ -187,13 +188,16 @@ function RecipeDetail({ recipe, onBack, onDelete }: { recipe: Recipe; onBack: ()
           </button>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 400, color: 'var(--fg-primary)' }}>{recipe.name}</h2>
         </div>
-        <button
-          className="btn"
-          style={{ color: 'var(--bad)', borderColor: 'rgba(251,113,133,0.3)', padding: '8px 12px' }}
-          onClick={() => { if (confirm('Delete this recipe?')) deleteMutation.mutate() }}
-        >
-          <Trash2 size={13}/>
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <ShareWithFamilyButton resourceType="recipe" resourceId={recipe.id} />
+          <button
+            className="btn"
+            style={{ color: 'var(--bad)', borderColor: 'rgba(251,113,133,0.3)', padding: '8px 12px' }}
+            onClick={() => { if (confirm('Delete this recipe?')) deleteMutation.mutate() }}
+          >
+            <Trash2 size={13}/>
+          </button>
+        </div>
       </div>
 
       {recipe.description && (
@@ -321,11 +325,12 @@ export default function RecipesRoute() {
                 <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--fg-primary)', marginBottom: 2 }}>{r.name}</div>
                 {r.description && <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', lineHeight: 1.4 }}>{r.description}</div>}
               </div>
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0, marginLeft: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 12 }}>
                 {r.prep_minutes != null && (
                   <span style={{ fontSize: 11, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>{r.prep_minutes + (r.cook_minutes ?? 0)} min</span>
                 )}
                 <span style={{ fontSize: 11, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>{r.ingredients.length} ingredients</span>
+                <ShareWithFamilyButton resourceType="recipe" resourceId={r.id} stopPropagation />
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>

@@ -316,3 +316,55 @@ class PushSubscription(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="push_subscriptions")
+
+
+class FamilyGroup(Base):
+    __tablename__ = "family_groups"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(Text, nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    members = relationship("FamilyMember", back_populates="group", cascade="all, delete-orphan")
+    shares = relationship("GroupShare", back_populates="group", cascade="all, delete-orphan")
+
+
+class FamilyMember(Base):
+    __tablename__ = "family_members"
+
+    group_id = Column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    role = Column(Text, nullable=False, default="member", server_default="'member'")
+    joined_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    group = relationship("FamilyGroup", back_populates="members")
+    user = relationship("User")
+
+
+class FamilyInvitation(Base):
+    __tablename__ = "family_invitations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    group_id = Column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), nullable=False)
+    invited_email = Column(CITEXT, nullable=False)
+    invited_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token = Column(Text, unique=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+
+    group = relationship("FamilyGroup")
+
+
+class GroupShare(Base):
+    __tablename__ = "group_shares"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    group_id = Column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), nullable=False)
+    resource_type = Column(Text, nullable=False)  # "recipe" | "favorite" | "plan"
+    resource_id = Column(UUID(as_uuid=True), nullable=False)
+    shared_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    note = Column(Text, nullable=True)
+    shared_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    group = relationship("FamilyGroup", back_populates="shares")
