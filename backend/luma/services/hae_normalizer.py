@@ -16,6 +16,8 @@ HAE_METRIC_MAP: dict[str, str] = {
     "body_mass":                    "weight_kg",
     "body_mass_index":              "bmi",
     "body_fat_percentage":          "body_fat_pct",
+    "height":                       "height_cm",
+    "body_height":                  "height_cm",
     # Cardiovascular
     "heart_rate_variability":       "hrv_ms",
     "resting_heart_rate":           "rhr_bpm",
@@ -83,6 +85,7 @@ _KNOWN_UNITS: dict[str, frozenset[str]] = {
     # device (controlled by iOS Language & Region, not the HAE metric toggle).
     # US-locale iPhones send lb even when HAE is set to metric.
     "weight_kg":            frozenset({"kg", "lb", "lbs"}),
+    "height_cm":            frozenset({"cm", "m", "in", "ft"}),
     "spo2_pct":             frozenset({"%"}),
     "body_temp_c":          frozenset({"degC", "degF"}),
     "bp_systolic_mmhg":     frozenset({"mmHg"}),
@@ -104,6 +107,12 @@ def _convert(value: float, hae_unit: str, internal_metric: str) -> float:
         return value / 2.20462262
     if internal_metric == "six_min_walk_m" and hae_unit == "ft":
         return value * 0.3048
+    if internal_metric == "height_cm":
+        if hae_unit == "m":
+            return value * 100
+        if hae_unit == "ft":
+            return value * 30.48
+        # "in" falls through to the generic inch rule below (×2.54); "cm" passes through
     if hae_unit == "mi":
         return value * 1.60934
     if hae_unit == "mi/hr":

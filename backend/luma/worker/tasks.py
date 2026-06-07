@@ -53,6 +53,30 @@ async def update_all_case_files(ctx: dict) -> None:
     logger.info("Case file refresh complete (%d users)", len(user_ids))
 
 
+async def sync_all_profiles(ctx: dict) -> None:
+    """Scheduled task: reconcile each user's saved profile (activity level,
+    height) against measured biometrics. Runs daily."""
+    from sqlalchemy import text
+    from luma.db.session import AsyncSessionLocal
+    from luma.services.profile_sync import sync_user_profile
+
+    logger.info("Profile sync starting")
+    async with AsyncSessionLocal() as db:
+        user_rows = await db.execute(text("SELECT id FROM users"))
+        user_ids = [str(r.id) for r in user_rows]
+
+    changed = 0
+    for user_id in user_ids:
+        try:
+            async with AsyncSessionLocal() as db:
+                if await sync_user_profile(user_id, db):
+                    changed += 1
+        except Exception:
+            logger.exception("Profile sync failed for user %s", user_id)
+
+    logger.info("Profile sync complete (%d users, %d updated)", len(user_ids), changed)
+
+
 async def refresh_all_coach_contexts(ctx: dict) -> None:
     """Scheduled task: refresh coach context blobs for all users every 2 hours."""
     from sqlalchemy import text

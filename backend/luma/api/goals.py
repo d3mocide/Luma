@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert
 from luma.config import settings
 from luma.db.models import Goal, Preference, User
 from luma.deps import CurrentUser, DbDep
+from luma.services.body_metrics import _ACTIVITY_FACTORS, _activity_factor, _mifflin_st_jeor_bmr
 from luma.services.hae_metrics import tracker as hae_metrics_tracker
 from luma.services.llm_metrics import tracker as llm_metrics_tracker
 
@@ -66,61 +67,6 @@ async def put_goals(body: GoalIn, user: CurrentUser, db: DbDep) -> dict[str, Any
     await db.execute(stmt)
     await db.commit()
     return await get_goals(user, db)
-
-
-# Standard Mifflin–St Jeor activity multipliers (BMR → TDEE), keyed by the
-# activity_level values the profile form stores.
-_ACTIVITY_FACTORS: dict[str, float] = {
-    "sedentary": 1.2,
-    "lightly_active": 1.375,
-    "moderately_active": 1.55,
-    "very_active": 1.725,
-}
-
-
-# Minimum days of step data before we trust the measured signal over a
-# self-reported activity level.
-_MIN_STEP_DAYS = 3
-
-
-def _steps_factor(steps_avg: float) -> float:
-    """Map a 7-day average daily step count to a Mifflin–St Jeor multiplier.
-
-    Deliberately conservative for weight loss: we'd rather slightly under-state
-    activity (and bank a real deficit) than over-state it and stall progress,
-    so the higher tiers demand more steps than a generic TDEE estimator would.
-    A typical 10k-steps/day lands at 'moderate' (1.55), not 'very active'.
-    """
-    if steps_avg >= 12_000:
-        return 1.725
-    if steps_avg >= 7_500:
-        return 1.55
-    if steps_avg >= 5_000:
-        return 1.375
-    return 1.2
-
-
-def _activity_factor(activity_level: str | None, steps_avg: float, steps_days: int) -> tuple[float, str]:
-    """Pick a Mifflin–St Jeor activity multiplier.
-
-    Objective measured steps win when we have a few days of them — a self-
-    reported activity level is often a stale default and shouldn't override
-    hard data (a "sedentary" setting next to 10k steps/day under-counts burn,
-    which under-feeds a weight-loss target). Self-report fills in only when
-    step data is sparse; fall back to sedentary when there's nothing to go on.
-    """
-    if steps_days >= _MIN_STEP_DAYS and steps_avg > 0:
-        return _steps_factor(steps_avg), "steps"
-    if activity_level in _ACTIVITY_FACTORS:
-        return _ACTIVITY_FACTORS[activity_level], "profile"
-    return 1.2, "default"
-
-
-def _mifflin_st_jeor_bmr(weight_kg: float, height_cm: float, age: int, sex: str) -> float:
-    """Mifflin–St Jeor resting metabolic rate — the same equation the Mayo
-    Clinic calculator is built on. `sex` must be 'male' or 'female'."""
-    s = 5 if sex == "male" else -161
-    return 10 * weight_kg + 6.25 * height_cm - 5 * age + s
 
 
 @router.get("/goals/recommend")

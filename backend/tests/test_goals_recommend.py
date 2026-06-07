@@ -1,5 +1,5 @@
 """Unit tests for the Mifflin–St Jeor goal-recommendation math."""
-from luma.api.goals import _activity_factor, _mifflin_st_jeor_bmr
+from luma.services.body_metrics import _activity_factor, _mifflin_st_jeor_bmr, steps_to_activity_level
 
 
 def test_mifflin_st_jeor_male():
@@ -43,6 +43,14 @@ def test_activity_factor_falls_back_to_profile_when_steps_sparse():
 def test_activity_factor_defaults_to_sedentary():
     assert _activity_factor(None, 0, steps_days=0) == (1.2, "default")
     assert _activity_factor("unknown_value", 0, steps_days=0) == (1.2, "default")
+
+
+def test_steps_to_activity_level_maps_to_profile_enums():
+    # Used by the background profile-sync to write activity_level back.
+    assert steps_to_activity_level(3000) == "sedentary"
+    assert steps_to_activity_level(6000) == "lightly_active"
+    assert steps_to_activity_level(10000) == "moderately_active"
+    assert steps_to_activity_level(13000) == "very_active"
 
 
 def test_formula_tdee_stays_near_mayo_not_inflated_watch():

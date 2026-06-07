@@ -67,6 +67,15 @@ def test_convert_fahrenheit_to_celsius():
 def test_convert_fps_to_mps():
     from luma.services.hae_normalizer import _convert
     assert _convert(1.0, "ft/s", "stair_speed_up_mps") == pytest.approx(0.3048, rel=1e-5)
+
+
+def test_convert_height_units():
+    from luma.services.hae_normalizer import _convert, HAE_METRIC_MAP
+    assert HAE_METRIC_MAP["height"] == "height_cm"
+    assert _convert(178.0, "cm", "height_cm") == pytest.approx(178.0)       # passthrough
+    assert _convert(70.0, "in", "height_cm") == pytest.approx(177.8, rel=1e-5)  # generic inch rule
+    assert _convert(1.78, "m", "height_cm") == pytest.approx(178.0, rel=1e-5)
+    assert _convert(5.0, "ft", "height_cm") == pytest.approx(152.4, rel=1e-5)
     assert _convert(1.0, "ft/s", "stair_speed_down_mps") == pytest.approx(0.3048, rel=1e-5)
 
 

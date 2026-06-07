@@ -301,7 +301,7 @@ export function ProfileCard() {
         {/* Activity level */}
         <div>
           <label className="eyebrow" style={{ display: 'block', marginBottom: 8, fontSize: 10 }}>
-            Activity level
+            Activity level <span style={{ textTransform: 'none', letterSpacing: 'normal', color: 'var(--fg-quiet)', fontWeight: 400, fontFamily: 'var(--font-sans)' }}>(auto-updated daily from your step data)</span>
           </label>
           <SegmentControl value={activity} options={ACTIVITY_OPTIONS} onChange={setActivity} className="segment-control-activity" />
           {activity && (
