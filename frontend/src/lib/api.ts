@@ -44,6 +44,28 @@ export const api = {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+export interface RecipeImportDraftIngredient {
+  raw_text: string
+  name: string
+  quantity: number
+  unit: string
+  notes: string | null
+  food_id: string | null
+  food_name: string | null
+}
+
+export interface RecipeImportDraft {
+  name: string
+  description: string | null
+  instructions: string[]
+  prep_minutes: number | null
+  cook_minutes: number | null
+  servings: number
+  tags: string[]
+  source_url: string
+  ingredients: RecipeImportDraftIngredient[]
+}
+
 export interface TodayData {
   date: string
   weight: {

@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     meal_planner_fallback_model: str = ""
     coach_fallback_model: str = ""
     insight_narrator_fallback_model: str = ""
+    recipe_import_model: str = "gemini/gemini-3.5-flash"
+    recipe_import_fallback_model: str = ""
 
     # VAPID keys for Web Push (generate with: python -m py_vapid --gen)
     vapid_private_key: str = ""

@@ -2,12 +2,14 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select, delete
-from pydantic import BaseModel
+from sqlalchemy import func, select, delete
+from pydantic import BaseModel, field_validator
 
 from luma.deps import DbDep, CurrentUser
 from luma.db.models import Recipe, RecipeIngredient, Food
 from luma.services.nutrition import ZERO_NUTRIENTS
+from luma.services.recipe_scraper import fetch_and_clean
+from luma.agents.recipe_importer import extract_recipe
 
 router = APIRouter()
 
@@ -29,7 +31,20 @@ class RecipeCreateRequest(BaseModel):
     cook_minutes: Optional[int] = None
     servings: float = 1.0
     tags: Optional[list[str]] = None
+    source: Optional[str] = None
     ingredients: list[IngredientIn] = []
+
+
+class RecipeImportRequest(BaseModel):
+    url: str
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, v: str) -> str:
+        v = v.strip()
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("URL must start with http:// or https://")
+        return v
 
 
 class RecipeUpdateRequest(BaseModel):
@@ -126,6 +141,65 @@ async def get_recipe(recipe_id: str, db: DbDep, current_user: CurrentUser) -> di
     return _recipe_dict(r)
 
 
+async def _match_ingredient(db, name: str) -> tuple[str | None, str | None]:
+    """Return (food_id, food_name) for the best trgm match above threshold, else (None, None)."""
+    q = name.strip().lower()
+    sim = func.similarity(Food.name, q)
+    row = (await db.execute(
+        select(Food).where(sim > 0.3).order_by(sim.desc()).limit(1)
+    )).scalar_one_or_none()
+    return (str(row.id), row.name) if row else (None, None)
+
+
+@router.post("/import")
+async def import_recipe(req: RecipeImportRequest, db: DbDep, current_user: CurrentUser) -> dict:
+    try:
+        page_text = await fetch_and_clean(req.url)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+    if not page_text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No readable content found at that URL",
+        )
+
+    extracted = await extract_recipe(req.url, page_text)
+    if extracted is None:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Could not extract a recipe from that page",
+        )
+
+    draft_ingredients = []
+    for ing in extracted.ingredients:
+        food_id, food_name = await _match_ingredient(db, ing.name)
+        parts = [f"{ing.quantity} {ing.unit} {ing.name}"]
+        if ing.notes:
+            parts.append(ing.notes)
+        draft_ingredients.append({
+            "raw_text": ", ".join(parts),
+            "name": ing.name,
+            "quantity": ing.quantity,
+            "unit": ing.unit,
+            "notes": ing.notes,
+            "food_id": food_id,
+            "food_name": food_name,
+        })
+
+    return {
+        "name": extracted.name,
+        "description": extracted.description,
+        "instructions": extracted.instructions,
+        "prep_minutes": extracted.prep_minutes,
+        "cook_minutes": extracted.cook_minutes,
+        "servings": extracted.servings,
+        "tags": extracted.tags,
+        "source_url": req.url,
+        "ingredients": draft_ingredients,
+    }
+
+
 @router.post("")
 async def create_recipe(req: RecipeCreateRequest, db: DbDep, current_user: CurrentUser) -> dict:
     r = Recipe(
@@ -138,6 +212,7 @@ async def create_recipe(req: RecipeCreateRequest, db: DbDep, current_user: Curre
         cook_minutes=req.cook_minutes,
         servings=req.servings,
         tags=req.tags,
+        source=req.source,
         nutrition_per_serving={},
     )
     db.add(r)
