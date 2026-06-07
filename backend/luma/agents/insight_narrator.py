@@ -23,7 +23,7 @@ class InsightResponse(BaseModel):
     thread_seed: str = Field(description="Follow-up question the user might ask the coach (12 words or less)")
 
 
-def _parse_insight(content: str) -> dict | None:
+def _parse_insight(content: str | None) -> dict | None:
     """Extract and validate the narrator's JSON payload, or return None.
 
     Reasoning models (the local narrator runs with reasoning enabled) prefill a
@@ -32,7 +32,11 @@ def _parse_insight(content: str) -> dict | None:
     any reasoning wrapper, recover the JSON object, and validate against
     InsightResponse rather than trusting dict.get() defaults.
     """
+    if not content:
+        return None
     content = content.strip()
+    original = content  # preserve for fallback search when the answer is inside the think block
+
     # Drop reasoning blocks (closed or dangling) so they don't shadow the answer.
     _flags = re.DOTALL | re.IGNORECASE
     content = re.sub(rf"<{_REASONING_TAG}>.*?</{_REASONING_TAG}>", "", content, flags=_flags)
@@ -46,6 +50,12 @@ def _parse_insight(content: str) -> dict | None:
     embedded = re.search(r"\{.*\}", content, re.DOTALL)
     if embedded:
         candidates.append(embedded.group(0))
+    # If post-strip content is empty the JSON may have been inside the think block;
+    # search the original so we don't discard a valid answer.
+    if not content:
+        embedded_orig = re.search(r"\{.*\}", original, re.DOTALL)
+        if embedded_orig:
+            candidates.append(embedded_orig.group(0))
 
     for candidate in candidates:
         try:
@@ -59,6 +69,7 @@ def _parse_insight(content: str) -> dict | None:
         except ValidationError:
             continue
 
+    logger.debug("_parse_insight: no valid JSON found in: %.200s", original)
     return None
 
 
@@ -217,9 +228,12 @@ async def narrate_alert(
 
         # The model returned something other than a valid insight object — send the
         # bad output back and ask for a clean object before falling back to a static copy.
-        logger.warning("Narrator returned no valid insight for alert %s; attempting correction retry", alert_id)
+        logger.warning(
+            "Narrator returned no valid insight for alert %s (content: %.200s); attempting correction retry",
+            alert_id, content,
+        )
         correction_messages = messages + [
-            {"role": "assistant", "content": content},
+            {"role": "assistant", "content": content or ""},
             {
                 "role": "user",
                 "content": (

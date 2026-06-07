@@ -151,9 +151,12 @@ async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str
     # Strip response_format for local targets to prevent UnsupportedParamsError in some LiteLLM environments,
     # as local endpoints (e.g., Ollama/LocalAI/vLLM) do not natively support Pydantic structured outputs,
     # and forcing JSON mode can interfere with reasoning model output (e.g., <think> tags).
-    if provider == "local" and "response_format" in kwargs:
+    # drop_params=True is also added so LiteLLM silently discards any other unsupported params
+    # (e.g. stream_options, null-valued fields) rather than raising UnsupportedParamsError.
+    if provider == "local":
         kwargs = kwargs.copy()
         kwargs.pop("response_format", None)
+        kwargs.setdefault("drop_params", True)
 
     try:
         response = await litellm.acompletion(**target, **kwargs)

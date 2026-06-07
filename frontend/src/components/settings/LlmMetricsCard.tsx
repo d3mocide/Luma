@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import { type LlmMetrics, formatMetricsDate } from './types'
+import { type LlmMetrics, formatMetricsDate, formatEventTime } from './types'
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
@@ -87,6 +87,9 @@ export function LlmMetricsCard() {
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div className="num" style={{ fontSize: 11, color: 'var(--fg-tertiary)', marginBottom: 2 }}>
+                      {formatEventTime(event.ts)}
+                    </div>
                     <div className="num" style={{ fontSize: 12, color: 'var(--fg-secondary)' }}>
                       {event.elapsed_ms != null ? `${event.elapsed_ms.toFixed(1)}ms` : '—'}
                     </div>
