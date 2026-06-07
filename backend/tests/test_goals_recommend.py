@@ -19,21 +19,28 @@ def test_mifflin_st_jeor_sex_term_difference():
     assert round(male - female, 2) == 166.0
 
 
-def test_activity_factor_prefers_explicit_profile():
-    assert _activity_factor("very_active", 0) == (1.725, "profile")
-    assert _activity_factor("sedentary", 99999) == (1.2, "profile")
+def test_activity_factor_trusts_measured_steps_over_stale_profile():
+    # 10k steps but "sedentary" self-report: objective data wins.
+    assert _activity_factor("sedentary", 10000, steps_days=7) == (1.725, "steps")
+    assert _activity_factor("very_active", 3000, steps_days=7) == (1.2, "steps")
 
 
-def test_activity_factor_infers_from_steps_when_unset():
-    assert _activity_factor(None, 12000) == (1.725, "steps")
-    assert _activity_factor(None, 8000) == (1.55, "steps")
-    assert _activity_factor(None, 6000) == (1.375, "steps")
-    assert _activity_factor(None, 3000) == (1.2, "steps")
+def test_activity_factor_steps_ladder():
+    assert _activity_factor(None, 12000, steps_days=5) == (1.725, "steps")
+    assert _activity_factor(None, 8000, steps_days=5) == (1.55, "steps")
+    assert _activity_factor(None, 6000, steps_days=5) == (1.375, "steps")
+    assert _activity_factor(None, 3000, steps_days=5) == (1.2, "steps")
+
+
+def test_activity_factor_falls_back_to_profile_when_steps_sparse():
+    # Too few days of step data — defer to the self-reported level.
+    assert _activity_factor("moderately_active", 9999, steps_days=2) == (1.55, "profile")
+    assert _activity_factor("sedentary", 0, steps_days=0) == (1.2, "profile")
 
 
 def test_activity_factor_defaults_to_sedentary():
-    assert _activity_factor(None, 0) == (1.2, "default")
-    assert _activity_factor("unknown_value", 0) == (1.2, "default")
+    assert _activity_factor(None, 0, steps_days=0) == (1.2, "default")
+    assert _activity_factor("unknown_value", 0, steps_days=0) == (1.2, "default")
 
 
 def test_formula_tdee_stays_near_mayo_not_inflated_watch():
@@ -41,5 +48,19 @@ def test_formula_tdee_stays_near_mayo_not_inflated_watch():
     # formula TDEE lands near the Mayo estimate, well below an over-reporting
     # watch's measured burn.
     bmr = _mifflin_st_jeor_bmr(90, 178, 40, "male")
-    tdee = bmr * _activity_factor("sedentary", 0)[0]
+    tdee = bmr * _activity_factor("sedentary", 0, steps_days=0)[0]
     assert 2000 <= round(tdee) <= 2300
+
+
+def test_example_active_woman_not_underfed():
+    # 5'10" / 28 / female, 200lb → 150lb, averaging 10k steps but profile says
+    # "sedentary". Trusting the steps must NOT drop her to a sub-BMR target.
+    weight_kg = 200 * 0.45359237
+    height_cm = 70 * 2.54
+    bmr = _mifflin_st_jeor_bmr(weight_kg, height_cm, 28, "female")
+    factor, source = _activity_factor("sedentary", 10000, steps_days=7)
+    assert source == "steps" and factor == 1.725
+    tdee = bmr * factor
+    target = max(1200.0, round((tdee - 500) / 50) * 50)  # deficit branch + female floor
+    assert target == 2450
+    assert target > bmr  # not eating below resting metabolism

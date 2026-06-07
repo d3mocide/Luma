@@ -13,6 +13,13 @@ const MODE_LABEL: Record<GoalRecommendation['basis']['mode'], string> = {
   insufficient_data: 'Estimated — limited data',
 }
 
+const ACTIVITY_LABEL: Record<string, string> = {
+  sedentary: 'Sedentary',
+  lightly_active: 'Lightly active',
+  moderately_active: 'Moderately active',
+  very_active: 'Very active',
+}
+
 function formatMissingFields(fields: string[]): string {
   const labels = fields.map((f) => MISSING_FIELD_LABELS[f] ?? f.replace(/_/g, ' '))
   if (labels.length === 1) return labels[0]
@@ -114,6 +121,15 @@ export function RecommendGoalsCard({ onApply }: Props) {
           {rec.basis.data_quality_warning && (
             <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--sun-400)', lineHeight: 1.5 }}>
               Your profile produced an out-of-range estimate, so targets were clamped to a safe range. Double-check your height, weight, and birth year for a more accurate result.
+            </p>
+          )}
+
+          {rec.basis.activity_conflict && rec.basis.avg_steps_7d != null && (
+            <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--sun-400)', lineHeight: 1.5 }}>
+              We based this on your measured activity (~{rec.basis.avg_steps_7d.toLocaleString()} steps/day)
+              {rec.basis.stated_activity_level
+                ? `, not your profile's "${ACTIVITY_LABEL[rec.basis.stated_activity_level] ?? rec.basis.stated_activity_level}" setting, which looks out of date`
+                : ''}. Update your profile if that's not right.
             </p>
           )}
 

@@ -78,23 +78,36 @@ _ACTIVITY_FACTORS: dict[str, float] = {
 }
 
 
-def _activity_factor(activity_level: str | None, steps_avg: float) -> tuple[float, str]:
+# Minimum days of step data before we trust the measured signal over a
+# self-reported activity level.
+_MIN_STEP_DAYS = 3
+
+
+def _steps_factor(steps_avg: float) -> float:
+    """Map a 7-day average daily step count to a Mifflin–St Jeor multiplier
+    (Tudor-Locke step bands → activity tiers)."""
+    if steps_avg >= 10_000:
+        return 1.725
+    if steps_avg >= 7_500:
+        return 1.55
+    if steps_avg >= 5_000:
+        return 1.375
+    return 1.2
+
+
+def _activity_factor(activity_level: str | None, steps_avg: float, steps_days: int) -> tuple[float, str]:
     """Pick a Mifflin–St Jeor activity multiplier.
 
-    Prefer the user's self-reported activity level; otherwise infer it from
-    7-day average step count (so the watch still informs the estimate); fall
-    back to sedentary when there's nothing to go on.
+    Objective measured steps win when we have a few days of them — a self-
+    reported activity level is often a stale default and shouldn't override
+    hard data (a "sedentary" setting next to 10k steps/day under-counts burn,
+    which under-feeds a weight-loss target). Self-report fills in only when
+    step data is sparse; fall back to sedentary when there's nothing to go on.
     """
+    if steps_days >= _MIN_STEP_DAYS and steps_avg > 0:
+        return _steps_factor(steps_avg), "steps"
     if activity_level in _ACTIVITY_FACTORS:
         return _ACTIVITY_FACTORS[activity_level], "profile"
-    if steps_avg > 0:
-        if steps_avg >= 10_000:
-            return 1.725, "steps"
-        if steps_avg >= 7_500:
-            return 1.55, "steps"
-        if steps_avg >= 5_000:
-            return 1.375, "steps"
-        return 1.2, "steps"
     return 1.2, "default"
 
 
@@ -120,7 +133,8 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     energy_result = await db.execute(
         text("""
             SELECT metric,
-                   PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY daily_total) AS median_daily
+                   PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY daily_total) AS median_daily,
+                   COUNT(*) AS day_count
             FROM (
                 SELECT metric,
                        date_trunc('day', ts AT TIME ZONE 'UTC') AS day,
@@ -135,7 +149,11 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         """),
         {"uid": str(user.id), "start": start_ts, "end": end_ts},
     )
-    energy_avgs: dict[str, float] = {row.metric: float(row.median_daily) for row in energy_result}
+    energy_avgs: dict[str, float] = {}
+    energy_days: dict[str, int] = {}
+    for row in energy_result:
+        energy_avgs[row.metric] = float(row.median_daily)
+        energy_days[row.metric] = int(row.day_count)
 
     data_days_result = await db.execute(
         text("""
@@ -192,7 +210,18 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     assert age is not None and sex is not None and height_cm is not None and current_weight_kg is not None
 
     msj_bmr = _mifflin_st_jeor_bmr(current_weight_kg, height_cm, age, sex)
-    activity_factor, activity_source = _activity_factor(user.activity_level, steps_avg)
+    steps_days = energy_days.get("steps", 0)
+    activity_factor, activity_source = _activity_factor(user.activity_level, steps_avg, steps_days)
+
+    # Conflict = we trusted measured steps but the user's self-reported level
+    # disagrees by ≥1 tier. Surface it so they can fix a stale profile setting.
+    stated_factor = _ACTIVITY_FACTORS.get(user.activity_level or "")
+    activity_conflict = bool(
+        activity_source == "steps"
+        and stated_factor is not None
+        and abs(stated_factor - activity_factor) >= 0.15
+    )
+
     formula_tdee = msj_bmr * activity_factor
 
     # Physiological sanity bounds — a formula TDEE outside 1,200–4,500 kcal
@@ -243,6 +272,8 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         "mifflin_bmr": round(msj_bmr),
         "activity_factor": activity_factor,
         "activity_source": activity_source,
+        "stated_activity_level": user.activity_level,
+        "activity_conflict": activity_conflict or None,
         "measured_tdee_kcal": round(measured_tdee) if measured_tdee else None,
         "bmr_7d_avg": round(bmr_avg) if bmr_avg > 0 else None,
         "active_7d_avg": round(active_avg) if active_avg > 0 else None,
@@ -303,14 +334,10 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
                 },
             ],
             temperature=0.3,
-            # Reasoning models (e.g. gemini-3.5-flash) spend part of the token
-            # budget on hidden thinking, so a tight ceiling clips the visible
-            # answer. Keep effort low and the ceiling generous — actual usage
-            # for 2-3 sentences stays small, this is only headroom. drop_params
-            # lets providers that don't support reasoning_effort ignore it.
-            max_tokens=2048,
-            reasoning_effort="low",
-            drop_params=True,
+            # No max_tokens — matching the other agents (insight_narrator, coach,
+            # meal_planner). A tight ceiling was what clipped reasoning models
+            # mid-thought; letting the call finish naturally is both the fix and
+            # the cheap option, since a 2-3 sentence answer is only ~80 tokens.
             timeout=30.0,
         )
         rationale = (resp.choices[0].message.content or "").strip() or None

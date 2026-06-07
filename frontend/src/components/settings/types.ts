@@ -51,6 +51,8 @@ export type GoalRecommendation = {
     mifflin_bmr?: number | null
     activity_factor?: number | null
     activity_source?: string
+    stated_activity_level?: string | null
+    activity_conflict?: true | null
     measured_tdee_kcal?: number | null
     bmr_7d_avg: number | null
     active_7d_avg: number | null
