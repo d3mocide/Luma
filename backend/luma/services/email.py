@@ -1,9 +1,91 @@
+import base64
 import logging
 from email.message import EmailMessage
+
+import httpx
 
 from luma.config import settings
 
 logger = logging.getLogger(__name__)
+
+_M365_TOKEN_URL = "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+_M365_SMTP_SCOPE = "https://outlook.office365.com/.default"
+
+
+async def _acquire_m365_token() -> str:
+    """
+    Client-credentials token fetch for M365 SMTP AUTH.
+    Requires SMTP.SendMail application permission with admin consent in Azure AD.
+    """
+    url = _M365_TOKEN_URL.format(tenant_id=settings.smtp_tenant_id)
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(url, data={
+            "grant_type": "client_credentials",
+            "client_id": settings.smtp_client_id,
+            "client_secret": settings.smtp_client_secret,
+            "scope": _M365_SMTP_SCOPE,
+        })
+        resp.raise_for_status()
+        data = resp.json()
+
+    if "access_token" not in data:
+        raise RuntimeError(
+            f"M365 token error: {data.get('error_description', data.get('error', data))}"
+        )
+    return data["access_token"]
+
+
+def _xoauth2_string(user: str, access_token: str) -> bytes:
+    """
+    Build the base64-encoded SASL XOAUTH2 initial client response.
+    Format: base64("user={email}\\x01auth=Bearer {token}\\x01\\x01")
+    """
+    payload = f"user={user}\x01auth=Bearer {access_token}\x01\x01"
+    return base64.b64encode(payload.encode())
+
+
+async def _send_m365_oauth(msg: EmailMessage) -> None:
+    """Send via M365 smtp.office365.com using SASL XOAUTH2."""
+    import aiosmtplib  # type: ignore[import]
+
+    access_token = await _acquire_m365_token()
+    xoauth2 = _xoauth2_string(settings.smtp_from, access_token)
+
+    smtp = aiosmtplib.SMTP(
+        hostname=settings.smtp_host,
+        port=settings.smtp_port,
+        start_tls=True,
+        timeout=30,
+    )
+    await smtp.connect()
+
+    # AUTH XOAUTH2 <base64-initial-response>
+    code, response = await smtp.execute_command(b"AUTH", b"XOAUTH2 " + xoauth2)
+    if code != 235:
+        # On failure M365 returns a base64-encoded JSON error as the continuation
+        try:
+            detail = base64.b64decode(response).decode()
+        except Exception:
+            detail = response.decode(errors="replace")
+        await smtp.quit()
+        raise RuntimeError(f"M365 XOAUTH2 auth rejected ({code}): {detail}")
+
+    await smtp.send_message(msg)
+    await smtp.quit()
+
+
+async def _send_basic_auth(msg: EmailMessage) -> None:
+    """Send via standard SMTP with username/password (Mailgun, Postmark, Gmail, etc.)."""
+    import aiosmtplib  # type: ignore[import]
+
+    await aiosmtplib.send(
+        msg,
+        hostname=settings.smtp_host,
+        port=settings.smtp_port,
+        username=settings.smtp_user or None,
+        password=settings.smtp_password or None,
+        use_tls=settings.smtp_use_tls,
+    )
 
 
 async def send_family_invite(
@@ -13,7 +95,10 @@ async def send_family_invite(
     accept_url: str,
 ) -> None:
     if not settings.smtp_host:
-        logger.info("SMTP not configured — invitation email skipped for %s (accept URL: %s)", to_email, accept_url)
+        logger.info(
+            "SMTP not configured — invitation email skipped for %s (accept URL: %s)",
+            to_email, accept_url,
+        )
         return
 
     msg = EmailMessage()
@@ -29,17 +114,11 @@ async def send_family_invite(
     )
 
     try:
-        import aiosmtplib  # type: ignore[import]
-
-        await aiosmtplib.send(
-            msg,
-            hostname=settings.smtp_host,
-            port=settings.smtp_port,
-            username=settings.smtp_user or None,
-            password=settings.smtp_password or None,
-            use_tls=settings.smtp_use_tls,
-        )
+        if settings.smtp_tenant_id:
+            await _send_m365_oauth(msg)
+        else:
+            await _send_basic_auth(msg)
         logger.info("Invitation email sent to %s", to_email)
     except Exception:
-        # Don't raise — the invite token is already in the DB; the caller can share the link manually.
+        # Don't raise — invite token is in DB; caller can share the link manually.
         logger.exception("Failed to send invitation email to %s", to_email)

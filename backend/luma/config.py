@@ -50,12 +50,26 @@ class Settings(BaseSettings):
 
     # SMTP — used for family invitation emails.
     # Leave smtp_host blank to disable email sending (invite tokens still work via manual link share).
+    #
+    # Basic Auth (Mailgun, Postmark, Gmail, etc.):
+    #   Set smtp_host, smtp_port, smtp_user, smtp_password, smtp_from.
+    #   Leave smtp_tenant_id blank.
+    #
+    # Microsoft 365 OAuth (recommended for M365 tenants):
+    #   Set smtp_host=smtp.office365.com, smtp_port=587, smtp_from=<licensed mailbox>.
+    #   Set smtp_tenant_id, smtp_client_id, smtp_client_secret from your Azure AD app registration.
+    #   The app needs the SMTP.SendMail application permission with admin consent.
+    #   Leave smtp_user and smtp_password blank.
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from: str = "noreply@example.com"
     smtp_use_tls: bool = True
+    # M365 OAuth — leave all three blank to use Basic Auth instead
+    smtp_tenant_id: str = ""
+    smtp_client_id: str = ""
+    smtp_client_secret: str = ""
 
     # Base URL used to build links in outbound emails (no trailing slash).
     app_base_url: str = "http://localhost:5173"
