@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import date, datetime, timedelta, timezone, time
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
@@ -73,8 +73,8 @@ async def put_goals(body: GoalIn, user: CurrentUser, db: DbDep) -> dict[str, Any
 async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     tz = ZoneInfo(settings.server_timezone)
     today_dt = datetime.now(tz).date()
-    start_ts = datetime.combine(today_dt - timedelta(days=7), time.min, tzinfo=tz).astimezone(timezone.utc)
-    end_ts = datetime.combine(today_dt, time.min, tzinfo=tz).astimezone(timezone.utc)
+    start_ts = datetime.combine(today_dt - timedelta(days=7), time.min, tzinfo=tz).astimezone(UTC)
+    end_ts = datetime.combine(today_dt, time.min, tzinfo=tz).astimezone(UTC)
 
     # 7-day daily totals — use MEDIAN (percentile_cont 0.5) instead of mean so
     # outlier days from bulk HAE historical exports don't skew the result.
@@ -465,6 +465,10 @@ async def get_ai_config(user: CurrentUser) -> dict[str, Any]:
             "insight_narrator": {
                 "primary": settings.insight_narrator_model,
                 "fallback": settings.insight_narrator_fallback_model or None,
+            },
+            "recipe_importer": {
+                "primary": settings.recipe_import_model,
+                "fallback": settings.recipe_import_fallback_model or None,
             },
         },
         "endpoints": {

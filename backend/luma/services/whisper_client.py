@@ -1,6 +1,8 @@
 """faster-whisper STT client — Phase 1."""
-import httpx
 import logging
+
+import httpx
+
 from luma.config import settings
 
 logger = logging.getLogger("whisper_client")

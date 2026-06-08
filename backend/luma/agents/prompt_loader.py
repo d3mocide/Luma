@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 _PROMPTS_DIR = Path(__file__).parent / "prompts"

@@ -1,6 +1,6 @@
 """Normalize Health Auto Export webhook payloads into biometrics rows."""
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -153,7 +153,7 @@ def _parse_hae_ts(date_str: str) -> datetime:
     """Parse HAE date strings like '2026-05-22 07:14:00 -0700'."""
     # fromisoformat doesn't handle the ' -0700' offset format; use dateutil.
     from dateutil import parser as dtparser
-    return dtparser.parse(date_str).astimezone(timezone.utc)
+    return dtparser.parse(date_str).astimezone(UTC)
 
 
 def _compute_sleep_scores(rows: list[dict], user_id: str) -> list[dict]:
@@ -424,8 +424,9 @@ async def _refresh_biometrics_daily(rows: list[dict]) -> None:
     end = max(ts_values).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=2)
 
     try:
-        from luma.db.session import engine
         from sqlalchemy import text as sa_text
+
+        from luma.db.session import engine
         async with engine.connect() as conn:
             await conn.execution_options(isolation_level="AUTOCOMMIT")
             await conn.execute(

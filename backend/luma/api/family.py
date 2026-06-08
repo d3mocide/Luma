@@ -2,8 +2,7 @@ import json
 import logging
 import secrets
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
@@ -38,12 +37,12 @@ class AcceptInvite(BaseModel):
 class ShareCreate(BaseModel):
     resource_type: str
     resource_id: str
-    note: Optional[str] = None
+    note: str | None = None
 
 
 # ── Auth helpers ─────────────────────────────────────────────────────────────
 
-async def _get_membership(db, group_id: str, user_id: str) -> Optional[str]:
+async def _get_membership(db, group_id: str, user_id: str) -> str | None:
     """Return role string if user is a member, None otherwise."""
     row = await db.execute(
         text("SELECT role FROM family_members WHERE group_id = :gid AND user_id = :uid"),
@@ -75,7 +74,7 @@ async def create_group(
     db: DbDep,
 ) -> dict:
     group_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     name = body.name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="Group name cannot be empty")
@@ -207,7 +206,7 @@ async def invite_member(
     )
 
     token = secrets.token_urlsafe(32)
-    expires_at = datetime.now(timezone.utc) + timedelta(days=INVITE_EXPIRE_DAYS)
+    expires_at = datetime.now(UTC) + timedelta(days=INVITE_EXPIRE_DAYS)
 
     await db.execute(
         text("""
@@ -261,7 +260,7 @@ async def accept_invitation(
         raise HTTPException(status_code=404, detail="Invitation not found")
     if invite.accepted_at is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Invitation already used")
-    if invite.expires_at < datetime.now(timezone.utc):
+    if invite.expires_at < datetime.now(UTC):
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Invitation has expired")
 
     existing = (await db.execute(
@@ -271,7 +270,7 @@ async def accept_invitation(
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Already a member of this group")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     await db.execute(
         text("UPDATE family_invitations SET accepted_at = :now WHERE id = :id"),
         {"now": now, "id": str(invite.id)},
@@ -355,7 +354,7 @@ async def share_resource(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Already shared with this group")
 
     share_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     await db.execute(
         text("""
             INSERT INTO group_shares (id, group_id, resource_type, resource_id, shared_by, note, shared_at)
@@ -376,7 +375,7 @@ async def list_shares(
     group_id: str,
     user: CurrentUser,
     db: DbDep,
-    resource_type: Optional[str] = None,
+    resource_type: str | None = None,
 ) -> dict:
     await _assert_member(db, group_id, str(user.id))
 
@@ -482,7 +481,7 @@ async def copy_shared_resource(
 
     uid = str(user.id)
     new_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     rid = str(share.resource_id)
 
     if share.resource_type == "recipe":

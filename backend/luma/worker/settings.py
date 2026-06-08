@@ -4,13 +4,13 @@ from arq.cron import cron
 from luma.config import settings
 from luma.worker.tasks import (
     ingest_hae_task,
-    run_alerts,
     refresh_all_coach_contexts,
-    update_case_file_task,
-    update_all_case_files,
+    run_alerts,
     send_daily_nudges,
     send_weekly_recap,
     sync_all_profiles,
+    update_all_case_files,
+    update_case_file_task,
 )
 
 

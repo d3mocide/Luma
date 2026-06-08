@@ -4,7 +4,6 @@ import { api } from '../lib/api'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { X, Heart } from 'lucide-react'
 import { VoiceTab } from './log-sheet/VoiceTab'
-import { BarcodeTab } from './log-sheet/BarcodeTab'
 import { SearchTab } from './log-sheet/SearchTab'
 import { PhotoTab } from './log-sheet/PhotoTab'
 import { QuickTab } from './log-sheet/QuickTab'
@@ -34,7 +33,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const pendingLogItems = useUIStore((s) => s.pendingLogItems)
   const clearPendingLogItems = useUIStore((s) => s.clearPendingLogItems)
 
-  const [activeTab, setActiveTab] = useState<'quick' | 'voice' | 'barcode' | 'search' | 'photo'>('quick')
+  const [activeTab, setActiveTab] = useState<'quick' | 'voice' | 'search' | 'photo'>('quick')
   const [slot, setSlot] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(getCurrentSlot)
   const [draftItems, setDraftItems] = useState<DraftItem[]>([])
   const [transcription, setTranscription] = useState('')
@@ -219,7 +218,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
 
         {/* Tab nav */}
         <div className="log-sheet-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--glass-edge)', position: 'relative', zIndex: 1 }}>
-          {(['quick', 'voice', 'barcode', 'search', 'photo'] as const).map((tab) => (
+          {(['quick', 'voice', 'search', 'photo'] as const).map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: '12px 4px', background: 'transparent', border: 'none', borderBottom: `2px solid ${activeTab === tab ? 'var(--sky-400)' : 'transparent'}`, color: activeTab === tab ? 'var(--sky-300)' : 'var(--fg-quiet)', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)', textTransform: 'capitalize', transition: 'all 150ms' }}>
               {tab}
             </button>
@@ -240,12 +239,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               onSwitchToPlate={() => setActiveTab('search')}
             />
           )}
-          {activeTab === 'barcode' && (
-            <BarcodeTab
-              onAddItem={addItem}
-              onSwitchToPlate={() => setActiveTab('search')}
-            />
-          )}
+
           {activeTab === 'search' && (
             <SearchTab
               draftItems={draftItems}

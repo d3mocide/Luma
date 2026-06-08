@@ -1,6 +1,5 @@
-import pytest
-from unittest.mock import MagicMock
 from luma.services.llm_client import _normalize_reasoning_response
+
 
 def test_normalize_reasoning_response_dict():
     # Test dictionary input

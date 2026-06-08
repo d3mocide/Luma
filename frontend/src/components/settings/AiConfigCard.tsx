@@ -10,6 +10,7 @@ const ROLE_META = {
   food_extractor: { label: 'Food Extractor', desc: 'Extracts macros from text/voice' },
   vision_classifier: { label: 'Vision Classifier', desc: 'Identifies meals in images' },
   insight_narrator: { label: 'Insight Narrator', desc: 'Generates daily trend commentary' },
+  recipe_importer: { label: 'Recipe Importer', desc: 'Parses web recipes and images' },
 }
 
 export function AiConfigCard() {
@@ -33,58 +34,107 @@ export function AiConfigCard() {
         <p style={{ color: 'var(--fg-quiet)', fontSize: 13, margin: 0 }}>Loading routing table…</p>
       ) : aiConfig ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ overflowX: 'auto', margin: '0 -24px', padding: '0 24px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--glass-edge)' }}>
-                  <th style={{ padding: '8px 0', fontSize: 11, fontWeight: 600, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Service</th>
-                  <th style={{ padding: '8px 12px', fontSize: 11, fontWeight: 600, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Primary model</th>
-                  <th style={{ padding: '8px 0', fontSize: 11, fontWeight: 600, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Fallback</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(Object.keys(ROLE_META) as Array<keyof typeof ROLE_META>).map((role) => {
-                  const meta = ROLE_META[role]
-                  const primary = aiConfig.models[role]?.primary || '—'
-                  const fallback = aiConfig.models[role]?.fallback
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {(Object.keys(ROLE_META) as Array<keyof typeof ROLE_META>).map((role) => {
+              const meta = ROLE_META[role]
+              const primary = aiConfig.models[role]?.primary || '—'
+              const fallback = aiConfig.models[role]?.fallback
 
-                  return (
-                    <tr key={role} style={{ borderBottom: '1px solid var(--glass-edge)' }}>
-                      <td style={{ padding: '14px 0', verticalAlign: 'middle' }}>
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{meta.label}</div>
-                          <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 1 }}>{meta.desc}</div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '14px 12px', verticalAlign: 'middle' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--fg-secondary)' }}>
-                            {primary}
-                          </span>
-                          <span style={{
-                            fontSize: 9, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase',
-                            padding: '1px 5px', borderRadius: 4,
-                            background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)',
-                            color: '#10b981', display: 'inline-block',
-                          }}>
-                            ACTIVE
-                          </span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '14px 0', verticalAlign: 'middle', textAlign: 'right' }}>
-                        {fallback ? (
-                          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--sun-400)' }}>
-                            {fallback}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>None</span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+              return (
+                <div
+                  key={role}
+                  style={{
+                    padding: '16px 0',
+                    borderBottom: '1px solid var(--glass-edge)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)' }}>
+                      {meta.label}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 2 }}>
+                      {meta.desc}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      flexWrap: 'wrap',
+                      gap: 12,
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid var(--glass-edge)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '1 1 180px', minWidth: 0 }}>
+                      <span style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--fg-quiet)', letterSpacing: '0.04em', flexShrink: 0 }}>
+                        Primary
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontFamily: 'var(--font-mono)',
+                          color: 'var(--fg-secondary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                        title={primary}
+                      >
+                        {primary}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 8,
+                          fontWeight: 700,
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase',
+                          padding: '1px 4.5px',
+                          borderRadius: 4,
+                          background: 'rgba(16, 185, 129, 0.08)',
+                          border: '1px solid rgba(16, 185, 129, 0.2)',
+                          color: '#10b981',
+                          display: 'inline-block',
+                          flexShrink: 0,
+                        }}
+                      >
+                        Active
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '1 1 180px', minWidth: 0 }}>
+                      <span style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--fg-quiet)', letterSpacing: '0.04em', flexShrink: 0 }}>
+                        Fallback
+                      </span>
+                      {fallback ? (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontFamily: 'var(--font-mono)',
+                            color: 'var(--sun-400)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                          title={fallback}
+                        >
+                          {fallback}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>None</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
           <div>

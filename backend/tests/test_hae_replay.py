@@ -1,6 +1,7 @@
 """Replay protection tests for the HAE ingest endpoint."""
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 
 @pytest.mark.asyncio
@@ -19,6 +20,7 @@ async def test_replay_first_request_accepted():
 @pytest.mark.asyncio
 async def test_replay_duplicate_rejected():
     from fastapi import HTTPException
+
     from luma.api.ingest import _check_replay
 
     mock_redis = AsyncMock()

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from redis.asyncio import Redis
@@ -33,7 +33,7 @@ class HAEMetricsTracker:
         rows_inserted: int,
         error: str | None = None,
     ) -> None:
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(UTC).isoformat()
         event: dict[str, Any] = {"ts": timestamp, "rows_inserted": rows_inserted}
         if error is not None:
             event["error"] = error

@@ -1,14 +1,14 @@
-from datetime import datetime, timezone, timedelta
-from typing import Optional
-from uuid import UUID
 import uuid
+from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
-from sqlalchemy import select, func as sqlfunc
+from sqlalchemy import func as sqlfunc
+from sqlalchemy import select
 
-from luma.deps import DbDep, CurrentUser
-from luma.db.models import MealJournalEntry, MealEvent
+from luma.db.models import MealEvent, MealJournalEntry
+from luma.deps import CurrentUser, DbDep
 
 router = APIRouter()
 
@@ -16,7 +16,7 @@ router = APIRouter()
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
 class JournalCreateRequest(BaseModel):
-    meal_event_id: Optional[UUID] = None
+    meal_event_id: UUID | None = None
     meal_name: str
     logged_at: datetime
     energy: int = Field(ge=1, le=5)
@@ -24,7 +24,7 @@ class JournalCreateRequest(BaseModel):
     mood: int = Field(ge=1, le=5)
     satiety: int = Field(ge=1, le=5)
     symptoms: list[str] = []
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 def _entry_dict(e: MealJournalEntry) -> dict:
@@ -80,7 +80,7 @@ async def create_entry(req: JournalCreateRequest, db: DbDep, current_user: Curre
 @router.get("/pending")
 async def get_pending(db: DbDep, current_user: CurrentUser) -> dict:
     """Meals logged 30–90 min ago that have no journal entry."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     window_start = now - timedelta(minutes=90)
     window_end = now - timedelta(minutes=30)
 

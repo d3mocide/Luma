@@ -1,8 +1,9 @@
 """sleep_analysis ingestion and sleep_score computation tests."""
-import pytest
 from unittest.mock import AsyncMock
 
-from tests.hae_fixtures import make_fake_user, build_capturing_db
+import pytest
+
+from tests.hae_fixtures import build_capturing_db
 
 _FAKE_USER_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 

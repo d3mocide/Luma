@@ -1,15 +1,16 @@
 """Open Food Facts client — Phase 1."""
 
-import httpx
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
+
+import httpx
 
 from luma.services.food_flags import compute_threshold_flags
 
 logger = logging.getLogger("off_client")
 
 
-async def lookup_barcode(barcode: str) -> Optional[Dict[str, Any]]:
+async def lookup_barcode(barcode: str) -> dict[str, Any] | None:
     """Fetch product details from Open Food Facts API and normalize to Luma schema."""
     url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
     headers = {"User-Agent": "LumaHealthTracker/1.0 (health@yourdomain.com)"}

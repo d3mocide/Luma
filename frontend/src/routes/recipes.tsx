@@ -524,7 +524,7 @@ export default function RecipesRoute() {
 
   if (view === 'create') {
     return (
-      <div className="thin-scroll" style={{ padding: '24px 20px' }}>
+      <div style={{ paddingTop: 0, paddingBottom: 20 }}>
         <RecipeForm onCancel={() => setView('list')} onSaved={() => setView('list')}/>
       </div>
     )
@@ -532,7 +532,7 @@ export default function RecipesRoute() {
 
   if (view === 'import') {
     return (
-      <div className="thin-scroll" style={{ padding: '24px 20px' }}>
+      <div style={{ paddingTop: 0, paddingBottom: 20 }}>
         <ImportRecipeView onCancel={() => setView('list')} onSaved={() => setView('list')}/>
       </div>
     )
@@ -540,14 +540,14 @@ export default function RecipesRoute() {
 
   if (view === 'detail' && selected) {
     return (
-      <div className="thin-scroll" style={{ padding: '24px 20px' }}>
+      <div style={{ paddingTop: 0, paddingBottom: 20 }}>
         <RecipeDetail recipe={selected} onBack={() => setView('list')} onDelete={() => setView('list')}/>
       </div>
     )
   }
 
   return (
-    <div className="thin-scroll" style={{ padding: '24px 20px' }}>
+    <div style={{ paddingTop: 0, paddingBottom: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <div className="eyebrow" style={{ marginBottom: 4 }}>My Library</div>
@@ -555,12 +555,14 @@ export default function RecipesRoute() {
             Recipes
           </h1>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn" style={{ gap: 6 }} onClick={() => setView('import')}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button className="btn" style={{ gap: 6, flexShrink: 0 }} onClick={() => setView('import')}>
             <Globe size={14}/> Import
           </button>
-          <button className="btn btn-primary" style={{ gap: 8 }} onClick={() => setView('create')}>
-            <Plus size={15}/> New Recipe
+          <button className="btn btn-primary" style={{ gap: 8, flexShrink: 0 }} onClick={() => setView('create')}>
+            <Plus size={15}/>
+            <span className="btn-label-desktop">New Recipe</span>
+            <span className="btn-label-mobile">Recipe</span>
           </button>
         </div>
       </div>

@@ -5,13 +5,12 @@ Run with:
 """
 import asyncio
 import os
-import sys
 
 from argon2 import PasswordHasher
 from sqlalchemy import select
 
-from luma.db.session import AsyncSessionLocal
 from luma.db.models import User
+from luma.db.session import AsyncSessionLocal
 
 
 async def main() -> None:

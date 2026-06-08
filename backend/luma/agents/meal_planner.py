@@ -1,16 +1,17 @@
 import json
 import logging
 import re
-from typing import Dict, Any, Optional, List
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from pydantic import BaseModel, Field
-from fastapi import HTTPException
+from typing import Any
 
+from fastapi import HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from luma.agents.prompt_loader import load_prompt
 from luma.config import settings
 from luma.db.models import Food, Goal, Preference
 from luma.services.llm_client import call_llm
-from luma.agents.prompt_loader import load_prompt
 
 logger = logging.getLogger("meal_planner")
 
@@ -35,11 +36,11 @@ class MealSlotSchema(BaseModel):
 
 class DailyPlanSchema(BaseModel):
     date: str = Field(description="ISO Date string YYYY-MM-DD")
-    slots: List[MealSlotSchema] = Field(description="Meal slots for this day")
+    slots: list[MealSlotSchema] = Field(description="Meal slots for this day")
 
 
 class ShoppingItemSchema(BaseModel):
-    food_id: Optional[str] = Field(description="UUID of matching local food item, or null if none")
+    food_id: str | None = Field(description="UUID of matching local food item, or null if none")
     name: str = Field(description="Name of the food item")
     quantity: float = Field(description="Quantity required")
     unit: str = Field(description="Unit of measurement (e.g., g, items)")
@@ -47,15 +48,15 @@ class ShoppingItemSchema(BaseModel):
 
 
 class MealPlanResponse(BaseModel):
-    plan: List[DailyPlanSchema] = Field(description="7-day meal plan")
-    shopping_list: List[ShoppingItemSchema] = Field(description="Aggregate shopping list")
+    plan: list[DailyPlanSchema] = Field(description="7-day meal plan")
+    shopping_list: list[ShoppingItemSchema] = Field(description="Aggregate shopping list")
 
 
 async def generate_meal_plan(
     db: AsyncSession,
     user_id: Any,
     week_start: str,
-    constraints: Optional[dict] = None,
+    constraints: dict | None = None,
 ) -> dict:
     """Generate a high-fidelity 7-day meal plan and shopping list tailored to LDL-lowering goals."""
     # 1. Fetch user's goals
@@ -85,7 +86,6 @@ async def generate_meal_plan(
     foods = [f for f in all_foods if not _is_excluded(f)][:100]
 
     # Format goals into prompt variables
-    ldl_target = goal.target_ldl_mg_dl if goal else 100
     calorie_target = goal.daily_calorie_target if goal else 2000
     sat_fat_max = float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else 13.0
     soluble_fiber_target = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else 10.0

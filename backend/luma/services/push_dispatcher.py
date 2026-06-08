@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def _send_webpush_sync(endpoint: str, p256dh: str, auth: str, payload: str) -> int | None:
     """Synchronous wrapper — runs in a thread executor. Returns HTTP status or None on success."""
-    from pywebpush import webpush, WebPushException
+    from pywebpush import WebPushException, webpush
 
     try:
         webpush(
@@ -39,6 +39,7 @@ async def send_push_to_user(user_id: str, title: str, body: str, url: str = "/")
         return
 
     from sqlalchemy import text
+
     from luma.db.session import AsyncSessionLocal
 
     async with AsyncSessionLocal() as db:

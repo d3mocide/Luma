@@ -92,8 +92,9 @@ async def ingest_hae(
     _verify_app_secret(request)
     body = await request.body()
 
-    from luma.db.models import User
     from sqlalchemy import select
+
+    from luma.db.models import User
 
     result = await db.execute(select(User).where(User.hae_import_token == import_token))
     user = result.scalar_one_or_none()

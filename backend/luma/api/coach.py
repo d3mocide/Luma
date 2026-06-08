@@ -42,6 +42,7 @@ async def create_thread(
     # Enqueue a case file update — the previous thread just "closed"
     try:
         from arq import create_pool
+
         from luma.worker.settings import WorkerSettings
         pool = await create_pool(WorkerSettings.redis_settings)
         await pool.enqueue_job("update_case_file_task", str(user.id))

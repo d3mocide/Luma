@@ -1,15 +1,14 @@
-from typing import List, Optional, Dict, Any
-from uuid import UUID
 import re
 import uuid
+from typing import Any
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import case, func, or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlalchemy import case, func, or_, select
 
 from luma.db.models import Food
-from luma.deps import DbDep, CurrentUser
+from luma.deps import CurrentUser, DbDep
 from luma.services import off_client, usda_client
 from luma.services.food_flags import merge_flags
 
@@ -21,28 +20,28 @@ _LOCAL_THRESHOLD = 5
 
 class FoodCreate(BaseModel):
     name: str
-    brand: Optional[str] = None
+    brand: str | None = None
     serving_size_g: float
-    nutrients_per_100g: Dict[str, Any]
-    tags: Optional[List[str]] = None
+    nutrients_per_100g: dict[str, Any]
+    tags: list[str] | None = None
 
 
 class FoodResponse(BaseModel):
     id: UUID
     source: str
-    source_id: Optional[str] = None
+    source_id: str | None = None
     name: str
-    brand: Optional[str] = None
-    serving_size_g: Optional[float] = None
-    nutrients_per_100g: Dict[str, Any]
-    tags: Optional[List[str]] = None
-    flags: List[str] = []
-    created_by: Optional[UUID] = None
+    brand: str | None = None
+    serving_size_g: float | None = None
+    nutrients_per_100g: dict[str, Any]
+    tags: list[str] | None = None
+    flags: list[str] = []
+    created_by: UUID | None = None
 
     model_config = {"from_attributes": True}
 
 
-def get_search_terms(q: str) -> List[str]:
+def get_search_terms(q: str) -> list[str]:
     q_clean = q.strip().lower()
     candidates = [q_clean]
 
@@ -54,7 +53,7 @@ def get_search_terms(q: str) -> List[str]:
         candidates.extend(words)
 
     # Simple singularization for each candidate
-    expanded: List[str] = []
+    expanded: list[str] = []
     for t in candidates:
         expanded.append(t)
         if t.endswith("s") and len(t) > 3:
@@ -78,13 +77,13 @@ def get_search_terms(q: str) -> List[str]:
     return list(dict.fromkeys(cleaned_terms))
 
 
-@router.get("/search", response_model=List[FoodResponse])
+@router.get("/search", response_model=list[FoodResponse])
 async def search_foods(
     db: DbDep,
     current_user: CurrentUser,
-    q: Optional[str] = Query(None, min_length=1),
-    flags: Optional[str] = Query(None, description="Comma-separated flag list (AND logic)"),
-) -> List[Food]:
+    q: str | None = Query(None, min_length=1),
+    flags: str | None = Query(None, description="Comma-separated flag list (AND logic)"),
+) -> list[Food]:
     # USDA reference foods surface first — they are curated, normalised to 100g,
     # and carry the full nutrient profile the agents depend on.
     _no_q_order = case(

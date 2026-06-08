@@ -442,25 +442,32 @@ export default function TodayRoute() {
 
         {/* Weight */}
         <div className="glass" style={{ padding: 18, marginBottom: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div className="eyebrow">Weight</div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <SlopeChip label="7d" value={trend7d} unit={slopeUnit}/>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Weight</div>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            {/* Left: Weight value and target */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <span className="num" style={{ fontSize: 36, fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--fg-primary)' }}>
+                  {latestWeight?.toFixed(1) ?? '—'}
+                </span>
+                <span style={{ fontSize: 14, color: 'var(--fg-tertiary)', fontWeight: 500 }}>{weightUnit}</span>
+              </div>
+              {targetWeight != null && (
+                <div style={{ fontSize: 11, color: 'var(--fg-quiet)', whiteSpace: 'nowrap' }}>
+                  target <span className="num" style={{ color: 'var(--fg-tertiary)', fontSize: 12 }}>{targetWeight.toFixed(1)} {weightUnit}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Trend slope chips stacked vertically (28d on top, shifted up) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0, marginTop: -4 }}>
               <SlopeChip label="28d" value={trend28d} unit={slopeUnit}/>
+              <SlopeChip label="7d" value={trend7d} unit={slopeUnit}/>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
-            <span className="num" style={{ fontSize: 38, fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--fg-primary)' }}>
-              {latestWeight?.toFixed(1) ?? '—'}
-            </span>
-            <span style={{ fontSize: 14, color: 'var(--fg-tertiary)' }}>{weightUnit}</span>
-            {targetWeight != null && (
-              <span style={{ fontSize: 12, color: 'var(--fg-quiet)', marginLeft: 4 }}>
-                target <span className="num" style={{ color: 'var(--fg-tertiary)' }}>{targetWeight.toFixed(1)} {weightUnit}</span>
-              </span>
-            )}
-          </div>
-          <div style={{ marginTop: 14, marginLeft: -6, marginRight: -6 }}>
+
+          <div style={{ marginTop: 16, marginLeft: -6, marginRight: -6 }}>
             <WeightChart data={weightSeries} width={340} height={70} showAxis={false}/>
           </div>
         </div>

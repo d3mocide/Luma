@@ -13,6 +13,7 @@ from uuid import UUID
 
 async def main(user_id: UUID) -> None:
     from sqlalchemy import text
+
     from luma.db.session import engine
 
     async with engine.connect() as conn:
@@ -43,7 +44,7 @@ async def main(user_id: UUID) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print(f"Usage: python -m luma.scripts.clear_hae_data <user-uuid>", file=sys.stderr)
+        print("Usage: python -m luma.scripts.clear_hae_data <user-uuid>", file=sys.stderr)
         sys.exit(1)
     try:
         uid = UUID(sys.argv[1])

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
@@ -16,7 +16,7 @@ router = APIRouter()
 
 class FavoriteItemIn(BaseModel):
     food_name: str
-    brand: Optional[str] = None
+    brand: str | None = None
     quantity_g: float
     nutrients: dict = {}
 
@@ -27,8 +27,8 @@ class FavoriteCreate(BaseModel):
 
 
 class FavoriteUpdate(BaseModel):
-    name: Optional[str] = None
-    items: Optional[list[FavoriteItemIn]] = None
+    name: str | None = None
+    items: list[FavoriteItemIn] | None = None
 
 
 def _item_row_to_dict(r: Any) -> dict[str, Any]:

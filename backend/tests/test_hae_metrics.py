@@ -1,12 +1,15 @@
 """Normalizer integration tests: row count, metric mapping, values, timestamps, source_meta."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from tests.hae_fixtures import (
-    SAMPLE_PAYLOAD, EXPECTED_METRICS, EXPECTED_TS,
-    make_fake_user, build_mock_db, build_capturing_db,
+    EXPECTED_METRICS,
+    EXPECTED_TS,
+    SAMPLE_PAYLOAD,
+    build_capturing_db,
+    build_mock_db,
 )
 
 _FAKE_USER_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
@@ -16,13 +19,13 @@ def test_parse_hae_ts_converts_to_utc():
     from luma.services.hae_normalizer import _parse_hae_ts
     ts = _parse_hae_ts("2026-05-19 00:00:00 -0700")
     assert ts == EXPECTED_TS
-    assert ts.tzinfo == timezone.utc
+    assert ts.tzinfo == UTC
 
 
 def test_parse_hae_ts_positive_offset():
     from luma.services.hae_normalizer import _parse_hae_ts
     ts = _parse_hae_ts("2026-05-19 08:00:00 +0100")
-    assert ts == datetime(2026, 5, 19, 7, 0, 0, tzinfo=timezone.utc)
+    assert ts == datetime(2026, 5, 19, 7, 0, 0, tzinfo=UTC)
 
 
 def test_convert_sleep_hours_to_minutes():
@@ -70,7 +73,7 @@ def test_convert_fps_to_mps():
 
 
 def test_convert_height_units():
-    from luma.services.hae_normalizer import _convert, HAE_METRIC_MAP
+    from luma.services.hae_normalizer import HAE_METRIC_MAP, _convert
     assert HAE_METRIC_MAP["height"] == "height_cm"
     assert _convert(178.0, "cm", "height_cm") == pytest.approx(178.0)       # passthrough
     assert _convert(70.0, "in", "height_cm") == pytest.approx(177.8, rel=1e-5)  # generic inch rule
@@ -92,6 +95,7 @@ def test_convert_weight_lb_to_kg():
 def test_convert_weight_lb_no_warning(caplog):
     """lb is a known valid unit for weight_kg — should not log a warning."""
     import logging
+
     from luma.services.hae_normalizer import _convert
     with caplog.at_level(logging.WARNING, logger="luma.services.hae_normalizer"):
         _convert(203.26, "lb", "weight_kg")
@@ -102,6 +106,7 @@ def test_convert_weight_lb_no_warning(caplog):
 def test_convert_known_metric_units_no_warning(caplog):
     """Metric-mode HAE exports (km, degC, etc.) pass through without warnings."""
     import logging
+
     from luma.services.hae_normalizer import _convert
     with caplog.at_level(logging.WARNING, logger="luma.services.hae_normalizer"):
         _convert(5.0, "km", "distance_km")
@@ -117,6 +122,7 @@ def test_convert_known_metric_units_no_warning(caplog):
 def test_convert_unknown_unit_logs_warning(caplog):
     """An unrecognised unit for a sensitive metric logs a warning and passes value through."""
     import logging
+
     from luma.services.hae_normalizer import _convert
     with caplog.at_level(logging.WARNING, logger="luma.services.hae_normalizer"):
         result = _convert(3.0, "mph", "walking_speed_kmh")
@@ -127,6 +133,7 @@ def test_convert_unknown_unit_logs_warning(caplog):
 def test_convert_unknown_unit_non_sensitive_no_warning(caplog):
     """Metrics absent from _KNOWN_UNITS never emit a unit-mismatch warning."""
     import logging
+
     from luma.services.hae_normalizer import _convert
     with caplog.at_level(logging.WARNING, logger="luma.services.hae_normalizer"):
         _convert(59.0, "some-weird-unit", "hrv_ms")

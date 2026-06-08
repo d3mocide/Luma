@@ -1,12 +1,10 @@
 """Meal logging endpoint tests — covers CRUD round-trip and auth gating."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
 
 SAMPLE_NUTRITION = {
     "calories": 380.0,
@@ -46,7 +44,7 @@ def _make_fake_event(user_id=None, event_id=None, slot="breakfast"):
     event = MagicMock()
     event.id = event_id or uuid4()
     event.user_id = user_id or uuid4()
-    event.ts = datetime.now(timezone.utc)
+    event.ts = datetime.now(UTC)
     event.slot = slot
     event.source = "manual"
     event.items = SAMPLE_ITEMS

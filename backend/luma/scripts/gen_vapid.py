@@ -1,7 +1,8 @@
 """Print a fresh VAPID key pair to stdout. Does not modify any files."""
+import base64
+
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-import base64
 
 key = ec.generate_private_key(ec.SECP256R1())
 

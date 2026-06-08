@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
@@ -41,7 +41,7 @@ async def _live_today_row(db: Any, user_id: str, metric: str) -> SimpleNamespace
     """Query today's data directly from biometrics when the aggregate hasn't caught up."""
     tz = ZoneInfo(settings.server_timezone)
     today_local = datetime.now(tz).date()
-    today_start = datetime(today_local.year, today_local.month, today_local.day, tzinfo=tz).astimezone(timezone.utc)
+    today_start = datetime(today_local.year, today_local.month, today_local.day, tzinfo=tz).astimezone(UTC)
     today_end = today_start + timedelta(days=1)
 
     agg = await db.execute(

@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ async def update_case_file_task(ctx: dict, user_id: str) -> None:
 async def update_all_case_files(ctx: dict) -> None:
     """Scheduled task: update rolling case files for all users every 2 hours."""
     from sqlalchemy import text
+
     from luma.db.session import AsyncSessionLocal
     from luma.services.coach_context import update_case_file
 
@@ -57,6 +59,7 @@ async def sync_all_profiles(ctx: dict) -> None:
     """Scheduled task: reconcile each user's saved profile (activity level,
     height) against measured biometrics. Runs daily."""
     from sqlalchemy import text
+
     from luma.db.session import AsyncSessionLocal
     from luma.services.profile_sync import sync_user_profile
 
@@ -80,6 +83,7 @@ async def sync_all_profiles(ctx: dict) -> None:
 async def refresh_all_coach_contexts(ctx: dict) -> None:
     """Scheduled task: refresh coach context blobs for all users every 2 hours."""
     from sqlalchemy import text
+
     from luma.db.session import AsyncSessionLocal
     from luma.services.coach_context import refresh_coach_context
 
@@ -100,13 +104,15 @@ async def refresh_all_coach_contexts(ctx: dict) -> None:
 
 async def send_daily_nudges(ctx: dict) -> None:
     """Hourly check: send push to users whose local nudge hour matches now and who haven't logged today."""
-    from datetime import datetime, timezone
+    from datetime import datetime
     from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
     from sqlalchemy import text
+
     from luma.db.session import AsyncSessionLocal
     from luma.services.push_dispatcher import send_push_to_user
 
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(UTC)
     logger.info("Daily nudge check at UTC %s", now_utc.isoformat())
 
     async with AsyncSessionLocal() as db:
@@ -126,7 +132,7 @@ async def send_daily_nudges(ctx: dict) -> None:
             continue
 
         today_start_local = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
-        today_start_utc = today_start_local.astimezone(timezone.utc)
+        today_start_utc = today_start_local.astimezone(UTC)
 
         async with AsyncSessionLocal() as db:
             logged = await db.execute(
@@ -156,16 +162,16 @@ async def send_weekly_recap(ctx: dict) -> None:
     receives the recap at a sensible local time rather than at a fixed UTC slot.
     Dedup is handled via the alerts table (168-hour dedup on rule_id='weekly_recap').
     """
-    import json
-    import uuid
-    from datetime import datetime, timezone
+    from datetime import datetime
     from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
     from sqlalchemy import text
-    from luma.db.session import AsyncSessionLocal
+
     from luma.agents.insight_narrator import narrate_alert
+    from luma.db.session import AsyncSessionLocal
     from luma.services.push_dispatcher import send_push_to_user
 
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(UTC)
     logger.info("Weekly recap check at UTC %s", now_utc.isoformat())
 
     async with AsyncSessionLocal() as db:
@@ -195,9 +201,11 @@ async def send_weekly_recap(ctx: dict) -> None:
 async def _generate_and_store_weekly_recap(user_id: str, now_utc, narrate_alert, send_push_to_user) -> None:
     import json
     import uuid
+
     from sqlalchemy import text
-    from luma.db.session import AsyncSessionLocal
+
     from luma.config import settings
+    from luma.db.session import AsyncSessionLocal
 
     async with AsyncSessionLocal() as db:
         # Dedup: skip if a recap already fired in the last 7 days

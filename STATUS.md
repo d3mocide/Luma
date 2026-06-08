@@ -1,6 +1,6 @@
 # Luma — Status
 
-Last updated: 2026-06-06
+Last updated: 2026-06-08
 
 ## Phase 0 — Foundations
 
@@ -164,7 +164,7 @@ Fully implemented, verified, stabilized, and bug-fixed.
 
 ## Infrastructure / Ops (ongoing)
 
-- [ ] CI — `alembic upgrade head` + `pytest` on every push
+- [x] CI — typecheck, lint, and tests (pytest) via GitHub Actions (.github/workflows/pr-checks.yml)
 - [ ] Log rotation config for nginx
 - [ ] Backup cron for postgres volume
 - [ ] Remote Local AI setup & model dependencies documented (e.g. `llama3.1:8b-instruct`, `moondream2`)

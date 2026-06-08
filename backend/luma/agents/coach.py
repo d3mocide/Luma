@@ -7,16 +7,11 @@ import uuid
 from collections.abc import AsyncGenerator
 from typing import Any
 
-import litellm
-from time import perf_counter
-
+from luma.agents.prompt_loader import load_prompt
 from luma.config import settings
-from luma.services.llm_client import build_litellm_target, call_llm
-from luma.services.llm_metrics import tracker as llm_metrics_tracker
+from luma.services.llm_client import call_llm
 
 logger = logging.getLogger(__name__)
-
-from luma.agents.prompt_loader import load_prompt
 
 _SYSTEM_BASE = load_prompt("coach_system")
 
@@ -129,6 +124,7 @@ TOOLS: list[dict[str, Any]] = [
 
 async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
     from datetime import datetime
+
     from sqlalchemy import text
 
     # Helper: convert ISO date string to Python date object
@@ -372,7 +368,11 @@ async def coach_stream(
     # Inject user context snapshot + rolling case file into system prompt
     system_content = _SYSTEM_BASE
     try:
-        from luma.services.coach_context import get_coach_context, get_case_file, format_context_for_prompt
+        from luma.services.coach_context import (
+            format_context_for_prompt,
+            get_case_file,
+            get_coach_context,
+        )
         ctx = await get_coach_context(user_id, db)
         case_file = await get_case_file(user_id, db)
         

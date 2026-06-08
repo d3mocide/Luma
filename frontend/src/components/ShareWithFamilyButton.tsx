@@ -60,17 +60,12 @@ export function ShareWithFamilyButton({ resourceType, resourceId, stopPropagatio
     <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
       <button
         onClick={handleTriggerClick}
-        style={{
-          padding: '6px 10px', borderRadius: 8, fontSize: 12,
-          background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
-          color: 'var(--fg-secondary)', cursor: 'pointer', display: 'flex',
-          alignItems: 'center', gap: 5, transition: 'all 150ms',
-        }}
+        className="favorite-action-btn"
         title="Share with family group"
         aria-label="Share with family"
       >
         <Share2 size={12} strokeWidth={1.75} />
-        Share
+        <span className="btn-label">Share</span>
       </button>
 
       {open && (

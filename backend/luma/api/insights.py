@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
@@ -76,10 +77,11 @@ async def trigger_insights(
     db: DbDep,
     bypass_dedup: bool = False,
 ) -> dict[str, Any]:
+    from datetime import datetime, timedelta
+
     from luma.alerts.engine import _process_user
-    from datetime import datetime, timezone, timedelta
     
-    start_time = datetime.now(timezone.utc) - timedelta(seconds=2)
+    start_time = datetime.now(UTC) - timedelta(seconds=2)
     try:
         await _process_user(str(user.id), bypass_dedup=bypass_dedup)
     except Exception as exc:

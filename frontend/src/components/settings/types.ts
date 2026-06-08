@@ -251,6 +251,7 @@ export type AiConfig = {
     food_extractor: { primary: string; fallback: string | null }
     vision_classifier: { primary: string; fallback: string | null }
     insight_narrator: { primary: string; fallback: string | null }
+    recipe_importer: { primary: string; fallback: string | null }
   }
   endpoints: {
     local_ai_api_base: string | null

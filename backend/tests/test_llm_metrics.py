@@ -1,6 +1,9 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
 from luma.services.llm_metrics import LLMMetricsTracker
+
 
 @pytest.mark.asyncio
 async def test_llm_metrics_record_success_increments_tokens():

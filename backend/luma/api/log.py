@@ -1,18 +1,18 @@
-from typing import Optional, List, Dict, Any
-from uuid import UUID
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
+from typing import Any
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
-from sqlalchemy import select
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
+from sqlalchemy import select
 
-from luma.deps import DbDep, CurrentUser
+from luma.agents import food_extractor
 from luma.db.models import Food, MealEvent
+from luma.deps import CurrentUser, DbDep
 from luma.services import off_client, whisper_client
 from luma.services.nutrition import aggregate_items
-from luma.agents import food_extractor
 
 router = APIRouter()
 
@@ -54,22 +54,22 @@ class TextLogRequest(BaseModel):
 
 
 class MealEventCreate(BaseModel):
-    ts: Optional[datetime] = None
+    ts: datetime | None = None
     slot: str  # "breakfast", "lunch", "dinner", "snack"
     source: str  # "voice", "barcode", "manual"
-    items: List[Dict[str, Any]]
-    nutrition: Dict[str, Any]
-    plan_slot_id: Optional[UUID] = None
-    raw_input: Optional[str] = None
-    confidence: Optional[float] = None
+    items: list[dict[str, Any]]
+    nutrition: dict[str, Any]
+    plan_slot_id: UUID | None = None
+    raw_input: str | None = None
+    confidence: float | None = None
 
 
 class MealEventUpdate(BaseModel):
-    slot: Optional[str] = None
-    items: Optional[List[Dict[str, Any]]] = None
-    nutrition: Optional[Dict[str, Any]] = None
-    plan_slot_id: Optional[UUID] = None
-    ts: Optional[datetime] = None
+    slot: str | None = None
+    items: list[dict[str, Any]] | None = None
+    nutrition: dict[str, Any] | None = None
+    plan_slot_id: UUID | None = None
+    ts: datetime | None = None
 
 
 @router.post("/meal/barcode")
@@ -174,7 +174,7 @@ async def log_meal(
     db: DbDep,
     current_user: CurrentUser,
 ) -> dict:
-    ts = req.ts or datetime.now(timezone.utc)
+    ts = req.ts or datetime.now(UTC)
     event = MealEvent(
         id=uuid.uuid4(),
         user_id=current_user.id,
@@ -271,6 +271,7 @@ async def log_meal_photo(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty image file")
 
     import base64
+
     from luma.config import settings
     from luma.services.llm_client import call_llm
 
@@ -308,9 +309,9 @@ async def log_meal_photo(
         },
     ]
 
-    import re
     import json as _json
     import logging as _logging
+    import re
     _logger = _logging.getLogger(__name__)
 
     def _parse_vision_json(raw: str) -> list | None:
@@ -386,7 +387,7 @@ async def get_frequent_meals(
     days: int = 7,
 ) -> dict:
     """Return the most frequently logged meal per slot over the past N days."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
     stmt = (
         select(MealEvent)
         .where(MealEvent.user_id == current_user.id, MealEvent.ts >= cutoff)

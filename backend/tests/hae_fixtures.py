@@ -1,5 +1,5 @@
 """Shared constants and helpers for HAE integration tests."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import orjson
@@ -48,7 +48,7 @@ EXPECTED_METRICS = {
 }
 
 # "2026-05-19 00:00:00 -0700" → 07:00 UTC
-EXPECTED_TS = datetime(2026, 5, 19, 7, 0, 0, tzinfo=timezone.utc)
+EXPECTED_TS = datetime(2026, 5, 19, 7, 0, 0, tzinfo=UTC)
 
 
 def make_fake_user():

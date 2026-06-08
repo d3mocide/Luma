@@ -309,7 +309,9 @@ function AccountTab({
         <div className="settings-order-notifications">
           <NotificationsCard />
         </div>
-        <FamilyStatusCard />
+        <div className="settings-order-family">
+          <FamilyStatusCard />
+        </div>
         <div className="settings-order-password">
           <PasswordCard />
         </div>

@@ -1,7 +1,5 @@
 import argparse
 import getpass
-import hashlib
-import hmac
 import json
 import os
 import sys

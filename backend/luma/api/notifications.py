@@ -1,12 +1,12 @@
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import uuid
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
 
 from luma.config import settings
-from luma.deps import DbDep, CurrentUser
+from luma.deps import CurrentUser, DbDep
 
 router = APIRouter()
 

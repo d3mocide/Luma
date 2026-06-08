@@ -987,7 +987,7 @@ function CalculatorTab() {
   }
 
   return (
-    <div style={{ paddingTop: 24, paddingBottom: 60, display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ paddingTop: 0, paddingBottom: 60, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
       {/* Ingredient builder */}
       <IngredientBuilder

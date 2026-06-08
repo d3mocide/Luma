@@ -281,40 +281,56 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
         </div>
       ) : (
         <div>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '0 10px 0 34px', borderRadius: 10, position: 'relative',
-            border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
-          }}>
-            <Search size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-quiet)', pointerEvents: 'none' }} />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search oats, salmon, chicken breast…"
-              className="field-input"
-              style={{
-                flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                padding: '9px 0', fontSize: 13,
-                color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)',
-              }}
-            />
-            {isSearching && (
-              <span style={{ width: 14, height: 14, border: '2px solid var(--sky-400)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'block', flexShrink: 0 }} />
-            )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+            <div style={{
+              flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+              padding: '0 12px 0 34px', borderRadius: 10, position: 'relative',
+              border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
+            }}>
+              <Search size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-quiet)', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search oats, salmon, chicken breast…"
+                className="field-input"
+                style={{
+                  flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                  padding: '9px 0', fontSize: 13,
+                  color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)',
+                }}
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                    color: 'var(--fg-quiet)', display: 'flex', alignItems: 'center',
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+              {isSearching && (
+                <span style={{ width: 14, height: 14, border: '2px solid var(--sky-400)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'block', flexShrink: 0 }} />
+              )}
+            </div>
             <button
               type="button"
               onClick={() => { setBarcodeError(''); setIsScanning((v) => !v) }}
-              title="Scan barcode"
               style={{
-                background: isScanning ? 'rgba(56,189,248,0.15)' : 'none',
-                border: 'none', padding: '2px 4px', cursor: 'pointer',
-                color: isScanning ? 'var(--sky-400)' : 'var(--fg-quiet)',
-                display: 'flex', alignItems: 'center', flexShrink: 0,
-                borderRadius: 6, transition: 'color 150ms, background 150ms',
+                padding: '0 14px', borderRadius: 10, flexShrink: 0,
+                background: isScanning ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
+                border: isScanning ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--glass-edge)',
+                color: isScanning ? 'var(--sky-300)' : 'var(--fg-secondary)',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6,
+                fontSize: 13, transition: 'all 150ms',
               }}
             >
               <Camera size={15} />
+              Scan
             </button>
           </div>
           {isScanning && (

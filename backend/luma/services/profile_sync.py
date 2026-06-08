@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select, text
@@ -35,8 +35,8 @@ async def sync_user_profile(user_id: str, db: AsyncSession) -> dict[str, str | N
 
     tz = ZoneInfo(settings.server_timezone)
     today_dt = datetime.now(tz).date()
-    start_ts = datetime.combine(today_dt - timedelta(days=7), time.min, tzinfo=tz).astimezone(timezone.utc)
-    end_ts = datetime.combine(today_dt, time.min, tzinfo=tz).astimezone(timezone.utc)
+    start_ts = datetime.combine(today_dt - timedelta(days=7), time.min, tzinfo=tz).astimezone(UTC)
+    end_ts = datetime.combine(today_dt, time.min, tzinfo=tz).astimezone(UTC)
 
     steps_row = (
         await db.execute(

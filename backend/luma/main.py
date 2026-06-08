@@ -5,8 +5,26 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from luma.api import (
+    admin,
+    auth,
+    coach,
+    family,
+    favorites,
+    foods,
+    goals,
+    hae_diagnostic,
+    ingest,
+    insights,
+    journal,
+    log,
+    notifications,
+    plan,
+    recipes,
+    today,
+    trends,
+)
 from luma.config import settings
-from luma.api import auth, ingest, today, trends, log, plan, coach, foods, recipes, goals, insights, hae_diagnostic, admin, journal, favorites, notifications, family
 
 logging.basicConfig(
     level=logging.INFO if settings.is_production else logging.DEBUG,
@@ -34,6 +52,7 @@ async def lifespan(app: FastAPI):
     # new deployments are never stuck waiting for a manual `make migrate`.
     def _run_alembic():
         from alembic.config import Config
+
         from alembic import command
         cfg = Config("alembic.ini")
         command.upgrade(cfg, "head")
@@ -46,9 +65,10 @@ async def lifespan(app: FastAPI):
         raise
 
     # Automatically seed the clinical core USDA Reference dataset on first startup if the database is empty
-    from luma.db.session import AsyncSessionLocal
-    from luma.db.models import Food
     from sqlalchemy import func, select
+
+    from luma.db.models import Food
+    from luma.db.session import AsyncSessionLocal
     
     async with AsyncSessionLocal() as session:
         try:

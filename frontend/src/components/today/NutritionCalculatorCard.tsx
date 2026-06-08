@@ -283,46 +283,50 @@ export function NutritionCalculatorCard({
               Food
             </span>
             <div style={{ position: 'relative' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '10px 12px', borderRadius: 10,
-                border: `1px solid ${selectedFood ? 'var(--sky-400)' : 'var(--glass-edge)'}`,
-                background: 'var(--glass-1)',
-              }}>
-                <Search size={13} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
-                <input
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value)
-                    if (selectedFood) setSelectedFood(null)
-                  }}
-                  placeholder="Search foods…"
-                  style={{
-                    flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                    color: 'var(--fg-primary)', fontSize: 13, minWidth: 0,
-                  }}
-                />
-                {selectedFood && (
-                  <button type="button" onClick={handleClear} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', alignItems: 'center' }}>
-                    <X size={13} />
-                  </button>
-                )}
-                {isFetching && !selectedFood && (
-                  <span style={{ fontSize: 10, color: 'var(--fg-quiet)', flexShrink: 0 }}>…</span>
-                )}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                <div style={{
+                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '10px 12px', borderRadius: 10,
+                  border: `1px solid ${selectedFood ? 'var(--sky-400)' : 'var(--glass-edge)'}`,
+                  background: 'var(--glass-1)',
+                }}>
+                  <Search size={13} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
+                  <input
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value)
+                      if (selectedFood) setSelectedFood(null)
+                    }}
+                    placeholder="Search foods…"
+                    style={{
+                      flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                      color: 'var(--fg-primary)', fontSize: 13, minWidth: 0,
+                    }}
+                  />
+                  {selectedFood && (
+                    <button type="button" onClick={handleClear} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', alignItems: 'center' }}>
+                      <X size={13} />
+                    </button>
+                  )}
+                  {isFetching && !selectedFood && (
+                    <span style={{ fontSize: 10, color: 'var(--fg-quiet)', flexShrink: 0 }}>…</span>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => { setBarcodeError(''); setIsScanning((v) => !v) }}
-                  title="Scan barcode"
                   style={{
-                    background: isScanning ? 'rgba(56,189,248,0.15)' : 'none',
-                    border: 'none', padding: '2px 4px', cursor: 'pointer',
-                    color: isScanning ? 'var(--sky-400)' : 'var(--fg-quiet)',
-                    display: 'flex', alignItems: 'center', flexShrink: 0,
-                    borderRadius: 6, transition: 'color 150ms, background 150ms',
+                    padding: '0 14px', borderRadius: 10, flexShrink: 0,
+                    background: isScanning ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
+                    border: isScanning ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--glass-edge)',
+                    color: isScanning ? 'var(--sky-300)' : 'var(--fg-secondary)',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    fontSize: 13, transition: 'all 150ms',
                   }}
                 >
                   <Camera size={14} />
+                  Scan
                 </button>
               </div>
               {isScanning && (

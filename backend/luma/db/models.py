@@ -1,13 +1,22 @@
 import uuid
-from datetime import datetime, date
-from typing import Any
 
 from sqlalchemy import (
-    Boolean, Column, Date, DateTime, Double, Float, ForeignKey,
-    Integer, Numeric, String, Text, UniqueConstraint, Index,
-    text, ARRAY,
+    ARRAY,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Double,
+    Float,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB, CITEXT
+from sqlalchemy.dialects.postgresql import CITEXT, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.sql import func
 

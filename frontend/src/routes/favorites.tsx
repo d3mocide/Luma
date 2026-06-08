@@ -233,57 +233,45 @@ export default function FavoritesRoute() {
               {favorites.map((fav) => (
                 <div
                   key={fav.id}
-                  className="glass-inset"
+                  className="glass"
                   style={{ padding: '16px 18px', borderRadius: 14 }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 3 }}>
-                        {fav.name}
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>
-                        {fav.items.length} {fav.items.length === 1 ? 'item' : 'items'} ·{' '}
-                        <span className="num" style={{ color: 'var(--sky-400)' }}>{totalKcal(fav.items)}</span> kcal
-                      </div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>
+                    {fav.name}
+                  </div>
+                  <div className="favorite-card-row">
+                    <div className="favorite-card-info" style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>
+                      {fav.items.length} {fav.items.length === 1 ? 'item' : 'items'} ·{' '}
+                      <span className="num" style={{ color: 'var(--sky-400)' }}>{totalKcal(fav.items)}</span> kcal
                     </div>
 
-                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <div className="favorite-card-actions">
                       <button
                         onClick={() => logFavoriteDirect.mutate(fav)}
                         disabled={logFavoriteDirect.isPending}
-                        className="btn btn-primary"
-                        style={{ padding: '6px 12px', fontSize: 12, gap: 5, opacity: logFavoriteDirect.isPending ? 0.7 : 1 }}
+                        className="favorite-action-btn favorite-action-btn--primary"
+                        style={{ opacity: logFavoriteDirect.isPending ? 0.7 : 1 }}
                       >
                         <Heart size={12} strokeWidth={2} />
-                        {logFavoriteDirect.isPending && logFavoriteDirect.variables?.id === fav.id ? 'Logging…' : 'Log this'}
+                        <span>{logFavoriteDirect.isPending && logFavoriteDirect.variables?.id === fav.id ? 'Logging…' : 'Log this'}</span>
                       </button>
                       <ShareWithFamilyButton resourceType="favorite" resourceId={fav.id} />
                       <button
                         onClick={() => startEdit(fav)}
-                        style={{
-                          padding: '6px 10px', borderRadius: 8, fontSize: 12,
-                          background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
-                          color: 'var(--fg-secondary)', cursor: 'pointer', display: 'flex',
-                          alignItems: 'center', gap: 5, transition: 'all 150ms',
-                        }}
+                        className="favorite-action-btn"
                       >
                         <Pencil size={12} strokeWidth={1.75} />
-                        Edit
+                        <span className="btn-label">Edit</span>
                       </button>
                       <button
                         onClick={() => deleteMutation.mutate(fav.id)}
                         disabled={deleteMutation.isPending}
-                        style={{
-                          padding: '6px 10px', borderRadius: 8, fontSize: 12,
-                          background: 'rgba(251,113,133,0.08)', border: '1px solid rgba(251,113,133,0.22)',
-                          color: 'var(--bad)', cursor: 'pointer', display: 'flex',
-                          alignItems: 'center', gap: 5, transition: 'all 150ms',
-                          opacity: deleteMutation.isPending ? 0.5 : 1,
-                        }}
+                        className="favorite-action-btn favorite-action-btn--danger"
+                        style={{ opacity: deleteMutation.isPending ? 0.5 : 1 }}
                         aria-label={`Delete ${fav.name}`}
                       >
                         <Trash2 size={12} strokeWidth={1.75} />
-                        Delete
+                        <span className="btn-label">Delete</span>
                       </button>
                     </div>
                   </div>

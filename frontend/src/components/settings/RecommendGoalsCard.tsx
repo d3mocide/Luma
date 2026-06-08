@@ -101,11 +101,18 @@ export function RecommendGoalsCard({ onApply, isSaving }: Props) {
       )}
 
       {missingFields && (
-        <p style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--sun-400)', lineHeight: 1.5 }}>
-          Add your {formatMissingFields(missingFields)} in the Profile section above so we can
-          calculate accurate targets. We use the Mifflin–St Jeor formula (the same one the Mayo
-          Clinic calculator uses) rather than raw watch calories, which tend to run high.
-        </p>
+        <div style={{
+          marginTop: 16,
+          padding: '12px 14px',
+          borderRadius: 12,
+          background: 'rgba(234,179,8,0.05)',
+          border: '1px solid rgba(234,179,8,0.15)',
+          color: 'var(--sun-400)',
+          fontSize: 12,
+          lineHeight: 1.5,
+        }}>
+          Provide your <strong style={{ color: 'var(--sun-300)' }}>{formatMissingFields(missingFields)}</strong> in the Profile section to enable target suggestions based on the clinical Mifflin–St Jeor formula (Mayo Clinic standard).
+        </div>
       )}
 
       {rec && (

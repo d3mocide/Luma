@@ -1,15 +1,14 @@
 import uuid
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import func, select, delete
 from pydantic import BaseModel, field_validator
+from sqlalchemy import delete, func, select
 
-from luma.deps import DbDep, CurrentUser
-from luma.db.models import Recipe, RecipeIngredient, Food
+from luma.agents.recipe_importer import extract_recipe
+from luma.db.models import Food, Recipe, RecipeIngredient
+from luma.deps import CurrentUser, DbDep
 from luma.services.nutrition import ZERO_NUTRIENTS
 from luma.services.recipe_scraper import fetch_and_clean
-from luma.agents.recipe_importer import extract_recipe
 
 router = APIRouter()
 
@@ -20,18 +19,18 @@ class IngredientIn(BaseModel):
     food_id: str
     quantity: float
     unit: str
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class RecipeCreateRequest(BaseModel):
     name: str
-    description: Optional[str] = None
-    instructions: Optional[list[str]] = None
-    prep_minutes: Optional[int] = None
-    cook_minutes: Optional[int] = None
+    description: str | None = None
+    instructions: list[str] | None = None
+    prep_minutes: int | None = None
+    cook_minutes: int | None = None
     servings: float = 1.0
-    tags: Optional[list[str]] = None
-    source: Optional[str] = None
+    tags: list[str] | None = None
+    source: str | None = None
     ingredients: list[IngredientIn] = []
 
 
@@ -48,14 +47,14 @@ class RecipeImportRequest(BaseModel):
 
 
 class RecipeUpdateRequest(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    instructions: Optional[list[str]] = None
-    prep_minutes: Optional[int] = None
-    cook_minutes: Optional[int] = None
-    servings: Optional[float] = None
-    tags: Optional[list[str]] = None
-    ingredients: Optional[list[IngredientIn]] = None
+    name: str | None = None
+    description: str | None = None
+    instructions: list[str] | None = None
+    prep_minutes: int | None = None
+    cook_minutes: int | None = None
+    servings: float | None = None
+    tags: list[str] | None = None
+    ingredients: list[IngredientIn] | None = None
 
 
 def _compute_nutrition(ingredients: list[RecipeIngredient], servings: float) -> dict:

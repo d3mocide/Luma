@@ -3,11 +3,10 @@
 import pytest
 
 from luma.api.hae_diagnostic import (
-    _to_snake,
-    _misalignment_match,
     _fuzzy_suggestions,
+    _misalignment_match,
+    _to_snake,
 )
-
 
 # ── name normalisation ────────────────────────────────────────────────────────
 
@@ -76,7 +75,8 @@ def test_fuzzy_suggestions_no_match():
 async def test_analyze_mapped_metric():
     """A known standard metric resolves to mapped status with no fields_not_extracted."""
     from unittest.mock import MagicMock
-    from luma.api.hae_diagnostic import hae_diagnostic_analyze, AnalyzeRequest
+
+    from luma.api.hae_diagnostic import AnalyzeRequest, hae_diagnostic_analyze
 
     payload = {
         "data": {
@@ -104,7 +104,8 @@ async def test_analyze_mapped_metric():
 async def test_analyze_heart_rate_surfaces_unused_fields():
     """heart_rate is aggregate; Min and Max are present but not extracted."""
     from unittest.mock import MagicMock
-    from luma.api.hae_diagnostic import hae_diagnostic_analyze, AnalyzeRequest
+
+    from luma.api.hae_diagnostic import AnalyzeRequest, hae_diagnostic_analyze
 
     payload = {
         "data": {
@@ -134,7 +135,8 @@ async def test_analyze_heart_rate_surfaces_unused_fields():
 async def test_analyze_sleep_v4_surfaces_stages():
     """sleep_analysis v4 surfaces Core/Deep/Rem/Awake as not-extracted."""
     from unittest.mock import MagicMock
-    from luma.api.hae_diagnostic import hae_diagnostic_analyze, AnalyzeRequest
+
+    from luma.api.hae_diagnostic import AnalyzeRequest, hae_diagnostic_analyze
 
     payload = {
         "data": {
@@ -173,7 +175,8 @@ async def test_analyze_sleep_v4_surfaces_stages():
 async def test_analyze_unmapped_with_misalignment():
     """A camelCase variant of a known name is flagged as a likely misalignment."""
     from unittest.mock import MagicMock
-    from luma.api.hae_diagnostic import hae_diagnostic_analyze, AnalyzeRequest
+
+    from luma.api.hae_diagnostic import AnalyzeRequest, hae_diagnostic_analyze
 
     payload = {
         "data": {
@@ -197,7 +200,8 @@ async def test_analyze_unmapped_with_misalignment():
 @pytest.mark.asyncio
 async def test_analyze_empty_payload():
     from unittest.mock import MagicMock
-    from luma.api.hae_diagnostic import hae_diagnostic_analyze, AnalyzeRequest
+
+    from luma.api.hae_diagnostic import AnalyzeRequest, hae_diagnostic_analyze
 
     fake_user = MagicMock()
     result = await hae_diagnostic_analyze(AnalyzeRequest(payload={}), fake_user)

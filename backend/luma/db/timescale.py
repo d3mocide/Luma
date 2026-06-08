@@ -4,8 +4,8 @@ These are called from Alembic migrations, not at app startup,
 because TimescaleDB DDL is not idempotent via SQLAlchemy schema reflection.
 """
 
+
 from alembic import op
-import sqlalchemy as sa
 
 
 def create_hypertables() -> None:

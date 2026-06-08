@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import jwt
@@ -7,12 +7,12 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from fastapi import APIRouter, Cookie, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import select, update, func
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import SQLAlchemyError
 
 from luma.config import settings
 from luma.db.models import User
-from luma.deps import DbDep, CurrentUser
+from luma.deps import CurrentUser, DbDep
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -72,7 +72,7 @@ class UserOut(BaseModel):
 
 
 def _make_access_token(user_id: UUID) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
+    expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     return jwt.encode(
         {"sub": str(user_id), "exp": expire, "type": "access"},
         settings.jwt_secret,
@@ -81,7 +81,7 @@ def _make_access_token(user_id: UUID) -> str:
 
 
 def _make_refresh_token(user_id: UUID) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
+    expire = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
     return jwt.encode(
         {"sub": str(user_id), "exp": expire, "type": "refresh"},
         settings.jwt_secret,
@@ -117,7 +117,7 @@ async def login(body: LoginRequest, response: Response, db: DbDep) -> UserOut:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     try:
-        await db.execute(update(User).where(User.id == user.id).values(last_login_at=datetime.now(timezone.utc)))
+        await db.execute(update(User).where(User.id == user.id).values(last_login_at=datetime.now(UTC)))
         await db.commit()
     except SQLAlchemyError as exc:
         _raise_auth_db_http_error(exc)
@@ -178,7 +178,7 @@ async def update_me(body: UpdateProfileRequest, user: CurrentUser, db: DbDep) ->
         user.display_name = name
 
     if body.birth_year is not None:
-        current_year = datetime.now(timezone.utc).year
+        current_year = datetime.now(UTC).year
         if not (1900 <= body.birth_year <= current_year - 13):
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid birth year.")
         user.birth_year = body.birth_year

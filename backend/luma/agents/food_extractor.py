@@ -1,12 +1,13 @@
 import json
 import logging
 import re
-from typing import List, Dict, Any
+from typing import Any
+
 from pydantic import BaseModel, Field
 
+from luma.agents.prompt_loader import load_prompt
 from luma.config import settings
 from luma.services.llm_client import call_llm
-from luma.agents.prompt_loader import load_prompt
 
 logger = logging.getLogger("food_extractor")
 
@@ -56,10 +57,10 @@ class FoodItemSchema(BaseModel):
 
 
 class FoodExtractorResponse(BaseModel):
-    items: List[FoodItemSchema] = Field(description="List of extracted food items")
+    items: list[FoodItemSchema] = Field(description="List of extracted food items")
 
 
-async def extract_foods_from_text(text: str) -> List[Dict[str, Any]]:
+async def extract_foods_from_text(text: str) -> list[dict[str, Any]]:
     """Parse text and extract a structured JSON list of food items and their nutrition metrics."""
     if not text.strip():
         return []

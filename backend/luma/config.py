@@ -1,8 +1,8 @@
+from typing import Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
-from typing import Any, Literal
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):

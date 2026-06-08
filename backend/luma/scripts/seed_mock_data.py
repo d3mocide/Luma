@@ -12,8 +12,8 @@ from uuid import UUID
 from argon2 import PasswordHasher
 from sqlalchemy import delete, select, text
 
+from luma.db.models import Biometric, Goal, MealEvent, User
 from luma.db.session import AsyncSessionLocal
-from luma.db.models import User, Goal, Biometric, MealEvent
 
 
 def normalize_uuid(u: str) -> str:
@@ -34,7 +34,7 @@ async def seed_data(user_id_str: str) -> None:
     normalized = normalize_uuid(user_id_str)
     try:
         user_uuid = UUID(normalized)
-    except ValueError as exc:
+    except ValueError:
         print(f"ERROR: '{user_id_str}' is not a valid UUID format (even after normalization try: '{normalized}')")
         sys.exit(1)
 
@@ -58,7 +58,7 @@ async def seed_data(user_id_str: str) -> None:
             )
             db.add(user)
             await db.commit()
-            print(f"Created new operator user with email: mock-operator@luma.health")
+            print("Created new operator user with email: mock-operator@luma.health")
         else:
             print(f"Found existing user: {user.email} (display name: {user.display_name})")
 
@@ -87,7 +87,7 @@ async def seed_data(user_id_str: str) -> None:
 
         # 4. Add Biometrics (30 days timeseries)
         print("Generating 30 days of biometric timeseries data (weight, ldl, sleep, active energy)...")
-        start_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=30)
+        start_date = datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=30)
         
         biometrics_to_add = []
         for i in range(31):
@@ -241,7 +241,7 @@ async def seed_data(user_id_str: str) -> None:
             "nutrition": {"calories": 180.0, "saturated_fat_g": 0.8, "soluble_fiber_g": 4.0, "protein_g": 5.0}
         }
 
-        meal_start = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=14)
+        meal_start = datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=14)
         for i in range(15):
             day_ts = meal_start + datetime.timedelta(days=i)
             
@@ -250,14 +250,14 @@ async def seed_data(user_id_str: str) -> None:
             
             if is_healthy_day:
                 # Compliant day
-                b = healthy_breakfast
-                l = healthy_lunch
-                d = healthy_dinner
+                breakfast_meal = healthy_breakfast
+                lunch_meal = healthy_lunch
+                dinner_meal = healthy_dinner
             else:
                 # Indulgent day
-                b = indulgent_breakfast if random.random() < 0.5 else healthy_breakfast
-                l = healthy_lunch
-                d = indulgent_dinner
+                breakfast_meal = indulgent_breakfast if random.random() < 0.5 else healthy_breakfast
+                lunch_meal = healthy_lunch
+                dinner_meal = indulgent_dinner
 
             # Build timestamps for morning, noon, evening
             breakfast_ts = day_ts.replace(hour=8, minute=15, second=0, microsecond=0)
@@ -265,9 +265,9 @@ async def seed_data(user_id_str: str) -> None:
             dinner_ts = day_ts.replace(hour=19, minute=0, second=0, microsecond=0)
 
             meal_events_to_add.extend([
-                MealEvent(user_id=user_uuid, ts=breakfast_ts, slot=b["slot"], source=b["source"], items=b["items"], nutrition=b["nutrition"]),
-                MealEvent(user_id=user_uuid, ts=lunch_ts, slot=l["slot"], source=l["source"], items=l["items"], nutrition=l["nutrition"]),
-                MealEvent(user_id=user_uuid, ts=dinner_ts, slot=d["slot"], source=d["source"], items=d["items"], nutrition=d["nutrition"]),
+                MealEvent(user_id=user_uuid, ts=breakfast_ts, slot=breakfast_meal["slot"], source=breakfast_meal["source"], items=breakfast_meal["items"], nutrition=breakfast_meal["nutrition"]),
+                MealEvent(user_id=user_uuid, ts=lunch_ts, slot=lunch_meal["slot"], source=lunch_meal["source"], items=lunch_meal["items"], nutrition=lunch_meal["nutrition"]),
+                MealEvent(user_id=user_uuid, ts=dinner_ts, slot=dinner_meal["slot"], source=dinner_meal["source"], items=dinner_meal["items"], nutrition=dinner_meal["nutrition"]),
             ])
 
             if random.random() < 0.6:  # 60% chance of a snack
@@ -294,12 +294,12 @@ async def seed_data(user_id_str: str) -> None:
             print(f"Warning: could not manually refresh continuous aggregates: {exc}. Values will populate on next automatic refresh.")
 
     print("\n🎉 Done! High-fidelity mock data successfully generated!")
-    print(f"  - 31 days of weight logs (~81.5 kg -> ~76.2 kg)")
-    print(f"  - 31 days of LDL logs (~145 mg/dL -> ~108 mg/dL)")
-    print(f"  - 31 days of 27+ HAE, longevity & gait metrics (blood oxygen, body temp, blood pressure, walking speed, asymmetry, step length, breathing, etc.)")
-    print(f"  - 15 days of breakfasts, lunches, and dinners")
-    print(f"  - Calorie, fat, and fiber goals properly wired.")
-    print(f"  - Four categorized hubs: Recovery, Activity, Gait & Posture, Vitals")
+    print("  - 31 days of weight logs (~81.5 kg -> ~76.2 kg)")
+    print("  - 31 days of LDL logs (~145 mg/dL -> ~108 mg/dL)")
+    print("  - 31 days of 27+ HAE, longevity & gait metrics (blood oxygen, body temp, blood pressure, walking speed, asymmetry, step length, breathing, etc.)")
+    print("  - 15 days of breakfasts, lunches, and dinners")
+    print("  - Calorie, fat, and fiber goals properly wired.")
+    print("  - Four categorized hubs: Recovery, Activity, Gait & Posture, Vitals")
 
 
 if __name__ == "__main__":

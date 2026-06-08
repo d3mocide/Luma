@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,7 +33,7 @@ async def get_coach_context(user_id: str, db: AsyncSession) -> dict:
     cached = row.fetchone()
 
     if cached:
-        age_hours = (datetime.now(timezone.utc) - cached.updated_at).total_seconds() / 3600
+        age_hours = (datetime.now(UTC) - cached.updated_at).total_seconds() / 3600
         if age_hours < 2:
             return cached.context
 

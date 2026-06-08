@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta, datetime, timezone, time
+from datetime import UTC, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -25,7 +25,6 @@ async def get_today(
         resolved_tz = ZoneInfo(settings.server_timezone)
     tz = resolved_tz
     today_dt = datetime.now(tz).date()
-    yesterday_dt = today_dt - timedelta(days=1)
 
     # 1. Fetch user's goals
     from luma.db.models import Goal, MealEvent, MealPlan, MealPlanSlot
@@ -37,24 +36,11 @@ async def get_today(
     target_sat = float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else None
     target_sol = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else None
 
-    # 2. Fetch yesterday's meal events
     # All boundaries are computed in the configured local timezone then converted
     # to UTC so queries align with the user's calendar day, not the server clock.
-    yesterday_start = datetime.combine(yesterday_dt, time.min, tzinfo=tz).astimezone(timezone.utc)
-    yesterday_end = datetime.combine(today_dt, time.min, tzinfo=tz).astimezone(timezone.utc)
+    yesterday_end = datetime.combine(today_dt, time.min, tzinfo=tz).astimezone(UTC)
     today_start = yesterday_end
-    today_end = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=tz).astimezone(timezone.utc)
-    
-    stmt_events = (
-        select(MealEvent)
-        .where(
-            MealEvent.user_id == user.id,
-            MealEvent.ts >= yesterday_start,
-            MealEvent.ts < yesterday_end
-        )
-    )
-    res_events = await db.execute(stmt_events)
-    events = res_events.scalars().all()
+    today_end = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=tz).astimezone(UTC)
 
     stmt_today_events = (
         select(MealEvent)

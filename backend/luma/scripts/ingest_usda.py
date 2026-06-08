@@ -10,8 +10,9 @@ import uuid
 from pathlib import Path
 
 from sqlalchemy import delete
-from luma.db.session import AsyncSessionLocal
+
 from luma.db.models import Food
+from luma.db.session import AsyncSessionLocal
 from luma.services.food_flags import merge_flags
 
 logging.basicConfig(level=logging.INFO)

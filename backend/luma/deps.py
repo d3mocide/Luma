@@ -8,8 +8,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from luma.config import settings
-from luma.db.session import AsyncSessionLocal
 from luma.db.models import User
+from luma.db.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 

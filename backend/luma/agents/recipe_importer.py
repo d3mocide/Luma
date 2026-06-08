@@ -1,7 +1,6 @@
 import json
 import logging
 import re
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -23,15 +22,15 @@ class RawIngredient(BaseModel):
     name: str = Field(description="Ingredient name, as specific as possible (e.g. 'all-purpose flour' not 'flour')")
     quantity: float = Field(description="Numeric quantity")
     unit: str = Field(description="Unit of measurement (e.g. g, cup, tbsp, oz, piece, clove)")
-    notes: Optional[str] = Field(default=None, description="Preparation notes (e.g. chopped, melted, room temperature)")
+    notes: str | None = Field(default=None, description="Preparation notes (e.g. chopped, melted, room temperature)")
 
 
 class RecipeImportResult(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     instructions: list[str] = Field(default_factory=list)
-    prep_minutes: Optional[int] = None
-    cook_minutes: Optional[int] = None
+    prep_minutes: int | None = None
+    cook_minutes: int | None = None
     servings: float = 1.0
     tags: list[str] = Field(default_factory=list)
     ingredients: list[RawIngredient] = Field(default_factory=list)

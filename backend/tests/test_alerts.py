@@ -1,13 +1,13 @@
 """Alert rules, engine, and narration tests."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
+from luma.agents.insight_narrator import _parse_insight, narrate_alert
+from luma.alerts.engine import _narrate_pending, _process_user, run_alert_engine
 from luma.alerts.rules import AlertResult, check_soluble_fiber_rolling
-from luma.alerts.engine import run_alert_engine, _process_user, _narrate_pending
-
 
 # ── Alert Rules ───────────────────────────────────────────────────────────────
 
@@ -162,7 +162,7 @@ async def test_narrate_pending_processes_and_saves_narrative():
     alert.rule_id = "sat_fat_rolling"
     alert.severity = "warning"
     alert.payload = {"avg_7d_g": 22.0}
-    alert.ts = datetime.now(timezone.utc)
+    alert.ts = datetime.now(UTC)
 
     mock_pending_result = MagicMock()
     mock_pending_result.fetchall.return_value = [alert]
@@ -202,8 +202,6 @@ async def test_narrate_pending_processes_and_saves_narrative():
 
 
 # ── Insight Narrator Parsing ────────────────────────────────────────────────────
-
-from luma.agents.insight_narrator import _parse_insight, narrate_alert
 
 
 def _llm_response(content: str) -> dict:
@@ -327,4 +325,8 @@ async def test_narrate_alert_falls_back_when_retry_also_fails():
     ):
         result = await narrate_alert("a3", "hrv_drop", "warning", {})
 
-    assert result == {"headline": "New insight", "body": "", "thread_seed": ""}
+    assert result == {
+        "headline": "Heart Rate Variability Drop",
+        "body": "Luma detected a noticeable drop in your HRV compared to your recent baseline.",
+        "thread_seed": "What factors could be causing my HRV to drop?",
+    }

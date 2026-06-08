@@ -3,15 +3,15 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import text
 
-from luma.alerts.rules import ALL_RULES
 from luma.alerts.ml import check_biometric_isolation_forest
+from luma.alerts.rules import ALL_RULES
+from luma.db.session import AsyncSessionLocal
 
 ALL_RULES = list(ALL_RULES) + [check_biometric_isolation_forest]
-from luma.db.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ async def _process_user(user_id: str, bypass_dedup: bool = False) -> None:
             {"uid": user_id},
         )
         recent_rule_ts: dict[str, datetime] = {r.rule_id: r.ts for r in fired_recently}
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         for rule_fn in ALL_RULES:
             try:
@@ -57,7 +57,7 @@ async def _process_user(user_id: str, bypass_dedup: bool = False) -> None:
             if not bypass_dedup and result.rule_id in recent_rule_ts:
                 last_ts = recent_rule_ts[result.rule_id]
                 if last_ts.tzinfo is None:
-                    last_ts = last_ts.replace(tzinfo=timezone.utc)
+                    last_ts = last_ts.replace(tzinfo=UTC)
                 age_hours = (now - last_ts).total_seconds() / 3600
                 if age_hours < result.dedup_hours:
                     logger.debug(
@@ -67,7 +67,7 @@ async def _process_user(user_id: str, bypass_dedup: bool = False) -> None:
                     continue
 
             alert_id = uuid.uuid4()
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             await db.execute(
                 text("""
                     INSERT INTO alerts (id, user_id, ts, rule_id, severity, payload, status)

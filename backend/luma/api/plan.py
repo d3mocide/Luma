@@ -1,22 +1,29 @@
-from datetime import date, datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
-from typing import Optional
-from uuid import UUID
-import uuid
 import json
 import logging
+import uuid
+from datetime import UTC, date, datetime, timedelta
+from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select, update
 from pydantic import BaseModel
+from sqlalchemy import select, update
 
-from luma.deps import DbDep, CurrentUser
-from luma.db.models import MealPlan, MealPlanSlot, ShoppingListItem, MealEvent, Food, Goal, Preference
 from luma.agents.meal_planner import generate_meal_plan
-from luma.services.nutrition import ZERO_NUTRIENTS
-from luma.services.plan_helpers import _slot_dict, _sum_nutrition, _nutrition_from_food, _parse_uuid
 from luma.config import settings
+from luma.db.models import (
+    Food,
+    Goal,
+    MealEvent,
+    MealPlan,
+    MealPlanSlot,
+    Preference,
+    ShoppingListItem,
+)
+from luma.deps import CurrentUser, DbDep
 from luma.services.llm_client import call_llm
+from luma.services.nutrition import ZERO_NUTRIENTS
+from luma.services.plan_helpers import _nutrition_from_food, _parse_uuid, _slot_dict, _sum_nutrition
 
 router = APIRouter()
 logger = logging.getLogger("plan")
@@ -30,15 +37,15 @@ def get_current_week_sunday() -> date:
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
 class PlanGenerateRequest(BaseModel):
-    week_start: Optional[date] = None
-    constraints: Optional[dict] = None
+    week_start: date | None = None
+    constraints: dict | None = None
 
 
 class SlotPatchRequest(BaseModel):
-    custom_name: Optional[str] = None
-    notes: Optional[str] = None
-    locked: Optional[bool] = None
-    nutrition: Optional[dict] = None
+    custom_name: str | None = None
+    notes: str | None = None
+    locked: bool | None = None
+    nutrition: dict | None = None
 
 
 class SlotReplaceRequest(BaseModel):
@@ -237,7 +244,7 @@ async def regenerate_weekly_plan(req: PlanGenerateRequest, db: DbDep, current_us
     if existing_plan:
         locked_slots = list((await db.execute(
             select(MealPlanSlot)
-            .where(MealPlanSlot.plan_id == existing_plan.id, MealPlanSlot.locked == True)
+            .where(MealPlanSlot.plan_id == existing_plan.id, MealPlanSlot.locked)
         )).scalars().all())
 
     # Build locked constraints for the LLM
@@ -534,7 +541,7 @@ async def log_as_eaten(plan_id: str, slot_id: str, db: DbDep, current_user: Curr
     event = MealEvent(
         id=uuid.uuid4(),
         user_id=current_user.id,
-        ts=datetime.now(timezone.utc),
+        ts=datetime.now(UTC),
         slot=slot.slot,
         source="plan",
         items=[{"name": slot.custom_name, "quantity": 1.0, "unit": "portion", "nutrients": nutrition}],

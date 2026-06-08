@@ -5,7 +5,7 @@ Threshold flags are auto-computed from per-100g nutrient values.
 """
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 # Single-nutrient threshold flags — (flag_name, nutrient_key, threshold, operator)
 # Operators: "gte" (>=), "lte" (<=), "gt" (>), "lt" (<)
