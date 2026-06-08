@@ -78,34 +78,74 @@ async def _fetch_favorite(favorite_id: str, user_id: str, db: Any) -> dict[str, 
     }
 
 
+# Map sort param to a fixed ORDER BY clause — never interpolate user input directly.
+_SORT_ORDERS = {
+    "recent": "created_at DESC",
+    "frequency": "log_count DESC, created_at DESC",
+}
+
+
 @router.get("")
 async def list_favorites(
     user: CurrentUser,
     db: DbDep,
+    sort: str = "recent",
+    limit: int | None = None,
+    offset: int = 0,
 ) -> dict[str, Any]:
+    order_by = _SORT_ORDERS.get(sort, _SORT_ORDERS["recent"])
+
+    params: dict[str, Any] = {"uid": str(user.id)}
+    page_clause = ""
+    if limit is not None:
+        page_clause = "LIMIT :limit OFFSET :offset"
+        params["limit"] = max(0, limit)
+        params["offset"] = max(0, offset)
+
+    # log_count counts how many times this favorite has been logged. Favorites are
+    # logged as meal_events with source='favorite' and raw_input set to the favorite
+    # name, so that pairing is the frequency signal. Paging happens on favorites (not
+    # joined item rows) via the CTE before items are attached.
     rows = await db.execute(
-        text("""
+        text(f"""
+            WITH fav_counts AS (
+                SELECT
+                    f.id, f.name, f.created_at, f.updated_at,
+                    COUNT(me.id) AS log_count
+                FROM favorites f
+                LEFT JOIN meal_events me
+                    ON me.user_id = f.user_id
+                    AND me.source = 'favorite'
+                    AND me.raw_input = f.name
+                WHERE f.user_id = :uid
+                GROUP BY f.id, f.name, f.created_at, f.updated_at
+            ),
+            paged AS (
+                SELECT * FROM fav_counts
+                ORDER BY {order_by}
+                {page_clause}
+            )
             SELECT
-                f.id        AS fav_id,
-                f.name      AS fav_name,
-                f.created_at,
-                f.updated_at,
+                p.id        AS fav_id,
+                p.name      AS fav_name,
+                p.created_at,
+                p.updated_at,
+                p.log_count,
                 fi.id       AS item_id,
                 fi.sort_order,
                 fi.food_name,
                 fi.brand,
                 fi.quantity_g,
                 fi.nutrients
-            FROM favorites f
-            LEFT JOIN favorite_items fi ON fi.favorite_id = f.id
-            WHERE f.user_id = :uid
-            ORDER BY f.created_at DESC, fi.sort_order NULLS LAST
+            FROM paged p
+            LEFT JOIN favorite_items fi ON fi.favorite_id = p.id
+            ORDER BY {order_by}, fi.sort_order NULLS LAST
         """),
-        {"uid": str(user.id)},
+        params,
     )
     results = rows.fetchall()
 
-    # Group items under their parent favorite, preserving insertion order
+    # Group items under their parent favorite, preserving the ranked order above
     favorites_map: dict[str, dict[str, Any]] = {}
     order: list[str] = []
     for r in results:
@@ -116,13 +156,20 @@ async def list_favorites(
                 "name": r.fav_name,
                 "created_at": r.created_at.isoformat(),
                 "updated_at": r.updated_at.isoformat(),
+                "log_count": int(r.log_count or 0),
                 "items": [],
             }
             order.append(fav_id)
         if r.item_id is not None:
             favorites_map[fav_id]["items"].append(_item_row_to_dict(r))
 
-    return {"favorites": [favorites_map[k] for k in order]}
+    total_row = await db.execute(
+        text("SELECT COUNT(*) AS n FROM favorites WHERE user_id = :uid"),
+        {"uid": str(user.id)},
+    )
+    total = int(total_row.scalar() or 0)
+
+    return {"favorites": [favorites_map[k] for k in order], "total": total}
 
 
 @router.post("")

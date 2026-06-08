@@ -15,6 +15,7 @@ import { RingLegend } from '../components/today/RingLegend'
 import { BioTile } from '../components/today/BioTile'
 import { PlanRow } from '../components/today/PlanRow'
 import { RecentMealsCard } from '../components/today/RecentMealsCard'
+import { FavoritesWidget } from '../components/today/FavoritesWidget'
 import { NutrientBreakdownSheet } from '../components/today/NutrientBreakdownSheet'
 import { NutritionCalculatorCard, type FoodAddPayload } from '../components/today/NutritionCalculatorCard'
 import { useHiddenMetrics } from '../lib/hidden-metrics'
@@ -299,6 +300,8 @@ export default function TodayRoute() {
           </div>
         </div>
 
+        <FavoritesWidget />
+
         {/* Biometrics */}
         {(() => {
           const tiles = [
@@ -487,6 +490,8 @@ export default function TodayRoute() {
           </div>
           <StreakStrip days={data.streak_days ?? 0} ofMax={14}/>
         </div>
+
+        <FavoritesWidget compact />
 
         {/* Biometrics */}
         {(() => {
