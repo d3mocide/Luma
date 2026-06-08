@@ -2,6 +2,10 @@ import { useState, useEffect, useRef, useId } from 'react'
 import { Search, Plus, X, Utensils, Heart, Shield, Wheat, Dumbbell, Sprout, Flame, Camera } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api } from '../../lib/api'
+import {
+  type PortionUnit, PORTION_UNITS, PORTION_UNIT_LABELS, PRESETS_BY_UNIT,
+  unitToGrams, densityForFood, defaultQtyForUnit,
+} from '../../lib/portions'
 import type { DraftItem } from './types'
 
 const FOOD_FORMATS = [
@@ -48,8 +52,6 @@ const FILTER_CHIPS = [
   { label: 'High Fiber',    flag: 'high-fiber',        color: 'rgba(132,204,22,0.15)',  icon: Sprout },
   { label: 'Keto',          flag: 'keto-friendly',     color: 'rgba(249,115,22,0.15)',  icon: Flame },
 ]
-
-const GRAM_PRESETS = [50, 100, 150, 200]
 
 function FlagBadges({ flags }: { flags?: string[] }) {
   if (!flags?.length) return null
@@ -98,10 +100,11 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   const [isSearching, setIsSearching]   = useState(false)
   const [activeFlags, setActiveFlags]   = useState<string[]>([])
   const [pending, setPending]           = useState<FoodResult | null>(null)
-  const [pendingGrams, setPendingGrams] = useState('')
+  const [pendingQty, setPendingQty]     = useState('')
+  const [pendingUnit, setPendingUnit]   = useState<PortionUnit>('g')
   const [isScanning, setIsScanning]     = useState(false)
   const [barcodeError, setBarcodeError] = useState('')
-  const gramsRef = useRef<HTMLInputElement>(null)
+  const qtyRef = useRef<HTMLInputElement>(null)
   const selectFoodRef = useRef<(food: FoodResult) => void>(() => {})
   const uid = useId()
   const scannerDomId = `ingredient-scanner-${uid.replace(/:/g, '')}`
@@ -131,13 +134,19 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
 
   function selectFood(food: FoodResult) {
     setPending(food)
-    setPendingGrams(String(Math.round(food.serving_size_g || 100)))
+    setPendingUnit('g')
+    setPendingQty(String(Math.round(food.serving_size_g || 100)))
     setQuery('')
     setResults([])
     setIsScanning(false)
-    setTimeout(() => gramsRef.current?.select(), 60)
+    setTimeout(() => qtyRef.current?.select(), 60)
   }
   selectFoodRef.current = selectFood
+
+  function changeUnit(unit: PortionUnit) {
+    setPendingUnit(unit)
+    setPendingQty(String(defaultQtyForUnit(unit, pending?.serving_size_g)))
+  }
 
   useEffect(() => {
     if (!isScanning) return
@@ -185,22 +194,31 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
 
   function confirmAdd() {
     if (!pending) return
-    const grams = Math.max(1, parseFloat(pendingGrams) || 100)
+    const qty = Math.max(0, parseFloat(pendingQty) || 0)
+    const grams = Math.max(1, Math.round(unitToGrams(qty, pendingUnit, {
+      density: densityForFood(pending.name),
+      servingSizeG: pending.serving_size_g,
+    })))
     onAddItem({
       name: pending.name,
       brand: pending.brand,
-      quantity: grams,
-      unit: 'g',
+      quantity: qty,
+      unit: pendingUnit,
       estimated_weight_g: grams,
       nutrients: nutrientsAt(pending, grams),
     })
     setPending(null)
-    setPendingGrams('')
+    setPendingQty('')
+    setPendingUnit('g')
   }
 
-  const pendingG = parseFloat(pendingGrams) || 0
+  const pendingQtyNum = parseFloat(pendingQty) || 0
+  const pendingG = pending
+    ? unitToGrams(pendingQtyNum, pendingUnit, { density: densityForFood(pending.name), servingSizeG: pending.serving_size_g })
+    : 0
   const pendingKcal = pending ? Math.round((pending.nutrients_per_100g.calories || 0) * (pendingG / 100)) : 0
   const pendingProtein = pending ? ((pending.nutrients_per_100g.protein_g || 0) * (pendingG / 100)).toFixed(1) : '0'
+  const pendingPresets = PRESETS_BY_UNIT[pendingUnit]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -216,7 +234,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
               <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{pending.brand || 'USDA reference'}</div>
             </div>
             <button
-              onClick={() => { setPending(null); setPendingGrams('') }}
+              onClick={() => { setPending(null); setPendingQty(''); setPendingUnit('g') }}
               style={{ color: 'var(--fg-quiet)', background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}
               aria-label="Cancel"
             >
@@ -226,27 +244,43 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <input
-              ref={gramsRef}
+              ref={qtyRef}
               type="number"
-              min={1}
-              value={pendingGrams}
-              onChange={(e) => setPendingGrams(e.target.value)}
+              min={0}
+              step="any"
+              value={pendingQty}
+              onChange={(e) => setPendingQty(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && confirmAdd()}
               className="field-input"
               style={{
-                width: 68, textAlign: 'center', borderRadius: 8, padding: '7px 6px',
+                width: 60, textAlign: 'center', borderRadius: 8, padding: '7px 6px',
                 fontSize: 15, fontWeight: 700, border: '1px solid var(--glass-edge)',
                 fontFamily: 'var(--font-mono)', color: 'var(--fg-primary)',
               }}
             />
-            <span style={{ fontSize: 12, color: 'var(--fg-tertiary)', flexShrink: 0 }}>g</span>
+            <select
+              value={pendingUnit}
+              onChange={(e) => changeUnit(e.target.value as PortionUnit)}
+              className="field-input"
+              style={{
+                borderRadius: 8, padding: '7px 8px', fontSize: 12, flexShrink: 0,
+                border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
+                color: 'var(--fg-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              }}
+            >
+              {PORTION_UNITS.map((u) => (
+                <option key={u} value={u} style={{ background: 'var(--bg-2)', color: 'var(--fg-primary)' }}>
+                  {PORTION_UNIT_LABELS[u]}
+                </option>
+              ))}
+            </select>
             <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-              {GRAM_PRESETS.map((p) => {
-                const active = Math.round(pendingG) === p
+              {pendingPresets.map((p) => {
+                const active = pendingQtyNum === p
                 return (
                   <button
                     key={p}
-                    onClick={() => setPendingGrams(String(p))}
+                    onClick={() => setPendingQty(String(p))}
                     style={{
                       flex: 1, padding: '5px 2px', borderRadius: 7, fontSize: 10,
                       fontFamily: 'var(--font-mono)', cursor: 'pointer', transition: 'all 150ms',
@@ -255,7 +289,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
                       color: active ? 'var(--sky-300)' : 'var(--fg-secondary)',
                     }}
                   >
-                    {p}g
+                    {p}
                   </button>
                 )
               })}
@@ -264,6 +298,9 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
 
           {pendingG > 0 && (
             <div style={{ fontSize: 11, color: 'var(--fg-tertiary)', paddingLeft: 2 }}>
+              {pendingUnit !== 'g' && (
+                <>= <span className="num" style={{ color: 'var(--fg-secondary)' }}>{Math.round(pendingG)}</span> g · </>
+              )}
               ≈ <span className="num" style={{ color: 'var(--fg-secondary)' }}>{pendingKcal}</span> kcal ·{' '}
               <span className="num" style={{ color: 'var(--fg-secondary)' }}>{pendingProtein}g</span> protein
             </div>
@@ -272,7 +309,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
           <button
             className="btn btn-primary"
             onClick={confirmAdd}
-            disabled={!pendingGrams || pendingG <= 0}
+            disabled={!pendingQty || pendingG <= 0}
             style={{ padding: '9px', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
           >
             <Plus size={14} />
