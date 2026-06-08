@@ -9,6 +9,8 @@ import { FOOD_CATEGORIES, SAT_FAT_COLORS, type FoodCategory } from '../lib/food-
 import { JournalDrawer, type PendingMeal } from '../components/journal/JournalDrawer'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import type { DraftItem } from '../components/log-sheet/types'
+import { scaleByRatio, sumNutrients as sumNutrientList } from '../lib/nutrients'
+import { unitToGrams } from '../lib/portions'
 import PlanRoute from './plan'
 import RecipesRoute from './recipes'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
@@ -852,33 +854,11 @@ function JournalTab({ openWithPrefill }: { openWithPrefill?: PendingMeal | null 
 type NutrientTotals = DraftItem['nutrients']
 
 function sumNutrients(items: DraftItem[]): NutrientTotals {
-  return items.reduce(
-    (acc, item) => ({
-      calories:        acc.calories        + item.nutrients.calories,
-      protein_g:       acc.protein_g       + item.nutrients.protein_g,
-      carbohydrates_g: acc.carbohydrates_g + item.nutrients.carbohydrates_g,
-      fat_g:           acc.fat_g           + item.nutrients.fat_g,
-      saturated_fat_g: acc.saturated_fat_g + item.nutrients.saturated_fat_g,
-      fiber_g:         acc.fiber_g         + item.nutrients.fiber_g,
-      soluble_fiber_g: acc.soluble_fiber_g + item.nutrients.soluble_fiber_g,
-      sodium_mg:       acc.sodium_mg       + item.nutrients.sodium_mg,
-    }),
-    { calories: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, saturated_fat_g: 0, fiber_g: 0, soluble_fiber_g: 0, sodium_mg: 0 }
-  )
+  return sumNutrientList(items)
 }
 
 function divideNutrients(totals: NutrientTotals, divisor: number): NutrientTotals {
-  const d = Math.max(1, divisor)
-  return {
-    calories:        totals.calories        / d,
-    protein_g:       totals.protein_g       / d,
-    carbohydrates_g: totals.carbohydrates_g / d,
-    fat_g:           totals.fat_g           / d,
-    saturated_fat_g: totals.saturated_fat_g / d,
-    fiber_g:         totals.fiber_g         / d,
-    soluble_fiber_g: totals.soluble_fiber_g / d,
-    sodium_mg:       totals.sodium_mg       / d,
-  }
+  return scaleByRatio(totals, 1 / Math.max(1, divisor))
 }
 
 type NutrientRow = { label: string; key: keyof NutrientTotals; unit: string; color?: string; indent?: boolean }
@@ -933,6 +913,99 @@ function NutritionPanel({ totals, label }: { totals: NutrientTotals; label: stri
   )
 }
 
+const LB_IN_G = 453.592
+const OZ_IN_G = 28.3495
+
+function formatWeight(g: number): string {
+  if (g >= LB_IN_G) return `${Math.round(g)} g · ${(g / LB_IN_G).toFixed(2)} lb`
+  return `${Math.round(g)} g · ${(g / OZ_IN_G).toFixed(1)} oz`
+}
+
+// Batch planner: treat each ingredient's weight as one portion, anchor the
+// batch to however much of one ingredient you have, and scale the rest to match.
+function BatchPlanner({ items, total }: { items: DraftItem[]; total: NutrientTotals }) {
+  const [anchorIndex, setAnchorIndex] = useState(0)
+  const [totalQty, setTotalQty] = useState('')
+  const [totalUnit, setTotalUnit] = useState<'g' | 'oz' | 'lb'>('lb')
+
+  const idx = anchorIndex < items.length ? anchorIndex : 0
+  const anchor = items[idx]
+  const anchorPerPortionG = anchor?.estimated_weight_g ?? 0
+  const haveG = unitToGrams(parseFloat(totalQty) || 0, totalUnit)
+  const portions = anchorPerPortionG > 0 ? Math.floor(haveG / anchorPerPortionG) : 0
+  const leftoverG = portions > 0 ? haveG - portions * anchorPerPortionG : haveG
+  const batchTotals = scaleByRatio(total, portions)
+
+  const selectStyle = {
+    borderRadius: 8, padding: '7px 8px', fontSize: 12,
+    border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
+    color: 'var(--fg-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+  } as const
+
+  return (
+    <div className="glass-inset" style={{ padding: '14px 16px', borderRadius: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div>
+        <div className="eyebrow" style={{ fontSize: 10, marginBottom: 3 }}>Batch planner</div>
+        <div style={{ fontSize: 12, color: 'var(--fg-quiet)', lineHeight: 1.5 }}>
+          Each ingredient's weight above is one portion. Pick what you're cooking around and enter how much you have — Luma scales the rest and tells you how many portions you'll get.
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <select value={idx} onChange={(e) => setAnchorIndex(Number(e.target.value))} style={{ ...selectStyle, flex: 1, minWidth: 120, maxWidth: 200 }}>
+          {items.map((it, i) => (
+            <option key={i} value={i} style={{ background: 'var(--bg-2)', color: 'var(--fg-primary)' }}>{it.name}</option>
+          ))}
+        </select>
+        <input
+          type="number" min={0} step="any" value={totalQty}
+          onChange={(e) => setTotalQty(e.target.value)}
+          placeholder="Amount"
+          className="field-input num"
+          style={{ width: 84, textAlign: 'center', borderRadius: 8, padding: '7px 6px', fontSize: 14, fontWeight: 700, border: '1px solid var(--glass-edge)', color: 'var(--fg-primary)', fontFamily: 'var(--font-mono)' }}
+        />
+        <select value={totalUnit} onChange={(e) => setTotalUnit(e.target.value as 'g' | 'oz' | 'lb')} style={selectStyle}>
+          {(['lb', 'oz', 'g'] as const).map((u) => (
+            <option key={u} value={u} style={{ background: 'var(--bg-2)', color: 'var(--fg-primary)' }}>{u}</option>
+          ))}
+        </select>
+      </div>
+
+      {haveG > 0 && anchorPerPortionG > 0 && (
+        portions < 1 ? (
+          <div style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>
+            Not enough for a full portion — one portion needs {formatWeight(anchorPerPortionG)}.
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span className="num" style={{ fontSize: 28, fontWeight: 700, color: 'var(--sky-400)' }}>{portions}</span>
+              <span style={{ fontSize: 13, color: 'var(--fg-secondary)' }}>portions</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div className="eyebrow" style={{ fontSize: 10 }}>Shopping / prep amounts</div>
+              {items.map((it, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13 }}>
+                  <span style={{ color: 'var(--fg-secondary)' }}>
+                    {it.name}{i === idx ? ' (anchor)' : ''}
+                  </span>
+                  <span className="num" style={{ color: 'var(--fg-primary)' }}>{formatWeight(it.estimated_weight_g * portions)}</span>
+                </div>
+              ))}
+            </div>
+            {leftoverG > 1 && (
+              <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
+                Leftover {anchor.name.toLowerCase()}: {formatWeight(leftoverG)}
+              </div>
+            )}
+            <NutritionPanel totals={batchTotals} label={`BATCH TOTAL (${portions} portions)`} />
+          </>
+        )
+      )}
+    </div>
+  )
+}
+
 function CalculatorTab() {
   const queryClient = useQueryClient()
   const [items, setItems] = useState<DraftItem[]>([])
@@ -971,16 +1044,7 @@ function CalculatorTab() {
       const item = { ...updated[index] }
       const ratio = newWeight / item.estimated_weight_g
       item.estimated_weight_g = newWeight
-      item.nutrients = {
-        calories:        item.nutrients.calories        * ratio,
-        saturated_fat_g: item.nutrients.saturated_fat_g * ratio,
-        soluble_fiber_g: item.nutrients.soluble_fiber_g * ratio,
-        protein_g:       item.nutrients.protein_g       * ratio,
-        carbohydrates_g: item.nutrients.carbohydrates_g * ratio,
-        fat_g:           item.nutrients.fat_g           * ratio,
-        fiber_g:         item.nutrients.fiber_g         * ratio,
-        sodium_mg:       item.nutrients.sodium_mg       * ratio,
-      }
+      item.nutrients = scaleByRatio(item.nutrients, ratio)
       updated[index] = item
       return updated
     })
@@ -1113,6 +1177,9 @@ function CalculatorTab() {
               </div>
             )}
           </div>
+
+          {/* Batch planner */}
+          <BatchPlanner items={items} total={total} />
 
           {/* Save as favorite */}
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>

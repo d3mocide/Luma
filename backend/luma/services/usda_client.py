@@ -117,6 +117,54 @@ def _extract_nutrients(fdc_food: dict[str, Any]) -> dict[str, float]:
     return out
 
 
+# USDA reports gram weights for everything except liquids; only treat these
+# serving units as gram-equivalent for branded household servings.
+_GRAM_UNITS = {"g", "gm", "grm", "gram", "grams"}
+
+
+def _extract_household_measures(fdc_food: dict[str, Any]) -> list[dict[str, Any]]:
+    """Pull household portion measures (label + gram weight) from an FDC food.
+
+    Covers Foundation/SR ``foodPortions`` (e.g. "1 cup" -> 240g) and the
+    Branded household serving (``householdServingFullText`` + ``servingSize``).
+    """
+    measures: list[dict[str, Any]] = []
+
+    for p in fdc_food.get("foodPortions", []) or []:
+        grams = p.get("gramWeight")
+        if not grams:
+            continue
+        label = (p.get("portionDescription") or "").strip()
+        if not label:
+            amount = p.get("amount")
+            unit = (p.get("modifier") or (p.get("measureUnit") or {}).get("name") or "").strip()
+            if unit.lower() in ("undetermined", "", "quantity not specified"):
+                unit = ""
+            if amount and unit:
+                label = f"{float(amount):g} {unit}"
+            elif unit:
+                label = unit
+        if label:
+            measures.append({"label": label, "grams": round(float(grams), 1)})
+
+    household = (fdc_food.get("householdServingFullText") or "").strip()
+    serving = fdc_food.get("servingSize")
+    serving_unit = (fdc_food.get("servingSizeUnit") or "").strip().lower()
+    if household and serving and serving_unit in _GRAM_UNITS:
+        measures.append({"label": household, "grams": round(float(serving), 1)})
+
+    # De-dupe by label (case-insensitive), drop non-positive weights, cap the list.
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for m in measures:
+        key = m["label"].lower()
+        if key in seen or m["grams"] <= 0:
+            continue
+        seen.add(key)
+        out.append(m)
+    return out[:6]
+
+
 def _to_luma_food(fdc_food: dict[str, Any]) -> dict[str, Any]:
     description = fdc_food.get("description", "Unknown")
     brand = fdc_food.get("brandOwner") or fdc_food.get("brandName")
@@ -131,6 +179,7 @@ def _to_luma_food(fdc_food: dict[str, Any]) -> dict[str, Any]:
         "brand": brand,
         "serving_size_g": serving_size,
         "nutrients_per_100g": nutrients,
+        "household_measures": _extract_household_measures(fdc_food),
         "tags": [],
         "flags": compute_threshold_flags(nutrients),
     }
@@ -179,3 +228,27 @@ async def search_foods(query: str, limit: int = 20) -> list[dict[str, Any]]:
             continue
         results.append(food)
     return results
+
+
+async def get_food_detail(fdc_id: str) -> dict[str, Any] | None:
+    """Fetch the full FDC record for one food.
+
+    The search endpoint returns abridged foods (no foodPortions, often partial
+    nutrients). The detail endpoint with ``format=full`` carries household
+    portions and the complete nutrient panel, so we use it to enrich a food the
+    first time a user reaches for it.
+    """
+    if not settings.usda_api_key:
+        return None
+
+    params = {"api_key": settings.usda_api_key, "format": "full"}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(f"{_FDC_BASE}/food/{fdc_id}", params=params)
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.HTTPError as exc:
+        logger.warning("USDA detail fetch failed for %s: %s", fdc_id, exc)
+        return None
+
+    return _to_luma_food(data)

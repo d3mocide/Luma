@@ -84,17 +84,25 @@ async def lookup_barcode(barcode: str) -> dict[str, Any] | None:
             if not mapped_nutrients["soluble_fiber_g"] and mapped_nutrients["fiber_g"]:
                 mapped_nutrients["soluble_fiber_g"] = round(mapped_nutrients["fiber_g"] * 0.25, 1)
 
-            serving_size = prod.get("serving_quantity")
-            if serving_size is not None:
-                serving_size = float(serving_size)
+            serving_quantity = prod.get("serving_quantity")
+            if serving_quantity is not None:
+                serving_size = float(serving_quantity)
             else:
                 serving_size = 100.0  # Default fallback
-                
+
+            # Surface the product's own serving as a one-tap household measure so
+            # users can log "1 serving" instead of guessing grams.
+            household_measures: list[dict[str, Any]] = []
+            if serving_quantity:
+                label = str(prod.get("serving_size") or "").strip() or "1 serving"
+                household_measures.append({"label": label, "grams": round(serving_size, 1)})
+
             return {
                 "name": prod.get("product_name") or prod.get("product_name_en") or f"Product {barcode}",
                 "brand": prod.get("brands") or "Unknown Brand",
                 "serving_size_g": serving_size,
                 "nutrients_per_100g": mapped_nutrients,
+                "household_measures": household_measures,
                 "tags": [t.replace("en:", "") for t in prod.get("categories_tags", [])[:5]],
                 "flags": compute_threshold_flags(mapped_nutrients),
                 "source_id": f"off_{barcode}",

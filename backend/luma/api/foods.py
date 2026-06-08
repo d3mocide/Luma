@@ -34,6 +34,7 @@ class FoodResponse(BaseModel):
     brand: str | None = None
     serving_size_g: float | None = None
     nutrients_per_100g: dict[str, Any]
+    household_measures: list[dict[str, Any]] = []
     tags: list[str] | None = None
     flags: list[str] = []
     created_by: UUID | None = None
@@ -189,11 +190,46 @@ async def lookup_barcode_food(
         brand=off_data.get("brand"),
         serving_size_g=off_data["serving_size_g"],
         nutrients_per_100g=off_data["nutrients_per_100g"],
+        household_measures=off_data.get("household_measures", []),
         tags=off_data.get("tags", []),
         flags=off_data.get("flags", []),
         created_by=None,
     )
     db.add(food)
+    await db.commit()
+    await db.refresh(food)
+    return food
+
+
+@router.post("/{food_id}/enrich", response_model=FoodResponse)
+async def enrich_food(
+    food_id: UUID,
+    db: DbDep,
+    current_user: CurrentUser,
+) -> Food:
+    """Lazily pull a USDA food's full detail (household portions + complete
+    nutrients) the first time it's selected, then cache it on the row."""
+    res = await db.execute(select(Food).where(Food.id == food_id))
+    food = res.scalar_one_or_none()
+    if not food:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Food not found")
+
+    if food.detail_enriched or food.source != "usda" or not (food.source_id or "").startswith("fdc_"):
+        return food
+
+    fdc_id = food.source_id[len("fdc_"):]
+    detail = await usda_client.get_food_detail(fdc_id)
+    if detail:
+        food.household_measures = detail.get("household_measures", [])
+        new_nutrients = detail.get("nutrients_per_100g") or {}
+        # Only overwrite nutrients if the detail call returned a usable profile.
+        if new_nutrients.get("calories"):
+            food.nutrients_per_100g = new_nutrients
+            food.flags = merge_flags(detail.get("flags", []), new_nutrients)
+        if detail.get("serving_size_g"):
+            food.serving_size_g = detail["serving_size_g"]
+    # Mark enriched even on a miss so we don't refetch a portion-less food.
+    food.detail_enriched = True
     await db.commit()
     await db.refresh(food)
     return food
