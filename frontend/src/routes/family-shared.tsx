@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { BookOpen, Heart, CalendarDays, Copy, Check, Trash2, Users } from 'lucide-react'
 import { api, FamilyGroup, GroupShare, MemberStatus, ResourceType } from '../lib/api'
 
-const TYPE_ICON: Record<ResourceType, ComponentType<{ size?: number | string; strokeWidth?: number; color?: string }>> = {
+const TYPE_ICON: Record<ResourceType, ComponentType<{ size?: number | string; strokeWidth?: number | string; color?: string }>> = {
   recipe: BookOpen,
   favorite: Heart,
   plan: CalendarDays,
