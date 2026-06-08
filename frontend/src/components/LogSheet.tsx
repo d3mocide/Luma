@@ -122,8 +122,8 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   })
 
   const favMutation = useMutation({
-    mutationFn: () => api.post('/favorites', {
-      name: favName.trim() || 'My favorite',
+    mutationFn: (name: string) => api.post('/favorites', {
+      name: name.trim() || 'My favorite',
       items: draftItems.map((item) => ({
         food_name: item.name,
         brand: item.brand ?? null,
@@ -131,7 +131,11 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
         nutrients: item.nutrients,
       })),
     }),
-    onSuccess: () => { setSavingFav(false); setFavName('') },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorites'] })
+      setSavingFav(false)
+      setFavName('')
+    },
   })
 
   const logFavoriteDirect = useMutation({
@@ -292,13 +296,13 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
                   type="text"
                   value={favName}
                   onChange={(e) => setFavName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') favMutation.mutate(); if (e.key === 'Escape') setSavingFav(false) }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') favMutation.mutate(favName); if (e.key === 'Escape') setSavingFav(false) }}
                   placeholder="Name this favorite…"
                   className="field-input flex-1 rounded-lg px-3 py-2 text-sm"
                   style={{ border: '1px solid var(--glass-edge)' }}
                 />
                 <button
-                  onClick={() => favMutation.mutate()}
+                  onClick={() => favMutation.mutate(favName)}
                   disabled={favMutation.isPending}
                   className="px-4 py-2 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
                 >
@@ -310,11 +314,18 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               </div>
             ) : (
               <button
-                onClick={() => setSavingFav(true)}
-                className="w-full py-2 text-sm text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-2"
+                onClick={() => {
+                  if (mealName.trim()) {
+                    favMutation.mutate(mealName)
+                  } else {
+                    setSavingFav(true)
+                  }
+                }}
+                disabled={favMutation.isPending}
+                className="w-full py-2 text-sm text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Heart size={14} />
-                Save as favorite
+                {favMutation.isPending ? 'Saving favorite…' : favMutation.isSuccess ? 'Saved to favorites' : 'Save as favorite'}
               </button>
             )}
             <button className="btn btn-primary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} style={{ width: '100%', padding: '13px', fontSize: 14, opacity: saveMutation.isPending ? 0.7 : 1 }}>
