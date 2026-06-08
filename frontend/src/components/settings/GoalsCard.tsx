@@ -4,6 +4,15 @@ import { api } from '../../lib/api'
 import { type GoalSettings, type GoalFormState, type MeasurementSystem, formatGoalNumber } from './types'
 import { convertWeight, measurementWeightUnit } from '../../lib/measurements'
 
+const predefinedOptions = [
+  { value: 'cholesterol-lowering', label: 'Cholesterol-lowering' },
+  { value: 'mediterranean',        label: 'Mediterranean' },
+  { value: 'heart-healthy',         label: 'Heart-healthy' },
+  { value: 'vegetarian',            label: 'Vegetarian' },
+  { value: 'vegan',                 label: 'Vegan' },
+  { value: 'low-carb',              label: 'Low-carb' },
+]
+
 function SummaryPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="glass-inset" style={{ padding: '10px 12px' }}>
@@ -41,15 +50,6 @@ export function GoalsCard({ goalForm, onFieldChange, goalSaveError, goalSaveSucc
     queryKey: ['settings', 'goals'],
     queryFn: () => api.get('/goals'),
   })
-
-  const predefinedOptions = [
-    { value: 'cholesterol-lowering', label: 'Cholesterol-lowering' },
-    { value: 'mediterranean',        label: 'Mediterranean' },
-    { value: 'heart-healthy',         label: 'Heart-healthy' },
-    { value: 'vegetarian',            label: 'Vegetarian' },
-    { value: 'vegan',                 label: 'Vegan' },
-    { value: 'low-carb',              label: 'Low-carb' },
-  ]
 
   const currentPattern = goalForm.dietary_pattern || 'cholesterol-lowering'
   const isPredefined = predefinedOptions.some(p => p.value === currentPattern.toLowerCase())
