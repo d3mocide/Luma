@@ -480,7 +480,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {['50', '100', '150', '200', '300'].map((preset) => (
+                      {['25', '50', '75', '100', '150'].map((preset) => (
                         <button key={preset} onClick={() => setServingG(preset)}
                           className={`serving-chip ${servingG === preset ? 'active' : ''}`}
                           style={{ padding: '5px 12px', borderRadius: 999, background: 'var(--glass-1)', border: '1px solid var(--glass-edge)', color: 'var(--fg-secondary)', fontSize: 11, fontFamily: 'var(--font-mono)' }}>

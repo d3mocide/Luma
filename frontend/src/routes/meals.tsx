@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, X, Plus, BookOpen, ArrowLeft, BatteryLow, Battery, BatteryMedium, Zap, Flame, Frown, Meh, Smile, SmilePlus, Laugh, CircleDashed, Circle, CircleDot, Disc, CheckCircle2, RotateCcw, Heart, Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { Search, X, Plus, BookOpen, ArrowLeft, BatteryLow, Battery, BatteryMedium, Zap, Flame, Frown, Meh, Smile, SmilePlus, Laugh, CircleDashed, Circle, CircleDot, Disc, CheckCircle2, RotateCcw, Heart, Check, ChevronDown, ChevronUp, Camera } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { api } from '../lib/api'
 import { type FoodResult } from '../components/plan/types'
@@ -11,6 +11,14 @@ import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import type { DraftItem } from '../components/log-sheet/types'
 import PlanRoute from './plan'
 import RecipesRoute from './recipes'
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
+
+const BARCODE_FORMATS = [
+  Html5QrcodeSupportedFormats.EAN_13,
+  Html5QrcodeSupportedFormats.EAN_8,
+  Html5QrcodeSupportedFormats.UPC_A,
+  Html5QrcodeSupportedFormats.UPC_E,
+]
 
 // ── Sat fat level label/badge ─────────────────────────────────────────────────
 
@@ -323,6 +331,10 @@ function FoodsTab() {
   const [selectedCategory, setSelectedCategory] = useState<FoodCategory | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [barcodeScanning, setBarcodeScanning] = useState(false)
+  const [barcodeLoading, setBarcodeLoading] = useState(false)
+  const [barcodeResult, setBarcodeResult] = useState<FoodResult | null>(null)
+  const [barcodeError, setBarcodeError] = useState('')
 
   function handleQueryChange(val: string) {
     setQuery(val)
@@ -333,6 +345,41 @@ function FoodsTab() {
   useEffect(() => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [])
+
+  useEffect(() => {
+    if (!barcodeScanning) return
+    const scanner = new Html5Qrcode('food-lib-scanner', { formatsToSupport: BARCODE_FORMATS, verbose: false })
+    let fired = false
+    let startResolved = false
+    let stopRequested = false
+    const handleDecode = async (code: string) => {
+      setBarcodeError('')
+      setBarcodeLoading(true)
+      try {
+        const food = await api.get<FoodResult>(`/foods/barcode/${encodeURIComponent(code)}`)
+        setBarcodeResult(food)
+      } catch (err: unknown) {
+        setBarcodeError((err as Error).message || 'Product not found')
+      } finally {
+        setBarcodeLoading(false)
+      }
+    }
+    scanner
+      .start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 130 } },
+        (code: string) => {
+          if (fired) return
+          fired = true
+          setBarcodeScanning(false)
+          void handleDecode(code)
+        },
+        () => {},
+      )
+      .then(() => { startResolved = true; if (stopRequested) scanner.stop().catch(() => {}) })
+      .catch(() => setBarcodeScanning(false))
+    return () => { stopRequested = true; if (startResolved) scanner.stop().catch(() => {}) }
+  }, [barcodeScanning])
 
   const { data: searchResults, isFetching } = useQuery<FoodResult[]>({
     queryKey: ['foods', debouncedQuery],
@@ -350,48 +397,155 @@ function FoodsTab() {
   return (
     <div>
       {/* Search bar */}
-      <div style={{ position: 'relative', marginBottom: 16 }}>
-        <Search
-          size={15}
-          style={{
-            position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
-            color: 'var(--fg-quiet)', pointerEvents: 'none',
-          }}
-        />
-        <input
-          ref={inputRef}
-          type="search"
-          value={query}
-          onChange={(e) => handleQueryChange(e.target.value)}
-          placeholder="Search foods — try 'salmon', 'oats', 'cheddar'…"
-          className="field-input"
-          style={{
-            width: '100%',
-            paddingLeft: 38,
-            paddingRight: query ? 38 : 14,
-            height: 44,
-            borderRadius: 12,
-            fontSize: 14,
-            border: '1px solid var(--glass-edge)',
-            background: 'var(--glass-1)',
-            color: 'var(--fg-primary)',
-            outline: 'none',
-            boxSizing: 'border-box',
-          }}
-        />
-        {query && (
-          <button
-            onClick={() => handleQueryChange('')}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search
+            size={15}
             style={{
-              position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-              background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-              color: 'var(--fg-quiet)',
+              position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+              color: 'var(--fg-quiet)', pointerEvents: 'none',
+            }}
+          />
+          <input
+            ref={inputRef}
+            type="search"
+            value={query}
+            onChange={(e) => handleQueryChange(e.target.value)}
+            placeholder="Search foods — try 'salmon', 'oats', 'cheddar'…"
+            className="field-input"
+            style={{
+              width: '100%',
+              paddingLeft: 38,
+              paddingRight: query ? 38 : 14,
+              height: 44,
+              borderRadius: 12,
+              fontSize: 14,
+              border: '1px solid var(--glass-edge)',
+              background: 'var(--glass-1)',
+              color: 'var(--fg-primary)',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+          {query && (
+            <button
+              onClick={() => handleQueryChange('')}
+              style={{
+                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                color: 'var(--fg-quiet)',
+              }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => { setBarcodeResult(null); setBarcodeError(''); setBarcodeScanning(true) }}
+          style={{
+            height: 44, padding: '0 14px', borderRadius: 12, flexShrink: 0,
+            background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+            color: 'var(--fg-secondary)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: 13, transition: 'all 150ms',
+          }}
+        >
+          <Camera size={15} />
+          Scan
+        </button>
+      </div>
+
+      {barcodeScanning && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span className="eyebrow">Point at barcode</span>
+            <button
+              type="button"
+              onClick={() => setBarcodeScanning(false)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', padding: 4 }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div id="food-lib-scanner" style={{ width: '100%', borderRadius: 12, overflow: 'hidden', background: '#000', minHeight: 240 }} />
+          <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--fg-quiet)', textAlign: 'center' }}>Hold steady over the barcode</p>
+        </div>
+      )}
+
+      {!barcodeScanning && barcodeLoading && (
+        <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--fg-tertiary)', fontSize: 13 }}>
+          Looking up product…
+        </div>
+      )}
+
+      {!barcodeScanning && barcodeError && (
+        <div style={{
+          marginBottom: 16, padding: '12px 16px', borderRadius: 12,
+          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+        }}>
+          <span style={{ fontSize: 13, color: 'var(--bad)' }}>{barcodeError}</span>
+          <button
+            type="button"
+            onClick={() => { setBarcodeError(''); setBarcodeScanning(true) }}
+            style={{ fontSize: 12, color: 'var(--sky-400)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {!barcodeScanning && !barcodeLoading && barcodeResult && (
+        <div
+          className="glass"
+          style={{ marginBottom: 16, padding: '16px 18px', borderRadius: 16, border: '1px solid var(--glass-edge)' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <CheckCircle2 size={14} strokeWidth={2} style={{ color: 'var(--good)' }} />
+              <span style={{ fontSize: 11, color: 'var(--good)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Saved to food library</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBarcodeResult(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', padding: 2 }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 2 }}>
+            {barcodeResult.name}
+          </div>
+          {barcodeResult.brand && (
+            <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginBottom: 12 }}>{barcodeResult.brand}</div>
+          )}
+          <div style={{ display: 'flex', gap: 16, marginBottom: 4 }}>
+            {[
+              { label: 'Cal', value: String(Math.round(barcodeResult.nutrients_per_100g.calories ?? 0)) },
+              { label: 'Protein', value: `${Math.round(barcodeResult.nutrients_per_100g.protein_g ?? 0)}g` },
+              { label: 'Carbs', value: `${Math.round(barcodeResult.nutrients_per_100g.carbohydrates_g ?? 0)}g` },
+              { label: 'Fat', value: `${Math.round(barcodeResult.nutrients_per_100g.fat_g ?? 0)}g` },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-primary)' }}>{value}</div>
+                <div style={{ fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => { setBarcodeResult(null); setBarcodeError(''); setBarcodeScanning(true) }}
+            style={{
+              marginTop: 14, width: '100%', padding: '8px 0', borderRadius: 10, fontSize: 13,
+              background: 'var(--glass-2)', border: '1px solid var(--glass-edge)',
+              color: 'var(--fg-secondary)', cursor: 'pointer',
             }}
           >
-            <X size={14} />
+            Scan another
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {showResults ? (
         <>

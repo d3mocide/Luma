@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from luma.db.models import Food
 from luma.deps import DbDep, CurrentUser
-from luma.services import usda_client
+from luma.services import off_client, usda_client
 from luma.services.food_flags import merge_flags
 
 router = APIRouter()
@@ -161,6 +161,43 @@ async def search_foods(
     # Re-query so the caller gets a consistent, ranked result set from the DB.
     res2 = await db.execute(stmt)
     return list(res2.scalars().all())
+
+
+@router.get("/barcode/{barcode}", response_model=FoodResponse)
+async def lookup_barcode_food(
+    barcode: str,
+    db: DbDep,
+    current_user: CurrentUser,
+) -> Food:
+    source_id = f"off_{barcode}"
+    stmt = select(Food).where(Food.source_id == source_id)
+    res = await db.execute(stmt)
+    food = res.scalar_one_or_none()
+    if food:
+        return food
+
+    off_data = await off_client.lookup_barcode(barcode)
+    if not off_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found. Try scanning a packaged food barcode.",
+        )
+    food = Food(
+        id=uuid.uuid4(),
+        source="off",
+        source_id=source_id,
+        name=off_data["name"],
+        brand=off_data.get("brand"),
+        serving_size_g=off_data["serving_size_g"],
+        nutrients_per_100g=off_data["nutrients_per_100g"],
+        tags=off_data.get("tags", []),
+        flags=off_data.get("flags", []),
+        created_by=None,
+    )
+    db.add(food)
+    await db.commit()
+    await db.refresh(food)
+    return food
 
 
 @router.get("/{food_id}", response_model=FoodResponse)

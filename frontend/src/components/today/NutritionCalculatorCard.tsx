@@ -474,7 +474,7 @@ export function NutritionCalculatorCard({
             </div>
             {/* Preset Chips */}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-              {['50', '100', '150', '200', '300'].map(renderPresetChip)}
+              {['25', '50', '75', '100', '150'].map(renderPresetChip)}
             </div>
           </div>
         </div>
