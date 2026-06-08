@@ -42,9 +42,10 @@ function RecPill({ label, value }: { label: string; value: string }) {
 
 type Props = {
   onApply: (rec: GoalRecommendation) => void
+  isSaving?: boolean
 }
 
-export function RecommendGoalsCard({ onApply }: Props) {
+export function RecommendGoalsCard({ onApply, isSaving }: Props) {
   const [rec, setRec] = useState<GoalRecommendation | null>(null)
   const [missingFields, setMissingFields] = useState<string[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -150,9 +151,10 @@ export function RecommendGoalsCard({ onApply }: Props) {
               type="button"
               className="btn btn-primary"
               onClick={() => onApply(rec)}
-              style={{ padding: '10px 14px' }}
+              disabled={isSaving}
+              style={{ padding: '10px 14px', opacity: isSaving ? 0.7 : 1 }}
             >
-              Apply to form
+              {isSaving ? 'Saving…' : 'Apply and Save'}
             </button>
           </div>
         </>

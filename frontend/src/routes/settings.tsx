@@ -342,7 +342,7 @@ function AccountTab({
           <ProfileCard />
         </div>
         <div className="settings-order-suggested">
-          <RecommendGoalsCard onApply={onApplyRecommendations} />
+          <RecommendGoalsCard onApply={onApplyRecommendations} isSaving={isPending} />
         </div>
         <div className="settings-order-goals">
           <GoalsCard
@@ -850,6 +850,17 @@ export default function SettingsRoute() {
       daily_soluble_fiber_g: String(rec.daily_soluble_fiber_g),
       ...(rec.daily_protein_g_min != null ? { daily_protein_g_min: String(rec.daily_protein_g_min) } : {}),
     }))
+    goalMutation.mutate({
+      target_weight_kg: convertWeightToKg(parseOptionalNumber(goalForm.target_weight_kg), measurementSystem),
+      target_ldl_mg_dl: parseOptionalInteger(goalForm.target_ldl_mg_dl),
+      current_ldl_mg_dl: parseOptionalInteger(goalForm.current_ldl_mg_dl),
+      current_ldl_drawn_at: goalForm.current_ldl_drawn_at.trim() || null,
+      daily_calorie_target: rec.daily_calorie_target,
+      daily_sat_fat_g_max: rec.daily_sat_fat_g_max,
+      daily_soluble_fiber_g: rec.daily_soluble_fiber_g,
+      daily_protein_g_min: rec.daily_protein_g_min ?? null,
+      dietary_pattern: goalForm.dietary_pattern.trim() || null,
+    })
   }
 
   const handleGoalSubmit = () => {
