@@ -436,7 +436,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
                   />
                   <span style={{ fontSize: 11, color: 'var(--fg-tertiary)', flexShrink: 0 }}>g</span>
                   <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-                    {[50, 100, 150, 200, 300].map((p) => {
+                    {[25, 50, 75, 100, 150].map((p) => {
                       const active = Math.round(item.estimated_weight_g) === p
                       return (
                         <button
