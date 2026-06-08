@@ -8,18 +8,26 @@
 // serving — e.g. { label: "1 cup", grams: 240 }.
 export type HouseholdMeasure = { label: string; grams: number }
 
-export type PortionUnit = 'g' | 'serving' | 'tbsp' | 'tsp' | 'cup' | 'fl oz' | 'ml'
+export type PortionUnit = 'g' | 'oz' | 'lb' | 'serving' | 'tbsp' | 'tsp' | 'cup' | 'fl oz' | 'ml'
 
-export const PORTION_UNITS: PortionUnit[] = ['g', 'serving', 'tbsp', 'tsp', 'cup', 'fl oz', 'ml']
+export const PORTION_UNITS: PortionUnit[] = ['g', 'oz', 'lb', 'serving', 'tbsp', 'tsp', 'cup', 'fl oz', 'ml']
 
 export const PORTION_UNIT_LABELS: Record<PortionUnit, string> = {
   g: 'g',
+  oz: 'oz',
+  lb: 'lb',
   serving: 'serving',
   tbsp: 'tbsp',
   tsp: 'tsp',
   cup: 'cup',
   'fl oz': 'fl oz',
   ml: 'ml',
+}
+
+// Weight units in grams — mass is mass, so these are density-independent.
+const GRAMS_PER_WEIGHT_UNIT: Partial<Record<PortionUnit, number>> = {
+  oz: 28.3495,
+  lb: 453.592,
 }
 
 // US customary volume units in milliliters.
@@ -51,6 +59,8 @@ export function unitToGrams(quantity: number, unit: PortionUnit, opts: ConvertOp
   if (!Number.isFinite(quantity) || quantity <= 0) return 0
   if (unit === 'g') return quantity
   if (unit === 'serving') return quantity * (opts.servingSizeG || 100)
+  const grams = GRAMS_PER_WEIGHT_UNIT[unit]
+  if (grams != null) return quantity * grams
   const ml = ML_PER_UNIT[unit]
   if (ml == null) return quantity
   return quantity * ml * (opts.density ?? 1.0)
@@ -59,6 +69,8 @@ export function unitToGrams(quantity: number, unit: PortionUnit, opts: ConvertOp
 // Quick-pick presets per unit, sized to typical real-world portions.
 export const PRESETS_BY_UNIT: Record<PortionUnit, number[]> = {
   g: [50, 100, 150, 200],
+  oz: [2, 4, 8, 16],
+  lb: [1, 2, 4, 8],
   serving: [0.5, 1, 1.5, 2],
   tbsp: [1, 2, 3, 4],
   tsp: [1, 2, 3, 4],
