@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check } from 'lucide-react'
 import { api } from '../lib/api'
@@ -34,6 +35,8 @@ function totalKcal(items: FavoriteItem[]): number {
 
 export default function FavoritesRoute() {
   const queryClient = useQueryClient()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [view, setView] = useState<'list' | 'building'>('list')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [favName, setFavName] = useState('')
@@ -90,6 +93,15 @@ export default function FavoritesRoute() {
     setView('building')
   }
 
+  // Open the creation panel directly when arriving via the Today favorites widget.
+  useEffect(() => {
+    if ((location.state as { create?: boolean } | null)?.create) {
+      startCreate()
+      navigate('.', { replace: true, state: null })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function startEdit(fav: Favorite) {
     setEditingId(fav.id)
     setFavName(fav.name)
@@ -120,6 +132,7 @@ export default function FavoritesRoute() {
       return api.post('/log/meal', {
         slot,
         source: 'favorite',
+        favorite_id: fav.id,
         items: draftItems,
         nutrition,
         raw_input: fav.name,

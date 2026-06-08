@@ -11,6 +11,7 @@ export type Favorite = {
   id: string
   name: string
   created_at: string
+  log_count?: number
   items: FavoriteItem[]
 }
 

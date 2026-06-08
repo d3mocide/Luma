@@ -41,6 +41,7 @@ def _format_event_response(event: MealEvent) -> dict:
         "items": event.items,
         "nutrition": event.nutrition,
         "plan_slot_id": str(event.plan_slot_id) if event.plan_slot_id else None,
+        "favorite_id": str(event.favorite_id) if event.favorite_id else None,
         "raw_input": event.raw_input,
         "confidence": float(event.confidence) if event.confidence is not None else None,
     }
@@ -61,6 +62,7 @@ class MealEventCreate(BaseModel):
     items: list[dict[str, Any]]
     nutrition: dict[str, Any]
     plan_slot_id: UUID | None = None
+    favorite_id: UUID | None = None
     raw_input: str | None = None
     confidence: float | None = None
 
@@ -186,6 +188,7 @@ async def log_meal(
         items=req.items,
         nutrition=req.nutrition,
         plan_slot_id=req.plan_slot_id,
+        favorite_id=req.favorite_id,
         raw_input=req.raw_input,
         confidence=req.confidence,
     )
