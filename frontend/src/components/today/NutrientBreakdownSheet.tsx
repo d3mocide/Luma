@@ -159,8 +159,9 @@ export function NutrientBreakdownSheet({
         onClick={onClose}
         style={{
           position: 'fixed', inset: 0,
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(4px)',
+          background: 'rgba(5,8,17,0.6)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
           zIndex: 200,
         }}
       />
@@ -169,8 +170,12 @@ export function NutrientBreakdownSheet({
         style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
           maxHeight: '92dvh',
-          background: 'var(--bg-card)',
+          background: 'linear-gradient(180deg, rgba(13,20,37,0.86), rgba(8,13,26,0.94))',
+          backdropFilter: 'blur(28px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(140%)',
+          borderTop: '1px solid var(--glass-edge-strong)',
           borderRadius: '20px 20px 0 0',
+          boxShadow: '0 -20px 60px rgba(0,0,0,0.5)',
           zIndex: 201,
           display: 'flex',
           flexDirection: 'column',
