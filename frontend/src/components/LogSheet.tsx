@@ -8,6 +8,7 @@ import { SearchTab } from './log-sheet/SearchTab'
 import { PhotoTab } from './log-sheet/PhotoTab'
 import { QuickTab } from './log-sheet/QuickTab'
 import type { DraftItem, Favorite } from './log-sheet/types'
+import { scaleByRatio, sumNutrients } from '../lib/nutrients'
 import { getCurrentSlot } from '../lib/format'
 
 type LogSheetMode = 'sheet' | 'page'
@@ -66,37 +67,13 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
       const item = { ...updated[index] }
       const ratio = newWeight / item.estimated_weight_g
       item.estimated_weight_g = newWeight
-      item.nutrients = {
-        calories: item.nutrients.calories * ratio,
-        saturated_fat_g: item.nutrients.saturated_fat_g * ratio,
-        soluble_fiber_g: item.nutrients.soluble_fiber_g * ratio,
-        protein_g: item.nutrients.protein_g * ratio,
-        carbohydrates_g: item.nutrients.carbohydrates_g * ratio,
-        fat_g: item.nutrients.fat_g * ratio,
-        fiber_g: item.nutrients.fiber_g * ratio,
-        sodium_mg: item.nutrients.sodium_mg * ratio,
-      }
+      item.nutrients = scaleByRatio(item.nutrients, ratio)
       updated[index] = item
       return updated
     })
   }
 
-  const totals = draftItems.reduce(
-    (acc, cur) => {
-      const n = cur.nutrients
-      return {
-        calories: acc.calories + (n.calories || 0),
-        saturated_fat_g: acc.saturated_fat_g + (n.saturated_fat_g || 0),
-        soluble_fiber_g: acc.soluble_fiber_g + (n.soluble_fiber_g || 0),
-        protein_g: acc.protein_g + (n.protein_g || 0),
-        carbohydrates_g: acc.carbohydrates_g + (n.carbohydrates_g || 0),
-        fat_g: acc.fat_g + (n.fat_g || 0),
-        fiber_g: acc.fiber_g + (n.fiber_g || 0),
-        sodium_mg: acc.sodium_mg + (n.sodium_mg || 0),
-      }
-    },
-    { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0 }
-  )
+  const totals = sumNutrients(draftItems)
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -140,22 +117,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
 
   const logFavoriteDirect = useMutation({
     mutationFn: ({ items, name }: { items: DraftItem[]; name: string }) => {
-      const nutrition = items.reduce(
-        (acc, cur) => {
-          const n = cur.nutrients
-          return {
-            calories: acc.calories + (n.calories || 0),
-            saturated_fat_g: acc.saturated_fat_g + (n.saturated_fat_g || 0),
-            soluble_fiber_g: acc.soluble_fiber_g + (n.soluble_fiber_g || 0),
-            protein_g: acc.protein_g + (n.protein_g || 0),
-            carbohydrates_g: acc.carbohydrates_g + (n.carbohydrates_g || 0),
-            fat_g: acc.fat_g + (n.fat_g || 0),
-            fiber_g: acc.fiber_g + (n.fiber_g || 0),
-            sodium_mg: acc.sodium_mg + (n.sodium_mg || 0),
-          }
-        },
-        { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0 }
-      )
+      const nutrition = sumNutrients(items)
       return api.post('/log/meal', { slot, source: 'favorite', items, nutrition, raw_input: name })
     },
     onSuccess: () => {

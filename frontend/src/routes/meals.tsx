@@ -9,6 +9,7 @@ import { FOOD_CATEGORIES, SAT_FAT_COLORS, type FoodCategory } from '../lib/food-
 import { JournalDrawer, type PendingMeal } from '../components/journal/JournalDrawer'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import type { DraftItem } from '../components/log-sheet/types'
+import { scaleByRatio, sumNutrients as sumNutrientList } from '../lib/nutrients'
 import PlanRoute from './plan'
 import RecipesRoute from './recipes'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
@@ -852,33 +853,11 @@ function JournalTab({ openWithPrefill }: { openWithPrefill?: PendingMeal | null 
 type NutrientTotals = DraftItem['nutrients']
 
 function sumNutrients(items: DraftItem[]): NutrientTotals {
-  return items.reduce(
-    (acc, item) => ({
-      calories:        acc.calories        + item.nutrients.calories,
-      protein_g:       acc.protein_g       + item.nutrients.protein_g,
-      carbohydrates_g: acc.carbohydrates_g + item.nutrients.carbohydrates_g,
-      fat_g:           acc.fat_g           + item.nutrients.fat_g,
-      saturated_fat_g: acc.saturated_fat_g + item.nutrients.saturated_fat_g,
-      fiber_g:         acc.fiber_g         + item.nutrients.fiber_g,
-      soluble_fiber_g: acc.soluble_fiber_g + item.nutrients.soluble_fiber_g,
-      sodium_mg:       acc.sodium_mg       + item.nutrients.sodium_mg,
-    }),
-    { calories: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, saturated_fat_g: 0, fiber_g: 0, soluble_fiber_g: 0, sodium_mg: 0 }
-  )
+  return sumNutrientList(items)
 }
 
 function divideNutrients(totals: NutrientTotals, divisor: number): NutrientTotals {
-  const d = Math.max(1, divisor)
-  return {
-    calories:        totals.calories        / d,
-    protein_g:       totals.protein_g       / d,
-    carbohydrates_g: totals.carbohydrates_g / d,
-    fat_g:           totals.fat_g           / d,
-    saturated_fat_g: totals.saturated_fat_g / d,
-    fiber_g:         totals.fiber_g         / d,
-    soluble_fiber_g: totals.soluble_fiber_g / d,
-    sodium_mg:       totals.sodium_mg       / d,
-  }
+  return scaleByRatio(totals, 1 / Math.max(1, divisor))
 }
 
 type NutrientRow = { label: string; key: keyof NutrientTotals; unit: string; color?: string; indent?: boolean }
@@ -971,16 +950,7 @@ function CalculatorTab() {
       const item = { ...updated[index] }
       const ratio = newWeight / item.estimated_weight_g
       item.estimated_weight_g = newWeight
-      item.nutrients = {
-        calories:        item.nutrients.calories        * ratio,
-        saturated_fat_g: item.nutrients.saturated_fat_g * ratio,
-        soluble_fiber_g: item.nutrients.soluble_fiber_g * ratio,
-        protein_g:       item.nutrients.protein_g       * ratio,
-        carbohydrates_g: item.nutrients.carbohydrates_g * ratio,
-        fat_g:           item.nutrients.fat_g           * ratio,
-        fiber_g:         item.nutrients.fiber_g         * ratio,
-        sodium_mg:       item.nutrients.sodium_mg       * ratio,
-      }
+      item.nutrients = scaleByRatio(item.nutrients, ratio)
       updated[index] = item
       return updated
     })

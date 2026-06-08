@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Mic, AlertCircle, X } from 'lucide-react'
 import { api } from '../../lib/api'
+import { toNutrients } from '../../lib/nutrients'
 import type { DraftItem } from './types'
 
 type Props = {
@@ -155,7 +156,7 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
           quantity: item.quantity,
           unit: item.unit,
           estimated_weight_g: item.estimated_weight_g ?? 100.0,
-          nutrients: item.nutrients,
+          nutrients: toNutrients(item.nutrients),
         }))
         onAddItems(mapped)
         onSwitchToPlate()

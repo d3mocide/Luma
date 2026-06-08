@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { Camera, ImagePlus, X, CheckCircle2 } from 'lucide-react'
+import { toNutrients } from '../../lib/nutrients'
 import type { DraftItem } from './types'
 
 type Props = {
@@ -104,7 +105,15 @@ function compressImage(file: File, maxW = 1024, maxH = 1024, quality = 0.8): Pro
         return
       }
 
-      onAddItems(data.items as DraftItem[])
+      const mapped: DraftItem[] = (data.items as DraftItem[]).map((item) => ({
+        name: item.name,
+        brand: item.brand,
+        quantity: item.quantity,
+        unit: item.unit,
+        estimated_weight_g: item.estimated_weight_g ?? 100.0,
+        nutrients: toNutrients(item.nutrients),
+      }))
+      onAddItems(mapped)
       setState('done')
     } catch {
       setErrorMsg('Photo analysis failed. Check your connection and try again.')

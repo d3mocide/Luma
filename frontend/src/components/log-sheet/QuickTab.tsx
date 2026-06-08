@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { Zap } from 'lucide-react'
+import { toNutrients } from '../../lib/nutrients'
 import type { DraftItem, Favorite } from './types'
 
 type FrequentMeal = {
@@ -156,16 +157,7 @@ export function QuickTab({ currentSlot, onAddItems, favorites, onLogFavoriteDire
                   quantity: i.quantity_g,
                   unit: 'g',
                   estimated_weight_g: i.quantity_g,
-                  nutrients: {
-                    calories: i.nutrients.calories ?? 0,
-                    saturated_fat_g: i.nutrients.saturated_fat_g ?? 0,
-                    soluble_fiber_g: i.nutrients.soluble_fiber_g ?? 0,
-                    protein_g: i.nutrients.protein_g ?? 0,
-                    carbohydrates_g: i.nutrients.carbohydrates_g ?? 0,
-                    fat_g: i.nutrients.fat_g ?? 0,
-                    fiber_g: i.nutrients.fiber_g ?? 0,
-                    sodium_mg: i.nutrients.sodium_mg ?? 0,
-                  },
+                  nutrients: toNutrients(i.nutrients),
                 }))
                 return (
                   <button

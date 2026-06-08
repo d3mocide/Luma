@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { getCurrentSlot } from '../lib/format'
 import type { DraftItem, Favorite, FavoriteItem } from '../components/log-sheet/types'
+import { toNutrients, scaleByRatio } from '../lib/nutrients'
 import { ShareWithFamilyButton } from '../components/ShareWithFamilyButton'
 
 function mapFavoriteItemToDraft(i: FavoriteItem): DraftItem {
@@ -14,16 +15,7 @@ function mapFavoriteItemToDraft(i: FavoriteItem): DraftItem {
     quantity: i.quantity_g,
     unit: 'g',
     estimated_weight_g: i.quantity_g,
-    nutrients: {
-      calories: i.nutrients.calories ?? 0,
-      saturated_fat_g: i.nutrients.saturated_fat_g ?? 0,
-      soluble_fiber_g: i.nutrients.soluble_fiber_g ?? 0,
-      protein_g: i.nutrients.protein_g ?? 0,
-      carbohydrates_g: i.nutrients.carbohydrates_g ?? 0,
-      fat_g: i.nutrients.fat_g ?? 0,
-      fiber_g: i.nutrients.fiber_g ?? 0,
-      sodium_mg: i.nutrients.sodium_mg ?? 0,
-    },
+    nutrients: toNutrients(i.nutrients),
   }
 }
 
@@ -161,16 +153,7 @@ export default function FavoritesRoute() {
       const item = { ...updated[index] }
       const ratio = newWeight / item.estimated_weight_g
       item.estimated_weight_g = newWeight
-      item.nutrients = {
-        calories: item.nutrients.calories * ratio,
-        saturated_fat_g: item.nutrients.saturated_fat_g * ratio,
-        soluble_fiber_g: item.nutrients.soluble_fiber_g * ratio,
-        protein_g: item.nutrients.protein_g * ratio,
-        carbohydrates_g: item.nutrients.carbohydrates_g * ratio,
-        fat_g: item.nutrients.fat_g * ratio,
-        fiber_g: item.nutrients.fiber_g * ratio,
-        sodium_mg: item.nutrients.sodium_mg * ratio,
-      }
+      item.nutrients = scaleByRatio(item.nutrients, ratio)
       updated[index] = item
       return updated
     })

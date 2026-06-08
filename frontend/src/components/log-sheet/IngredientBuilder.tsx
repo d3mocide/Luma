@@ -6,6 +6,7 @@ import {
   type PortionUnit, PORTION_UNITS, PORTION_UNIT_LABELS, PRESETS_BY_UNIT,
   unitToGrams, densityForFood, defaultQtyForUnit,
 } from '../../lib/portions'
+import { scaleNutrients } from '../../lib/nutrients'
 import type { DraftItem } from './types'
 
 const FOOD_FORMATS = [
@@ -69,21 +70,6 @@ function FlagBadges({ flags }: { flags?: string[] }) {
       })}
     </div>
   )
-}
-
-function nutrientsAt(food: FoodResult, grams: number): DraftItem['nutrients'] {
-  const n = food.nutrients_per_100g
-  const f = grams / 100
-  return {
-    calories:        (n.calories        || 0) * f,
-    saturated_fat_g: (n.saturated_fat_g || 0) * f,
-    soluble_fiber_g: (n.soluble_fiber_g || 0) * f,
-    protein_g:       (n.protein_g       || 0) * f,
-    carbohydrates_g: (n.carbohydrates_g || 0) * f,
-    fat_g:           (n.fat_g           || 0) * f,
-    fiber_g:         (n.fiber_g         || 0) * f,
-    sodium_mg:       (n.sodium_mg       || 0) * f,
-  }
 }
 
 type Props = {
@@ -205,7 +191,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
       quantity: qty,
       unit: pendingUnit,
       estimated_weight_g: grams,
-      nutrients: nutrientsAt(pending, grams),
+      nutrients: scaleNutrients(pending.nutrients_per_100g, grams),
     })
     setPending(null)
     setPendingQty('')
