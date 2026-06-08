@@ -10,6 +10,7 @@ import { JournalDrawer, type PendingMeal } from '../components/journal/JournalDr
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import type { DraftItem } from '../components/log-sheet/types'
 import PlanRoute from './plan'
+import RecipesRoute from './recipes'
 
 // ── Sat fat level label/badge ─────────────────────────────────────────────────
 
@@ -986,14 +987,14 @@ function CalculatorTab() {
 
 // ── Main Meals route ──────────────────────────────────────────────────────────
 
-type TabKey = 'foods' | 'plan' | 'journal' | 'calculator'
+type TabKey = 'foods' | 'plan' | 'journal' | 'calculator' | 'recipes'
 
 export default function MealsRoute() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const initialTab: TabKey = (() => {
     const t = searchParams.get('tab')
-    if (t === 'foods' || t === 'journal' || t === 'calculator') return t
+    if (t === 'foods' || t === 'journal' || t === 'calculator' || t === 'recipes') return t
     return 'plan'
   })()
 
@@ -1044,6 +1045,7 @@ export default function MealsRoute() {
           { key: 'plan',       label: 'Plan'       },
           { key: 'journal',    label: 'Journal'    },
           { key: 'calculator', label: 'Calculator' },
+          { key: 'recipes',    label: 'Recipes'    },
         ] as const).map(({ key, label }) => (
           <button
             key={key}
@@ -1064,6 +1066,7 @@ export default function MealsRoute() {
         <JournalTab openWithPrefill={journalPrefill} />
       )}
       {activeTab === 'calculator' && <CalculatorTab />}
+      {activeTab === 'recipes' && <RecipesRoute />}
     </div>
   )
 }
