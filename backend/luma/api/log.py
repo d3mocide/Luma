@@ -26,6 +26,7 @@ def _format_food_response(food: Food) -> dict:
         "brand": food.brand,
         "serving_size_g": float(food.serving_size_g or 100.0),
         "nutrients_per_100g": food.nutrients_per_100g,
+        "household_measures": food.household_measures or [],
         "tags": food.tags or [],
     }
 
@@ -111,6 +112,7 @@ async def log_meal_barcode(
         brand=off_data["brand"],
         serving_size_g=off_data["serving_size_g"],
         nutrients_per_100g=off_data["nutrients_per_100g"],
+        household_measures=off_data.get("household_measures", []),
         tags=off_data["tags"],
         created_by=None,
     )

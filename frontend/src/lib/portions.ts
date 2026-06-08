@@ -4,6 +4,10 @@
 // but oils, honey, and syrups differ enough to be worth a nudge. Once a unit is
 // resolved to grams, the rest of the logging pipeline is unchanged.
 
+// A food-specific portion sourced from USDA foodPortions or an Open Food Facts
+// serving — e.g. { label: "1 cup", grams: 240 }.
+export type HouseholdMeasure = { label: string; grams: number }
+
 export type PortionUnit = 'g' | 'serving' | 'tbsp' | 'tsp' | 'cup' | 'fl oz' | 'ml'
 
 export const PORTION_UNITS: PortionUnit[] = ['g', 'serving', 'tbsp', 'tsp', 'cup', 'fl oz', 'ml']

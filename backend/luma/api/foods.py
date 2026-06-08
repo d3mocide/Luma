@@ -34,6 +34,7 @@ class FoodResponse(BaseModel):
     brand: str | None = None
     serving_size_g: float | None = None
     nutrients_per_100g: dict[str, Any]
+    household_measures: list[dict[str, Any]] = []
     tags: list[str] | None = None
     flags: list[str] = []
     created_by: UUID | None = None
@@ -189,6 +190,7 @@ async def lookup_barcode_food(
         brand=off_data.get("brand"),
         serving_size_g=off_data["serving_size_g"],
         nutrients_per_100g=off_data["nutrients_per_100g"],
+        household_measures=off_data.get("household_measures", []),
         tags=off_data.get("tags", []),
         flags=off_data.get("flags", []),
         created_by=None,

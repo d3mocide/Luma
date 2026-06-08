@@ -3,7 +3,7 @@ import { Search, Plus, X, Utensils, Heart, Shield, Wheat, Dumbbell, Sprout, Flam
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api } from '../../lib/api'
 import {
-  type PortionUnit, PORTION_UNITS, PORTION_UNIT_LABELS, PRESETS_BY_UNIT,
+  type PortionUnit, type HouseholdMeasure, PORTION_UNITS, PORTION_UNIT_LABELS, PRESETS_BY_UNIT,
   unitToGrams, densityForFood, defaultQtyForUnit,
 } from '../../lib/portions'
 import { scaleNutrients } from '../../lib/nutrients'
@@ -22,7 +22,20 @@ type FoodResult = {
   brand?: string
   serving_size_g?: number
   nutrients_per_100g: Record<string, number>
+  household_measures?: HouseholdMeasure[]
   flags?: string[]
+}
+
+// A household measure is identified in the unit picker as "hm:<index>".
+function gramsForUnit(food: FoodResult, unit: string, qty: number): number {
+  if (unit.startsWith('hm:')) {
+    const m = food.household_measures?.[Number(unit.slice(3))]
+    return m ? qty * m.grams : qty
+  }
+  return unitToGrams(qty, unit as PortionUnit, {
+    density: densityForFood(food.name),
+    servingSizeG: food.serving_size_g,
+  })
 }
 
 const FLAG_BADGE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
@@ -87,7 +100,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   const [activeFlags, setActiveFlags]   = useState<string[]>([])
   const [pending, setPending]           = useState<FoodResult | null>(null)
   const [pendingQty, setPendingQty]     = useState('')
-  const [pendingUnit, setPendingUnit]   = useState<PortionUnit>('g')
+  const [pendingUnit, setPendingUnit]   = useState<string>('g')
   const [isScanning, setIsScanning]     = useState(false)
   const [barcodeError, setBarcodeError] = useState('')
   const qtyRef = useRef<HTMLInputElement>(null)
@@ -120,8 +133,11 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
 
   function selectFood(food: FoodResult) {
     setPending(food)
-    setPendingUnit('g')
-    setPendingQty(String(Math.round(food.serving_size_g || 100)))
+    // Default to the food's own first household measure when it has one
+    // (e.g. a scanned product logs as "1 serving"); otherwise fall back to grams.
+    const hasMeasures = (food.household_measures?.length ?? 0) > 0
+    setPendingUnit(hasMeasures ? 'hm:0' : 'g')
+    setPendingQty(String(hasMeasures ? 1 : Math.round(food.serving_size_g || 100)))
     setQuery('')
     setResults([])
     setIsScanning(false)
@@ -129,9 +145,10 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   }
   selectFoodRef.current = selectFood
 
-  function changeUnit(unit: PortionUnit) {
+  function changeUnit(unit: string) {
     setPendingUnit(unit)
-    setPendingQty(String(defaultQtyForUnit(unit, pending?.serving_size_g)))
+    const qty = unit.startsWith('hm:') ? 1 : defaultQtyForUnit(unit as PortionUnit, pending?.serving_size_g)
+    setPendingQty(String(qty))
   }
 
   useEffect(() => {
@@ -157,6 +174,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
               brand: food.brand as string | undefined,
               serving_size_g: food.serving_size_g as number | undefined,
               nutrients_per_100g: food.nutrients_per_100g as Record<string, number>,
+              household_measures: food.household_measures as HouseholdMeasure[] | undefined,
               flags: food.flags as string[] | undefined,
             })
           } catch {
@@ -181,15 +199,15 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   function confirmAdd() {
     if (!pending) return
     const qty = Math.max(0, parseFloat(pendingQty) || 0)
-    const grams = Math.max(1, Math.round(unitToGrams(qty, pendingUnit, {
-      density: densityForFood(pending.name),
-      servingSizeG: pending.serving_size_g,
-    })))
+    const grams = Math.max(1, Math.round(gramsForUnit(pending, pendingUnit, qty)))
+    const unitLabel = pendingUnit.startsWith('hm:')
+      ? (pending.household_measures?.[Number(pendingUnit.slice(3))]?.label ?? 'serving')
+      : pendingUnit
     onAddItem({
       name: pending.name,
       brand: pending.brand,
       quantity: qty,
-      unit: pendingUnit,
+      unit: unitLabel,
       estimated_weight_g: grams,
       nutrients: scaleNutrients(pending.nutrients_per_100g, grams),
     })
@@ -198,13 +216,12 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
     setPendingUnit('g')
   }
 
+  const pendingMeasures = pending?.household_measures ?? []
   const pendingQtyNum = parseFloat(pendingQty) || 0
-  const pendingG = pending
-    ? unitToGrams(pendingQtyNum, pendingUnit, { density: densityForFood(pending.name), servingSizeG: pending.serving_size_g })
-    : 0
+  const pendingG = pending ? gramsForUnit(pending, pendingUnit, pendingQtyNum) : 0
   const pendingKcal = pending ? Math.round((pending.nutrients_per_100g.calories || 0) * (pendingG / 100)) : 0
   const pendingProtein = pending ? ((pending.nutrients_per_100g.protein_g || 0) * (pendingG / 100)).toFixed(1) : '0'
-  const pendingPresets = PRESETS_BY_UNIT[pendingUnit]
+  const pendingPresets = pendingUnit.startsWith('hm:') ? [0.5, 1, 2, 3] : PRESETS_BY_UNIT[pendingUnit as PortionUnit]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -246,14 +263,19 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
             />
             <select
               value={pendingUnit}
-              onChange={(e) => changeUnit(e.target.value as PortionUnit)}
+              onChange={(e) => changeUnit(e.target.value)}
               className="field-input"
               style={{
-                borderRadius: 8, padding: '7px 8px', fontSize: 12, flexShrink: 0,
+                borderRadius: 8, padding: '7px 8px', fontSize: 12, flexShrink: 0, maxWidth: 150,
                 border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
                 color: 'var(--fg-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
               }}
             >
+              {pendingMeasures.map((m, i) => (
+                <option key={`hm:${i}`} value={`hm:${i}`} style={{ background: 'var(--bg-2)', color: 'var(--fg-primary)' }}>
+                  {m.label} ({Math.round(m.grams)}g)
+                </option>
+              ))}
               {PORTION_UNITS.map((u) => (
                 <option key={u} value={u} style={{ background: 'var(--bg-2)', color: 'var(--fg-primary)' }}>
                   {PORTION_UNIT_LABELS[u]}
