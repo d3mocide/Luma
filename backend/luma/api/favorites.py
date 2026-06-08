@@ -103,9 +103,8 @@ async def list_favorites(
         params["offset"] = max(0, offset)
 
     # log_count counts how many times this favorite has been logged. Favorites are
-    # logged as meal_events with source='favorite' and raw_input set to the favorite
-    # name, so that pairing is the frequency signal. Paging happens on favorites (not
-    # joined item rows) via the CTE before items are attached.
+    # logged as meal_events carrying favorite_id, so the link survives renames. Paging
+    # happens on favorites (not joined item rows) via the CTE before items are attached.
     rows = await db.execute(
         text(f"""
             WITH fav_counts AS (
@@ -113,10 +112,7 @@ async def list_favorites(
                     f.id, f.name, f.created_at, f.updated_at,
                     COUNT(me.id) AS log_count
                 FROM favorites f
-                LEFT JOIN meal_events me
-                    ON me.user_id = f.user_id
-                    AND me.source = 'favorite'
-                    AND me.raw_input = f.name
+                LEFT JOIN meal_events me ON me.favorite_id = f.id
                 WHERE f.user_id = :uid
                 GROUP BY f.id, f.name, f.created_at, f.updated_at
             ),

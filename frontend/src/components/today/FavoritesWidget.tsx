@@ -56,7 +56,7 @@ export function FavoritesWidget({ compact = false }: { compact?: boolean }) {
         },
         { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0 }
       )
-      return api.post('/log/meal', { slot, source: 'favorite', items: draftItems, nutrition, raw_input: fav.name })
+      return api.post('/log/meal', { slot, source: 'favorite', favorite_id: fav.id, items: draftItems, nutrition, raw_input: fav.name })
     },
     onSuccess: (_, fav) => {
       queryClient.invalidateQueries({ queryKey: ['today'] })

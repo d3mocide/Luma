@@ -116,9 +116,9 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   })
 
   const logFavoriteDirect = useMutation({
-    mutationFn: ({ items, name }: { items: DraftItem[]; name: string }) => {
+    mutationFn: ({ items, name, favoriteId }: { items: DraftItem[]; name: string; favoriteId: string }) => {
       const nutrition = sumNutrients(items)
-      return api.post('/log/meal', { slot, source: 'favorite', items, nutrition, raw_input: name })
+      return api.post('/log/meal', { slot, source: 'favorite', favorite_id: favoriteId, items, nutrition, raw_input: name })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['today'] })
@@ -198,7 +198,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               currentSlot={slot}
               onAddItems={(items) => { addItems(items); setActiveTab('search') }}
               favorites={favorites}
-              onLogFavoriteDirect={(items, name) => logFavoriteDirect.mutate({ items, name })}
+              onLogFavoriteDirect={(items, name, favoriteId) => logFavoriteDirect.mutate({ items, name, favoriteId })}
               isLoggingFavorite={logFavoriteDirect.isPending}
             />
           )}

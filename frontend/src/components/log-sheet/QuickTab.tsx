@@ -18,7 +18,7 @@ type Props = {
   currentSlot: string
   onAddItems: (items: DraftItem[]) => void
   favorites?: Favorite[]
-  onLogFavoriteDirect?: (items: DraftItem[], name: string) => void
+  onLogFavoriteDirect?: (items: DraftItem[], name: string, favoriteId: string) => void
   isLoggingFavorite?: boolean
 }
 
@@ -162,7 +162,7 @@ export function QuickTab({ currentSlot, onAddItems, favorites, onLogFavoriteDire
                 return (
                   <button
                     key={fav.id}
-                    onClick={() => onLogFavoriteDirect?.(favDraftItems, fav.name)}
+                    onClick={() => onLogFavoriteDirect?.(favDraftItems, fav.name, fav.id)}
                     disabled={isLoggingFavorite}
                     style={{
                       width: '100%',

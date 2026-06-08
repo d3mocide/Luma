@@ -254,6 +254,7 @@ class MealEvent(Base):
     items = Column(JSONB, nullable=False, default=list)
     nutrition = Column(JSONB, nullable=False, default=dict)
     plan_slot_id = Column(UUID(as_uuid=True), ForeignKey("meal_plan_slots.id"))
+    favorite_id = Column(UUID(as_uuid=True), ForeignKey("favorites.id", ondelete="SET NULL"))
     raw_input = Column(Text)
     confidence = Column(Numeric(3, 2))
 

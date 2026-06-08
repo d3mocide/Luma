@@ -132,6 +132,7 @@ export default function FavoritesRoute() {
       return api.post('/log/meal', {
         slot,
         source: 'favorite',
+        favorite_id: fav.id,
         items: draftItems,
         nutrition,
         raw_input: fav.name,
