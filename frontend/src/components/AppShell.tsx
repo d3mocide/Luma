@@ -413,6 +413,19 @@ function MobileHeader({ initials }: { initials: string }) {
                 <ChevronDown size={14} strokeWidth={1.8} style={{ transform: 'rotate(-90deg)' }} />
               </NavLink>
 
+              <NavLink
+                to="/family"
+                className="mobile-profile-action"
+                onClick={() => setIsOpen(false)}
+                style={{ marginTop: 10 }}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <Users size={15} strokeWidth={1.6} />
+                  <span>Family</span>
+                </span>
+                <ChevronDown size={14} strokeWidth={1.8} style={{ transform: 'rotate(-90deg)' }} />
+              </NavLink>
+
               <button
                 type="button"
                 className="mobile-profile-action"
