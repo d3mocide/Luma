@@ -20,6 +20,7 @@ type FoodResult = {
   id: string
   name: string
   brand?: string
+  source?: string
   serving_size_g?: number
   nutrients_per_100g: Record<string, number>
   household_measures?: HouseholdMeasure[]
@@ -104,6 +105,9 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   const [isScanning, setIsScanning]     = useState(false)
   const [barcodeError, setBarcodeError] = useState('')
   const qtyRef = useRef<HTMLInputElement>(null)
+  // Cleared once the user adjusts qty/unit, so async enrichment doesn't clobber
+  // a portion they've already chosen.
+  const autoUnitRef = useRef(true)
   const selectFoodRef = useRef<(food: FoodResult) => void>(() => {})
   const uid = useId()
   const scannerDomId = `ingredient-scanner-${uid.replace(/:/g, '')}`
@@ -133,6 +137,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
 
   function selectFood(food: FoodResult) {
     setPending(food)
+    autoUnitRef.current = true
     // Default to the food's own first household measure when it has one
     // (e.g. a scanned product logs as "1 serving"); otherwise fall back to grams.
     const hasMeasures = (food.household_measures?.length ?? 0) > 0
@@ -142,10 +147,25 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
     setResults([])
     setIsScanning(false)
     setTimeout(() => qtyRef.current?.select(), 60)
+
+    // USDA search hits are abridged. Pull the full FDC record once to surface
+    // household portions ("1 cup", "1 slice") and complete nutrients.
+    if (food.source === 'usda' && !hasMeasures && food.id) {
+      api.post<FoodResult>(`/foods/${food.id}/enrich`, {})
+        .then((enriched) => {
+          setPending((cur) => (cur && cur.id === food.id ? { ...cur, ...enriched } : cur))
+          if (autoUnitRef.current && (enriched.household_measures?.length ?? 0) > 0) {
+            setPendingUnit('hm:0')
+            setPendingQty('1')
+          }
+        })
+        .catch(() => { /* keep generic units */ })
+    }
   }
   selectFoodRef.current = selectFood
 
   function changeUnit(unit: string) {
+    autoUnitRef.current = false
     setPendingUnit(unit)
     const qty = unit.startsWith('hm:') ? 1 : defaultQtyForUnit(unit as PortionUnit, pending?.serving_size_g)
     setPendingQty(String(qty))
@@ -252,7 +272,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
               min={0}
               step="any"
               value={pendingQty}
-              onChange={(e) => setPendingQty(e.target.value)}
+              onChange={(e) => { autoUnitRef.current = false; setPendingQty(e.target.value) }}
               onKeyDown={(e) => e.key === 'Enter' && confirmAdd()}
               className="field-input"
               style={{
@@ -288,7 +308,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
                 return (
                   <button
                     key={p}
-                    onClick={() => setPendingQty(String(p))}
+                    onClick={() => { autoUnitRef.current = false; setPendingQty(String(p)) }}
                     style={{
                       flex: 1, padding: '5px 2px', borderRadius: 7, fontSize: 10,
                       fontFamily: 'var(--font-mono)', cursor: 'pointer', transition: 'all 150ms',

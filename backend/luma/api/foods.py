@@ -201,6 +201,40 @@ async def lookup_barcode_food(
     return food
 
 
+@router.post("/{food_id}/enrich", response_model=FoodResponse)
+async def enrich_food(
+    food_id: UUID,
+    db: DbDep,
+    current_user: CurrentUser,
+) -> Food:
+    """Lazily pull a USDA food's full detail (household portions + complete
+    nutrients) the first time it's selected, then cache it on the row."""
+    res = await db.execute(select(Food).where(Food.id == food_id))
+    food = res.scalar_one_or_none()
+    if not food:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Food not found")
+
+    if food.detail_enriched or food.source != "usda" or not (food.source_id or "").startswith("fdc_"):
+        return food
+
+    fdc_id = food.source_id[len("fdc_"):]
+    detail = await usda_client.get_food_detail(fdc_id)
+    if detail:
+        food.household_measures = detail.get("household_measures", [])
+        new_nutrients = detail.get("nutrients_per_100g") or {}
+        # Only overwrite nutrients if the detail call returned a usable profile.
+        if new_nutrients.get("calories"):
+            food.nutrients_per_100g = new_nutrients
+            food.flags = merge_flags(detail.get("flags", []), new_nutrients)
+        if detail.get("serving_size_g"):
+            food.serving_size_g = detail["serving_size_g"]
+    # Mark enriched even on a miss so we don't refetch a portion-less food.
+    food.detail_enriched = True
+    await db.commit()
+    await db.refresh(food)
+    return food
+
+
 @router.get("/{food_id}", response_model=FoodResponse)
 async def get_food(
     food_id: UUID,

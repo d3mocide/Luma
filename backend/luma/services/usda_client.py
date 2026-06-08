@@ -228,3 +228,27 @@ async def search_foods(query: str, limit: int = 20) -> list[dict[str, Any]]:
             continue
         results.append(food)
     return results
+
+
+async def get_food_detail(fdc_id: str) -> dict[str, Any] | None:
+    """Fetch the full FDC record for one food.
+
+    The search endpoint returns abridged foods (no foodPortions, often partial
+    nutrients). The detail endpoint with ``format=full`` carries household
+    portions and the complete nutrient panel, so we use it to enrich a food the
+    first time a user reaches for it.
+    """
+    if not settings.usda_api_key:
+        return None
+
+    params = {"api_key": settings.usda_api_key, "format": "full"}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(f"{_FDC_BASE}/food/{fdc_id}", params=params)
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.HTTPError as exc:
+        logger.warning("USDA detail fetch failed for %s: %s", fdc_id, exc)
+        return None
+
+    return _to_luma_food(data)
