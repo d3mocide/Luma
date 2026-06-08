@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, ChevronLeft, Search, X, Utensils } from 'lucide-react'
+import { Plus, Trash2, ChevronLeft, Search, X, Utensils, Globe, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { api } from '../lib/api'
+import type { RecipeImportDraft, RecipeImportDraftIngredient } from '../lib/api'
 import type { Recipe, RecipeIngredient, FoodResult } from '../components/plan/types'
 import { KEY_NUTRIENTS, fmtNutr } from '../components/plan/types'
 import { ShareWithFamilyButton } from '../components/ShareWithFamilyButton'
@@ -252,8 +253,266 @@ function RecipeDetail({ recipe, onBack, onDelete }: { recipe: Recipe; onBack: ()
   )
 }
 
+function ImportRecipeView({ onCancel, onSaved }: { onCancel: () => void; onSaved: () => void }) {
+  const queryClient = useQueryClient()
+  const [stage, setStage] = useState<'url' | 'review'>('url')
+  const [url, setUrl] = useState('')
+  const [draft, setDraft] = useState<RecipeImportDraft | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+
+  // Review-stage state (pre-populated once draft arrives)
+  const [name, setName] = useState('')
+  const [servings, setServings] = useState('1')
+  const [matchedIngredients, setMatchedIngredients] = useState<RecipeImportDraftIngredient[]>([])
+  const [unmatchedIngredients, setUnmatchedIngredients] = useState<RecipeImportDraftIngredient[]>([])
+  const [foodQuery, setFoodQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [resolvingIdx, setResolvingIdx] = useState<number | null>(null)
+
+  const fieldStyle = {
+    width: '100%', boxSizing: 'border-box' as const,
+    background: 'rgba(0,0,0,0.25)', border: '1px solid var(--glass-edge)',
+    borderRadius: 10, color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)',
+    fontSize: 14, padding: '10px 14px', outline: 'none',
+  }
+
+  const { data: foodResults, isFetching: searching } = useQuery<FoodResult[]>({
+    queryKey: ['foods', debouncedQuery],
+    queryFn: () => api.get(`/foods/search?q=${encodeURIComponent(debouncedQuery)}`),
+    enabled: debouncedQuery.length > 1,
+    staleTime: 60_000,
+  })
+
+  const saveMutation = useMutation({
+    mutationFn: () => {
+      if (!draft) throw new Error('No draft')
+      return api.post('/recipes', {
+        name,
+        description: draft.description || undefined,
+        instructions: draft.instructions.length ? draft.instructions : undefined,
+        prep_minutes: draft.prep_minutes ?? undefined,
+        cook_minutes: draft.cook_minutes ?? undefined,
+        servings: parseFloat(servings) || 1,
+        tags: draft.tags.length ? draft.tags : undefined,
+        source: draft.source_url,
+        ingredients: matchedIngredients.map((ing, i) => ({
+          food_id: ing.food_id!,
+          quantity: ing.quantity,
+          unit: ing.unit,
+          notes: ing.notes || undefined,
+          sort_order: i,
+        })),
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recipes'] })
+      onSaved()
+    },
+  })
+
+  async function handleImport() {
+    if (!url.trim()) return
+    setImporting(true)
+    setImportError(null)
+    try {
+      const result = await api.post<RecipeImportDraft>('/recipes/import', { url: url.trim() })
+      setDraft(result)
+      setName(result.name)
+      setServings(result.servings.toString())
+      setMatchedIngredients(result.ingredients.filter((i) => i.food_id !== null))
+      setUnmatchedIngredients(result.ingredients.filter((i) => i.food_id === null))
+      setStage('review')
+    } catch (err: unknown) {
+      setImportError(err instanceof Error ? err.message : 'Import failed')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  function resolveUnmatched(idx: number, food: FoodResult) {
+    const ing = unmatchedIngredients[idx]
+    setMatchedIngredients((prev) => [...prev, { ...ing, food_id: food.id, food_name: food.name }])
+    setUnmatchedIngredients((prev) => prev.filter((_, i) => i !== idx))
+    setResolvingIdx(null)
+    setFoodQuery('')
+    setDebouncedQuery('')
+  }
+
+  if (stage === 'url') {
+    return (
+      <div style={{ maxWidth: 600, margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', padding: 4 }}>
+            <ChevronLeft size={20}/>
+          </button>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 400, color: 'var(--fg-primary)' }}>Import Recipe</h2>
+        </div>
+
+        <div className="glass" style={{ padding: 24, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <Globe size={16} style={{ color: 'var(--fg-quiet)' }}/>
+            <div className="eyebrow">Recipe URL</div>
+          </div>
+          <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--fg-secondary)', lineHeight: 1.5 }}>
+            Paste any recipe page URL — Luma will extract the ingredients and details automatically.
+          </p>
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleImport()}
+            placeholder="https://..."
+            type="url"
+            style={fieldStyle}
+            autoFocus
+          />
+          {importError && (
+            <div style={{ marginTop: 10, fontSize: 12, color: 'var(--bad)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertTriangle size={13}/> {importError}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button className="btn" style={{ flex: 1 }} onClick={onCancel}>Cancel</button>
+          <button
+            className="btn btn-primary"
+            style={{ flex: 2 }}
+            disabled={!url.trim() || importing}
+            onClick={handleImport}
+          >
+            {importing ? 'Importing…' : 'Import Recipe'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Review stage
+  const unmatched = unmatchedIngredients.length
+  return (
+    <div style={{ maxWidth: 600, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+        <button onClick={() => setStage('url')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', padding: 4 }}>
+          <ChevronLeft size={20}/>
+        </button>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 400, color: 'var(--fg-primary)' }}>Review Recipe</h2>
+      </div>
+
+      {/* Unmatched warning */}
+      {unmatched > 0 && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 16px', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 12, marginBottom: 16, fontSize: 13, color: 'var(--fg-secondary)' }}>
+          <AlertTriangle size={15} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }}/>
+          <span>{unmatched} ingredient{unmatched > 1 ? 's' : ''} couldn't be matched to the food database. Search below to link them, or save and they'll be skipped.</span>
+        </div>
+      )}
+
+      {/* Source URL */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16, fontSize: 11, color: 'var(--fg-quiet)' }}>
+        <Globe size={11}/>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 480 }}>{draft?.source_url}</span>
+      </div>
+
+      {/* Name */}
+      <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
+        <div className="eyebrow" style={{ marginBottom: 12 }}>Details</div>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Recipe name *" style={fieldStyle}/>
+        {draft?.description && (
+          <p style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--fg-secondary)', lineHeight: 1.5 }}>{draft.description}</p>
+        )}
+        <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+          {draft?.prep_minutes != null && <span style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>Prep: {draft.prep_minutes} min</span>}
+          {draft?.cook_minutes != null && <span style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>Cook: {draft.cook_minutes} min</span>}
+          <span style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>Servings:&nbsp;
+            <input type="number" value={servings} onChange={(e) => setServings(e.target.value)} min={0.5} step={0.5}
+              style={{ width: 48, padding: '2px 6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-edge)', borderRadius: 6, color: 'var(--fg-primary)', fontFamily: 'var(--font-mono)', fontSize: 12, outline: 'none' }}/>
+          </span>
+        </div>
+      </div>
+
+      {/* Matched ingredients */}
+      {matchedIngredients.length > 0 && (
+        <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Matched Ingredients</div>
+          {matchedIngredients.map((ing, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < matchedIngredients.length - 1 ? '1px solid var(--glass-edge)' : 'none' }}>
+              <CheckCircle2 size={13} style={{ color: 'var(--good)', flexShrink: 0 }}/>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: 13, color: 'var(--fg-primary)' }}>{ing.food_name}</span>
+                <span style={{ fontSize: 11, color: 'var(--fg-quiet)', marginLeft: 6 }}>{ing.raw_text}</span>
+              </div>
+              <span style={{ fontSize: 12, color: 'var(--fg-secondary)', fontFamily: 'var(--font-mono)', flexShrink: 0 }}>{ing.quantity}{ing.unit}</span>
+              <button onClick={() => { setUnmatchedIngredients((prev) => [...prev, { ...ing, food_id: null, food_name: null }]); setMatchedIngredients((prev) => prev.filter((_, j) => j !== i)) }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', padding: 4, display: 'flex' }}>
+                <X size={13}/>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Unmatched ingredients */}
+      {unmatchedIngredients.length > 0 && (
+        <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Unmatched Ingredients</div>
+          {unmatchedIngredients.map((ing, i) => (
+            <div key={i} style={{ padding: '10px 0', borderBottom: i < unmatchedIngredients.length - 1 ? '1px solid var(--glass-edge)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: resolvingIdx === i ? 8 : 0 }}>
+                <AlertTriangle size={13} style={{ color: '#fbbf24', flexShrink: 0 }}/>
+                <span style={{ flex: 1, fontSize: 13, color: 'var(--fg-secondary)' }}>{ing.raw_text}</span>
+                <button
+                  className="btn"
+                  style={{ padding: '4px 10px', fontSize: 11 }}
+                  onClick={() => { setResolvingIdx(resolvingIdx === i ? null : i); setFoodQuery(''); setDebouncedQuery('') }}
+                >
+                  {resolvingIdx === i ? 'Cancel' : 'Search'}
+                </button>
+              </div>
+              {resolvingIdx === i && (
+                <div style={{ paddingLeft: 21 }}>
+                  <div style={{ position: 'relative', marginBottom: 6 }}>
+                    <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-quiet)' }}/>
+                    <input
+                      autoFocus
+                      value={foodQuery}
+                      onChange={(e) => { setFoodQuery(e.target.value); setDebouncedQuery(e.target.value) }}
+                      placeholder={`Search for "${ing.name}"…`}
+                      style={{ ...fieldStyle, paddingLeft: 30, fontSize: 12 }}
+                    />
+                  </div>
+                  {searching && <div style={{ fontSize: 11, color: 'var(--fg-quiet)', padding: '4px 0' }}>Searching…</div>}
+                  {!searching && debouncedQuery.length > 1 && !foodResults?.length && <div style={{ fontSize: 11, color: 'var(--fg-quiet)', padding: '4px 0' }}>No results</div>}
+                  {!searching && foodResults?.map((f) => (
+                    <button key={f.id} onClick={() => resolveUnmatched(i, f)}
+                      style={{ width: '100%', textAlign: 'left', padding: '7px 10px', background: 'var(--glass-1)', border: '1px solid var(--glass-edge)', borderRadius: 8, cursor: 'pointer', marginBottom: 3, fontSize: 12, color: 'var(--fg-primary)', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>{f.name}{f.brand && <span style={{ fontSize: 10, color: 'var(--fg-quiet)', marginLeft: 6 }}>{f.brand}</span>}</span>
+                      <span style={{ fontSize: 10, color: 'var(--sky-400)', fontFamily: 'var(--font-mono)' }}>{Math.round(f.nutrients_per_100g.calories ?? 0)} cal/100g</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button className="btn" style={{ flex: 1 }} onClick={onCancel}>Discard</button>
+        <button
+          className="btn btn-primary"
+          style={{ flex: 2 }}
+          disabled={!name.trim() || saveMutation.isPending}
+          onClick={() => saveMutation.mutate()}
+        >
+          {saveMutation.isPending ? 'Saving…' : `Save Recipe${unmatched > 0 ? ` (skip ${unmatched} unmatched)` : ''}`}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function RecipesRoute() {
-  const [view, setView] = useState<'list' | 'create' | 'detail'>('list')
+  const [view, setView] = useState<'list' | 'create' | 'detail' | 'import'>('list')
   const [selected, setSelected] = useState<Recipe | null>(null)
 
   const { data, isLoading } = useQuery<{ recipes: Recipe[] }>({
@@ -267,6 +526,14 @@ export default function RecipesRoute() {
     return (
       <div className="thin-scroll" style={{ padding: '24px 20px' }}>
         <RecipeForm onCancel={() => setView('list')} onSaved={() => setView('list')}/>
+      </div>
+    )
+  }
+
+  if (view === 'import') {
+    return (
+      <div className="thin-scroll" style={{ padding: '24px 20px' }}>
+        <ImportRecipeView onCancel={() => setView('list')} onSaved={() => setView('list')}/>
       </div>
     )
   }
@@ -288,9 +555,14 @@ export default function RecipesRoute() {
             Recipes
           </h1>
         </div>
-        <button className="btn btn-primary" style={{ gap: 8 }} onClick={() => setView('create')}>
-          <Plus size={15}/> New Recipe
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn" style={{ gap: 6 }} onClick={() => setView('import')}>
+            <Globe size={14}/> Import
+          </button>
+          <button className="btn btn-primary" style={{ gap: 8 }} onClick={() => setView('create')}>
+            <Plus size={15}/> New Recipe
+          </button>
+        </div>
       </div>
 
       {isLoading && (
