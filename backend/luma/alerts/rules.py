@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from typing import Callable, NamedTuple
+from collections.abc import Callable
+from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
