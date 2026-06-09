@@ -35,5 +35,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    // lightningcss (Vite 8 default) can't parse Tailwind 3's escaped-slash
+    // opacity selectors (e.g. .bg-red-500\/80). esbuild handles them gracefully.
+    // Remove once we upgrade to Tailwind v4, which uses CSS vars instead.
+    cssMinify: 'esbuild',
   },
 })
