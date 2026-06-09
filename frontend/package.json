@@ -55,12 +55,5 @@
     "workbox-precaching": "^7.4.1",
     "workbox-routing": "^7.4.1",
     "workbox-strategies": "^7.4.1"
-  },
-  "pnpm": {
-    "overrides": {
-      "baseline-browser-mapping": "2.10.32",
-      "electron-to-chromium": "1.5.361",
-      "side-channel": "1.1.0"
-    }
   }
 }
