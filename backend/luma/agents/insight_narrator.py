@@ -120,6 +120,13 @@ _RULE_CONTEXT = {
         "(days on target for sat fat and fiber, heart-healthy foods eaten, weight direction) and misses "
         "(days over sat fat, under fiber, missed logging). Be specific about numbers and genuinely encouraging."
     ),
+    "calorie_ring_suggestion": (
+        "the user still has more than 500 kcal left to reach today's calorie target — "
+        "if the payload includes 'suggested_name', name that specific food and mention its approximate calories; "
+        "frame it as a practical way to close the ring before the day ends. "
+        "If no food is suggested, recommend a satisfying whole-food snack or small meal. "
+        "Keep the tone light and practical, not alarming."
+    ),
 }
 
 
@@ -198,6 +205,11 @@ _STATIC_FALLBACKS = {
         "headline": "Your Weekly Health Recap",
         "body": "Here is a summary of your LDL-relevant wins and focus areas from the past week.",
         "thread_seed": "What should I focus on changing for the coming week?",
+    },
+    "calorie_ring_suggestion": {
+        "headline": "Time to fuel up",
+        "body": "You're more than 500 kcal short of today's target. A satisfying snack or small meal can help you close the ring.",
+        "thread_seed": "What should I eat to reach my calorie goal today?",
     },
 }
 

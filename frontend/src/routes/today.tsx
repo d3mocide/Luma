@@ -140,7 +140,8 @@ export default function TodayRoute() {
   const rings: [number, number, number] = [
     (adherence?.calories?.pct ?? 0) / 100,
     (adherence?.sat_fat_g?.pct ?? 0) / 100,
-    (adherence?.soluble_fiber_g?.pct ?? 0) / 100,
+    // Fiber: cap at 1.0 — exceeding the fiber target is good, not an overage to flag
+    Math.min((adherence?.soluble_fiber_g?.pct ?? 0) / 100, 1.0),
   ]
   const weightUnit = measurementWeightUnit(measurementSystem)
   const slopeUnit = measurementSlopeUnit(measurementSystem)
