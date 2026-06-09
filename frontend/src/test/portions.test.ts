@@ -54,7 +54,7 @@ describe('unitToGrams', () => {
 })
 
 describe('defaultQtyForUnit', () => {
-  it('returns servingSizeG rounded for g unit', () => {
+  it('returns servingSizeG rounded-sm for g unit', () => {
     expect(defaultQtyForUnit('g', 100)).toBe(100)
   })
 

@@ -1,142 +1,245 @@
 /* Geist Sans — weights used by the design */
-@import '@fontsource/geist/300.css';
-@import '@fontsource/geist/400.css';
-@import '@fontsource/geist/500.css';
-@import '@fontsource/geist/600.css';
-@import '@fontsource/geist/700.css';
+@import '@fontsource/geist/300.css' layer(base);
+@import '@fontsource/geist/400.css' layer(base);
+@import '@fontsource/geist/500.css' layer(base);
+@import '@fontsource/geist/600.css' layer(base);
+@import '@fontsource/geist/700.css' layer(base);
 
 /* Geist Mono */
-@import '@fontsource/geist-mono/400.css';
-@import '@fontsource/geist-mono/500.css';
-@import '@fontsource/geist-mono/600.css';
+@import '@fontsource/geist-mono/400.css' layer(base);
+@import '@fontsource/geist-mono/500.css' layer(base);
+@import '@fontsource/geist-mono/600.css' layer(base);
 
 /* Instrument Serif (only used for serif-italic accent text) */
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap')
+layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-/* ══════════════════════════════════════════════════════════════════════════
+@theme {
+  --font-sans: Geist, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: Geist Mono, ui-monospace, monospace;
+  --font-serif: Instrument Serif, Times New Roman, serif;
+
+  --color-sky-100: #e0f2fe;
+  --color-sky-200: #bae6fd;
+  --color-sky-300: #7dd3fc;
+  --color-sky-400: #38bdf8;
+  --color-sky-500: #0ea5e9;
+  --color-sky-600: #0284c7;
+
+  --color-sun-100: #fef3c7;
+  --color-sun-200: #fde68a;
+  --color-sun-300: #fcd34d;
+  --color-sun-400: #fbbf24;
+  --color-sun-500: #f59e0b;
+
+  --color-aurora-mint: #5eead4;
+  --color-aurora-pink: #f472b6;
+  --color-aurora-violet: #a78bfa;
+
+  --color-fg-primary: var(--fg-primary);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-tertiary: var(--fg-tertiary);
+  --color-fg-quiet: var(--fg-quiet);
+  --color-fg-faint: var(--fg-faint);
+  --color-bg-luma-0: var(--bg-0);
+  --color-bg-luma-1: var(--bg-1);
+  --color-bg-luma-2: var(--bg-2);
+  --color-bg-luma-3: var(--bg-3);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+
+  --color-brand-50: #f0f9ff;
+  --color-brand-400: #38bdf8;
+  --color-brand-500: #0ea5e9;
+  --color-brand-600: #0284c7;
+  --color-brand-700: #0369a1;
+
+  --radius-luma: 20px;
+  --radius-luma-sm: 10px;
+  --radius-luma-md: 14px;
+  --radius-luma-xl: 28px;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+@layer utilities {
+  /* ══════════════════════════════════════════════════════════════════════════
  * LUMA — Glassy Atmospheric Design System
  * Dark but luminous. Sky blue primary, sun amber accents.
  * ══════════════════════════════════════════════════════════════════════════ */
 
-:root {
-  /* Surfaces — deep nightlit ocean */
-  --bg-0: #050811;
-  --bg-1: #080d1a;
-  --bg-2: #0d1425;
-  --bg-3: #131c33;
+  :root {
+    /* Surfaces — deep nightlit ocean */
+    --bg-0: #050811;
+    --bg-1: #080d1a;
+    --bg-2: #0d1425;
+    --bg-3: #131c33;
 
-  /* Glass tints */
-  --glass-1: rgba(255, 255, 255, 0.04);
-  --glass-2: rgba(255, 255, 255, 0.06);
-  --glass-3: rgba(255, 255, 255, 0.09);
-  --glass-edge: rgba(255, 255, 255, 0.12);
-  --glass-edge-strong: rgba(255, 255, 255, 0.18);
+    /* Glass tints */
+    --glass-1: rgba(255, 255, 255, 0.04);
+    --glass-2: rgba(255, 255, 255, 0.06);
+    --glass-3: rgba(255, 255, 255, 0.09);
+    --glass-edge: rgba(255, 255, 255, 0.12);
+    --glass-edge-strong: rgba(255, 255, 255, 0.18);
 
-  /* Brand — sky blue */
-  --sky-100: #e0f2fe;
-  --sky-200: #bae6fd;
-  --sky-300: #7dd3fc;
-  --sky-400: #38bdf8;
-  --sky-500: #0ea5e9;
-  --sky-600: #0284c7;
+    /* Brand — sky blue */
+    --sky-100: #e0f2fe;
+    --sky-200: #bae6fd;
+    --sky-300: #7dd3fc;
+    --sky-400: #38bdf8;
+    --sky-500: #0ea5e9;
+    --sky-600: #0284c7;
 
-  /* Accent — sun amber */
-  --sun-100: #fef3c7;
-  --sun-200: #fde68a;
-  --sun-300: #fcd34d;
-  --sun-400: #fbbf24;
-  --sun-500: #f59e0b;
+    /* Accent — sun amber */
+    --sun-100: #fef3c7;
+    --sun-200: #fde68a;
+    --sun-300: #fcd34d;
+    --sun-400: #fbbf24;
+    --sun-500: #f59e0b;
 
-  /* Aurora accents */
-  --aurora-mint: #5eead4;
-  --aurora-pink: #f472b6;
-  --aurora-violet: #a78bfa;
+    /* Aurora accents */
+    --aurora-mint: #5eead4;
+    --aurora-pink: #f472b6;
+    --aurora-violet: #a78bfa;
 
-  /* Text */
-  --fg-primary: #f6f9ff;
-  --fg-secondary: rgba(246, 249, 255, 0.78);
-  --fg-tertiary: rgba(246, 249, 255, 0.56);
-  --fg-quiet: rgba(246, 249, 255, 0.38);
-  --fg-faint: rgba(246, 249, 255, 0.22);
+    /* Text */
+    --fg-primary: #f6f9ff;
+    --fg-secondary: rgba(246, 249, 255, 0.78);
+    --fg-tertiary: rgba(246, 249, 255, 0.56);
+    --fg-quiet: rgba(246, 249, 255, 0.38);
+    --fg-faint: rgba(246, 249, 255, 0.22);
 
-  /* Semantic */
-  --good: #34d399;
-  --good-glow: rgba(52, 211, 153, 0.25);
-  --warn: #fbbf24;
-  --warn-glow: rgba(251, 191, 36, 0.25);
-  --bad: #fb7185;
-  --bad-glow: rgba(251, 113, 133, 0.25);
+    /* Semantic */
+    --good: #34d399;
+    --good-glow: rgba(52, 211, 153, 0.25);
+    --warn: #fbbf24;
+    --warn-glow: rgba(251, 191, 36, 0.25);
+    --bad: #fb7185;
+    --bad-glow: rgba(251, 113, 133, 0.25);
 
-  /* Typography */
-  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, monospace;
-  --font-serif: 'Instrument Serif', 'Times New Roman', serif;
+    /* Typography */
+    --font-sans:
+      'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
+    --font-serif: 'Instrument Serif', 'Times New Roman', serif;
 
-  /* Radii */
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
-  --radius-2xl: 36px;
-  --radius-pill: 9999px;
+    /* Radii */
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+    --radius-2xl: 36px;
+    --radius-pill: 9999px;
 
-  /* Today insight card accents */
-  --insight-card-bg: linear-gradient(165deg, rgba(251,191,36,0.10), rgba(251,113,133,0.05));
-  --insight-card-border: rgba(251,191,36,0.25);
-  --insight-icon-bg: linear-gradient(180deg, rgba(251,191,36,0.3), rgba(251,191,36,0.15));
-  --insight-icon-border: rgba(251,191,36,0.4);
-  --insight-icon-fg: var(--sun-300);
-  --insight-cta-bg: rgba(251,191,36,0.18);
-  --insight-cta-border: rgba(251,191,36,0.4);
-  --insight-cta-fg: var(--sun-200);
-  --accent-gradient-hero: linear-gradient(120deg, var(--sun-200), var(--sky-300) 48%, var(--sky-500));
+    /* Today insight card accents */
+    --insight-card-bg: linear-gradient(
+      165deg,
+      rgba(251, 191, 36, 0.1),
+      rgba(251, 113, 133, 0.05)
+    );
+    --insight-card-border: rgba(251, 191, 36, 0.25);
+    --insight-icon-bg: linear-gradient(
+      180deg,
+      rgba(251, 191, 36, 0.3),
+      rgba(251, 191, 36, 0.15)
+    );
+    --insight-icon-border: rgba(251, 191, 36, 0.4);
+    --insight-icon-fg: var(--sun-300);
+    --insight-cta-bg: rgba(251, 191, 36, 0.18);
+    --insight-cta-border: rgba(251, 191, 36, 0.4);
+    --insight-cta-fg: var(--sun-200);
+    --accent-gradient-hero: linear-gradient(
+      120deg,
+      var(--sun-200),
+      var(--sky-300) 48%,
+      var(--sky-500)
+    );
+  }
+
+  /* ── LIGHT MODE ────────────────────────────────────────────────────────── */
+  [data-theme='light'] {
+    --bg-0: #f6f4ef;
+    --bg-1: #fbf9f4;
+    --bg-2: #ffffff;
+    --bg-3: #f1eee7;
+
+    --glass-1: rgba(255, 255, 255, 0.55);
+    --glass-2: rgba(255, 255, 255, 0.72);
+    --glass-3: rgba(255, 255, 255, 0.88);
+    --glass-edge: rgba(15, 23, 42, 0.08);
+    --glass-edge-strong: rgba(15, 23, 42, 0.14);
+
+    --fg-primary: #0c1426;
+    --fg-secondary: rgba(12, 20, 38, 0.78);
+    --fg-tertiary: rgba(12, 20, 38, 0.58);
+    --fg-quiet: rgba(12, 20, 38, 0.42);
+    --fg-faint: rgba(12, 20, 38, 0.22);
+
+    --good: #059669;
+    --good-glow: rgba(5, 150, 105, 0.2);
+    --warn: #d97706;
+    --warn-glow: rgba(217, 119, 6, 0.2);
+    --bad: #e11d48;
+    --bad-glow: rgba(225, 29, 72, 0.2);
+
+    --insight-card-bg: linear-gradient(
+      165deg,
+      rgba(251, 191, 36, 0.16),
+      rgba(251, 113, 133, 0.08)
+    );
+    --insight-card-border: rgba(217, 119, 6, 0.35);
+    --insight-icon-bg: linear-gradient(
+      180deg,
+      rgba(251, 191, 36, 0.3),
+      rgba(245, 158, 11, 0.16)
+    );
+    --insight-icon-border: rgba(217, 119, 6, 0.42);
+    --insight-icon-fg: #a16207;
+    --insight-cta-bg: rgba(245, 158, 11, 0.22);
+    --insight-cta-border: rgba(217, 119, 6, 0.44);
+    --insight-cta-fg: #7c2d12;
+    --accent-gradient-hero: linear-gradient(
+      120deg,
+      #8c86c9 0%,
+      #5aaee6 52%,
+      #0284c7 100%
+    );
+
+    color: var(--fg-primary);
+  }
+
+  /* ── Base reset ─────────────────────────────────────────────────────────── */
+  * {
+    box-sizing: border-box;
+  }
 }
-
-/* ── LIGHT MODE ────────────────────────────────────────────────────────── */
-[data-theme="light"] {
-  --bg-0: #f6f4ef;
-  --bg-1: #fbf9f4;
-  --bg-2: #ffffff;
-  --bg-3: #f1eee7;
-
-  --glass-1: rgba(255, 255, 255, 0.55);
-  --glass-2: rgba(255, 255, 255, 0.72);
-  --glass-3: rgba(255, 255, 255, 0.88);
-  --glass-edge: rgba(15, 23, 42, 0.08);
-  --glass-edge-strong: rgba(15, 23, 42, 0.14);
-
-  --fg-primary: #0c1426;
-  --fg-secondary: rgba(12, 20, 38, 0.78);
-  --fg-tertiary: rgba(12, 20, 38, 0.58);
-  --fg-quiet: rgba(12, 20, 38, 0.42);
-  --fg-faint: rgba(12, 20, 38, 0.22);
-
-  --good: #059669;
-  --good-glow: rgba(5, 150, 105, 0.20);
-  --warn: #d97706;
-  --warn-glow: rgba(217, 119, 6, 0.20);
-  --bad: #e11d48;
-  --bad-glow: rgba(225, 29, 72, 0.20);
-
-  --insight-card-bg: linear-gradient(165deg, rgba(251, 191, 36, 0.16), rgba(251, 113, 133, 0.08));
-  --insight-card-border: rgba(217, 119, 6, 0.35);
-  --insight-icon-bg: linear-gradient(180deg, rgba(251, 191, 36, 0.30), rgba(245, 158, 11, 0.16));
-  --insight-icon-border: rgba(217, 119, 6, 0.42);
-  --insight-icon-fg: #a16207;
-  --insight-cta-bg: rgba(245, 158, 11, 0.22);
-  --insight-cta-border: rgba(217, 119, 6, 0.44);
-  --insight-cta-fg: #7c2d12;
-  --accent-gradient-hero: linear-gradient(120deg, #8c86c9 0%, #5aaee6 52%, #0284c7 100%);
-
-  color: var(--fg-primary);
-}
-
-/* ── Base reset ─────────────────────────────────────────────────────────── */
-* { box-sizing: border-box; }
 
 @layer base {
   html {
@@ -170,15 +273,6 @@
     height: 100lvh;
     width: 100%;
     overflow: hidden;
-  }
-}
-
-@layer utilities {
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  .safe-top {
-    padding-top: env(safe-area-inset-top);
   }
 }
 
@@ -1023,8 +1117,7 @@ input[type="search"]::-webkit-search-results-decoration {
   background: linear-gradient(180deg, #34d399, #059669) !important;
 }
 
-[data-theme="light"] .log-sheet-body .border-slate-800,
-[data-theme="light"] .log-sheet-body .divide-slate-800\\/80 {
+[data-theme="light"] .log-sheet-body .border-slate-800 {
   border-color: rgba(15, 23, 42, 0.08) !important;
 }
 
