@@ -40,7 +40,7 @@ Brand/UI reference: `refrence/BRAND-GUIDE.md` is the canonical source for visual
 - React 18 + TypeScript (strict mode)
 - TanStack Query for all server state — no raw fetch in components
 - Zustand for client-only state (log sheet open/close, theme, layout)
-- Tailwind CSS + shadcn/ui components (do not add other UI libraries)
+- Tailwind CSS v4 + shadcn/ui components (do not add other UI libraries); config lives in `src/index.css` via `@theme` — there is no `tailwind.config.js`
 - Recharts for charts — do not add Chart.js or D3 directly
 - React Router v6 for routing
 - vite-plugin-pwa for service worker/manifest
@@ -81,6 +81,8 @@ Follow §12 of the design doc exactly. Do not create files outside the tree defi
 - Auth round-trip test: register → login → `/auth/me` returns correct user
 - Ingest smoke test: POST to `/ingest/hae` with valid HMAC returns 200
 - Do not ship Phase 1 without coverage on logging paths
+- Backend type checking: `mypy luma --ignore-missing-imports` must pass clean
+- Frontend unit tests: `pnpm test` (vitest) must pass; test files live in `src/test/`
 
 ## Secret Handling
 
@@ -110,10 +112,10 @@ Follow §12 of the design doc exactly. Do not create files outside the tree defi
 Before every `git commit` that touches frontend files, run:
 
 ```bash
-cd frontend && pnpm type-check && pnpm lint
+cd frontend && pnpm type-check && pnpm lint && pnpm test
 ```
 
-Fix all errors before committing. Do not use `--no-verify` to bypass hooks. Do not commit code that fails type-check or lint.
+Fix all errors before committing. Do not use `--no-verify` to bypass hooks. Do not commit code that fails type-check, lint, or tests.
 
 ## Food Search Ranking — Invariants
 

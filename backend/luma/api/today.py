@@ -23,8 +23,7 @@ async def get_today(
         resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
     except Exception:
         resolved_tz = ZoneInfo(settings.server_timezone)
-    tz = resolved_tz
-    today_dt = datetime.now(tz).date()
+    today_dt = datetime.now(resolved_tz).date()
 
     # 1. Fetch user's goals
     from luma.db.models import Goal, MealEvent, MealPlan, MealPlanSlot
@@ -38,9 +37,9 @@ async def get_today(
 
     # All boundaries are computed in the configured local timezone then converted
     # to UTC so queries align with the user's calendar day, not the server clock.
-    yesterday_end = datetime.combine(today_dt, time.min, tzinfo=tz).astimezone(UTC)
+    yesterday_end = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
     today_start = yesterday_end
-    today_end = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=tz).astimezone(UTC)
+    today_end = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
 
     stmt_today_events = (
         select(MealEvent)

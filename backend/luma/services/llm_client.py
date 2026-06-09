@@ -97,7 +97,7 @@ def _normalize_reasoning_response(response: Any) -> None:
     transparently.
     """
     try:
-        choices = []
+        choices: list[Any] = []
         if isinstance(response, dict):
             choices = response.get("choices") or []
         else:

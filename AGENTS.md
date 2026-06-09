@@ -33,7 +33,6 @@ Same as CLAUDE.md. Phase 0 must be complete before any agent touches Phase 1+ co
 /frontend/src/               React TypeScript PWA
 /nginx/                      Nginx config
 /whisper/                    Whisper STT wrapper
-/litellm/                    LiteLLM config
 compose.yml                  Orchestration
 ```
 
@@ -136,7 +135,6 @@ JWT_ALGORITHM         HS256
 ACCESS_TOKEN_EXPIRE_MINUTES  15
 REFRESH_TOKEN_EXPIRE_DAYS    7
 HAE_SHARED_SECRET     <min 32 bytes random>
-LITELLM_BASE_URL      http://litellm:4000
 WHISPER_URL           http://whisper:9000
 ANTHROPIC_API_KEY     <from Anthropic console>
 ENVIRONMENT           development | production

@@ -3,10 +3,16 @@ name: PR Checks
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   frontend:
-    name: Frontend — type-check & lint
+    name: Frontend — type-check, lint, test & build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -34,8 +40,17 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Test
+        run: pnpm test
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level high
+
+      - name: Build
+        run: pnpm build
+
   backend:
-    name: Backend — lint & tests
+    name: Backend — lint, type-check & tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -54,14 +69,62 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Lint (ruff)
-        run: ruff check .
+        run: ruff check . --output-format github
+
+      - name: Type-check (mypy)
+        run: mypy luma --ignore-missing-imports
+
+      - name: Audit dependencies
+        run: pip-audit
 
       - name: Tests
-        run: pytest -x -q
+        run: pytest -x -q --tb=short
         env:
-          DATABASE_URL: sqlite+aiosqlite:///:memory:
-          REDIS_URL: redis://localhost:6379
-          JWT_SECRET: test-secret-do-not-use-in-production
-          HAE_SECRET: test-hae-secret-32-bytes-minimum!!
-          LITELLM_BASE_URL: http://localhost:4000
-          LITELLM_API_KEY: test-key
+          DATABASE_URL: "postgresql+asyncpg://test:test@localhost/testdb"
+          REDIS_URL: "redis://localhost:6379/0"
+          JWT_SECRET: "test-secret-do-not-use-in-production"
+          HAE_SHARED_SECRET: "test-hae-shared-secret-32-bytes-min"
+
+  migrations:
+    name: Migrations — apply & check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: timescale/timescaledb:2.16.1-pg16
+        env:
+          POSTGRES_USER: luma
+          POSTGRES_PASSWORD: luma
+          POSTGRES_DB: luma_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Apply migrations
+        run: alembic upgrade head
+        env:
+          DATABASE_URL: "postgresql+asyncpg://luma:luma@localhost:5432/luma_test"
+
+      - name: Check for unapplied model changes
+        run: alembic check
+        env:
+          DATABASE_URL: "postgresql+asyncpg://luma:luma@localhost:5432/luma_test"

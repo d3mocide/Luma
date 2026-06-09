@@ -215,7 +215,7 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
           <button
             onClick={() => handleUploadAudio(audioBlob)}
             disabled={isProcessing}
-            className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white text-sm font-bold rounded-lg shadow transition-colors w-full"
+            className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white text-sm font-bold rounded-lg shadow-sm transition-colors w-full"
           >
             {isProcessing ? 'Processing with Luma AI...' : 'Analyze Audio Transcription'}
           </button>
