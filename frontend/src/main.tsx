@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App'
+import { releaseSwGate } from './swGate'
 
 // Measure env(safe-area-inset-*) at the document root level — outside any
 // stacking context — and expose as CSS variables. iOS standalone PWA can fail
@@ -69,7 +70,31 @@ const isTrustedPwaOrigin =
   !['localhost', '127.0.0.1'].includes(window.location.hostname)
 
 if (isTrustedPwaOrigin) {
-  registerSW({ immediate: true })
+  // Release the gate once we know no SW-triggered reload is coming.
+  // - onRegistered with nothing installing/waiting → stable, release now.
+  // - onRegistered with installing/waiting → a reload is imminent, keep gate
+  //   closed so the user never sees interactive UI before the reload fires.
+  // - onOfflineReady → precache done, definitely no reload coming.
+  // Safety: release after 3.5 s regardless so a stuck SW never locks the UI.
+  registerSW({
+    immediate: true,
+    onRegistered(registration) {
+      if (!registration || (!registration.installing && !registration.waiting)) {
+        releaseSwGate()
+      }
+    },
+    onOfflineReady() {
+      releaseSwGate()
+    },
+    onRegisterError() {
+      releaseSwGate()
+    },
+  })
+  setTimeout(releaseSwGate, 3500)
+} else {
+  // Dev / non-HTTPS — no service worker, release immediately so there's no
+  // splash delay during development.
+  releaseSwGate()
 }
 
 createRoot(document.getElementById('root')!).render(
