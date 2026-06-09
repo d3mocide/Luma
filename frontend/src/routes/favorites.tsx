@@ -44,8 +44,8 @@ export default function FavoritesRoute() {
   const [successModal, setSuccessModal] = useState<{ name: string; slot: string } | null>(null)
 
   const { data: favoritesData, isLoading } = useQuery<{ favorites: Favorite[] }>({
-    queryKey: ['favorites'],
-    queryFn: () => api.get('/favorites'),
+    queryKey: ['favorites', 'frequency'],
+    queryFn: () => api.get('/favorites?sort=frequency'),
   })
   const favorites = favoritesData?.favorites ?? []
 

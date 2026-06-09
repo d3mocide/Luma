@@ -22,10 +22,10 @@ const NAV_ITEMS = [
 
 const DESKTOP_NAV_ITEMS = [
   { to: '/today',          label: 'Today',     Icon: CircleDot },
-  { to: '/meals',          label: 'Meals',     Icon: Utensils  },
   { to: '/trends',         label: 'Trends',    Icon: Activity  },
-  { to: '/coach',          label: 'Coach',     Icon: Sparkles  },
   { to: '/favorites',      label: 'Favorites', Icon: Heart     },
+  { to: '/meals',          label: 'Meals',     Icon: Utensils  },
+  { to: '/coach',          label: 'Coach',     Icon: Sparkles  },
   { to: '/family',         label: 'Family',    Icon: Users     },
 ]
 

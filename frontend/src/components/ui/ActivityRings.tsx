@@ -45,7 +45,7 @@ export default function ActivityRings({
         const r = radii[i]
         const c = 2 * Math.PI * r
         const pct = Math.min(v, 1.0)
-        const overage = Math.max(0, v - 1.0)
+        const overage = Math.min(Math.max(0, v - 1.0), 1.0)
         const overageColor = overage > 0.3 ? '#ef4444' : '#f59e0b'
         return (
           <g key={i}>
