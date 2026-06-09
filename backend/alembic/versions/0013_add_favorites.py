@@ -4,9 +4,10 @@ Revision ID: 0013_add_favorites
 Revises: 0012_add_meal_journal
 Create Date: 2026-06-02
 """
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+
+from alembic import op
 
 revision = '0013_add_favorites'
 down_revision = '0012_add_meal_journal'

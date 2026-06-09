@@ -4,8 +4,9 @@ Revision ID: 0018_food_detail_enriched
 Revises: 0017_food_household_measures
 Create Date: 2026-06-08
 """
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = '0018_food_detail_enriched'
 down_revision = '0017_food_household_measures'

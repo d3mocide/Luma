@@ -4,8 +4,9 @@ Revision ID: 0009_slot_locked
 Revises: 0008_biometrics_daily_sum
 Create Date: 2026-06-01
 """
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = '0009_slot_locked'
 down_revision = '0008'
