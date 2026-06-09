@@ -5,3 +5,11 @@ allowBuilds:
   esbuild: true
 onlyBuiltDependencies:
   - esbuild
+
+overrides:
+  baseline-browser-mapping: "2.10.32"
+  electron-to-chromium: "1.5.361"
+  side-channel: "1.1.0"
+
+policies:
+  minimumReleaseAge: "72 hours"
