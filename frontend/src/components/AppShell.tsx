@@ -12,10 +12,10 @@ import LogSheet from './LogSheet'
 import Login from './Login'
 
 const NAV_ITEMS = [
-  { to: '/today',  label: 'Today',  Icon: CircleDot },
-  { to: '/meals',  label: 'Meals',  Icon: Utensils  },
-  { to: '/trends', label: 'Trends', Icon: Activity  },
-  { to: '/coach',  label: 'Coach',  Icon: Sparkles  },
+  { to: '/today',     label: 'Today',     Icon: CircleDot },
+  { to: '/meals',     label: 'Meals',     Icon: Utensils  },
+  { to: '/favorites', label: 'Favorites', Icon: Heart     },
+  { to: '/coach',     label: 'Coach',     Icon: Sparkles  },
 ]
 
 const DESKTOP_NAV_ITEMS = [
@@ -395,19 +395,6 @@ function MobileHeader({ initials }: { initials: string }) {
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                   <Settings size={15} strokeWidth={1.6} />
                   <span>Open settings</span>
-                </span>
-                <ChevronDown size={14} strokeWidth={1.8} style={{ transform: 'rotate(-90deg)' }} />
-              </NavLink>
-
-              <NavLink
-                to="/favorites"
-                className="mobile-profile-action"
-                onClick={() => setIsOpen(false)}
-                style={{ marginTop: 10 }}
-              >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <Heart size={15} strokeWidth={1.6} />
-                  <span>Saved meals</span>
                 </span>
                 <ChevronDown size={14} strokeWidth={1.8} style={{ transform: 'rotate(-90deg)' }} />
               </NavLink>

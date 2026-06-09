@@ -410,6 +410,26 @@ export default function TodayRoute() {
           </div>
         </div>
 
+        {/* Quick-access chips */}
+        <div style={{ display: 'flex', gap: 8, padding: '0 0 14px' }}>
+          <button
+            type="button"
+            onClick={() => navigate('/trends')}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '7px 14px', borderRadius: 999,
+              background: 'rgba(56,189,248,0.08)',
+              border: '1px solid rgba(56,189,248,0.22)',
+              color: 'var(--sky-300)',
+              fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              letterSpacing: '0.01em',
+            }}
+          >
+            <Activity size={13} strokeWidth={1.75} />
+            Trends
+          </button>
+        </div>
+
         {/* Rings */}
         <div className="glass" style={{ padding: 20, marginBottom: 14, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: -115, right: -130, width: 320, height: 280, background: 'radial-gradient(ellipse 60% 56% at 68% 34%, rgba(56,189,248,0.24), transparent 70%), radial-gradient(ellipse 54% 56% at 88% 78%, rgba(56,189,248,0.10), transparent 72%)', filter: 'blur(14px)', opacity: 0.88, pointerEvents: 'none' }}/>
