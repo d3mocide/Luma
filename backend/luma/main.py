@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -25,6 +26,7 @@ from luma.api import (
     trends,
 )
 from luma.config import settings
+from luma.middleware import CSRFMiddleware
 
 logging.basicConfig(
     level=logging.INFO if settings.is_production else logging.DEBUG,
@@ -39,7 +41,23 @@ class _HealthCheckFilter(logging.Filter):
         return "GET /health" not in record.getMessage()
 
 
+# The HAE import path embeds a long-lived per-user credential; it must never
+# land in access logs (nginx already skips ingest paths — this covers uvicorn).
+_INGEST_TOKEN_RE = re.compile(r"(/api/v1/ingest/hae/)[^\s?\"]+")
+
+
+class _IngestTokenRedactFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.args:
+            record.args = tuple(
+                _INGEST_TOKEN_RE.sub(r"\1[redacted]", arg) if isinstance(arg, str) else arg
+                for arg in record.args
+            )
+        return True
+
+
 logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
+logging.getLogger("uvicorn.access").addFilter(_IngestTokenRedactFilter())
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +65,12 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Luma API starting (env=%s)", settings.environment)
+
+    if settings.is_production and not settings.hae_shared_secret:
+        logger.warning(
+            "HAE_SHARED_SECRET is empty — ingest endpoints will accept any request "
+            "that presents a valid per-user import token, with no app-level secret."
+        )
 
     # Apply any pending Alembic migrations before accepting traffic so that
     # new deployments are never stuck waiting for a manual `make migrate`.
@@ -94,6 +118,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(CSRFMiddleware, secure=settings.is_production)
+
+# Added after CSRF so CORS runs outermost and preflights never hit the CSRF check.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

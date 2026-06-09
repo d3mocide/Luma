@@ -43,6 +43,8 @@ services:
       dockerfile: Dockerfile
     # --proxy-headers lets FastAPI trust X-Forwarded-For / X-Forwarded-Proto
     # from the internal nginx in both standalone and proxied deployments.
+    # Trust is limited to private ranges (the compose network) so a spoofed
+    # X-Forwarded-For is ignored if this port is ever published to the host.
     command:
       - uvicorn
       - luma.main:app
@@ -51,7 +53,7 @@ services:
       - --port
       - "8000"
       - --proxy-headers
-      - --forwarded-allow-ips=*
+      - --forwarded-allow-ips=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1
     environment: &api-env
       DATABASE_URL:      ${DATABASE_URL}
       REDIS_URL:         ${REDIS_URL}

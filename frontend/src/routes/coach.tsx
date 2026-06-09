@@ -5,7 +5,7 @@ import { Sparkles, Send, Plus, ChevronDown } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { LumaLogo } from '../components/ui/LumaLogo'
-import { api, Insight } from '../lib/api'
+import { api, csrfHeaders, Insight } from '../lib/api'
 
 const BASE = '/api/v1'
 
@@ -113,7 +113,7 @@ export default function CoachRoute() {
       const resp = await fetch(`${BASE}/coach/threads/${threadId}/messages`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await csrfHeaders()) },
         body: JSON.stringify({ content: text }),
       })
 

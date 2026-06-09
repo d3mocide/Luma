@@ -44,6 +44,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_password_temp: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default='false')
+    token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default='0')
     nudge_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default='false')
     nudge_hour: Mapped[int] = mapped_column(Integer, nullable=False, default=19, server_default='19')
     nudge_tz: Mapped[str] = mapped_column(Text, nullable=False, default='UTC', server_default="'UTC'")

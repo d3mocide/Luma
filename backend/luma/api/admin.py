@@ -144,6 +144,9 @@ async def reset_password(user_id: UUID, admin: AdminUser, db: DbDep) -> ResetPas
     temp_pw = _temp_password()
     user.password_hash = ph.hash(temp_pw)
     user.is_password_temp = True
+    # Kill the user's existing sessions — an admin reset usually means the
+    # account is suspected compromised or the holder lost control of it.
+    user.token_version += 1
     try:
         await db.commit()
     except SQLAlchemyError:

@@ -1,7 +1,7 @@
 import logging
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import jwt
 from argon2 import PasswordHasher
@@ -14,6 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from luma.config import settings
 from luma.db.models import User
 from luma.deps import CurrentUser, DbDep
+from luma.services.token_store import consume_refresh_jti, revoke_refresh_jti
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -22,6 +23,15 @@ ph = PasswordHasher()
 
 def _raise_auth_db_http_error(exc: SQLAlchemyError) -> None:
     logger.exception("Auth database operation failed")
+
+    if settings.is_production:
+        # Operational hints (env var names, migration commands) belong in the
+        # server log, not in responses on a public deployment.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service is temporarily unavailable.",
+        )
+
     message = str(getattr(exc, "orig", exc)).lower()
 
     if 'relation "users" does not exist' in message:
@@ -72,30 +82,43 @@ class UserOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-def _make_access_token(user_id: UUID) -> str:
+def _make_access_token(user: User) -> str:
     expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     return jwt.encode(
-        {"sub": str(user_id), "exp": expire, "type": "access"},
+        {"sub": str(user.id), "exp": expire, "type": "access", "ver": user.token_version},
         settings.jwt_secret,
         algorithm=settings.jwt_algorithm,
     )
 
 
-def _make_refresh_token(user_id: UUID) -> str:
+def _make_refresh_token(user: User) -> str:
     expire = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
     return jwt.encode(
-        {"sub": str(user_id), "exp": expire, "type": "refresh"},
+        {
+            "sub": str(user.id),
+            "exp": expire,
+            "type": "refresh",
+            "ver": user.token_version,
+            "jti": uuid4().hex,
+        },
         settings.jwt_secret,
         algorithm=settings.jwt_algorithm,
     )
 
 
-def _set_auth_cookies(response: Response, user_id: UUID) -> None:
-    access = _make_access_token(user_id)
-    refresh = _make_refresh_token(user_id)
+def _set_auth_cookies(response: Response, user: User) -> None:
+    access = _make_access_token(user)
+    refresh = _make_refresh_token(user)
     secure = settings.is_production
     response.set_cookie("access_token", access, httponly=True, secure=secure, samesite="strict", max_age=settings.access_token_expire_minutes * 60)
     response.set_cookie("refresh_token", refresh, httponly=True, secure=secure, samesite="strict", max_age=settings.refresh_token_expire_days * 86400)
+
+
+def _refresh_ttl_seconds(payload: dict) -> int:
+    exp = payload.get("exp")
+    if not isinstance(exp, (int, float)):
+        return settings.refresh_token_expire_days * 86400
+    return max(int(exp - datetime.now(UTC).timestamp()), 1)
 
 
 @router.post("/login")
@@ -123,14 +146,29 @@ async def login(body: LoginRequest, response: Response, db: DbDep) -> UserOut:
     except SQLAlchemyError as exc:
         _raise_auth_db_http_error(exc)
 
-    _set_auth_cookies(response, user.id)
+    _set_auth_cookies(response, user)
     return UserOut.model_validate(user)
 
 
 @router.post("/logout")
-async def logout(response: Response) -> dict:
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
+async def logout(
+    response: Response,
+    refresh_token: str | None = Cookie(None),
+) -> dict:
+    # Best-effort server-side revocation of the refresh token; cookie deletion
+    # alone leaves a stolen copy valid until expiry.
+    if refresh_token:
+        try:
+            payload = jwt.decode(refresh_token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+            jti = payload.get("jti")
+            if jti:
+                await revoke_refresh_jti(jti, _refresh_ttl_seconds(payload))
+        except jwt.InvalidTokenError:
+            pass
+
+    secure = settings.is_production
+    response.delete_cookie("access_token", httponly=True, secure=secure, samesite="strict")
+    response.delete_cookie("refresh_token", httponly=True, secure=secure, samesite="strict")
     return {"detail": "logged out"}
 
 
@@ -235,7 +273,16 @@ async def refresh(
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-    _set_auth_cookies(response, user.id)
+    if payload.get("ver", 0) != user.token_version:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
+
+    # Rotation: each refresh token is single-use. A replayed token means the
+    # cookie was copied — refuse it.
+    jti = payload.get("jti")
+    if jti and not await consume_refresh_jti(jti, _refresh_ttl_seconds(payload)):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
+
+    _set_auth_cookies(response, user)
     return UserOut.model_validate(user)
 
 
@@ -263,6 +310,12 @@ async def setup(body: SetupRequest, response: Response, db: DbDep) -> UserOut:
     if count > 0:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Setup has already been completed.")
 
+    if len(body.password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Password must be at least 8 characters long.",
+        )
+
     # First user becomes the admin
     password_hash = ph.hash(body.password)
     user = User(
@@ -278,7 +331,7 @@ async def setup(body: SetupRequest, response: Response, db: DbDep) -> UserOut:
     except SQLAlchemyError as exc:
         _raise_auth_db_http_error(exc)
 
-    _set_auth_cookies(response, user.id)
+    _set_auth_cookies(response, user)
     return UserOut.model_validate(user)
 
 
@@ -290,6 +343,7 @@ class ChangePasswordRequest(BaseModel):
 @router.post("/change-password")
 async def change_password(
     body: ChangePasswordRequest,
+    response: Response,
     user: CurrentUser,
     db: DbDep,
 ) -> dict:
@@ -309,11 +363,16 @@ async def change_password(
 
     user.password_hash = ph.hash(body.new_password)
     user.is_password_temp = False
+    # Invalidate every outstanding access/refresh token for this user, then
+    # re-issue cookies so the session doing the change stays signed in.
+    user.token_version += 1
 
     try:
         await db.commit()
+        await db.refresh(user)
     except SQLAlchemyError as exc:
         _raise_auth_db_http_error(exc)
 
+    _set_auth_cookies(response, user)
     return {"detail": "Password changed successfully."}
 

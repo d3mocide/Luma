@@ -1,7 +1,7 @@
 from typing import Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -102,6 +102,29 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
+
+    @model_validator(mode="after")
+    def _guard_production_secrets(self) -> "Settings":
+        """Refuse to boot a production deployment with placeholder secrets.
+
+        A guessable JWT_SECRET lets anyone forge tokens for any user, so this
+        is a hard failure rather than a warning.
+        """
+        if not self.is_production:
+            return self
+        if self.jwt_secret.startswith("changeme") or len(self.jwt_secret) < 32:
+            raise ValueError(
+                "JWT_SECRET is unset, a placeholder, or shorter than 32 characters. "
+                "Generate one with `openssl rand -hex 32` before deploying with "
+                "ENVIRONMENT=production."
+            )
+        if self.hae_shared_secret.startswith("changeme"):
+            raise ValueError(
+                "HAE_SHARED_SECRET is still the placeholder value. Generate one with "
+                "`openssl rand -hex 32`, or leave it empty to disable the app-level "
+                "ingest secret."
+            )
+        return self
 
 
 settings = Settings()  # type: ignore[call-arg]

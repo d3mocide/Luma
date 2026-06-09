@@ -2,6 +2,35 @@ import { handleMockApiRequest, isMockApiEnabled, MockApiError } from './mock-api
 
 const BASE = '/api/v1'
 
+const CSRF_COOKIE = 'csrf_token'
+
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+let csrfBootstrap: Promise<unknown> | null = null
+
+// The server issues the CSRF cookie on any response. Normally the app's first
+// GET (/auth/me or /auth/setup-status) has already set it; this covers the
+// rare case where a mutating request fires before any GET completes.
+async function ensureCsrfToken(): Promise<string | null> {
+  const existing = readCookie(CSRF_COOKIE)
+  if (existing) return existing
+  csrfBootstrap ??= fetch(`${BASE}/auth/setup-status`, { credentials: 'include' }).catch(() => undefined)
+  await csrfBootstrap
+  csrfBootstrap = null
+  return readCookie(CSRF_COOKIE)
+}
+
+// Header for state-mutating requests — exported for call sites that use raw
+// fetch (streaming, multipart) instead of this module's request helper.
+export async function csrfHeaders(): Promise<Record<string, string>> {
+  const token = await ensureCsrfToken()
+  return token ? { 'X-CSRF-Token': token } : {}
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (isMockApiEnabled()) {
     try {
@@ -13,12 +42,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const isFormData = init?.body instanceof FormData
+  const isMutating = (init?.method ?? 'GET') !== 'GET'
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     credentials: 'include',
     headers: {
       // Don't set Content-Type for multipart — the browser sets it with the boundary.
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(isMutating ? await csrfHeaders() : {}),
       ...(init?.headers ?? {}),
     },
   })
