@@ -226,18 +226,34 @@ async def _get_active_insight(db, user_id: str) -> dict | None:
     import json as _json
     import time as _time
 
-    # Pool up to 3 most recent real (non-nudge) open alerts.
-    real_rows = await db.execute(
+    # Prefer alerts from the past 24 h so the Today widget always surfaces recent
+    # content. Only fall through to older open alerts when nothing recent exists.
+    recent_rows = await db.execute(
         text("""
             SELECT id, rule_id, severity, payload, narrative
             FROM alerts
             WHERE user_id = :uid AND status = 'open' AND narrative IS NOT NULL
               AND rule_id != 'motivational_nudge'
+              AND ts >= now() - INTERVAL '24 hours'
             ORDER BY ts DESC LIMIT 3
         """),
         {"uid": user_id},
     )
-    pool = real_rows.fetchall()
+    pool = recent_rows.fetchall()
+
+    if not pool:
+        # No recent alerts — use the 3 most recent open alerts regardless of age.
+        older_rows = await db.execute(
+            text("""
+                SELECT id, rule_id, severity, payload, narrative
+                FROM alerts
+                WHERE user_id = :uid AND status = 'open' AND narrative IS NOT NULL
+                  AND rule_id != 'motivational_nudge'
+                ORDER BY ts DESC LIMIT 3
+            """),
+            {"uid": user_id},
+        )
+        pool = older_rows.fetchall()
 
     if not pool:
         # Fall back to the most recent motivational nudge.
@@ -258,7 +274,8 @@ async def _get_active_insight(db, user_id: str) -> dict | None:
     if not pool:
         return None
 
-    # Rotate through the pool every 4 hours so all open insights get airtime.
+    # Rotate through the pool every 4 hours so multiple same-day insights each
+    # get airtime on the Today screen.
     idx = int(_time.time() // (4 * 3600)) % len(pool)
     r = pool[idx]
 

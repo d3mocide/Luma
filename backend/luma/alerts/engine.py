@@ -8,10 +8,14 @@ from datetime import UTC, datetime
 from sqlalchemy import text
 
 from luma.alerts.ml import check_biometric_isolation_forest
-from luma.alerts.rules import ALL_RULES
+from luma.alerts.rules import ALL_RULES, RULE_REGISTRY
 from luma.db.session import AsyncSessionLocal
 
 ALL_RULES = list(ALL_RULES) + [check_biometric_isolation_forest]
+
+# Full registry including the ML-based rule (lives outside rules.py).
+_RULE_REGISTRY = dict(RULE_REGISTRY)
+_RULE_REGISTRY["biometric_cluster_anomaly"] = check_biometric_isolation_forest
 
 logger = logging.getLogger(__name__)
 
@@ -93,14 +97,68 @@ async def _process_user(user_id: str, bypass_dedup: bool = False) -> None:
                     from luma.services.push_dispatcher import send_push_to_user
                     title = result.payload.get("title", "Luma health alert")
                     body = result.payload.get("summary", "A new health insight is waiting for you.")
-                    await send_push_to_user(user_id, title, body, "/insights")
+                    await send_push_to_user(user_id, title, body, "/coach?tab=insights")
                 except Exception:
                     logger.exception("Push on alert failed for user %s rule %s", user_id, result.rule_id)
 
         await db.commit()
 
-        # Narrate newly created open alerts that have no narrative yet
+        # Auto-resolve open alerts whose conditions have since cleared.
+        await _resolve_cleared_alerts(user_id, db)
+
+        # Narrate newly created open alerts that have no narrative yet.
         await _narrate_pending(user_id, db)
+
+
+async def _resolve_cleared_alerts(user_id: str, db) -> None:
+    """Auto-resolve open alerts whose triggering condition has since cleared.
+
+    Runs every engine cycle. Groups open alerts by rule_id and re-runs each
+    rule once. If a rule now returns None the condition no longer holds, so all
+    open alerts for that rule are marked 'resolved' and removed from the Today
+    widget without requiring a manual dismiss.
+    """
+    open_rows = await db.execute(
+        text("""
+            SELECT id, rule_id
+            FROM alerts
+            WHERE user_id = :uid AND status = 'open'
+        """),
+        {"uid": user_id},
+    )
+    open_alerts = open_rows.fetchall()
+    if not open_alerts:
+        return
+
+    # Group alert ids by rule_id; only process rules we know how to re-check.
+    from collections import defaultdict
+    by_rule: dict[str, list[str]] = defaultdict(list)
+    for row in open_alerts:
+        if row.rule_id in _RULE_REGISTRY:
+            by_rule[row.rule_id].append(str(row.id))
+
+    to_resolve: list[str] = []
+    for rule_id, alert_ids in by_rule.items():
+        try:
+            result = await _RULE_REGISTRY[rule_id](user_id, db)
+        except Exception:
+            logger.debug("Resolution check failed for rule %s user %s", rule_id, user_id)
+            continue
+        if result is None:
+            to_resolve.extend(alert_ids)
+            logger.info(
+                "Auto-resolving %d alert(s) for rule %s (condition cleared)",
+                len(alert_ids), rule_id,
+                extra={"user_id": user_id, "rule_id": rule_id},
+            )
+
+    for alert_id in to_resolve:
+        await db.execute(
+            text("UPDATE alerts SET status = 'resolved' WHERE id = :id AND status = 'open'"),
+            {"id": alert_id},
+        )
+    if to_resolve:
+        await db.commit()
 
 
 async def _narrate_pending(user_id: str, db) -> None:

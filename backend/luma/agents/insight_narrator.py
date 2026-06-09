@@ -1,6 +1,7 @@
 """Insight narrator agent — converts alert payloads to human-readable insights."""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -75,12 +76,22 @@ def _parse_insight(content: str | None) -> dict | None:
 
 
 _RULE_CONTEXT = {
-    "sat_fat_rolling": "saturated fat intake has been elevated over the last 7 days",
-    "low_fiber_rolling": "soluble fiber intake has been consistently below target for 7 days",
+    "sat_fat_rolling": (
+        "the 7-day rolling average saturated fat intake has been elevated — "
+        "mention the 7-day window so the user understands this reflects a pattern, not just one day"
+    ),
+    "low_fiber_rolling": (
+        "the 7-day rolling average soluble fiber intake has been consistently below target — "
+        "mention the 7-day window so the user understands this reflects a pattern, not just today"
+    ),
     "weight_trend_diverging": "weight trend is moving away from the goal",
     "hrv_drop": "HRV has dropped noticeably compared to recent baseline",
     "logging_streak_broken": "the meal logging streak was broken",
-    "aggressive_deficit": "the average daily calorie deficit has been too aggressive",
+    "aggressive_deficit": (
+        "the 7-day rolling average daily calorie deficit has been over 500 kcal — "
+        "mention the 7-day average explicitly so the user knows this is a week-long pattern, "
+        "not something that clears from a single day of eating more"
+    ),
     "ldl_risk_day": "yesterday was a high saturated fat and low fiber day, a pattern linked to LDL elevation",
     "positive_milestone": "a positive milestone was reached",
     "motivational_nudge": (
@@ -108,6 +119,13 @@ _RULE_CONTEXT = {
         "it is the end of the week — provide a warm, personalised summary of the user's LDL-relevant wins "
         "(days on target for sat fat and fiber, heart-healthy foods eaten, weight direction) and misses "
         "(days over sat fat, under fiber, missed logging). Be specific about numbers and genuinely encouraging."
+    ),
+    "calorie_ring_suggestion": (
+        "the user still has more than 500 kcal left to reach today's calorie target — "
+        "if the payload includes 'suggested_name', name that specific food and mention its approximate calories; "
+        "frame it as a practical way to close the ring before the day ends. "
+        "If no food is suggested, recommend a satisfying whole-food snack or small meal. "
+        "Keep the tone light and practical, not alarming."
     ),
 }
 
@@ -188,6 +206,11 @@ _STATIC_FALLBACKS = {
         "body": "Here is a summary of your LDL-relevant wins and focus areas from the past week.",
         "thread_seed": "What should I focus on changing for the coming week?",
     },
+    "calorie_ring_suggestion": {
+        "headline": "Time to fuel up",
+        "body": "You're more than 500 kcal short of today's target. A satisfying snack or small meal can help you close the ring.",
+        "thread_seed": "What should I eat to reach my calorie goal today?",
+    },
 }
 
 
@@ -244,6 +267,7 @@ async def narrate_alert(
                 ),
             },
         ]
+        await asyncio.sleep(1)
         retry_resp = await call_llm(
             primary_model=settings.insight_narrator_model,
             fallback_model=settings.insight_narrator_fallback_model,

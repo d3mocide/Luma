@@ -315,6 +315,6 @@ async def _generate_and_store_weekly_recap(user_id: str, now_utc, narrate_alert,
     try:
         headline = narrative.get("headline", "Your weekly recap is ready")
         body_text = narrative.get("body", "See how your week went.")
-        await send_push_to_user(user_id, headline, body_text, "/insights")
+        await send_push_to_user(user_id, headline, body_text, "/coach?tab=insights")
     except Exception:
         logger.exception("Weekly recap push failed for user %s", user_id)

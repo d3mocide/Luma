@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import NamedTuple
 from zoneinfo import ZoneInfo
@@ -578,6 +579,104 @@ async def check_ldl_proxy_stall(user_id: str, db: AsyncSession) -> AlertResult |
     )
 
 
+async def check_calorie_ring_suggestion(user_id: str, db: AsyncSession) -> AlertResult | None:
+    """Afternoon nudge: suggest a favorite food when >500 kcal below today's target.
+
+    Only fires between 15:00 and 20:00 local time so the suggestion is still
+    actionable. The time-gate also acts as a natural expiry — the resolution
+    sweep will auto-dismiss the alert after 20:00 even if the gap persists.
+    """
+    tz = settings.server_timezone
+    now_local = datetime.now(ZoneInfo(tz))
+    if not (15 <= now_local.hour < 20):
+        return None
+
+    today = now_local.date()
+
+    gap_row = await db.execute(
+        text("""
+            SELECT
+                g.daily_calorie_target::float AS target,
+                COALESCE(SUM((me.nutrition->>'calories')::float), 0) AS logged
+            FROM goals g
+            LEFT JOIN meal_events me
+                ON me.user_id = g.user_id
+                AND DATE(me.ts AT TIME ZONE :tz) = :today
+                AND (me.nutrition->>'calories') IS NOT NULL
+            WHERE g.user_id = :uid
+              AND g.daily_calorie_target IS NOT NULL
+            GROUP BY g.daily_calorie_target
+        """),
+        {"uid": user_id, "tz": tz, "today": today},
+    )
+    gap_r = gap_row.fetchone()
+    if not gap_r or gap_r.target is None:
+        return None
+
+    gap = gap_r.target - gap_r.logged
+    if gap <= 500:
+        return None
+
+    # Find the most-logged favorite that has calorie data.
+    # Prefer one whose total calories fit within the remaining gap; fall back to any.
+    fav_row = await db.execute(
+        text("""
+            WITH fav_nutrition AS (
+                SELECT
+                    fi.favorite_id,
+                    SUM((fi.nutrients->>'calories')::float) AS total_cal,
+                    COALESCE(SUM((fi.nutrients->>'soluble_fiber_g')::float), 0) AS total_fiber,
+                    COALESCE(SUM((fi.nutrients->>'saturated_fat_g')::float), 0) AS total_sat_fat
+                FROM favorite_items fi
+                JOIN favorites f2 ON f2.id = fi.favorite_id AND f2.user_id = :uid
+                WHERE (fi.nutrients->>'calories') IS NOT NULL
+                GROUP BY fi.favorite_id
+            ),
+            fav_logs AS (
+                SELECT favorite_id, COUNT(*) AS log_count
+                FROM meal_events
+                WHERE user_id = :uid AND favorite_id IS NOT NULL
+                GROUP BY favorite_id
+            )
+            SELECT
+                f.id, f.name,
+                COALESCE(fn.total_cal, 0) AS total_cal,
+                COALESCE(fn.total_fiber, 0) AS total_fiber,
+                COALESCE(fn.total_sat_fat, 0) AS total_sat_fat,
+                COALESCE(fl.log_count, 0) AS log_count
+            FROM favorites f
+            LEFT JOIN fav_nutrition fn ON fn.favorite_id = f.id
+            LEFT JOIN fav_logs fl ON fl.favorite_id = f.id
+            WHERE f.user_id = :uid
+              AND COALESCE(fn.total_cal, 0) > 0
+            ORDER BY
+                CASE WHEN COALESCE(fn.total_cal, 0) <= :gap THEN 0 ELSE 1 END,
+                COALESCE(fl.log_count, 0) DESC
+            LIMIT 1
+        """),
+        {"uid": user_id, "gap": gap},
+    )
+    fav = fav_row.fetchone()
+
+    payload: dict = {
+        "calorie_gap_kcal": round(gap, 0),
+        "target_kcal": round(gap_r.target, 0),
+        "logged_kcal": round(gap_r.logged, 0),
+    }
+    if fav:
+        payload["suggested_name"] = fav.name
+        payload["suggested_cal"] = round(fav.total_cal, 0)
+        payload["suggested_fiber_g"] = round(fav.total_fiber, 1)
+        payload["suggested_sat_fat_g"] = round(fav.total_sat_fat, 1)
+
+    return AlertResult(
+        rule_id="calorie_ring_suggestion",
+        severity="info",
+        payload=payload,
+        dedup_hours=24,
+    )
+
+
 ALL_RULES = [
     check_sat_fat_rolling,
     check_soluble_fiber_rolling,
@@ -592,5 +691,26 @@ ALL_RULES = [
     check_sodium_potassium_ratio,
     check_positive_milestone,
     check_motivational_nudge,
+    check_calorie_ring_suggestion,
 ]
+
+# Maps every rule_id to its check function so the engine's resolution sweep can
+# re-evaluate whether an open alert's condition has since cleared.
+# biometric_cluster_anomaly is wired in engine.py (ML check lives in alerts/ml.py).
+RULE_REGISTRY: dict[str, Callable] = {
+    "sat_fat_rolling":             check_sat_fat_rolling,
+    "low_fiber_rolling":           check_soluble_fiber_rolling,
+    "weight_trend_diverging":      check_weight_trend,
+    "weight_trend_worsening":      check_weight_trend_worsening,
+    "weight_stall":                check_weight_stall,
+    "hrv_drop":                    check_hrv_anomaly,
+    "logging_streak_broken":       check_logging_gap,
+    "aggressive_deficit":          check_calorie_deficit,
+    "ldl_risk_day":                check_ldl_risk_day,
+    "ldl_proxy_stall":             check_ldl_proxy_stall,
+    "high_sodium_potassium_ratio": check_sodium_potassium_ratio,
+    "positive_milestone":          check_positive_milestone,
+    "motivational_nudge":          check_motivational_nudge,
+    "calorie_ring_suggestion":     check_calorie_ring_suggestion,
+}
 

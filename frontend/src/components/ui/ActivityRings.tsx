@@ -45,6 +45,8 @@ export default function ActivityRings({
         const r = radii[i]
         const c = 2 * Math.PI * r
         const pct = Math.min(v, 1.0)
+        const overage = Math.max(0, v - 1.0)
+        const overageColor = overage > 0.3 ? '#ef4444' : '#f59e0b'
         return (
           <g key={i}>
             <circle
@@ -62,6 +64,18 @@ export default function ActivityRings({
               filter={`url(#ring-glow-${size})`}
               style={animate ? { animation: `ringDraw${i} 1.6s cubic-bezier(.2,.7,.2,1) both` } : {}}
             />
+            {overage > 0 && (
+              <circle
+                cx={center} cy={center} r={r}
+                fill="none"
+                stroke={overageColor}
+                strokeWidth={thickness}
+                strokeLinecap="round"
+                strokeDasharray={c}
+                strokeDashoffset={c * (1 - overage)}
+                style={animate ? { animation: `ringOverage${i} 0.5s cubic-bezier(.2,.7,.2,1) 1.6s both` } : {}}
+              />
+            )}
           </g>
         )
       })}
@@ -69,6 +83,9 @@ export default function ActivityRings({
         @keyframes ringDraw0 { from { stroke-dashoffset: ${2 * Math.PI * radii[0]} } }
         @keyframes ringDraw1 { from { stroke-dashoffset: ${2 * Math.PI * radii[1]} } }
         @keyframes ringDraw2 { from { stroke-dashoffset: ${2 * Math.PI * radii[2]} } }
+        @keyframes ringOverage0 { from { stroke-dashoffset: ${2 * Math.PI * radii[0]} } }
+        @keyframes ringOverage1 { from { stroke-dashoffset: ${2 * Math.PI * radii[1]} } }
+        @keyframes ringOverage2 { from { stroke-dashoffset: ${2 * Math.PI * radii[2]} } }
       `}</style>
     </svg>
   )
