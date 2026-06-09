@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from time import perf_counter
 from typing import Any
@@ -159,7 +160,15 @@ async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str
         kwargs.setdefault("drop_params", True)
 
     try:
-        response = await litellm.acompletion(**target, **kwargs)
+        timeout_s: float | None = kwargs.get("timeout")
+        coro = litellm.acompletion(**target, **kwargs)
+        # asyncio.wait_for enforces the timeout at the event-loop level so local
+        # OpenAI-compatible endpoints (Ollama/LocalAI) cannot outlive the budget
+        # even if LiteLLM's own timeout mechanism doesn't fire for them.
+        if timeout_s is not None and provider == "local":
+            response = await asyncio.wait_for(coro, timeout=timeout_s)
+        else:
+            response = await coro
         _normalize_reasoning_response(response)
         elapsed_ms = round((perf_counter() - started) * 1000, 1)
         usage = _usage_fields(response)
@@ -255,6 +264,7 @@ async def call_llm(
                 "LLM primary failed; retrying with fallback",
                 extra={"llm_event": "fallback_retry", "llm_model": primary_model, "llm_fallback_model": fallback_model},
             )
+            await asyncio.sleep(1)
             return await _call_target(fallback, model_alias=fallback_model, attempt="fallback", trigger=trigger, **kwargs)
 
     logger.debug("LLM call configured without fallback", extra={"llm_model": primary_model})

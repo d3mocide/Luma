@@ -1,6 +1,7 @@
 """Insight narrator agent — converts alert payloads to human-readable insights."""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -244,6 +245,7 @@ async def narrate_alert(
                 ),
             },
         ]
+        await asyncio.sleep(1)
         retry_resp = await call_llm(
             primary_model=settings.insight_narrator_model,
             fallback_model=settings.insight_narrator_fallback_model,

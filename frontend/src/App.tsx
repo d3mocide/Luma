@@ -35,6 +35,7 @@ export default function App() {
           <Route path="/log" element={<LogRoute />} />
           <Route path="/favorites" element={<FavoritesRoute />} />
           <Route path="/family" element={<FamilyRoute />} />
+          <Route path="/insights" element={<Navigate to="/coach?tab=insights" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

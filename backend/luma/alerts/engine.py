@@ -93,7 +93,7 @@ async def _process_user(user_id: str, bypass_dedup: bool = False) -> None:
                     from luma.services.push_dispatcher import send_push_to_user
                     title = result.payload.get("title", "Luma health alert")
                     body = result.payload.get("summary", "A new health insight is waiting for you.")
-                    await send_push_to_user(user_id, title, body, "/insights")
+                    await send_push_to_user(user_id, title, body, "/coach?tab=insights")
                 except Exception:
                     logger.exception("Push on alert failed for user %s rule %s", user_id, result.rule_id)
 
