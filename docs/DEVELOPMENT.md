@@ -67,6 +67,8 @@ make migrate
 
 ## Running Tests
 
+### Backend
+
 ```bash
 docker compose exec api pytest
 ```
@@ -84,6 +86,21 @@ Run a specific test file:
 ```bash
 docker compose exec api pytest backend/tests/test_auth.py -v
 ```
+
+Run mypy type checking:
+
+```bash
+docker compose exec api mypy luma --ignore-missing-imports
+```
+
+### Frontend
+
+```bash
+cd frontend && pnpm test          # run vitest unit tests once
+cd frontend && pnpm test --watch  # re-run on file changes
+```
+
+Test files live in `frontend/src/test/`. The setup uses vitest with jsdom and `@testing-library/react`.
 
 ---
 
@@ -160,6 +177,7 @@ Open Food Facts data is populated incrementally: the worker runs a monthly JSONL
 - Client-only UI state (sheet open/close, theme) lives in the Zustand store at `stores/index.ts`
 - Do not add UI libraries beyond shadcn/ui and Tailwind — Recharts for all charts
 - File naming: `kebab-case` for route files, `PascalCase` for component files
+- Tailwind v4: all theme config lives in `src/index.css` under `@theme { ... }` — there is no `tailwind.config.js`; postcss uses `@tailwindcss/postcss`
 
 ### Naming
 
