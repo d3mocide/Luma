@@ -50,10 +50,16 @@ proxy_set_header   Host \$host;
 proxy_set_header   X-Real-IP \$remote_addr;
 proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
 proxy_set_header   X-Forwarded-Proto ${FWD_PROTO};
-proxy_read_timeout 600s;
-proxy_send_timeout 600s;
-client_max_body_size 50m;
 EOF
+
+# Timeouts and body size live at server level (they inherit into locations,
+# and the coach location overrides the timeouts). Keeping them out of the
+# proxy include avoids duplicate-directive errors where a location overrides.
+PROXY_DEFAULTS="
+    client_max_body_size 50m;
+    proxy_read_timeout 600s;
+    proxy_send_timeout 600s;
+"
 
 # ── Rate limiting (http context — conf.d files are included at http level) ───
 # luma_auth:    credential endpoints (login/setup/change-password) — brute-force guard.
@@ -162,7 +168,7 @@ server {
 ${REAL_IP}
     root /var/www/html;
     index index.html;
-
+${PROXY_DEFAULTS}
     include ${HEADERS_INC};
 
 ${LOCATIONS}
@@ -204,7 +210,7 @@ server {
 
     root /var/www/html;
     index index.html;
-
+${PROXY_DEFAULTS}
     include ${HEADERS_INC};
 
 ${LOCATIONS}
