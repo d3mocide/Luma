@@ -13,17 +13,11 @@ export function SplashScreen() {
       }}
     >
       <img
-        src="/assets/luma-glyph-dark.svg"
-        width={52}
-        height={52}
+        src="/assets/luma-wordmark-stacked-dark.svg"
+        width={153}
+        height={153}
         alt=""
         style={{ animation: 'luma-splash-pulse 1.8s ease-in-out infinite' }}
-      />
-      <img
-        src="/assets/luma-wordmark-dark.svg"
-        height={22}
-        alt="Luma"
-        style={{ width: 'auto', opacity: 0.65 }}
       />
       <style>{`@keyframes luma-splash-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.95)}}`}</style>
     </div>
