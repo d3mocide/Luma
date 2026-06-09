@@ -32,8 +32,9 @@ def include_object(object, name, type_, reflected, compare_to):
     ):
         return False
     # Ignore duplicate unique constraints reflected from composite primary key tables
+    # and from tables where CREATE UNIQUE INDEX is reflected as both Index + UniqueConstraint
     if type_ == "unique_constraint" and (
-        (getattr(object, "table", None) is not None and object.table.name in {"preferences", "shopping_list_items"})
+        (getattr(object, "table", None) is not None and object.table.name in {"preferences", "shopping_list_items", "family_invitations"})
         or name is None
     ):
         return False
