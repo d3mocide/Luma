@@ -197,7 +197,7 @@ async def search_foods(query: str, limit: int = 20) -> list[dict[str, Any]]:
         logger.warning("USDA_API_KEY not set — skipping live USDA search")
         return []
 
-    params = {
+    params: dict[str, str | int] = {
         "query": query,
         "api_key": settings.usda_api_key,
         "pageSize": limit,

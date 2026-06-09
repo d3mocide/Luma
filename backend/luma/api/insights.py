@@ -66,7 +66,7 @@ async def ack_insight(
         {"uid": str(user.id), "id": alert_id},
     )
     await db.commit()
-    if result.rowcount == 0:
+    if result.rowcount == 0:  # type: ignore[attr-defined]
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found or already dismissed")
     return {"status": "dismissed"}
 

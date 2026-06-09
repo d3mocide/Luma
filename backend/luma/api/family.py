@@ -301,7 +301,7 @@ async def remove_member(
                 text("SELECT COUNT(*) FROM family_members WHERE group_id = :gid"),
                 {"gid": group_id},
             )).scalar()
-            if count > 1:
+            if (count or 0) > 1:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="Transfer ownership or remove all other members before leaving as owner",
@@ -317,7 +317,7 @@ async def remove_member(
         {"gid": group_id, "uid": member_uid},
     )
     await db.commit()
-    if result.rowcount == 0:
+    if result.rowcount == 0:  # type: ignore[attr-defined]
         raise HTTPException(status_code=404, detail="Member not found")
 
 

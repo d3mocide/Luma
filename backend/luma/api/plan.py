@@ -466,7 +466,7 @@ async def swap_slot(slot_id: str, db: DbDep, current_user: CurrentUser) -> dict:
     dislikes = [p.value for p in prefs if p.kind == "dislike"]
     allergies = [p.value for p in prefs if p.kind == "allergy"]
 
-    calorie_target = goal.daily_calorie_target if goal else 2000
+    calorie_target = (goal.daily_calorie_target if goal else None) or 2000
     sat_fat_max = float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else 13.0
     soluble_fiber_target = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else 10.0
 

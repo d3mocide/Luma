@@ -1,5 +1,6 @@
 import logging
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from uuid import UUID
 
 import jwt
@@ -191,7 +192,7 @@ async def update_me(body: UpdateProfileRequest, user: CurrentUser, db: DbDep) ->
     if body.height_cm is not None:
         if not (50.0 <= body.height_cm <= 280.0):
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="height_cm out of range.")
-        user.height_cm = body.height_cm
+        user.height_cm = Decimal(str(body.height_cm))
 
     if body.activity_level is not None:
         if body.activity_level not in _VALID_ACTIVITY:

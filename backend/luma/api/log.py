@@ -154,7 +154,7 @@ async def log_meal_voice(
         )
         
     # 1. Transcribe audio to text
-    transcription = await whisper_client.transcribe(audio_bytes, filename=file.filename)
+    transcription = await whisper_client.transcribe(audio_bytes, filename=file.filename or "audio.wav")
     if not transcription:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

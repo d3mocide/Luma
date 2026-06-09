@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException, status
@@ -134,7 +135,7 @@ async def post_message(
     from luma.agents.coach import coach_stream
     from luma.db.session import AsyncSessionLocal
 
-    async def _event_stream():
+    async def _event_stream() -> AsyncGenerator[str, None]:
         collected: list[str] = []
         async with AsyncSessionLocal() as agent_db:
             async for chunk in coach_stream(user_id=str(user.id), thread_id=thread_id, messages=history, db=agent_db):

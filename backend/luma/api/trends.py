@@ -111,7 +111,7 @@ async def get_trend(
         """),
         {"user_id": str(user.id), "metric": metric, "days": days},
     )
-    rows = list(result.fetchall())
+    rows: list[Any] = list(result.fetchall())
 
     # Supplement with a live query when the continuous aggregate hasn't
     # materialized today's bucket yet (aggregate refresh lags by up to 1 hour).

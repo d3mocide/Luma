@@ -1,7 +1,7 @@
 import logging
 import uuid
 from datetime import UTC, date, datetime, time, timedelta
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter
@@ -371,7 +371,7 @@ async def get_measurement_settings(user: CurrentUser, db: DbDep) -> MeasurementS
             Preference.value.in_(MEASUREMENT_SYSTEMS),
         )
     )
-    system = result.scalar_one_or_none() or "metric"
+    system = cast(Literal["metric", "imperial"], result.scalar_one_or_none() or "metric")
     return MeasurementSettingsOut(system=system)
 
 

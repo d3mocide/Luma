@@ -267,6 +267,6 @@ async def delete_favorite(
         {"fav_id": favorite_id, "uid": str(user.id)},
     )
     await db.commit()
-    if result.rowcount == 0:
+    if result.rowcount == 0:  # type: ignore[attr-defined]
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Favorite not found")
     return {"status": "ok"}

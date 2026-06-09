@@ -97,7 +97,7 @@ async def hae_diagnostic_summary(user: CurrentUser, db: DbDep) -> dict[str, Any]
         {
             "internal_metric": r.metric,
             "hae_metric": r.hae_metric,
-            "data_points": int(r.count),
+            "data_points": int(r._mapping["count"]),
             "earliest_ts": r.earliest_ts.isoformat() if r.earliest_ts else None,
             "latest_ts": r.latest_ts.isoformat() if r.latest_ts else None,
             "latest_value": r.latest_value,

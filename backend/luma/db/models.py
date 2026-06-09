@@ -1,9 +1,11 @@
 import uuid
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import (
     ARRAY,
     Boolean,
-    Column,
     Date,
     DateTime,
     Double,
@@ -17,7 +19,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB, UUID
-from sqlalchemy.orm import DeclarativeBase, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 
@@ -32,22 +34,22 @@ def gen_uuid() -> str:
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email = Column(CITEXT, unique=True, nullable=False)
-    password_hash = Column(Text, nullable=False)
-    display_name = Column(Text, nullable=False)
-    role = Column(String(20), nullable=False, default="operator")
-    hae_import_token = Column(UUID(as_uuid=True), unique=True, nullable=False, default=uuid.uuid4)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    last_login_at = Column(DateTime(timezone=True))
-    is_password_temp = Column(Boolean, nullable=False, default=False, server_default='false')
-    nudge_enabled = Column(Boolean, nullable=False, default=False, server_default='false')
-    nudge_hour = Column(Integer, nullable=False, default=19, server_default='19')
-    nudge_tz = Column(Text, nullable=False, default='UTC', server_default="'UTC'")
-    birth_year = Column(Integer)
-    biological_sex = Column(Text)
-    height_cm = Column(Numeric(5, 1))
-    activity_level = Column(Text)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(CITEXT, unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    display_name: Mapped[str] = mapped_column(Text, nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default="operator")
+    hae_import_token: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), unique=True, nullable=False, default=uuid.uuid4)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_password_temp: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default='false')
+    nudge_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default='false')
+    nudge_hour: Mapped[int] = mapped_column(Integer, nullable=False, default=19, server_default='19')
+    nudge_tz: Mapped[str] = mapped_column(Text, nullable=False, default='UTC', server_default="'UTC'")
+    birth_year: Mapped[int | None] = mapped_column(Integer)
+    biological_sex: Mapped[str | None] = mapped_column(Text)
+    height_cm: Mapped[Decimal | None] = mapped_column(Numeric(5, 1))
+    activity_level: Mapped[str | None] = mapped_column(Text)
 
     goals = relationship("Goal", back_populates="user", uselist=False, cascade="all, delete-orphan")
     preferences = relationship("Preference", back_populates="user", cascade="all, delete-orphan")
@@ -61,17 +63,17 @@ class User(Base):
 class Goal(Base):
     __tablename__ = "goals"
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    target_weight_kg = Column(Numeric(5, 2))
-    target_ldl_mg_dl = Column(Integer)
-    current_ldl_mg_dl = Column(Integer)
-    current_ldl_drawn_at = Column(Date)
-    daily_calorie_target = Column(Integer)
-    daily_sat_fat_g_max = Column(Numeric(5, 2))
-    daily_soluble_fiber_g = Column(Numeric(5, 2))
-    daily_protein_g_min = Column(Numeric(5, 2))
-    dietary_pattern = Column(Text)
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    target_weight_kg: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    target_ldl_mg_dl: Mapped[int | None] = mapped_column(Integer)
+    current_ldl_mg_dl: Mapped[int | None] = mapped_column(Integer)
+    current_ldl_drawn_at: Mapped[date | None] = mapped_column(Date)
+    daily_calorie_target: Mapped[int | None] = mapped_column(Integer)
+    daily_sat_fat_g_max: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    daily_soluble_fiber_g: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    daily_protein_g_min: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    dietary_pattern: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     user = relationship("User", back_populates="goals")
 
@@ -82,9 +84,9 @@ class Preference(Base):
         UniqueConstraint("user_id", "kind", "value"),
     )
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    kind = Column(Text, nullable=False, primary_key=True)
-    value = Column(Text, nullable=False, primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    kind: Mapped[str] = mapped_column(Text, nullable=False, primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False, primary_key=True)
 
     user = relationship("User", back_populates="preferences")
 
@@ -92,37 +94,37 @@ class Preference(Base):
 class Food(Base):
     __tablename__ = "foods"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    source = Column(Text, nullable=False)
-    source_id = Column(Text)
-    name = Column(Text, nullable=False)
-    brand = Column(Text)
-    serving_size_g = Column(Numeric(7, 2))
-    nutrients_per_100g = Column(JSONB, nullable=False, default=dict)
-    household_measures = Column(JSONB, nullable=False, server_default="[]")
-    detail_enriched = Column(Boolean, nullable=False, server_default="false")
-    category = Column(Text)
-    tags = Column(ARRAY(Text))
-    flags = Column(ARRAY(Text), nullable=False, server_default='{}')
-    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    source_id: Mapped[str | None] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    brand: Mapped[str | None] = mapped_column(Text)
+    serving_size_g: Mapped[Decimal | None] = mapped_column(Numeric(7, 2))
+    nutrients_per_100g: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    household_measures: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, server_default="[]")
+    detail_enriched: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    category: Mapped[str | None] = mapped_column(Text)
+    tags: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
+    flags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, server_default='{}')
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 class Recipe(Base):
     __tablename__ = "recipes"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
-    name = Column(Text, nullable=False)
-    description = Column(Text)
-    instructions = Column(ARRAY(Text))
-    prep_minutes = Column(Integer)
-    cook_minutes = Column(Integer)
-    servings = Column(Numeric(4, 1), nullable=False, default=1)
-    tags = Column(ARRAY(Text))
-    source = Column(Text)
-    nutrition_per_serving = Column(JSONB, nullable=False, default=dict)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    instructions: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
+    prep_minutes: Mapped[int | None] = mapped_column(Integer)
+    cook_minutes: Mapped[int | None] = mapped_column(Integer)
+    servings: Mapped[Decimal] = mapped_column(Numeric(4, 1), nullable=False, default=1)
+    tags: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
+    source: Mapped[str | None] = mapped_column(Text)
+    nutrition_per_serving: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="recipes")
     ingredients = relationship("RecipeIngredient", back_populates="recipe", cascade="all, delete-orphan", order_by="RecipeIngredient.sort_order")
@@ -131,12 +133,12 @@ class Recipe(Base):
 class RecipeIngredient(Base):
     __tablename__ = "recipe_ingredients"
 
-    recipe_id = Column(UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"), primary_key=True)
-    food_id = Column(UUID(as_uuid=True), ForeignKey("foods.id"))
-    quantity = Column(Numeric(7, 2), nullable=False)
-    unit = Column(Text, nullable=False)
-    notes = Column(Text)
-    sort_order = Column(Integer, nullable=False, primary_key=True)
+    recipe_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"), primary_key=True)
+    food_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("foods.id"))
+    quantity: Mapped[Decimal] = mapped_column(Numeric(7, 2), nullable=False)
+    unit: Mapped[str] = mapped_column(Text, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, primary_key=True)
 
     recipe = relationship("Recipe", back_populates="ingredients")
     food = relationship("Food")
@@ -145,12 +147,12 @@ class RecipeIngredient(Base):
 class MealPlan(Base):
     __tablename__ = "meal_plans"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
-    week_start = Column(Date, nullable=False)
-    status = Column(Text, nullable=False, default="active")
-    generation_meta = Column(JSONB)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    week_start: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="active")
+    generation_meta: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="meal_plans")
     slots = relationship("MealPlanSlot", back_populates="plan", cascade="all, delete-orphan")
@@ -160,16 +162,16 @@ class MealPlan(Base):
 class MealPlanSlot(Base):
     __tablename__ = "meal_plan_slots"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    plan_id = Column(UUID(as_uuid=True), ForeignKey("meal_plans.id", ondelete="CASCADE"))
-    slot_date = Column(Date, nullable=False)
-    slot = Column(Text, nullable=False)
-    recipe_id = Column(UUID(as_uuid=True), ForeignKey("recipes.id"))
-    food_id = Column(UUID(as_uuid=True), ForeignKey("foods.id", ondelete="SET NULL"))
-    custom_name = Column(Text)
-    notes = Column(Text)
-    nutrition = Column(JSONB)
-    locked = Column(Boolean, nullable=False, default=False, server_default='false')
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    plan_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("meal_plans.id", ondelete="CASCADE"))
+    slot_date: Mapped[date] = mapped_column(Date, nullable=False)
+    slot: Mapped[str] = mapped_column(Text, nullable=False)
+    recipe_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("recipes.id"))
+    food_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("foods.id", ondelete="SET NULL"))
+    custom_name: Mapped[str | None] = mapped_column(Text)
+    notes: Mapped[str | None] = mapped_column(Text)
+    nutrition: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    locked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default='false')
 
     plan = relationship("MealPlan", back_populates="slots")
     recipe = relationship("Recipe")
@@ -182,12 +184,12 @@ class ShoppingListItem(Base):
         UniqueConstraint("plan_id", "food_id", "unit"),
     )
 
-    plan_id = Column(UUID(as_uuid=True), ForeignKey("meal_plans.id", ondelete="CASCADE"), primary_key=True)
-    food_id = Column(UUID(as_uuid=True), ForeignKey("foods.id"), primary_key=True)
-    quantity = Column(Numeric(7, 2), nullable=False)
-    unit = Column(Text, nullable=False, primary_key=True)
-    aisle = Column(Text)
-    purchased = Column(Boolean, nullable=False, default=False)
+    plan_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("meal_plans.id", ondelete="CASCADE"), primary_key=True)
+    food_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("foods.id"), primary_key=True)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(7, 2), nullable=False)
+    unit: Mapped[str] = mapped_column(Text, nullable=False, primary_key=True)
+    aisle: Mapped[str | None] = mapped_column(Text)
+    purchased: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     plan = relationship("MealPlan", back_populates="shopping_items")
     food = relationship("Food")
@@ -196,10 +198,10 @@ class ShoppingListItem(Base):
 class CoachThread(Base):
     __tablename__ = "coach_threads"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
-    title = Column(Text)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    title: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="coach_threads")
     messages = relationship("CoachMessage", back_populates="thread", cascade="all, delete-orphan", order_by="CoachMessage.created_at")
@@ -208,13 +210,13 @@ class CoachThread(Base):
 class CoachMessage(Base):
     __tablename__ = "coach_messages"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    thread_id = Column(UUID(as_uuid=True), ForeignKey("coach_threads.id", ondelete="CASCADE"))
-    role = Column(Text, nullable=False)
-    content = Column(Text, nullable=False)
-    tool_calls = Column(JSONB)
-    is_summary = Column(Boolean, nullable=False, default=False)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    thread_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("coach_threads.id", ondelete="CASCADE"))
+    role: Mapped[str] = mapped_column(Text, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    tool_calls: Mapped[Any | None] = mapped_column(JSONB)
+    is_summary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     thread = relationship("CoachThread", back_populates="messages")
 
@@ -222,9 +224,9 @@ class CoachMessage(Base):
 class CoachContext(Base):
     __tablename__ = "coach_context"
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    context = Column(JSONB, nullable=False, default=dict)
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    context: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     user = relationship("User")
 
@@ -232,14 +234,14 @@ class CoachContext(Base):
 class Alert(Base):
     __tablename__ = "alerts"
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    ts = Column(DateTime(timezone=True), primary_key=True, server_default=func.now())
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    rule_id = Column(Text, nullable=False)
-    severity = Column(Text, nullable=False)
-    payload = Column(JSONB, nullable=False, default=dict)
-    narrative = Column(Text)
-    status = Column(Text, nullable=False, server_default=text("'open'"))
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, server_default=func.now())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    rule_id: Mapped[str] = mapped_column(Text, nullable=False)
+    severity: Mapped[str] = mapped_column(Text, nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    narrative: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'open'"))
 
     user = relationship("User")
 
@@ -247,34 +249,34 @@ class Alert(Base):
 class MealEvent(Base):
     __tablename__ = "meal_events"
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    ts = Column(DateTime(timezone=True), primary_key=True, server_default=func.now())
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    slot = Column(Text, nullable=False)
-    source = Column(Text, nullable=False)
-    items = Column(JSONB, nullable=False, default=list)
-    nutrition = Column(JSONB, nullable=False, default=dict)
-    plan_slot_id = Column(UUID(as_uuid=True), ForeignKey("meal_plan_slots.id"))
-    favorite_id = Column(UUID(as_uuid=True), ForeignKey("favorites.id", ondelete="SET NULL"))
-    raw_input = Column(Text)
-    confidence = Column(Numeric(3, 2))
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, server_default=func.now())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    slot: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    items: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
+    nutrition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    plan_slot_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("meal_plan_slots.id"))
+    favorite_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("favorites.id", ondelete="SET NULL"))
+    raw_input: Mapped[str | None] = mapped_column(Text)
+    confidence: Mapped[Decimal | None] = mapped_column(Numeric(3, 2))
 
 
 class MealJournalEntry(Base):
     __tablename__ = "meal_journal_entries"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    meal_event_id = Column(UUID(as_uuid=True), nullable=True)  # soft ref to meal_events.id
-    meal_name = Column(Text, nullable=False)
-    logged_at = Column(DateTime(timezone=True), nullable=False)
-    energy = Column(Integer, nullable=False)      # 1–5
-    digestion = Column(Integer, nullable=False)   # 1–5
-    mood = Column(Integer, nullable=False)        # 1–5
-    satiety = Column(Integer, nullable=False)     # 1–5
-    symptoms = Column(ARRAY(Text), nullable=False, server_default='{}')
-    notes = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    meal_event_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    meal_name: Mapped[str] = mapped_column(Text, nullable=False)
+    logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    energy: Mapped[int] = mapped_column(Integer, nullable=False)
+    digestion: Mapped[int] = mapped_column(Integer, nullable=False)
+    mood: Mapped[int] = mapped_column(Integer, nullable=False)
+    satiety: Mapped[int] = mapped_column(Integer, nullable=False)
+    symptoms: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, server_default='{}')
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     user = relationship("User")
 
@@ -282,22 +284,22 @@ class MealJournalEntry(Base):
 class Biometric(Base):
     __tablename__ = "biometrics"
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    ts = Column(DateTime(timezone=True), primary_key=True, server_default=func.now())
-    metric = Column(Text, primary_key=True)
-    value = Column(Double, nullable=False)
-    source = Column(Text, nullable=False)
-    source_meta = Column(JSONB)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, server_default=func.now())
+    metric: Mapped[str] = mapped_column(Text, primary_key=True)
+    value: Mapped[float] = mapped_column(Double, nullable=False)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    source_meta: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
 class Favorite(Base):
     __tablename__ = "favorites"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    name = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="favorites")
     items = relationship("FavoriteItem", back_populates="favorite", cascade="all, delete-orphan", order_by="FavoriteItem.sort_order")
@@ -306,13 +308,13 @@ class Favorite(Base):
 class FavoriteItem(Base):
     __tablename__ = "favorite_items"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    favorite_id = Column(UUID(as_uuid=True), ForeignKey("favorites.id", ondelete="CASCADE"), nullable=False)
-    sort_order = Column(Integer, nullable=False, default=0)
-    food_name = Column(Text, nullable=False)
-    brand = Column(Text, nullable=True)
-    quantity_g = Column(Float, nullable=False)
-    nutrients = Column(JSONB, nullable=False, default=dict)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    favorite_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("favorites.id", ondelete="CASCADE"), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    food_name: Mapped[str] = mapped_column(Text, nullable=False)
+    brand: Mapped[str | None] = mapped_column(Text)
+    quantity_g: Mapped[float] = mapped_column(Float, nullable=False)
+    nutrients: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
     favorite = relationship("Favorite", back_populates="items")
 
@@ -320,13 +322,13 @@ class FavoriteItem(Base):
 class PushSubscription(Base):
     __tablename__ = "push_subscriptions"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    endpoint = Column(Text, unique=True, nullable=False)
-    p256dh = Column(Text, nullable=False)
-    auth = Column(Text, nullable=False)
-    device_label = Column(Text)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    endpoint: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    p256dh: Mapped[str] = mapped_column(Text, nullable=False)
+    auth: Mapped[str] = mapped_column(Text, nullable=False)
+    device_label: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="push_subscriptions")
 
@@ -334,10 +336,10 @@ class PushSubscription(Base):
 class FamilyGroup(Base):
     __tablename__ = "family_groups"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(Text, nullable=False)
-    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     members = relationship("FamilyMember", back_populates="group", cascade="all, delete-orphan")
     shares = relationship("GroupShare", back_populates="group", cascade="all, delete-orphan")
@@ -346,10 +348,10 @@ class FamilyGroup(Base):
 class FamilyMember(Base):
     __tablename__ = "family_members"
 
-    group_id = Column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), primary_key=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    role = Column(Text, nullable=False, default="member", server_default="'member'")
-    joined_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    role: Mapped[str] = mapped_column(Text, nullable=False, default="member", server_default="'member'")
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     group = relationship("FamilyGroup", back_populates="members")
     user = relationship("User")
@@ -358,13 +360,13 @@ class FamilyMember(Base):
 class FamilyInvitation(Base):
     __tablename__ = "family_invitations"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    group_id = Column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), nullable=False)
-    invited_email = Column(CITEXT, nullable=False)
-    invited_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    token = Column(Text, unique=True, nullable=False)
-    expires_at = Column(DateTime(timezone=True), nullable=False)
-    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), nullable=False)
+    invited_email: Mapped[str] = mapped_column(CITEXT, nullable=False)
+    invited_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     group = relationship("FamilyGroup")
 
@@ -372,12 +374,12 @@ class FamilyInvitation(Base):
 class GroupShare(Base):
     __tablename__ = "group_shares"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    group_id = Column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), nullable=False)
-    resource_type = Column(Text, nullable=False)  # "recipe" | "favorite" | "plan"
-    resource_id = Column(UUID(as_uuid=True), nullable=False)
-    shared_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    note = Column(Text, nullable=True)
-    shared_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), nullable=False)
+    resource_type: Mapped[str] = mapped_column(Text, nullable=False)
+    resource_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    shared_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    shared_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     group = relationship("FamilyGroup", back_populates="shares")
