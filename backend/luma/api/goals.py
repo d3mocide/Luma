@@ -192,10 +192,10 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
 
     # Calorie target
     if target_weight_kg and target_weight_kg < current_weight_kg - 1.0:
-        cal_target = round((tdee - 500) / 50) * 50  # ~500 kcal/day deficit ≈ 0.45 kg (1 lb)/week
+        cal_target = float(round((tdee - 500) / 50) * 50)  # ~500 kcal/day deficit ≈ 0.45 kg (1 lb)/week
         mode = "deficit"
     else:
-        cal_target = round(tdee / 50) * 50
+        cal_target = float(round(tdee / 50) * 50)
         mode = "maintenance"
 
     # Mayo-style minimum — never recommend below the clinically advised floor.

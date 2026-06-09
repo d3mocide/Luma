@@ -288,7 +288,7 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                         source = point.get("source", "hae")
                         # Strip spaces so "In Bed" → "inbed" matches the map key.
                         stage = str(point.get("value", "")).lower().replace(" ", "")
-                        iname = next((n for k, n in _STAGE_MAP.items() if k in stage), None)
+                        iname: str | None = next((n for k, n in _STAGE_MAP.items() if k in stage), None)  # type: ignore[no-redef]
                         if iname is None:
                             continue  # awake / unknown — skip
                         rows.append({

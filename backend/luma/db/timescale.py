@@ -5,7 +5,7 @@ because TimescaleDB DDL is not idempotent via SQLAlchemy schema reflection.
 """
 
 
-from alembic import op
+from alembic import op  # type: ignore[attr-defined]
 
 
 def create_hypertables() -> None:

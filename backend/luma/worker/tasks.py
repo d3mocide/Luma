@@ -11,7 +11,7 @@ async def ingest_hae_task(ctx: dict, payload: dict[str, Any], user_id: str | Non
     from luma.services.hae_normalizer import normalize_hae_payload
 
     async with AsyncSessionLocal() as db:
-        rows = await normalize_hae_payload(payload, db)
+        rows = await normalize_hae_payload(payload, db, user_id)
     return {"rows_inserted": rows}
 
 
