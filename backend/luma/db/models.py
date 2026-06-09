@@ -101,6 +101,7 @@ class Food(Base):
     nutrients_per_100g = Column(JSONB, nullable=False, default=dict)
     household_measures = Column(JSONB, nullable=False, server_default="[]")
     detail_enriched = Column(Boolean, nullable=False, server_default="false")
+    category = Column(Text)
     tags = Column(ARRAY(Text))
     flags = Column(ARRAY(Text), nullable=False, server_default='{}')
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))

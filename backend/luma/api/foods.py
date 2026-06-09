@@ -35,6 +35,7 @@ class FoodResponse(BaseModel):
     serving_size_g: float | None = None
     nutrients_per_100g: dict[str, Any]
     household_measures: list[dict[str, Any]] = []
+    category: str | None = None
     tags: list[str] | None = None
     flags: list[str] = []
     created_by: UUID | None = None
@@ -84,6 +85,7 @@ async def search_foods(
     current_user: CurrentUser,
     q: str | None = Query(None, min_length=1),
     flags: str | None = Query(None, description="Comma-separated flag list (AND logic)"),
+    category: str | None = Query(None, description="Browse a single food-group category"),
 ) -> list[Food]:
     # USDA reference foods surface first — they are curated, normalised to 100g,
     # and carry the full nutrient profile the agents depend on.
@@ -95,14 +97,26 @@ async def search_foods(
     )
 
     flag_list = [f.strip() for f in flags.split(",") if f.strip()] if flags else []
+    category = category.strip() if category and category.strip() else None
 
-    def _apply_flag_filters(s):
+    def _apply_filters(s):
         for flag in flag_list:
             s = s.where(Food.flags.contains([flag]))
+        if category:
+            s = s.where(Food.category == category)
         return s
 
+    # Category browse: list the whole curated group (no text query), reference
+    # foods first then alphabetical. A higher limit so the full group is visible.
+    if category and (not q or not q.strip()):
+        stmt = _apply_filters(
+            select(Food).order_by(_no_q_order, Food.name).limit(100)
+        )
+        res = await db.execute(stmt)
+        return list(res.scalars().all())
+
     if not q or not q.strip():
-        stmt = _apply_flag_filters(
+        stmt = _apply_filters(
             select(Food).order_by(_no_q_order, Food.name).limit(30)
         )
         res = await db.execute(stmt)
@@ -133,7 +147,7 @@ async def search_foods(
     _user_boost = case((Food.source == "user", 0.5), else_=0.0)
     _usda_boost = case((Food.source == "usda", 0.1), else_=0.0)
 
-    stmt = _apply_flag_filters(
+    stmt = _apply_filters(
         select(Food)
         .where(or_(*where_conds))
         .order_by((_sim + _match_boost + _ref_boost + _user_boost + _usda_boost).desc())

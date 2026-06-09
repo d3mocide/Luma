@@ -41,6 +41,7 @@ async def main() -> None:
                 brand=item["brand"],
                 serving_size_g=item["serving_size_g"],
                 nutrients_per_100g=item["nutrients"],
+                category=item.get("category"),
                 tags=item["tags"],
                 flags=computed_flags,
                 created_by=None,
