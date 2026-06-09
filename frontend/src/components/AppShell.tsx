@@ -7,9 +7,11 @@ import {
 } from 'lucide-react'
 import { api, TodayData, User } from '../lib/api'
 import { useUIStore } from '../stores'
+import { useSwReady } from '../swGate'
 import { LumaLogo, LumaWordmark } from './ui/LumaLogo'
 import LogSheet from './LogSheet'
 import Login from './Login'
+import { SplashScreen } from './SplashScreen'
 
 const NAV_ITEMS = [
   { to: '/today',     label: 'Today',     Icon: CircleDot },
@@ -33,25 +35,16 @@ export default function AppShell() {
   const isTodayLoading = location.pathname === '/today' && todayFetchCount > 0
   const isLogRoute = location.pathname === '/log'
 
+  const swReady = useSwReady()
+
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['me'],
     queryFn: () => api.get('/auth/me'),
     retry: false,
   })
 
-  if (isLoading) {
-    return (
-      <div className="luma-bg" style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{
-          width: 36, height: 36,
-          borderRadius: '50%',
-          border: '2px solid rgba(56,189,248,0.2)',
-          borderTopColor: 'var(--sky-400)',
-          animation: 'spin 0.8s linear infinite',
-        }}/>
-        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-      </div>
-    )
+  if (isLoading || !swReady) {
+    return <SplashScreen />
   }
 
   if (error || !user) {

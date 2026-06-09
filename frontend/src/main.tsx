@@ -4,11 +4,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App'
+import { releaseSwGate } from './swGate'
 
 // Measure env(safe-area-inset-*) at the document root level — outside any
 // stacking context — and expose as CSS variables. iOS standalone PWA can fail
 // to resolve env() inside position:fixed + isolation:isolate + overflow:clip
 // containers, so we do the measurement once here and update on resize.
+//
+// Vite 8 injects the script into <head> before the stylesheet, so this module
+// runs before the first paint. env(safe-area-inset-top) returns 0 on iOS PWA
+// before the viewport is rendered. We defer the initial measurement to after
+// the first paint (double rAF) so the probe reads the real inset value.
+// The CSS fallback — var(--sat, env(safe-area-inset-top, 0px)) — handles the
+// first frame correctly because --sat is not yet defined at that point.
 function setupSafeAreaVars(): void {
   const measure = () => {
     const probe = document.createElement('div')
@@ -35,7 +43,8 @@ function setupSafeAreaVars(): void {
     document.documentElement.style.setProperty('--sat', `${sat}px`)
   }
 
-  measure()
+  // Defer until after the first paint so env() values are settled.
+  requestAnimationFrame(() => requestAnimationFrame(measure))
   window.addEventListener('resize', measure, { passive: true })
   let orientationTimer: ReturnType<typeof setTimeout>
   window.addEventListener('orientationchange', () => {
@@ -61,7 +70,31 @@ const isTrustedPwaOrigin =
   !['localhost', '127.0.0.1'].includes(window.location.hostname)
 
 if (isTrustedPwaOrigin) {
-  registerSW({ immediate: true })
+  // Release the gate once we know no SW-triggered reload is coming.
+  // - onRegistered with nothing installing/waiting → stable, release now.
+  // - onRegistered with installing/waiting → a reload is imminent, keep gate
+  //   closed so the user never sees interactive UI before the reload fires.
+  // - onOfflineReady → precache done, definitely no reload coming.
+  // Safety: release after 3.5 s regardless so a stuck SW never locks the UI.
+  registerSW({
+    immediate: true,
+    onRegistered(registration) {
+      if (!registration || (!registration.installing && !registration.waiting)) {
+        releaseSwGate()
+      }
+    },
+    onOfflineReady() {
+      releaseSwGate()
+    },
+    onRegisterError() {
+      releaseSwGate()
+    },
+  })
+  setTimeout(releaseSwGate, 3500)
+} else {
+  // Dev / non-HTTPS — no service worker, release immediately so there's no
+  // splash delay during development.
+  releaseSwGate()
 }
 
 createRoot(document.getElementById('root')!).render(

@@ -409,10 +409,6 @@ export default function TodayRoute() {
               <span className="serif-italic gradient-accent-text" style={{ background: 'var(--accent-gradient-hero)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>{greetingName}</span>.
             </h1>
           </div>
-        </div>
-
-        {/* Quick-access chips */}
-        <div style={{ display: 'flex', gap: 8, padding: '0 0 14px' }}>
           <button
             type="button"
             onClick={() => navigate('/trends')}
@@ -423,7 +419,7 @@ export default function TodayRoute() {
               border: '1px solid rgba(56,189,248,0.22)',
               color: 'var(--sky-300)',
               fontSize: 12, fontWeight: 500, cursor: 'pointer',
-              letterSpacing: '0.01em',
+              letterSpacing: '0.01em', flexShrink: 0,
             }}
           >
             <Activity size={13} strokeWidth={1.75} />
@@ -464,10 +460,26 @@ export default function TodayRoute() {
           </div>
         </div>
 
+        {/* Streak */}
+        <div className="glass" style={{ padding: 18, marginBottom: 14, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: -100, right: -90, width: 260, height: 220, background: 'radial-gradient(ellipse 58% 56% at 62% 38%, rgba(251,191,36,0.17), transparent 70%), radial-gradient(ellipse 52% 52% at 88% 82%, rgba(251,191,36,0.08), transparent 74%)', filter: 'blur(12px)', opacity: 0.88, pointerEvents: 'none' }}/>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+            <div>
+              <div className="eyebrow">Streak</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+                <Flame size={18} color="var(--sun-300)"/>
+                <span className="num" style={{ fontSize: 26, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>{data.streak_days ?? 0}</span>
+                <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>days on track</span>
+              </div>
+            </div>
+          </div>
+          <StreakStrip days={data.streak_days ?? 0} ofMax={14}/>
+        </div>
+
         {/* Weight */}
         <div className="glass" style={{ padding: 18, marginBottom: 14 }}>
           <div className="eyebrow" style={{ marginBottom: 12 }}>Weight</div>
-          
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
             {/* Left: Weight value and target */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -541,22 +553,6 @@ export default function TodayRoute() {
             </div>
           </div>
         ) : null}
-
-        {/* Streak */}
-        <div className="glass" style={{ padding: 18, marginBottom: 14, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: -100, right: -90, width: 260, height: 220, background: 'radial-gradient(ellipse 58% 56% at 62% 38%, rgba(251,191,36,0.17), transparent 70%), radial-gradient(ellipse 52% 52% at 88% 82%, rgba(251,191,36,0.08), transparent 74%)', filter: 'blur(12px)', opacity: 0.88, pointerEvents: 'none' }}/>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-            <div>
-              <div className="eyebrow">Streak</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
-                <Flame size={18} color="var(--sun-300)"/>
-                <span className="num" style={{ fontSize: 26, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>{data.streak_days ?? 0}</span>
-                <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>days on track</span>
-              </div>
-            </div>
-          </div>
-          <StreakStrip days={data.streak_days ?? 0} ofMax={14}/>
-        </div>
 
         <FavoritesWidget compact />
 

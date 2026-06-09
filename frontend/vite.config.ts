@@ -1,6 +1,33 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import fs from 'node:fs'
+import path from 'node:path'
+
+// Vite 8 no longer rewrites/emits url() assets from node_modules CSS.
+// Copy @fontsource font files to dist/assets/files/ so the paths in the
+// compiled CSS (./files/geist-*.woff2) resolve correctly in production.
+function copyFontsPlugin() {
+  return {
+    name: 'copy-fontsource-files',
+    apply: 'build' as const,
+    closeBundle() {
+      const sources = [
+        path.resolve('node_modules/@fontsource/geist/files'),
+        path.resolve('node_modules/@fontsource/geist-mono/files'),
+      ]
+      const dest = path.resolve('dist/assets/files')
+      fs.mkdirSync(dest, { recursive: true })
+      for (const src of sources) {
+        for (const file of fs.readdirSync(src)) {
+          if (file.endsWith('.woff2') || file.endsWith('.woff')) {
+            fs.copyFileSync(path.join(src, file), path.join(dest, file))
+          }
+        }
+      }
+    },
+  }
+}
 
 export default defineConfig({
   plugins: [
@@ -16,6 +43,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
       },
     }),
+    copyFontsPlugin(),
   ],
   server: {
     host: true,
