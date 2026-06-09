@@ -44,7 +44,7 @@ dependencies = [
     "scikit-learn==1.6.1",
 
     # Email — async SMTP for family invitation emails
-    "aiosmtplib==4.0.1",
+    "aiosmtplib==5.1.1",
 ]
 
 [project.optional-dependencies]
