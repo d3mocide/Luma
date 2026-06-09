@@ -248,7 +248,7 @@ async def accept_invitation(
 ) -> dict:
     invite = (await db.execute(
         text("""
-            SELECT fi.id, fi.group_id, fi.expires_at, fi.accepted_at, fg.name AS group_name
+            SELECT fi.id, fi.group_id, fi.invited_email, fi.expires_at, fi.accepted_at, fg.name AS group_name
             FROM family_invitations fi
             JOIN family_groups fg ON fg.id = fi.group_id
             WHERE fi.token = :token
@@ -262,6 +262,11 @@ async def accept_invitation(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Invitation already used")
     if invite.expires_at < datetime.now(UTC):
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Invitation has expired")
+    if invite.invited_email.strip().lower() != user.email.strip().lower():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This invitation was issued to a different email address",
+        )
 
     existing = (await db.execute(
         text("SELECT 1 FROM family_members WHERE group_id = :gid AND user_id = :uid"),
