@@ -11,6 +11,7 @@ from sqlalchemy import (
     Double,
     Float,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -103,9 +104,9 @@ class Food(Base):
     nutrients_per_100g: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     household_measures: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, server_default="[]")
     detail_enriched: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    category: Mapped[str | None] = mapped_column(Text)
+    category: Mapped[str | None] = mapped_column(Text, index=True)
     tags: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
-    flags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, server_default='{}')
+    flags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, server_default='{}', index=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -264,6 +265,10 @@ class MealEvent(Base):
 
 class MealJournalEntry(Base):
     __tablename__ = "meal_journal_entries"
+    __table_args__ = (
+        Index("ix_journal_user_created", "user_id", "created_at"),
+        Index("ix_journal_meal_event", "meal_event_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -294,6 +299,9 @@ class Biometric(Base):
 
 class Favorite(Base):
     __tablename__ = "favorites"
+    __table_args__ = (
+        Index("ix_favorites_user_id", "user_id", "created_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -307,6 +315,9 @@ class Favorite(Base):
 
 class FavoriteItem(Base):
     __tablename__ = "favorite_items"
+    __table_args__ = (
+        Index("ix_favorite_items_fav", "favorite_id", "sort_order"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     favorite_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("favorites.id", ondelete="CASCADE"), nullable=False)
@@ -349,7 +360,7 @@ class FamilyMember(Base):
     __tablename__ = "family_members"
 
     group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
     role: Mapped[str] = mapped_column(Text, nullable=False, default="member", server_default="'member'")
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -359,12 +370,15 @@ class FamilyMember(Base):
 
 class FamilyInvitation(Base):
     __tablename__ = "family_invitations"
+    __table_args__ = (
+        Index("ix_family_invitations_token", "token", unique=True),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), nullable=False)
     invited_email: Mapped[str] = mapped_column(CITEXT, nullable=False)
     invited_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    token: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    token: Mapped[str] = mapped_column(Text, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -375,7 +389,7 @@ class GroupShare(Base):
     __tablename__ = "group_shares"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), nullable=False)
+    group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("family_groups.id", ondelete="CASCADE"), nullable=False, index=True)
     resource_type: Mapped[str] = mapped_column(Text, nullable=False)
     resource_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     shared_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
