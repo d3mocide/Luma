@@ -3,10 +3,12 @@ name: PR Checks
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
 
 jobs:
   frontend:
-    name: Frontend — type-check & lint
+    name: Frontend — type-check, lint & build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -34,6 +36,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Build
+        run: pnpm build
+
   backend:
     name: Backend — lint & tests
     runs-on: ubuntu-latest
@@ -59,9 +64,7 @@ jobs:
       - name: Tests
         run: pytest -x -q
         env:
-          DATABASE_URL: sqlite+aiosqlite:///:memory:
-          REDIS_URL: redis://localhost:6379
-          JWT_SECRET: test-secret-do-not-use-in-production
-          HAE_SECRET: test-hae-secret-32-bytes-minimum!!
-          LITELLM_BASE_URL: http://localhost:4000
-          LITELLM_API_KEY: test-key
+          DATABASE_URL: "postgresql+asyncpg://test:test@localhost/testdb"
+          REDIS_URL: "redis://localhost:6379/0"
+          JWT_SECRET: "test-secret-do-not-use-in-production"
+          HAE_SHARED_SECRET: "test-hae-shared-secret-32-bytes-min"
