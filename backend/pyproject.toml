@@ -41,7 +41,7 @@ dependencies = [
     "pywebpush==2.0.0",
 
     # ML — anomaly detection
-    "scikit-learn==1.6.1",
+    "scikit-learn==1.9.0",
 
     # Email — async SMTP for family invitation emails
     "aiosmtplib==4.0.1",
