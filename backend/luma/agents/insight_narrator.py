@@ -241,7 +241,7 @@ async def narrate_alert(
             trigger="insight_narrate",
             messages=messages,
             temperature=0.4,
-            timeout=30.0,
+            timeout=90.0,
             response_format=InsightResponse,
         )
 
@@ -274,7 +274,7 @@ async def narrate_alert(
             trigger="insight_narrate",
             messages=correction_messages,
             temperature=0.4,
-            timeout=60.0,
+            timeout=120.0,
             response_format=InsightResponse,
         )
         insight = _parse_insight(retry_resp["choices"][0]["message"]["content"])
