@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from typing import NamedTuple
+from typing import Callable, NamedTuple
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
@@ -593,4 +593,23 @@ ALL_RULES = [
     check_positive_milestone,
     check_motivational_nudge,
 ]
+
+# Maps every rule_id to its check function so the engine's resolution sweep can
+# re-evaluate whether an open alert's condition has since cleared.
+# biometric_cluster_anomaly is wired in engine.py (ML check lives in alerts/ml.py).
+RULE_REGISTRY: dict[str, Callable] = {
+    "sat_fat_rolling":             check_sat_fat_rolling,
+    "low_fiber_rolling":           check_soluble_fiber_rolling,
+    "weight_trend_diverging":      check_weight_trend,
+    "weight_trend_worsening":      check_weight_trend_worsening,
+    "weight_stall":                check_weight_stall,
+    "hrv_drop":                    check_hrv_anomaly,
+    "logging_streak_broken":       check_logging_gap,
+    "aggressive_deficit":          check_calorie_deficit,
+    "ldl_risk_day":                check_ldl_risk_day,
+    "ldl_proxy_stall":             check_ldl_proxy_stall,
+    "high_sodium_potassium_ratio": check_sodium_potassium_ratio,
+    "positive_milestone":          check_positive_milestone,
+    "motivational_nudge":          check_motivational_nudge,
+}
 
