@@ -43,8 +43,8 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const [favName, setFavName] = useState('')
 
   const { data: favoritesData } = useQuery<{ favorites: Favorite[] }>({
-    queryKey: ['favorites'],
-    queryFn: () => api.get('/favorites'),
+    queryKey: ['favorites', 'frequency'],
+    queryFn: () => api.get('/favorites?sort=frequency'),
     enabled: isVisible,
   })
   const favorites = favoritesData?.favorites ?? []
