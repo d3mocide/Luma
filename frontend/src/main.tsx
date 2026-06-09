@@ -9,6 +9,13 @@ import App from './App'
 // stacking context — and expose as CSS variables. iOS standalone PWA can fail
 // to resolve env() inside position:fixed + isolation:isolate + overflow:clip
 // containers, so we do the measurement once here and update on resize.
+//
+// Vite 8 injects the script into <head> before the stylesheet, so this module
+// runs before the first paint. env(safe-area-inset-top) returns 0 on iOS PWA
+// before the viewport is rendered. We defer the initial measurement to after
+// the first paint (double rAF) so the probe reads the real inset value.
+// The CSS fallback — var(--sat, env(safe-area-inset-top, 0px)) — handles the
+// first frame correctly because --sat is not yet defined at that point.
 function setupSafeAreaVars(): void {
   const measure = () => {
     const probe = document.createElement('div')
@@ -35,7 +42,8 @@ function setupSafeAreaVars(): void {
     document.documentElement.style.setProperty('--sat', `${sat}px`)
   }
 
-  measure()
+  // Defer until after the first paint so env() values are settled.
+  requestAnimationFrame(() => requestAnimationFrame(measure))
   window.addEventListener('resize', measure, { passive: true })
   let orientationTimer: ReturnType<typeof setTimeout>
   window.addEventListener('orientationchange', () => {
