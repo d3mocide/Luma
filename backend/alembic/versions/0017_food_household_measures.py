@@ -4,9 +4,10 @@ Revision ID: 0017_food_household_measures
 Revises: 0016_family_sharing
 Create Date: 2026-06-08
 """
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
+
+from alembic import op
 
 revision = '0017_food_household_measures'
 down_revision = '0016_family_sharing'

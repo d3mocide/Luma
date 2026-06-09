@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, time, timedelta
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select, text
@@ -92,7 +93,7 @@ async def sync_user_profile(user_id: str, db: AsyncSession) -> dict[str, str | N
             )
         ).first()
         if height_row and _HEIGHT_MIN_CM <= float(height_row[0]) <= _HEIGHT_MAX_CM:
-            user.height_cm = round(float(height_row[0]), 1)
+            user.height_cm = Decimal(str(round(float(height_row[0]), 1)))
             changes["height_cm"] = f"set {user.height_cm}"
 
     if changes:

@@ -20,9 +20,9 @@ METRICS_EVENT_LIMIT = 20
 
 class LLMMetricsTracker:
     def __init__(self) -> None:
-        self._redis: Redis[str] | None = None
+        self._redis: Redis[str] | None = None  # type: ignore[type-arg]
 
-    def _client(self) -> Redis[str]:
+    def _client(self) -> Redis[str]:  # type: ignore[type-arg]
         if self._redis is None:
             self._redis = Redis.from_url(settings.redis_url, decode_responses=True)
         return self._redis
@@ -99,9 +99,9 @@ class LLMMetricsTracker:
     async def snapshot(self) -> dict[str, Any]:
         try:
             redis = self._client()
-            totals = await redis.hgetall(METRICS_HASH_KEY)
-            meta = await redis.hgetall(METRICS_META_KEY)
-            raw_events = await redis.lrange(METRICS_EVENTS_KEY, 0, METRICS_EVENT_LIMIT - 1)
+            totals = await redis.hgetall(METRICS_HASH_KEY)  # type: ignore[misc]
+            meta = await redis.hgetall(METRICS_META_KEY)  # type: ignore[misc]
+            raw_events = await redis.lrange(METRICS_EVENTS_KEY, 0, METRICS_EVENT_LIMIT - 1)  # type: ignore[misc]
         except RedisError:
             logger.exception("Failed to load LLM metrics from Redis")
             return self._empty_snapshot(source="redis-unavailable")

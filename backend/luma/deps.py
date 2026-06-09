@@ -1,4 +1,5 @@
 import logging
+from collections.abc import AsyncGenerator
 from typing import Annotated
 from uuid import UUID
 
@@ -14,7 +15,7 @@ from luma.db.session import AsyncSessionLocal
 logger = logging.getLogger(__name__)
 
 
-async def get_db() -> AsyncSession:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             yield session

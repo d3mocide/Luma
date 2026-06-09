@@ -1,4 +1,5 @@
 import asyncio
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -6,17 +7,15 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
+from luma.db.models import Base
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-from luma.db.models import Base
 target_metadata = Base.metadata
 
-# Allow DATABASE_URL env var to override alembic.ini
-import os
 db_url = os.environ.get("DATABASE_URL")
 if db_url:
     config.set_main_option("sqlalchemy.url", db_url)
@@ -33,8 +32,9 @@ def include_object(object, name, type_, reflected, compare_to):
     ):
         return False
     # Ignore duplicate unique constraints reflected from composite primary key tables
+    # and from tables where CREATE UNIQUE INDEX is reflected as both Index + UniqueConstraint
     if type_ == "unique_constraint" and (
-        (getattr(object, "table", None) is not None and object.table.name in {"preferences", "shopping_list_items"})
+        (getattr(object, "table", None) is not None and object.table.name in {"preferences", "shopping_list_items", "family_invitations"})
         or name is None
     ):
         return False

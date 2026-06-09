@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, field_validator
@@ -271,7 +272,7 @@ async def update_recipe(recipe_id: str, req: RecipeUpdateRequest, db: DbDep, cur
     if req.cook_minutes is not None:
         r.cook_minutes = req.cook_minutes
     if req.servings is not None:
-        r.servings = req.servings
+        r.servings = Decimal(str(req.servings))
     if req.tags is not None:
         r.tags = req.tags
 

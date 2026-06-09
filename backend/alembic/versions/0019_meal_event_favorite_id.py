@@ -4,9 +4,10 @@ Revision ID: 0019_meal_event_favorite_id
 Revises: 0018_food_detail_enriched
 Create Date: 2026-06-08
 """
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
+
+from alembic import op
 
 revision = '0019_meal_event_favorite_id'
 down_revision = '0018_food_detail_enriched'

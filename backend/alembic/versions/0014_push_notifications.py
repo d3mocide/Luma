@@ -4,9 +4,10 @@ Revision ID: 0014_push_notifications
 Revises: 0013_add_favorites
 Create Date: 2026-06-04
 """
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
+
+from alembic import op
 
 revision = '0014_push_notifications'
 down_revision = '0013_add_favorites'

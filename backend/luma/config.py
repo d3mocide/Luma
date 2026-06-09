@@ -104,4 +104,4 @@ class Settings(BaseSettings):
         return self.environment == "production"
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]

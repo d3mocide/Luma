@@ -4,9 +4,10 @@ Revision ID: 0012_add_meal_journal
 Revises: 0011_food_flags
 Create Date: 2026-06-01
 """
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
+
+from alembic import op
 
 revision = '0012_add_meal_journal'
 down_revision = '0011_food_flags'

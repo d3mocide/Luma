@@ -231,7 +231,7 @@ async def enrich_food(
     if food.detail_enriched or food.source != "usda" or not (food.source_id or "").startswith("fdc_"):
         return food
 
-    fdc_id = food.source_id[len("fdc_"):]
+    fdc_id = (food.source_id or "")[len("fdc_"):]
     detail = await usda_client.get_food_detail(fdc_id)
     if detail:
         food.household_measures = detail.get("household_measures", [])

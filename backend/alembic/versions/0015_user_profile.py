@@ -4,8 +4,9 @@ Revision ID: 0015_user_profile
 Revises: 0014_push_notifications
 Create Date: 2026-06-06
 """
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = '0015_user_profile'
 down_revision = '0014_push_notifications'

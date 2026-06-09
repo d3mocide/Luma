@@ -64,7 +64,7 @@ async def _send_oauth(msg: EmailMessage) -> None:
         try:
             detail = base64.b64decode(response).decode()
         except Exception:
-            detail = response.decode(errors="replace")
+            detail = response
         await smtp.quit()
         raise RuntimeError(f"XOAUTH2 auth rejected ({code}): {detail}")
 
