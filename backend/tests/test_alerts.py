@@ -112,10 +112,15 @@ async def test_process_user_inserts_alert_and_calls_narrator():
     # Recent rules query (none fired in last 24h)
     mock_recent_result = MagicMock()
     mock_recent_result.__iter__.return_value = []
-    
+
+    # _resolve_cleared_alerts: no open alerts to sweep
+    mock_open_result = MagicMock()
+    mock_open_result.fetchall.return_value = []
+
     db.execute.side_effect = [
-        mock_recent_result,  # first select query in _process_user (recent alerts)
-        AsyncMock(),         # insert statement
+        mock_recent_result,  # SELECT recent alerts (dedup window)
+        AsyncMock(),         # INSERT alert
+        mock_open_result,    # SELECT open alerts in _resolve_cleared_alerts
     ]
 
     # Mock rule to fire a dummy alert
