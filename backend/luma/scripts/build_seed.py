@@ -37,9 +37,16 @@ from pathlib import Path
 from typing import Any
 
 # ---------------------------------------------------------------------------
-# Nutrient ID → seed key mapping (mirrors usda_client.py)
+# Nutrient ID → seed key mapping (mirrors usda_client.py exactly)
+#
+# This MUST stay in sync with luma.services.usda_client._NUTRIENT_MAP. The live
+# USDA search path extracts the full micronutrient panel below; when the seed
+# builder mapped only the ten macros, freshly-searched foods carried richer data
+# than our curated reference rows. Keeping both maps identical means a regenerated
+# seed has the same depth as anything pulled live.
 # ---------------------------------------------------------------------------
 _NUTRIENT_MAP: dict[int, str] = {
+    # Macros
     1008: "calories",
     1003: "protein_g",
     1004: "fat_g",
@@ -47,9 +54,33 @@ _NUTRIENT_MAP: dict[int, str] = {
     2000: "sugars_g",
     1079: "fiber_g",
     1258: "saturated_fat_g",
+    1292: "monounsaturated_fat_g",
+    1293: "polyunsaturated_fat_g",
+    1257: "trans_fat_g",
+    1253: "cholesterol_mg",
     1082: "soluble_fiber_g",
+    # Electrolytes
     1093: "sodium_mg",
     1092: "potassium_mg",
+    # Minerals
+    1087: "calcium_mg",
+    1089: "iron_mg",
+    1090: "magnesium_mg",
+    1091: "phosphorus_mg",
+    1095: "zinc_mg",
+    1103: "selenium_mcg",
+    # Vitamins
+    1106: "vitamin_a_mcg",
+    1109: "vitamin_e_mg",
+    1114: "vitamin_d_mcg",
+    1185: "vitamin_k_mcg",
+    1162: "vitamin_c_mg",
+    1165: "thiamin_mg",
+    1166: "riboflavin_mg",
+    1167: "niacin_mg",
+    1175: "vitamin_b6_mg",
+    1177: "folate_mcg",
+    1178: "vitamin_b12_mcg",
 }
 
 _EMPTY_NUTRIENTS: dict[str, float] = {v: 0.0 for v in _NUTRIENT_MAP.values()}
@@ -246,6 +277,65 @@ def _find_best_match(
     return None
 
 
+# ---------------------------------------------------------------------------
+# Food-group categorisation — mirrors the 13 groups on the Meals page
+# (frontend/src/lib/food-categories.ts). Stamped onto each seed entry so the
+# category browse can list a whole group straight from the local database.
+# ---------------------------------------------------------------------------
+CATEGORY_IDS: list[str] = [
+    "vegetables", "fruits", "legumes", "grains", "fish", "poultry", "eggs",
+    "nuts", "low-fat-dairy", "full-fat-dairy", "red-meat", "processed-meat",
+    "tropical-oils",
+]
+
+
+def classify_category(name: str, tags: list[str], nutrients: dict[str, float]) -> str | None:
+    n = name.lower()
+    t = set(tags)
+    sat = float(nutrients.get("saturated_fat_g", 0) or 0)
+
+    if re.search(r"\b(coconut|palm)\b", n) and ("oil" in n or "cream" in n or "milk" in n):
+        return "tropical-oils"
+    if re.match(r"egg\b", n):
+        return "eggs"
+    if re.search(r"\b(bacon|sausage|salami|pepperoni|prosciutto|deli|corned beef|hot dog|frankfurter|ham)\b", n):
+        return "processed-meat"
+    if "poultry" in t or re.search(r"\b(chicken|turkey|duck)\b", n):
+        return "poultry"
+    if "seafood" in t:
+        return "fish"
+    if t & {"beef", "red-meat", "pork", "lamb", "game"} or re.search(
+        r"\b(beef|steak|lamb|pork|bison|venison|ribs|brisket|sirloin|ribeye|filet|veal)\b", n
+    ):
+        return "red-meat"
+    if t & {"nuts", "seeds"} or re.search(
+        r"\b(almond|walnut|cashew|pistachio|pecan|macadamia|brazil nut|peanut|seed|tahini|flax|chia|hemp|sunflower|pumpkin|sesame)\b", n
+    ):
+        return "nuts"
+    if "condiment" not in t and "sauce" not in n and not re.search(r"\bsnap pea", n) and (
+        "plant-protein" in t
+        or re.search(r"\b(beans?|lentils?|chickpeas?|garbanzo|edamame|hummus|tofu|tempeh|split pea|black-eyed pea|green pea|mung)\b", n)
+    ):
+        return "legumes"
+    if "dairy" in t or re.search(
+        r"\b(milk|cheese|yogurt|cream|butter|kefir|ricotta|feta|cheddar|gouda|parmesan|mozzarella|brie|whey)\b", n
+    ):
+        if "whole" in n:
+            return "full-fat-dairy"
+        if re.search(r"\b(skim|nonfat|non-fat|low.fat|part.skim|1%|2%|light|fat.free)\b", n):
+            return "low-fat-dairy"
+        return "full-fat-dairy" if sat >= 3.0 else "low-fat-dairy"
+    if t & {"grain", "bread"} or re.search(
+        r"\b(rice|oat|quinoa|barley|bread|pasta|tortilla|bulgur|farro|millet|buckwheat|amaranth|couscous|rye|wheat)\b", n
+    ):
+        return "grains"
+    if "vegetable" in t:
+        return "vegetables"
+    if "fruit" in t:
+        return "fruits"
+    return None
+
+
 def _fdc_to_seed_entry(
     fdc_food: dict[str, Any],
     seed_name: str,
@@ -259,6 +349,7 @@ def _fdc_to_seed_entry(
         "brand": "USDA Reference",
         "serving_size_g": serving_size_g,
         "tags": tags,
+        "category": classify_category(seed_name, tags, nutrients),
         "nutrients": nutrients,
         "flags": curated_flags,
         "_fdc_source": {

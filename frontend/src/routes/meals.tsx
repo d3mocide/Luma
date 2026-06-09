@@ -43,40 +43,9 @@ function SatFatBadge({ level, range }: { level: FoodCategory['satFatLevel']; ran
 }
 
 
-// ── Example food card (curated comparisons) ───────────────────────────────────
+// ── Food comparison card (curated category browse) ────────────────────────────
 
-function ExampleFoodCard({ name, onClick }: { name: string; onClick: () => void }) {
-  const { data: results, isLoading } = useQuery<FoodResult[]>({
-    queryKey: ['foods', 'example', name],
-    queryFn: () => api.get(`/foods/search?q=${encodeURIComponent(name)}`),
-    staleTime: 5 * 60_000,
-  })
-
-  const food = results?.[0]
-
-  if (isLoading) {
-    return (
-      <div className="glass" style={{ padding: '14px 16px', borderRadius: 14, height: 110, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <style>{`
-          @keyframes pulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 0.3; }
-          }
-        `}</style>
-        <div style={{ width: '60%', height: 14, background: 'var(--bg-3)', borderRadius: 4, marginBottom: 12, animation: 'pulse 1.5s infinite ease-in-out' }} />
-        <div style={{ width: '80%', height: 10, background: 'var(--bg-3)', borderRadius: 4, animation: 'pulse 1.5s infinite ease-in-out' }} />
-      </div>
-    )
-  }
-
-  if (!food) {
-    return (
-      <div className="glass" style={{ padding: '14px 16px', borderRadius: 14, height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.7 }}>
-        <span style={{ fontSize: 12, color: 'var(--fg-quiet)', fontStyle: 'italic' }}>{name} (No data)</span>
-      </div>
-    )
-  }
-
+function FoodCompareCard({ food, onClick }: { food: FoodResult; onClick: () => void }) {
   const satFat = food.nutrients_per_100g?.saturated_fat_g ?? 0
   const calories = food.nutrients_per_100g?.calories ?? 0
   const protein = food.nutrients_per_100g?.protein_g ?? 0
@@ -131,6 +100,46 @@ function ExampleFoodCard({ name, onClick }: { name: string; onClick: () => void 
         </div>
       </div>
     </button>
+  )
+}
+
+// ── Curated category browse (whole group from the local database) ──────────────
+
+function CategoryComparisonGrid({ category, onPick }: { category: FoodCategory; onPick: (name: string) => void }) {
+  const { data: foods, isLoading } = useQuery<FoodResult[]>({
+    queryKey: ['foods', 'category', category.id],
+    queryFn: () => api.get(`/foods/search?category=${encodeURIComponent(category.id)}`),
+    staleTime: 5 * 60_000,
+  })
+
+  if (isLoading) {
+    return (
+      <div className="food-category-grid">
+        <style>{`@keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 0.3; } }`}</style>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="glass" style={{ padding: '14px 16px', borderRadius: 14, height: 110, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ width: '60%', height: 14, background: 'var(--bg-3)', borderRadius: 4, marginBottom: 12, animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ width: '80%', height: 10, background: 'var(--bg-3)', borderRadius: 4, animation: 'pulse 1.5s infinite ease-in-out' }} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (!foods?.length) {
+    return (
+      <p style={{ fontSize: 12, color: 'var(--fg-quiet)', fontStyle: 'italic', padding: '8px 0' }}>
+        No reference foods in this group yet — try the search bar above.
+      </p>
+    )
+  }
+
+  return (
+    <div className="food-category-grid">
+      {foods.map((food) => (
+        <FoodCompareCard key={food.id} food={food} onClick={() => onPick(food.name)} />
+      ))}
+    </div>
   )
 }
 
@@ -604,19 +613,14 @@ function FoodsTab() {
 
           <div>
             <div className="eyebrow" style={{ marginBottom: 12 }}>Curated Reference Comparisons</div>
-            <div className="food-category-grid">
-              {selectedCategory.examples.map((ex) => (
-                <ExampleFoodCard
-                  key={ex}
-                  name={ex}
-                  onClick={() => {
-                    handleQueryChange(ex)
-                    setSelectedCategory(null)
-                    inputRef.current?.focus()
-                  }}
-                />
-              ))}
-            </div>
+            <CategoryComparisonGrid
+              category={selectedCategory}
+              onPick={(name) => {
+                handleQueryChange(name)
+                setSelectedCategory(null)
+                inputRef.current?.focus()
+              }}
+            />
           </div>
         </div>
       ) : (
