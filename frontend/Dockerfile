@@ -3,7 +3,7 @@
 # Stage 1: build the React/Vite app
 FROM node:22-alpine AS builder
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@11
 
 WORKDIR /app
 

@@ -5,3 +5,6 @@ allowBuilds:
   esbuild: true
 onlyBuiltDependencies:
   - esbuild
+
+policies:
+  minimumReleaseAge: "72 hours"
