@@ -40,11 +40,19 @@ function setupSafeAreaVars(): void {
     document.documentElement.removeChild(probeTop)
 
     document.documentElement.style.setProperty('--sab', `${sab}px`)
-    document.documentElement.style.setProperty('--sat', `${sat}px`)
+    // Only write --sat when the probe reads a positive value.  On iOS PWA
+    // fast cached reloads the double-rAF can fire before env() has settled,
+    // returning 0.  Writing --sat: 0px explicitly overrides the env() CSS
+    // fallback and permanently breaks the top safe zone.
+    if (sat > 0) document.documentElement.style.setProperty('--sat', `${sat}px`)
   }
 
   // Defer until after the first paint so env() values are settled.
   requestAnimationFrame(() => requestAnimationFrame(measure))
+  // Extra safety: re-measure after iOS has had more time to settle.
+  // On cached-asset fast reloads (post sign-out or PWA resume) the double-rAF
+  // above can fire while env() still returns 0; this catches that case.
+  setTimeout(measure, 300)
   window.addEventListener('resize', measure, { passive: true })
   let orientationTimer: ReturnType<typeof setTimeout>
   window.addEventListener('orientationchange', () => {
