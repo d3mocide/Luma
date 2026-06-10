@@ -625,8 +625,8 @@ export function AiPriceCalculator() {
                   width: '100%',
                   accentColor: getProviderColor(selectedModel.provider),
                   cursor: 'pointer',
-                  ['--thumb-color' as any]: getProviderColor(selectedModel.provider),
-                }}
+                  '--thumb-color': getProviderColor(selectedModel.provider),
+                } as React.CSSProperties}
               />
             </div>
 
@@ -646,8 +646,8 @@ export function AiPriceCalculator() {
                   width: '100%',
                   accentColor: getProviderColor(selectedModel.provider),
                   cursor: 'pointer',
-                  ['--thumb-color' as any]: getProviderColor(selectedModel.provider),
-                }}
+                  '--thumb-color': getProviderColor(selectedModel.provider),
+                } as React.CSSProperties}
               />
             </div>
 
@@ -701,8 +701,8 @@ export function AiPriceCalculator() {
                   width: '100%',
                   accentColor: getProviderColor(selectedModel.provider),
                   cursor: 'pointer',
-                  ['--thumb-color' as any]: getProviderColor(selectedModel.provider),
-                }}
+                  '--thumb-color': getProviderColor(selectedModel.provider),
+                } as React.CSSProperties}
               />
             </div>
 
