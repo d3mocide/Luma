@@ -17,7 +17,7 @@ import { PlanRow } from '../components/today/PlanRow'
 import { RecentMealsCard } from '../components/today/RecentMealsCard'
 import { FavoritesWidget } from '../components/today/FavoritesWidget'
 import { NutrientBreakdownSheet } from '../components/today/NutrientBreakdownSheet'
-import { NutritionCalculatorCard, type FoodAddPayload } from '../components/today/NutritionCalculatorCard'
+import { NutritionCalculatorCard } from '../components/today/NutritionCalculatorCard'
 import { useHiddenMetrics } from '../lib/hidden-metrics'
 
 export default function TodayRoute() {
@@ -102,20 +102,6 @@ export default function TodayRoute() {
     },
     onSettled: () => {
       setDeletingMealId(null)
-    },
-  })
-
-  const quickAddMutation = useMutation({
-    mutationFn: (payload: FoodAddPayload) => api.post('/log/meal', {
-      slot: 'snack', source: 'manual',
-      items: [{ name: payload.name, quantity: payload.serving_g, unit: 'g', nutrients: payload.nutrition }],
-      nutrition: payload.nutrition,
-    }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['today'] })
-    },
-    onError: (err: Error) => {
-      alert(err.message || 'Failed to add meal.')
     },
   })
 
@@ -372,7 +358,7 @@ export default function TodayRoute() {
           )
         })()}
 
-        <NutritionCalculatorCard adherence={data.adherence_today} onAdd={(p) => quickAddMutation.mutate(p)} isAdding={quickAddMutation.isPending} compact={false}/>
+        <NutritionCalculatorCard adherence={data.adherence_today} compact={false}/>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 20 }}>
           {/* Today's plan */}
@@ -583,7 +569,7 @@ export default function TodayRoute() {
           )
         })()}
 
-        <NutritionCalculatorCard adherence={data.adherence_today} onAdd={(p) => quickAddMutation.mutate(p)} isAdding={quickAddMutation.isPending} compact/>
+        <NutritionCalculatorCard adherence={data.adherence_today} compact/>
 
         {/* Plan */}
         <div className="glass" style={{ padding: 18, marginBottom: 14 }}>

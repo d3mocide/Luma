@@ -1219,8 +1219,8 @@ export default function MealsRoute() {
 
   const initialTab: TabKey = (() => {
     const t = searchParams.get('tab')
-    if (t === 'foods' || t === 'journal' || t === 'calculator' || t === 'recipes') return t
-    return 'plan'
+    if (t === 'plan' || t === 'journal' || t === 'calculator' || t === 'recipes') return t
+    return 'foods'
   })()
 
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab)
@@ -1238,7 +1238,7 @@ export default function MealsRoute() {
 
   function switchTab(tab: TabKey) {
     setActiveTab(tab)
-    setSearchParams(tab === 'plan' ? {} : { tab }, { replace: true })
+    setSearchParams(tab === 'foods' ? {} : { tab }, { replace: true })
   }
 
   return (

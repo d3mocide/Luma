@@ -242,6 +242,17 @@ layer(base);
 }
 
 @layer base {
+  /* Hide default browser numeric spinner controls (up and down chevrons) globally to match theme */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
   html {
     height: 100vh;
     height: 100lvh;
