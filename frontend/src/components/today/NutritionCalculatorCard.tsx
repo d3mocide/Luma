@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, X, Search, Camera, Trash2, Heart, Check } from 'lucide-react'
+import { Plus, X, Search, Camera, Trash2, Heart, Check, Edit2 } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api, TodayData } from '../../lib/api'
 import { getCurrentSlot } from '../../lib/format'
@@ -68,17 +68,17 @@ function BudgetStat({
 }) {
   const over = showProjected && projected < 0
   return (
-    <div className="glass-inset" style={{ padding: compact ? '10px 8px' : '10px 12px', textAlign: compact ? 'center' : 'left' }}>
-      <div style={{ fontSize: compact ? 10.5 : 11.5, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+    <div className="glass-inset" style={{ padding: compact ? '8px 6px' : '10px 12px', textAlign: compact ? 'center' : 'left' }}>
+      <div style={{ fontSize: compact ? 9.5 : 11.5, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {label}
       </div>
-      <div style={{ marginTop: compact ? 4 : 6, display: 'flex', alignItems: 'baseline', gap: compact ? 4 : 6, justifyContent: compact ? 'center' : 'flex-start' }}>
-        <span className="num" style={{ fontSize: compact ? 18 : 20, color: over ? 'var(--bad)' : noTarget ? 'var(--fg-quiet)' : 'var(--fg-primary)' }}>
+      <div style={{ marginTop: compact ? 3 : 6, display: 'flex', alignItems: 'baseline', gap: compact ? 3 : 6, justifyContent: compact ? 'center' : 'flex-start' }}>
+        <span className="num" style={{ fontSize: compact ? 16 : 20, color: over ? 'var(--bad)' : noTarget ? 'var(--fg-quiet)' : 'var(--fg-primary)' }}>
           {noTarget ? '—' : remaining}
         </span>
-        {!noTarget && <span style={{ fontSize: compact ? 11 : 13, color: 'var(--fg-quiet)' }}>{unit}</span>}
+        {!noTarget && <span style={{ fontSize: compact ? 10 : 13, color: 'var(--fg-quiet)' }}>{unit}</span>}
       </div>
-      <div style={{ marginTop: 3, fontSize: compact ? 10.5 : 11.5, color: over ? 'var(--bad)' : 'var(--fg-quiet)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div style={{ marginTop: 2, fontSize: compact ? 9.5 : 11.5, color: over ? 'var(--bad)' : 'var(--fg-quiet)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {noTarget
           ? compact ? 'no target' : 'no target set'
           : showProjected
@@ -108,6 +108,8 @@ export function NutritionCalculatorCard({
 }) {
   const queryClient = useQueryClient()
   const [mealItems, setMealItems] = useState<MealBuilderItem[]>([])
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  const [editingItemGrams, setEditingItemGrams] = useState<string>('')
   const [mealName, setMealName] = useState('')
   const [selectedSlot, setSelectedSlot] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(() => getCurrentSlot())
   const [successMessage, setSuccessMessage] = useState('')
@@ -299,7 +301,40 @@ export function NutritionCalculatorCard({
   }
 
   const handleRemoveMealItem = (index: number) => {
+    const itemToRemove = mealItems[index]
+    if (itemToRemove && editingItemId === itemToRemove.id) {
+      setEditingItemId(null)
+    }
     setMealItems((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleStartEditItem = (item: MealBuilderItem) => {
+    setEditingItemId(item.id)
+    setEditingItemGrams(String(item.serving_g))
+  }
+
+  const handleSaveEditedItem = () => {
+    const parsed = Math.round(parseFloat(editingItemGrams)) || 0
+    if (parsed <= 0) return
+
+    setMealItems((prev) =>
+      prev.map((item) => {
+        if (item.id === editingItemId) {
+          const ratio = parsed / item.serving_g
+          const nutrition: Record<string, number> = {}
+          for (const [k, v] of Object.entries(item.nutrition)) {
+            nutrition[k] = round1(v * ratio)
+          }
+          return {
+            ...item,
+            serving_g: parsed,
+            nutrition,
+          }
+        }
+        return item
+      })
+    )
+    setEditingItemId(null)
   }
 
   const logMealMutation = useMutation({
@@ -396,7 +431,7 @@ export function NutritionCalculatorCard({
 
   return (
     <div className="glass" style={{
-      padding: compact ? 18 : 24,
+      padding: compact ? 12 : 24,
       marginTop: compact ? 14 : 0,
       marginBottom: compact ? 14 : 0,
       position: 'relative',
@@ -408,14 +443,14 @@ export function NutritionCalculatorCard({
         <div className="eyebrow">Budget check</div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: compact ? 8 : 10, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: compact ? 6 : 10, marginBottom: 12 }}>
         <BudgetStat label="Calories" remaining={calRemain} projected={calProjected} unit="kcal" showProjected={hasItemsOrFood} noTarget={calTarget === 0} compact={compact} />
         <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    showProjected={hasItemsOrFood} noTarget={satTarget === 0} compact={compact} />
         <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   showProjected={hasItemsOrFood} noTarget={solTarget === 0} compact={compact} />
       </div>
 
-      <div className="glass-inset" style={{ padding: compact ? 10 : 12, display: 'grid', gap: 10, minWidth: 0, width: '100%' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr auto', gap: 12, alignItems: 'start', minWidth: 0, width: '100%' }}>
+      <div className="glass-inset" style={{ padding: compact ? 8 : 12, display: 'grid', gap: 10, minWidth: 0, width: '100%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr auto', gap: compact ? 8 : 12, alignItems: 'start', minWidth: 0, width: '100%' }}>
 
           {/* Food search */}
           <label style={{ display: 'grid', gap: 6, minWidth: 0, width: '100%' }}>
@@ -423,10 +458,10 @@ export function NutritionCalculatorCard({
               Food
             </span>
             <div style={{ position: 'relative' }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', gap: compact ? 6 : 8, alignItems: 'stretch' }}>
                 <div style={{
                   flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '10px 12px', borderRadius: 10,
+                  padding: compact ? '8px 10px' : '10px 12px', borderRadius: 10,
                   border: `1px solid ${selectedFood ? 'var(--sky-400)' : 'var(--glass-edge)'}`,
                   background: 'var(--glass-1)',
                 }}>
@@ -456,12 +491,12 @@ export function NutritionCalculatorCard({
                   type="button"
                   onClick={() => { setBarcodeError(''); setIsScanning((v) => !v) }}
                   style={{
-                    padding: '0 14px', borderRadius: 10, flexShrink: 0,
+                    padding: compact ? '0 10px' : '0 14px', borderRadius: 10, flexShrink: 0,
                     background: isScanning ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
                     border: isScanning ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--glass-edge)',
                     color: isScanning ? 'var(--sky-300)' : 'var(--fg-secondary)',
                     cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 6,
+                    display: 'flex', alignItems: 'center', gap: compact ? 4 : 6,
                     fontSize: 13, transition: 'all 150ms',
                   }}
                 >
@@ -583,7 +618,7 @@ export function NutritionCalculatorCard({
             <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
               Serving
             </span>
-            <div style={{ display: 'flex', alignItems: 'stretch', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: compact ? 6 : 8 }}>
               <input
                 type="number"
                 min={0}
@@ -591,7 +626,7 @@ export function NutritionCalculatorCard({
                 value={servingQty}
                 onChange={(e) => { autoUnitRef.current = false; setServingQty(e.target.value) }}
                 style={{
-                  width: 80, textAlign: 'center', borderRadius: 10, padding: '10px 6px',
+                  width: compact ? 68 : 80, textAlign: 'center', borderRadius: 10, padding: compact ? '8px 4px' : '10px 6px',
                   border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
                   color: 'var(--fg-primary)', fontSize: 13, outline: 'none',
                   fontFamily: 'var(--font-mono)', fontWeight: 700,
@@ -601,7 +636,7 @@ export function NutritionCalculatorCard({
                 value={servingUnit}
                 onChange={(e) => changeUnit(e.target.value)}
                 style={{
-                  borderRadius: 10, padding: '10px 8px', fontSize: 12, flex: '1 1 0px', minWidth: 0, width: '100%',
+                  borderRadius: 10, padding: compact ? '8px 6px' : '10px 8px', fontSize: 12, flex: '1 1 0px', minWidth: 0, width: '100%',
                   maxWidth: compact ? 'none' : 200,
                   border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
                   color: 'var(--fg-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
@@ -629,7 +664,7 @@ export function NutritionCalculatorCard({
                 onClick={handleAdd}
                 disabled={!selectedFood || !servingQty || grams <= 0}
                 style={{
-                  padding: '0 12px',
+                  padding: compact ? '0 10px' : '0 12px',
                   fontSize: 12,
                   flexShrink: 0,
                   display: 'flex',
@@ -727,26 +762,112 @@ export function NutritionCalculatorCard({
                         </span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                      <span className="num" style={{ fontSize: 11, color: 'var(--sky-300)', fontFamily: 'var(--font-mono)' }}>
-                        {item.serving_g}g
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMealItem(index)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          padding: 2,
-                          color: 'var(--fg-quiet)',
-                          display: 'flex',
-                          alignItems: 'center',
-                        }}
-                        aria-label={`Remove ${item.name}`}
-                      >
-                        <Trash2 size={13} style={{ color: 'var(--fg-quiet)' }} />
-                      </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      {editingItemId === item.id ? (
+                        <>
+                          <input
+                            type="number"
+                            min={1}
+                            value={editingItemGrams}
+                            onChange={(e) => setEditingItemGrams(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEditedItem()
+                              if (e.key === 'Escape') setEditingItemId(null)
+                            }}
+                            style={{
+                              width: 54,
+                              textAlign: 'center',
+                              borderRadius: 6,
+                              padding: '2px 4px',
+                              border: '1px solid var(--sky-400)',
+                              background: 'rgba(0,0,0,0.2)',
+                              color: 'var(--fg-primary)',
+                              fontSize: 11,
+                              fontFamily: 'var(--font-mono)',
+                              fontWeight: 'bold',
+                              outline: 'none',
+                            }}
+                            autoFocus
+                          />
+                          <span style={{ fontSize: 11, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>g</span>
+                          <button
+                            type="button"
+                            onClick={handleSaveEditedItem}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: 2,
+                              color: 'var(--good)',
+                              display: 'flex',
+                              alignItems: 'center',
+                            }}
+                            aria-label="Save changes"
+                          >
+                            <Check size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingItemId(null)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: 2,
+                              color: 'var(--fg-quiet)',
+                              display: 'flex',
+                              alignItems: 'center',
+                            }}
+                            aria-label="Cancel editing"
+                          >
+                            <X size={13} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="num" style={{ fontSize: 11, color: 'var(--sky-300)', fontFamily: 'var(--font-mono)' }}>
+                            {item.serving_g}g
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditItem(item)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: 2,
+                              color: 'var(--fg-quiet)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              transition: 'color 0.15s',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--fg-secondary)'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--fg-quiet)'}
+                            aria-label={`Edit quantity of ${item.name}`}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMealItem(index)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: 2,
+                              color: 'var(--fg-quiet)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              transition: 'color 0.15s',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--bad)'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--fg-quiet)'}
+                            aria-label={`Remove ${item.name}`}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
