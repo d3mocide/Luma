@@ -106,15 +106,16 @@ export function ScanTab({ onAddItems }: Props) {
           setIsScanning(false)
           try {
             const food = await api.post<Record<string, unknown>>('/log/meal/barcode', { barcode: code })
+            const measures = food.household_measures as HouseholdMeasure[] | undefined
             setPending({
               id: food.id as string,
               name: food.name as string,
               brand: food.brand as string | undefined,
               serving_size_g: food.serving_size_g as number | undefined,
               nutrients_per_100g: food.nutrients_per_100g as Record<string, number>,
-              household_measures: food.household_measures as HouseholdMeasure[] | undefined,
+              household_measures: measures,
             })
-            const hasMeasures = (food.household_measures?.length ?? 0) > 0
+            const hasMeasures = (measures?.length ?? 0) > 0
             setPendingUnit(hasMeasures ? 'hm:0' : 'g')
             setPendingQty(String(hasMeasures ? 1 : Math.round((food.serving_size_g as number) || 100)))
             setTimeout(() => qtyRef.current?.select(), 60)
