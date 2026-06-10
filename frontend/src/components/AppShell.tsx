@@ -50,8 +50,14 @@ export default function AppShell() {
     const handleResize = () => {
       const height = visualViewport.height
       document.documentElement.style.setProperty('--visual-viewport-height', `${height}px`)
-      // Prevent layout viewport scroll offsets on iOS when keyboard is active
-      if (window.scrollY > 0) {
+      // The on-screen keyboard shrinks the visual viewport well below the layout
+      // viewport (window.innerHeight). Detect that gap so the shell can surface
+      // the composer above the keyboard instead of behind the floating nav.
+      const keyboardOpen = window.innerHeight - height > 120
+      document.body.classList.toggle('keyboard-open', keyboardOpen)
+      // iOS shifts the layout viewport when the keyboard opens; pin it back so
+      // the fixed shell stays aligned to the visible area above the keyboard.
+      if (keyboardOpen && window.scrollY > 0) {
         window.scrollTo(0, 0)
         document.body.scrollTop = 0
       }
@@ -64,6 +70,7 @@ export default function AppShell() {
     return () => {
       visualViewport.removeEventListener('resize', handleResize)
       visualViewport.removeEventListener('scroll', handleResize)
+      document.body.classList.remove('keyboard-open')
     }
   }, [])
 
