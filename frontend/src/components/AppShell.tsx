@@ -51,7 +51,7 @@ export default function AppShell() {
       const height = visualViewport.height
       document.documentElement.style.setProperty('--visual-viewport-height', `${height}px`)
       // Prevent layout viewport scroll offsets on iOS when keyboard is active
-      if (document.body.classList.contains('keyboard-open') && window.scrollY > 0) {
+      if (window.scrollY > 0) {
         window.scrollTo(0, 0)
         document.body.scrollTop = 0
       }
@@ -66,44 +66,6 @@ export default function AppShell() {
       visualViewport.removeEventListener('scroll', handleResize)
     }
   }, [])
-
-  useEffect(() => {
-    const handleFocusIn = (e: FocusEvent) => {
-      const target = e.target as HTMLElement
-      if (
-        target &&
-        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') &&
-        window.location.pathname === '/coach'
-      ) {
-        document.body.classList.add('keyboard-open')
-        // Instantly align viewport on focus to prevent panning animation
-        setTimeout(() => {
-          window.scrollTo(0, 0)
-          document.body.scrollTop = 0
-        }, 30)
-      }
-    }
-
-    const handleFocusOut = (e: FocusEvent) => {
-      const target = e.target as HTMLElement
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-        document.body.classList.remove('keyboard-open')
-      }
-    }
-
-    document.addEventListener('focusin', handleFocusIn)
-    document.addEventListener('focusout', handleFocusOut)
-
-    return () => {
-      document.removeEventListener('focusin', handleFocusIn)
-      document.removeEventListener('focusout', handleFocusOut)
-      document.body.classList.remove('keyboard-open')
-    }
-  }, [])
-
-  useEffect(() => {
-    document.body.classList.remove('keyboard-open')
-  }, [location.pathname])
 
   if (isLoading || !swReady) {
     return <SplashScreen />
