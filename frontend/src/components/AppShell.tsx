@@ -43,92 +43,10 @@ export default function AppShell() {
     retry: false,
   })
 
-  useEffect(() => {
-    // Soft-keyboard handling for touch devices. On iOS standalone the keyboard
-    // IS reported reliably through visualViewport (on-device captures show
-    // vv.resize firing ~70ms after focus with the exact keyboard height). The
-    // old approach guessed the height and let iOS pan the whole fixed shell to
-    // reveal occluded fields (header sliding off-screen, composer flying up).
-    //
-    // Instead, size the app to the visible region: when .luma-bg is only as
-    // tall as visualViewport.height, the focused field is never hidden behind
-    // the keyboard, so iOS has no reason to pan. The header stays put and a
-    // bottom-pinned field (the coach composer) lands just above the keyboard.
-    if (!window.matchMedia('(pointer: coarse)').matches) return
-    const vv = window.visualViewport
-    if (!vv) return
-
-    const root = document.documentElement
-    // Last *measured* keyboard height, used to pre-shrink on focus before iOS
-    // reports anything. Seeded with a one-time estimate; replaced by the exact
-    // value the first time visualViewport resizes.
-    let lastKb = Math.round(window.innerHeight * 0.45)
-    let closeTimer = 0
-
-    const openTo = (visibleHeight: number, keyboard: number) => {
-      window.clearTimeout(closeTimer)
-      document.body.classList.remove('keyboard-closing')
-      root.style.setProperty('--app-height', `${Math.round(visibleHeight)}px`)
-      root.style.setProperty('--keyboard-inset', `${Math.round(keyboard)}px`)
-      document.body.classList.add('keyboard-open')
-    }
-
-    // Pre-empt the pan: when a field is focused, collapse the shell to the
-    // expected visible height *immediately*, before iOS shows the keyboard and
-    // decides whether to pan. With the field already above where the keyboard
-    // will land, iOS has no reason to pan — so the header never moves and
-    // there is no pan-then-snap flash. The exact height arrives via `apply`
-    // (visualViewport resize) ~75ms later and reconciles silently.
-    const onFocusIn = (e: FocusEvent) => {
-      const t = e.target
-      if (!(t instanceof HTMLElement) || (t.tagName !== 'INPUT' && t.tagName !== 'TEXTAREA')) return
-      openTo(window.innerHeight - lastKb, lastKb)
-    }
-
-    const apply = () => {
-      // Keyboard height = layout viewport − visible region. NOTE: do not
-      // subtract vv.offsetTop — offsetTop is how far iOS has *panned* the
-      // visual viewport (large when a bottom-pinned field like the coach
-      // composer is focused), not part of the keyboard. Subtracting it made
-      // the measured height collapse below threshold exactly when the page
-      // panned, so the shell never shrank and the pan was left in place.
-      const keyboard = Math.max(0, Math.round(window.innerHeight - vv.height))
-      if (keyboard > 80) {
-        lastKb = keyboard
-        openTo(vv.height, keyboard)
-        // If iOS still managed a pan before the pre-shrink landed, undo it so
-        // the shell stays glued to the top of the visible region.
-        if (window.scrollY !== 0) window.scrollTo(0, 0)
-      } else {
-        // Closing: animate the shell back to full height (keyboard-closing CSS),
-        // then drop the override once the transition has finished.
-        document.body.classList.remove('keyboard-open')
-        document.body.classList.add('keyboard-closing')
-        window.clearTimeout(closeTimer)
-        closeTimer = window.setTimeout(() => {
-          document.body.classList.remove('keyboard-closing')
-          root.style.removeProperty('--app-height')
-          root.style.removeProperty('--keyboard-inset')
-        }, 240)
-      }
-    }
-
-    document.addEventListener('focusin', onFocusIn)
-    vv.addEventListener('resize', apply)
-    vv.addEventListener('scroll', apply)
-    apply()
-
-    return () => {
-      window.clearTimeout(closeTimer)
-      document.removeEventListener('focusin', onFocusIn)
-      vv.removeEventListener('resize', apply)
-      vv.removeEventListener('scroll', apply)
-      root.style.removeProperty('--app-height')
-      root.style.removeProperty('--keyboard-inset')
-      document.body.classList.remove('keyboard-open')
-      document.body.classList.remove('keyboard-closing')
-    }
-  }, [])
+  // Soft keyboard is handled natively: on mobile the document scrolls (see the
+  // .app-shell-* / mobile native-scroll rules in index.css), so iOS reveals
+  // focused inputs by scrolling the page itself and the sticky header stays
+  // pinned — no visualViewport math, no shell resizing.
 
   if (isLoading || !swReady) {
     return <SplashScreen />
@@ -145,32 +63,24 @@ export default function AppShell() {
   const initials = getUserInitials(user.display_name)
 
   return (
-    <div className="luma-bg" style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'row' }}>
+    <div className="luma-bg app-shell-root">
       <LogSheet />
 
       {/* Desktop Sidebar */}
       <DesktopSidebar user={user} isTodayLoading={isTodayLoading} />
 
-      {/* Content column — flex column so mobile header/nav are in-flow (not fixed) */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-        {/* Mobile header anchored to top of column */}
+      {/* Content column. Desktop: fixed flex column with an inner scrolling
+          <main>. Mobile: native document scroll (see .app-shell-* in css). */}
+      <div className="app-shell-col">
+        {/* Mobile header — sticky-pinned on mobile */}
         {!isLogRoute && <MobileHeader initials={initials} />}
 
-        {/* Scrollable page content */}
-        <main
-          className="thin-scroll mobile-shell-main"
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: 'auto',
-            overscrollBehavior: 'contain',
-            position: 'relative',
-          }}
-        >
+        {/* Page content */}
+        <main className="thin-scroll mobile-shell-main app-shell-main">
           <Outlet />
         </main>
 
-        {/* Mobile nav anchored to bottom of column */}
+        {/* Mobile nav — fixed to the viewport bottom on mobile */}
         {!isLogRoute && <MobileNav />}
       </div>
     </div>

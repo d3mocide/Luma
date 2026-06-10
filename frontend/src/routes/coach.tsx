@@ -35,11 +35,21 @@ export default function CoachRoute() {
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
   const seedSentRef = useRef(false)
 
+  // Scroll the messages list to the bottom by moving ITS OWN scroller — never
+  // scrollIntoView, which also scrolls the window/visual viewport and, with the
+  // keyboard up on iOS, pans the whole fixed shell (header off-screen, nav
+  // wedged under the composer).
+  const scrollMessagesToEnd = (behavior: ScrollBehavior) => {
+    const el = messagesRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior })
+  }
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    scrollMessagesToEnd('smooth')
   }, [messages])
 
   // Pre-populate input from thread_seed when navigating from an insight card
@@ -285,7 +295,7 @@ export default function CoachRoute() {
       ) : (
         <>
           {/* Messages */}
-          <div className="thin-scroll coach-messages" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '32px 40px', position: 'relative', zIndex: 1 }}>
+          <div ref={messagesRef} className="thin-scroll coach-messages" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '32px 40px', position: 'relative', zIndex: 1 }}>
             <div className="coach-messages-container" style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
               {messages.length === 0 && <CoachIntro onSuggest={send} />}
@@ -369,9 +379,11 @@ export default function CoachRoute() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
-                  // The keyboard-open lift shrinks the messages area; re-pin
-                  // the conversation to its latest message after that reflow.
-                  onFocus={() => requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ block: 'end' }))}
+                  // The keyboard-open shrink reduces the messages area; re-pin
+                  // the conversation to its latest message by scrolling the
+                  // list's own scroller (not scrollIntoView, which would pan
+                  // the shell on iOS).
+                  onFocus={() => requestAnimationFrame(() => scrollMessagesToEnd('auto'))}
                   placeholder="Ask Luma…"
                   disabled={streaming}
                   style={{
