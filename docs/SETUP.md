@@ -113,13 +113,18 @@ Each role routes independently. Mix local and cloud freely.
 |---|---|---|
 | `LOCAL_AI_API_BASE` | _(empty)_ | Base URL for any OpenAI-compatible local endpoint (e.g. `http://host.docker.internal:11434` for Ollama) |
 | `LOCAL_AI_API_KEY` | _(empty)_ | API key for local endpoint (most Ollama setups don't need this) |
-| `FOOD_EXTRACTOR_MODEL` | `gemini/gemini-2.5-flash` | Voice transcript → structured meal items |
-| `FOOD_EXTRACTOR_FALLBACK_MODEL` | _(empty)_ | Fallback if primary fails |
-| `VISION_CLASSIFIER_MODEL` | `gemini/gemini-2.5-flash` | Photo → meal items (Phase 2) |
+| `FOOD_EXTRACTOR_MODEL` | `gemini/gemini-3.5-flash` | Voice transcript → structured meal items |
+| `FOOD_EXTRACTOR_FALLBACK_MODEL` | `anthropic/claude-haiku-4-5` | Fallback if primary fails |
+| `VISION_CLASSIFIER_MODEL` | `gemini/gemini-3.5-flash` | Photo → meal items |
+| `VISION_CLASSIFIER_FALLBACK_MODEL` | `anthropic/claude-haiku-4-5` | Fallback if primary fails |
 | `MEAL_PLANNER_MODEL` | `anthropic/claude-sonnet-4-5` | 7-day plan generation |
-| `MEAL_PLANNER_FALLBACK_MODEL` | _(empty)_ | |
-| `COACH_MODEL` | `gemini/gemini-2.5-flash` | Conversational coaching (Phase 2) |
-| `INSIGHT_NARRATOR_MODEL` | `anthropic/claude-sonnet-4-5` | Alert → insight headline (Phase 2) |
+| `MEAL_PLANNER_FALLBACK_MODEL` | `gemini/gemini-3.5-flash` | Fallback if primary fails |
+| `COACH_MODEL` | `gemini/gemini-3.5-flash` | Conversational coaching |
+| `COACH_FALLBACK_MODEL` | `anthropic/claude-haiku-4-5` | Fallback if primary fails |
+| `INSIGHT_NARRATOR_MODEL` | `gemini/gemini-3.5-flash` | Alert → insight headline |
+| `INSIGHT_NARRATOR_FALLBACK_MODEL` | `anthropic/claude-haiku-4-5` | Fallback if primary fails |
+| `RECIPE_IMPORT_MODEL` | `gemini/gemini-3.5-flash` | URL → recipe import |
+| `RECIPE_IMPORT_FALLBACK_MODEL` | `anthropic/claude-haiku-4-5` | Fallback if primary fails |
 
 **Prefix rules:**
 
@@ -163,13 +168,72 @@ Available sizes (accuracy / VRAM tradeoff): `tiny.en` · `base.en` · `small.en`
 |---|---|
 | `USDA_API_KEY` | Optional. Free key from [fdc.nal.usda.gov](https://fdc.nal.usda.gov/api-key-signup). Enables live USDA FoodData Central fallback when local food search returns fewer than 5 results. |
 
+### Push Notifications
+
+Push notifications are optional. Leave the VAPID variables blank to disable them entirely.
+
+Generate a key pair with:
+
+```bash
+make gen-vapid   # requires containers to be running
+```
+
+Copy the printed values into `.env`:
+
+| Variable | Description |
+|---|---|
+| `VAPID_PRIVATE_KEY` | VAPID private key (keep secret) |
+| `VAPID_PUBLIC_KEY` | VAPID public key (sent to browser) |
+| `VAPID_CLAIMS_EMAIL` | Contact email embedded in VAPID claims — use your own address |
+
+### Email
+
+Outbound email is used for family group invitations. Three send paths are supported; Luma auto-detects which one to use based on which variables are set.
+
+**Path A — Microsoft Graph API** (recommended for M365)
+
+Set `SMTP_OAUTH_TOKEN_URL` to a `microsoftonline.com` URL. Luma uses the Microsoft Graph `Mail.Send` API. No licensed mailbox is required — a shared mailbox is sufficient. Grant `Mail.Send` application permission in Entra ID (portal.azure.com) and provide admin consent.
+
+| Variable | Description |
+|---|---|
+| `SMTP_FROM` | Sender address (must be a mailbox in your tenant) |
+| `SMTP_OAUTH_TOKEN_URL` | Token endpoint, e.g. `https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/token` |
+| `SMTP_OAUTH_CLIENT_ID` | App registration client ID |
+| `SMTP_OAUTH_CLIENT_SECRET` | App registration client secret |
+
+**Path B — SMTP XOAUTH2** (Google Workspace or other OAuth providers)
+
+Set `SMTP_HOST` and `SMTP_OAUTH_TOKEN_URL` (non-Microsoft URL). For Google Workspace, grant `https://mail.google.com/` via domain-wide delegation and set `SMTP_OAUTH_SCOPE=https://mail.google.com/`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `SMTP_HOST` | _(empty)_ | e.g. `smtp.gmail.com` |
+| `SMTP_PORT` | `587` | SMTP port |
+| `SMTP_USE_TLS` | `true` | Enable STARTTLS |
+
+**Path C — Basic Auth SMTP** (Mailgun, Postmark, SendGrid, self-hosted)
+
+Set `SMTP_HOST` + `SMTP_USER` + `SMTP_PASSWORD`. Leave `SMTP_OAUTH_TOKEN_URL` blank.
+
+| Variable | Description |
+|---|---|
+| `SMTP_USER` | SMTP username |
+| `SMTP_PASSWORD` | SMTP password |
+
+All paths also use:
+
+| Variable | Default | Description |
+|---|---|---|
+| `APP_BASE_URL` | `http://localhost:5173` | Public URL embedded in invitation links |
+
 ### App
 
 | Variable | Default | Description |
 |---|---|---|
 | `ENVIRONMENT` | `development` | Set to `production` to enable stricter error handling and disable debug routes |
 | `CORS_ORIGINS` | `http://localhost:5173,https://localhost` | Comma-separated list of allowed origins |
-| `VITE_USE_MOCK_DATA` | `1` | `1` = mock API responses; `0` = live backend |
+| `SERVER_TIMEZONE` | `UTC` | IANA timezone for calendar-day boundaries (streaks, `/today`, goal recommendations). Set to your local timezone, e.g. `America/New_York`. |
+| `VITE_USE_MOCK_DATA` | `0` | `1` = mock API responses; `0` = live backend |
 
 ---
 

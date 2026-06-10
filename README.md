@@ -28,12 +28,16 @@ Luma is a self-hosted personal health assistant built for long-term weight and n
 | **Today Dashboard** | ✅ Live | Weight trend hero, daily adherence ring, active plan preview, and biometric strip |
 | **Trend Charts** | ✅ Live | Interactive 7 d / 30 d / 90 d / 1 y charts for every tracked metric via TimescaleDB continuous aggregates |
 | **Goals & Preferences** | ✅ Live | Per-user calorie, sat-fat, and soluble-fibre targets; metric or imperial units |
-| **Meal Logging** | ✅ Live | Voice (Whisper STT → LLM extraction), barcode scanner (Open Food Facts), or fuzzy food search |
-| **Meal Planning** | ✅ Live | AI-generated 7-day plan with per-slot nutrition, food-browser swaps, and shopping list export |
-| **Food Database** | ✅ Live | Local pg_trgm cache + Open Food Facts + USDA FoodData Central live fallback |
-| **Alerts & Insights** | 🔒 Phase 2 | Eight deterministic health rules + LLM-narrated insight headlines |
-| **Coaching Chat** | 🔒 Phase 2 | Streaming AI coach with direct tool access to your biometric and meal data |
-| **Anomaly Detection** | 🔒 Phase 3 | Prophet / IsolationForest ML on long-horizon biometric trends |
+| **Meal Logging** | ✅ Live | Voice (Whisper STT → LLM extraction), barcode scanner (Open Food Facts), photo (AI vision), or fuzzy food search |
+| **Meal Planning** | ✅ Live | AI-generated 7-day plan with per-slot nutrition, food-browser swaps, lock/pin, drag-reorder, and shopping list export |
+| **Food Database** | ✅ Live | Local pg_trgm cache + Open Food Facts + USDA FoodData Central fallback; ~170 seeded reference foods; category browse + nutrition flags |
+| **Favorites & Combos** | ✅ Live | One-tap re-logging of frequent meals; quick combo builder sorted by frequency |
+| **Recipes** | ✅ Live | User-created composite meals with ingredient lists, serving sizes, and computed nutrition |
+| **Alerts & Insights** | ✅ Live | 10+ deterministic health rules + IsolationForest anomaly detection + LLM-narrated insight headlines |
+| **Coaching Chat** | ✅ Live | Streaming SSE AI coach with tool access to biometrics, meals, plans, and goals |
+| **Weekly Recap** | ✅ Live | Sunday auto-narration of 7-day nutrition and weight summary, delivered via push notification |
+| **Push Notifications** | ✅ Live | VAPID Web Push with per-user nudge schedule and timezone-aware delivery |
+| **Family Sharing** | ✅ Live | Groups, email invitations, role-based access, shared food library |
 
 ## Architecture
 

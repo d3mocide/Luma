@@ -73,13 +73,15 @@ make migrate
 docker compose exec api pytest
 ```
 
-**Phase 0 minimum test suite:**
+Key test coverage areas:
 
 | Test | Description |
 |---|---|
 | Import smoke test | `pytest` can import all modules without error |
 | Auth round-trip | `POST /auth/login` → `GET /auth/me` returns correct user |
-| HAE ingest smoke | `POST /ingest/hae` with valid HMAC returns 200 |
+| HAE ingest smoke | `POST /ingest/hae` with valid Bearer token returns 200 |
+| Meal logging paths | Voice, barcode, text search, and photo log endpoints |
+| Alert engine rules | Each deterministic rule evaluated against fixture biometrics |
 
 Run a specific test file:
 
