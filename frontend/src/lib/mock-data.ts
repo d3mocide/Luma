@@ -1,4 +1,5 @@
 import { TodayData } from './api'
+import { toNutrients } from './nutrients'
 
 type WeightPoint = {
   date: string
@@ -55,8 +56,8 @@ export function createMockTodayData(): TodayData {
         headline: 'Steel cut oats with blueberries',
         raw_input: 'Steel cut oats with blueberries',
         items: [
-          { name: 'Steel cut oats', quantity: 1, unit: 'cup cooked', estimated_weight_g: 234, nutrients: { calories: 166, protein_g: 5.9, carbohydrates_g: 28, fat_g: 3.6, fiber_g: 4, saturated_fat_g: 0.7, soluble_fiber_g: 2, sodium_mg: 9 } as any },
-          { name: 'Blueberries', quantity: 0.5, unit: 'cup', estimated_weight_g: 74, nutrients: { calories: 42, protein_g: 0.5, carbohydrates_g: 11, fat_g: 0.2, fiber_g: 1.8, saturated_fat_g: 0, soluble_fiber_g: 0.8, sodium_mg: 1 } as any },
+          { name: 'Steel cut oats', quantity: 1, unit: 'cup cooked', estimated_weight_g: 234, nutrients: toNutrients({ calories: 166, protein_g: 5.9, carbohydrates_g: 28, fat_g: 3.6, fiber_g: 4, saturated_fat_g: 0.7, soluble_fiber_g: 2, sodium_mg: 9 }) },
+          { name: 'Blueberries', quantity: 0.5, unit: 'cup', estimated_weight_g: 74, nutrients: toNutrients({ calories: 42, protein_g: 0.5, carbohydrates_g: 11, fat_g: 0.2, fiber_g: 1.8, saturated_fat_g: 0, soluble_fiber_g: 0.8, sodium_mg: 1 }) },
         ]
       },
     ],

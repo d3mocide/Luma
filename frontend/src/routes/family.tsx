@@ -17,6 +17,7 @@ export default function FamilyRoute() {
 
   // Reset to list when token param is cleared
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!inviteToken && view === 'accept') setView('list')
   }, [inviteToken, view])
 

@@ -22,7 +22,6 @@ export function useSwReady(): boolean {
 
   useEffect(() => {
     if (_released) {
-      setReady(true)
       return
     }
     const notify = () => setReady(true)
