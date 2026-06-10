@@ -262,7 +262,7 @@ export default function TodayRoute() {
                 <button
                   type="button"
                   onClick={() => setShowDayBreakdown(true)}
-                  style={{ marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--fg-tertiary)', textDecoration: 'underline', textAlign: 'left' }}
+                  style={{ display: 'block', width: '100%', marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--fg-tertiary)', textDecoration: 'underline', textAlign: 'right' }}
                 >
                   Full nutrient breakdown →
                 </button>
@@ -416,37 +416,34 @@ export default function TodayRoute() {
         </div>
 
         {/* Rings */}
-        <div className="glass" style={{ padding: 20, marginBottom: 14, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: -115, right: -130, width: 320, height: 280, background: 'radial-gradient(ellipse 60% 56% at 68% 34%, rgba(56,189,248,0.24), transparent 70%), radial-gradient(ellipse 54% 56% at 88% 78%, rgba(56,189,248,0.10), transparent 72%)', filter: 'blur(14px)', opacity: 0.88, pointerEvents: 'none' }}/>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: 150, height: 150, position: 'relative' }}>
-                <ActivityRings size={150} values={rings} thickness={11} gap={5}/>
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div className="num" style={{ fontSize: 20, lineHeight: 1, fontWeight: 500, color: 'var(--fg-primary)' }}>
-                    {rings.filter(r => r >= 0.9).length} / 3
-                  </div>
+        <div className="glass" style={{ padding: 24, display: 'flex', gap: 22, alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ width: 150, height: 150, position: 'relative' }}>
+              <ActivityRings size={150} values={rings} thickness={11} gap={5}/>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="num" style={{ fontSize: 20, lineHeight: 1, fontWeight: 500, color: 'var(--fg-primary)' }}>
+                  {rings.filter(r => r >= 0.9).length} / 3
                 </div>
               </div>
-              <div style={{ marginTop: 8, fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="eyebrow">Today</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-                <RingLegend color="var(--sky-400)" label="Calories" value={`${fmt(adherence?.calories?.logged, 0)} / ${fmt(adherence?.calories?.target, 0)}`} pct={adherence?.calories?.pct ?? 0}/>
-                <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
-                <RingLegend color="var(--good)" label="Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
-              </div>
-              {Object.keys(dayNutrition).length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowDayBreakdown(true)}
-                  style={{ marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--fg-tertiary)', textDecoration: 'underline', textAlign: 'left' }}
-                >
-                  Full nutrient breakdown →
-                </button>
-              )}
+            <div style={{ marginTop: 8, fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="eyebrow">Today</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
+              <RingLegend color="var(--sky-400)" label="Calories" value={`${fmt(adherence?.calories?.logged, 0)} / ${fmt(adherence?.calories?.target, 0)}`} pct={adherence?.calories?.pct ?? 0}/>
+              <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
+              <RingLegend color="var(--good)" label="Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
             </div>
+            {Object.keys(dayNutrition).length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowDayBreakdown(true)}
+                style={{ display: 'block', width: '100%', marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--fg-tertiary)', textDecoration: 'underline', textAlign: 'right' }}
+              >
+                Full nutrient breakdown →
+              </button>
+            )}
           </div>
         </div>
 
