@@ -116,8 +116,11 @@ All services (except `frontend`) run with `restart: unless-stopped`.
 | Task | Schedule | Description |
 |---|---|---|
 | OFF monthly ingest | Monthly | Downloads the Open Food Facts JSONL dump and merges new foods into the local database |
-| Alert engine | Every 30 min (Phase 2) | Evaluates all 8 health rules against recent biometrics; fires alerts when thresholds are crossed |
-| Insight generation | On-demand (Phase 2) | Calls the insight narrator agent to generate human-readable headlines for new alerts |
+| Alert engine | Every 30 min | Evaluates 10+ deterministic health rules + IsolationForest anomaly detection + SQL trend reversal against recent biometrics and meals |
+| Insight generation | On new alert | Calls the insight narrator agent to generate human-readable headlines for new alerts |
+| Weekly recap | Sunday (server TZ) | Narrates a 7-day nutrition and weight summary; dispatches push notification if subscriptions exist |
+| Push nudges | Per-user schedule | Delivers personalised nudges based on user activity and goals, respecting per-user timezone |
+| Family invite email | On-demand | Sends invitation email when a user is added to a family group |
 
 **Key environment variables:** Same as `api` — both services share the same image and config.
 
