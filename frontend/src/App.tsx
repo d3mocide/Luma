@@ -11,6 +11,7 @@ import LogRoute from './routes/log'
 import FavoritesRoute from './routes/favorites'
 import FamilyRoute from './routes/family'
 import { OfflineBanner, InstallPrompt } from './components/PwaPrompts'
+import KeyboardDebugOverlay from './components/KeyboardDebugOverlay'
 
 export default function App() {
   const theme = useUIStore((s) => s.theme)
@@ -23,6 +24,7 @@ export default function App() {
     <BrowserRouter>
       <OfflineBanner/>
       <InstallPrompt/>
+      <KeyboardDebugOverlay/>
       <Routes>
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/today" replace />} />
