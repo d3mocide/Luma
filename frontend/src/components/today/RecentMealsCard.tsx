@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Trash2, ChevronRight } from 'lucide-react'
+import { Trash2, ChevronRight, Pencil } from 'lucide-react'
 import { NutrientBreakdownSheet } from './NutrientBreakdownSheet'
+import type { DraftItem } from '../log-sheet/types'
 
-type RecentMeal = {
+export type RecentMeal = {
   id: string
   ts: string
   slot: string
@@ -11,6 +12,8 @@ type RecentMeal = {
   calories: number
   headline: string
   nutrition?: Record<string, number>
+  items?: DraftItem[]
+  raw_input?: string | null
 }
 
 function formatMealTime(value: string) {
@@ -24,11 +27,13 @@ export function RecentMealsCard({
   compact,
   onDelete,
   deletingId,
+  onEdit,
 }: {
   meals?: RecentMeal[]
   compact?: boolean
   onDelete?: (id: string) => void
   deletingId?: string | null
+  onEdit?: (meal: RecentMeal) => void
 }) {
   const safeMeals = Array.isArray(meals) ? meals : []
   const [breakdownMeal, setBreakdownMeal] = useState<RecentMeal | null>(null)
@@ -86,29 +91,52 @@ export function RecentMealsCard({
                       {formatMealTime(meal.ts)}
                     </div>
                   </div>
-                  {meal.nutrition && !onDelete && (
+                  {meal.nutrition && !onDelete && !onEdit && (
                     <ChevronRight size={13} strokeWidth={1.8} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
                   )}
-                  {onDelete && (
-                    <button
-                      type="button"
-                      className="btn"
-                      disabled={isDeleting}
-                      onClick={(e) => { e.stopPropagation(); onDelete(meal.id) }}
-                      title="Delete meal"
-                      style={{
-                        padding: '6px',
-                        borderRadius: 8,
-                        border: '1px solid var(--glass-edge)',
-                        background: 'transparent',
-                        color: 'var(--fg-quiet)',
-                        flexShrink: 0,
-                        lineHeight: 0,
-                      }}
-                    >
-                      <Trash2 size={13} strokeWidth={1.8} />
-                    </button>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                    {onEdit && (
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={isDeleting}
+                        onClick={(e) => { e.stopPropagation(); onEdit(meal) }}
+                        title="Edit meal"
+                        style={{
+                          padding: '6px',
+                          borderRadius: 8,
+                          border: '1px solid var(--glass-edge)',
+                          background: 'transparent',
+                          color: 'var(--fg-quiet)',
+                          flexShrink: 0,
+                          lineHeight: 0,
+                          marginRight: onDelete ? 6 : 0,
+                        }}
+                      >
+                        <Pencil size={13} strokeWidth={1.8} />
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={isDeleting}
+                        onClick={(e) => { e.stopPropagation(); onDelete(meal.id) }}
+                        title="Delete meal"
+                        style={{
+                          padding: '6px',
+                          borderRadius: 8,
+                          border: '1px solid var(--glass-edge)',
+                          background: 'transparent',
+                          color: 'var(--fg-quiet)',
+                          flexShrink: 0,
+                          lineHeight: 0,
+                        }}
+                      >
+                        <Trash2 size={13} strokeWidth={1.8} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             })}

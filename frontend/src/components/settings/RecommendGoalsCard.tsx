@@ -124,6 +124,9 @@ export function RecommendGoalsCard({ onApply, isSaving }: Props) {
             {rec.daily_protein_g_min != null && (
               <RecPill label="Protein floor" value={`${rec.daily_protein_g_min} g`} />
             )}
+            {rec.daily_sugar_g_max != null && (
+              <RecPill label="Sugar max" value={`${rec.daily_sugar_g_max} g`} />
+            )}
           </div>
 
           {rec.basis.data_quality_warning && (

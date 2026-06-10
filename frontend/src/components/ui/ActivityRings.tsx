@@ -1,22 +1,31 @@
 import { useId } from 'react'
 
+interface RingColor {
+  from: string
+  to: string
+  glow: string
+}
+
 interface ActivityRingsProps {
   size?: number
-  values?: [number, number, number]
+  values?: number[]
+  colors?: RingColor[]
   thickness?: number
   gap?: number
   animate?: boolean
 }
 
-const RING_COLORS = [
+const DEFAULT_COLORS = [
   { from: '#38bdf8', to: '#0ea5e9', glow: 'rgba(56,189,248,0.5)' },
   { from: '#fde68a', to: '#fbbf24', glow: 'rgba(251,191,36,0.5)' },
   { from: '#86efac', to: '#34d399', glow: 'rgba(52,211,153,0.5)' },
+  { from: '#f472b6', to: '#ec4899', glow: 'rgba(244,114,182,0.5)' },
 ]
 
 export default function ActivityRings({
   size = 200,
-  values = [0.96, 0.83, 1.10],
+  values = [0.96, 0.83, 1.10, 0.5],
+  colors = DEFAULT_COLORS,
   thickness = 14,
   gap = 6,
   animate = true,
@@ -34,7 +43,7 @@ export default function ActivityRings({
       className="ring-svg"
     >
       <defs>
-        {RING_COLORS.map((c, i) => (
+        {colors.map((c, i) => (
           <linearGradient key={i} id={`ring-${id}-${i}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor={c.from} />
             <stop offset="100%" stopColor={c.to} />
@@ -83,14 +92,12 @@ export default function ActivityRings({
           </g>
         )
       })}
-      <style>{`
-        @keyframes ringDraw-${id}-0 { from { stroke-dashoffset: ${2 * Math.PI * radii[0]} } }
-        @keyframes ringDraw-${id}-1 { from { stroke-dashoffset: ${2 * Math.PI * radii[1]} } }
-        @keyframes ringDraw-${id}-2 { from { stroke-dashoffset: ${2 * Math.PI * radii[2]} } }
-        @keyframes ringOverage-${id}-0 { from { stroke-dashoffset: ${2 * Math.PI * radii[0]} } }
-        @keyframes ringOverage-${id}-1 { from { stroke-dashoffset: ${2 * Math.PI * radii[1]} } }
-        @keyframes ringOverage-${id}-2 { from { stroke-dashoffset: ${2 * Math.PI * radii[2]} } }
-      `}</style>
+      <style>{
+        values.map((_, i) => `
+          @keyframes ringDraw-${id}-${i} { from { stroke-dashoffset: ${2 * Math.PI * radii[i]} } }
+          @keyframes ringOverage-${id}-${i} { from { stroke-dashoffset: ${2 * Math.PI * radii[i]} } }
+        `).join('\n')
+      }</style>
     </svg>
   )
 }

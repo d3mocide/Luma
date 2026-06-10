@@ -21,6 +21,7 @@ export function createMockTodayData(): TodayData {
       calories: { logged: 1980, target: 2100, pct: 94 },
       sat_fat_g: { logged: 14, target: 18, pct: 78 },
       soluble_fiber_g: { logged: 11.8, target: 10, pct: 118 },
+      sugars_g: { logged: 24.5, target: 36, pct: 68 },
     },
     biometrics_latest: {
       hrv_ms: 49,
@@ -49,9 +50,14 @@ export function createMockTodayData(): TodayData {
         ts: new Date(now.getTime() - 40 * 60 * 1000).toISOString(),
         slot: 'breakfast',
         source: 'voice',
-        item_count: 3,
-        calories: 438,
+        item_count: 2,
+        calories: 208,
         headline: 'Steel cut oats with blueberries',
+        raw_input: 'Steel cut oats with blueberries',
+        items: [
+          { name: 'Steel cut oats', quantity: 1, unit: 'cup cooked', estimated_weight_g: 234, nutrients: { calories: 166, protein_g: 5.9, carbohydrates_g: 28, fat_g: 3.6, fiber_g: 4, saturated_fat_g: 0.7, soluble_fiber_g: 2, sodium_mg: 9 } as any },
+          { name: 'Blueberries', quantity: 0.5, unit: 'cup', estimated_weight_g: 74, nutrients: { calories: 42, protein_g: 0.5, carbohydrates_g: 11, fat_g: 0.2, fiber_g: 1.8, saturated_fat_g: 0, soluble_fiber_g: 0.8, sodium_mg: 1 } as any },
+        ]
       },
     ],
     active_insight: {
@@ -72,7 +78,8 @@ export function isTodaySparseData(data: TodayData): boolean {
     data.adherence_today.calories,
     data.adherence_today.sat_fat_g,
     data.adherence_today.soluble_fiber_g,
-  ].every((m) => m.logged == null && m.target == null)
+    data.adherence_today.sugars_g,
+  ].every((m) => m == null || (m.logged == null && m.target == null))
 
   return noWeight && noBio && noPlan && noAdherence
 }

@@ -25,14 +25,21 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const isPageMode = mode === 'page'
   const isVisible = isPageMode || isOpen
 
+  const pendingLogItems = useUIStore((s) => s.pendingLogItems)
+  const clearPendingLogItems = useUIStore((s) => s.clearPendingLogItems)
+
+  const editingMealId = useUIStore((s) => s.editingMealId)
+  const editingMealItems = useUIStore((s) => s.editingMealItems)
+  const editingMealSlot = useUIStore((s) => s.editingMealSlot)
+  const editingMealName = useUIStore((s) => s.editingMealName)
+  const clearEditingMeal = useUIStore((s) => s.clearEditingMeal)
+
   const handleClose = () => {
     setMealName('')
+    clearEditingMeal()
     if (isPageMode) { onClose?.(); return }
     close()
   }
-
-  const pendingLogItems = useUIStore((s) => s.pendingLogItems)
-  const clearPendingLogItems = useUIStore((s) => s.clearPendingLogItems)
 
   const [activeTab, setActiveTab] = useState<'quick' | 'voice' | 'search' | 'scan'>('quick')
   const [slot, setSlot] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(getCurrentSlot)
@@ -56,6 +63,15 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
     }
   }, [pendingLogItems, clearPendingLogItems])
 
+  useEffect(() => {
+    if (editingMealId && editingMealItems && editingMealSlot) {
+      setSlot(editingMealSlot)
+      setDraftItems(editingMealItems)
+      setMealName(editingMealName || '')
+      setActiveTab('search')
+    }
+  }, [editingMealId, editingMealItems, editingMealSlot, editingMealName])
+
   const addItems = (items: DraftItem[]) => setDraftItems((prev) => [...prev, ...items])
   const addItem = (item: DraftItem) => setDraftItems((prev) => [...prev, item])
 
@@ -76,14 +92,23 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const totals = sumNutrients(draftItems)
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      api.post('/log/meal', {
+    mutationFn: () => {
+      if (editingMealId) {
+        return api.patch(`/log/meal/${editingMealId}`, {
+          slot,
+          items: draftItems,
+          nutrition: totals,
+          raw_input: mealName.trim() || transcription || 'Manual log',
+        })
+      }
+      return api.post('/log/meal', {
         slot,
         source: activeTab,
         items: draftItems,
         nutrition: totals,
         raw_input: mealName.trim() || transcription || 'Manual log',
-      }),
+      })
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['today'] })
       queryClient.invalidateQueries({ queryKey: ['meals'] })
@@ -226,11 +251,12 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
         {draftItems.length > 0 && (
           <div className="log-sheet-footer" style={{ padding: '16px 20px calc(env(safe-area-inset-bottom) + 16px)', borderTop: '1px solid var(--glass-edge)', background: 'linear-gradient(180deg, rgba(8,13,26,0.98), rgba(5,8,17,0.98))', display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', zIndex: 1 }}>
             <div className="eyebrow">Cumulative nutrition</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
               {[
                 { l: 'Calories', v: Math.round(totals.calories), c: 'var(--fg-primary)' },
                 { l: 'Sat Fat', v: `${totals.saturated_fat_g.toFixed(1)}g`, c: 'var(--bad)' },
                 { l: 'Sol Fiber', v: `${totals.soluble_fiber_g.toFixed(1)}g`, c: 'var(--good)' },
+                { l: 'Sugar', v: `${totals.sugars_g.toFixed(1)}g`, c: 'var(--aurora-pink)' },
                 { l: 'Protein', v: `${totals.protein_g.toFixed(1)}g`, c: 'var(--aurora-violet)' },
               ].map((n) => (
                 <div key={n.l} className="glass-inset" style={{ padding: '8px 10px', textAlign: 'center' }}>
@@ -291,7 +317,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               </button>
             )}
             <button className="btn btn-primary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} style={{ width: '100%', padding: '13px', fontSize: 14, opacity: saveMutation.isPending ? 0.7 : 1 }}>
-              {saveMutation.isPending ? 'Logging…' : 'Save meal log'}
+              {saveMutation.isPending ? (editingMealId ? 'Saving…' : 'Logging…') : (editingMealId ? 'Save changes' : 'Save meal log')}
             </button>
           </div>
         )}

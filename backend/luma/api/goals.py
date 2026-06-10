@@ -29,6 +29,7 @@ class GoalIn(BaseModel):
     daily_sat_fat_g_max: float | None = None
     daily_soluble_fiber_g: float | None = None
     daily_protein_g_min: float | None = None
+    daily_sugar_g_max: float | None = None
     dietary_pattern: str | None = None
 
 
@@ -50,6 +51,7 @@ async def get_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         "daily_sat_fat_g_max": _f(goal.daily_sat_fat_g_max),
         "daily_soluble_fiber_g": _f(goal.daily_soluble_fiber_g),
         "daily_protein_g_min": _f(goal.daily_protein_g_min),
+        "daily_sugar_g_max": _f(goal.daily_sugar_g_max),
         "dietary_pattern": goal.dietary_pattern,
     }
 
@@ -217,6 +219,11 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     else:
         protein_g = round(current_weight_kg * 0.8)
 
+    # Sugar limit: AHA <=36g for men, <=25g for women. Stricter <5% of energy under active LDL target.
+    sugar_base = 36.0 if sex == "male" else 25.0
+    sugar_max = round((cal_target * 0.05 / 4) * 2) / 2 if target_ldl else sugar_base
+    sugar_max = min(sugar_base, sugar_max)
+
     basis = {
         "tdee_kcal": round(tdee),
         "tdee_source": "mifflin_st_jeor",
@@ -261,7 +268,7 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
 
         rec_str = (
             f"{int(cal_target)} kcal/day, {sat_fat_max}g sat fat max, "
-            f"{sol_fiber}g soluble fiber"
+            f"{sol_fiber}g soluble fiber, {sugar_max}g sugar limit"
             + (f", {protein_g}g protein floor" if protein_g else "")
         )
 
@@ -313,6 +320,7 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         "daily_sat_fat_g_max": sat_fat_max,
         "daily_soluble_fiber_g": sol_fiber,
         "daily_protein_g_min": protein_g,
+        "daily_sugar_g_max": sugar_max,
         "basis": basis,
         "rationale": rationale,
     }

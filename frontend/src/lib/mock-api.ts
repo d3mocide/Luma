@@ -435,6 +435,11 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     return { status: 'ok', meal_event_id: 'mock-meal-' + Math.random().toString(36).substr(2, 9) }
   }
 
+  if (method === 'PATCH' && pathname.startsWith('/log/meal/')) {
+    requireAuth()
+    return { status: 'ok', message: 'Meal log updated successfully' }
+  }
+
   if (method === 'POST' && pathname === '/log/meal/barcode') {
     requireAuth()
     const body = parseBody(init)

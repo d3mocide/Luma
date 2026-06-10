@@ -74,6 +74,7 @@ class Goal(Base):
     daily_sat_fat_g_max: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     daily_soluble_fiber_g: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     daily_protein_g_min: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    daily_sugar_g_max: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     dietary_pattern: Mapped[str | None] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 

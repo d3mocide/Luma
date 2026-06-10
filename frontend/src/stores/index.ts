@@ -12,6 +12,12 @@ interface UIStore {
   pendingLogItems: DraftItem[] | null
   logWithItems: (items: DraftItem[]) => void
   clearPendingLogItems: () => void
+  editingMealId: string | null
+  editingMealItems: DraftItem[] | null
+  editingMealSlot: 'breakfast' | 'lunch' | 'dinner' | 'snack' | null
+  editingMealName: string | null
+  startEditingMeal: (id: string, items: DraftItem[], slot: 'breakfast' | 'lunch' | 'dinner' | 'snack', name: string) => void
+  clearEditingMeal: () => void
 }
 
 export const useUIStore = create<UIStore>()(
@@ -26,6 +32,23 @@ export const useUIStore = create<UIStore>()(
       pendingLogItems: null,
       logWithItems: (items) => set({ pendingLogItems: items, logSheetOpen: true }),
       clearPendingLogItems: () => set({ pendingLogItems: null }),
+      editingMealId: null,
+      editingMealItems: null,
+      editingMealSlot: null,
+      editingMealName: null,
+      startEditingMeal: (id, items, slot, name) => set({
+        editingMealId: id,
+        editingMealItems: items,
+        editingMealSlot: slot,
+        editingMealName: name,
+        logSheetOpen: true,
+      }),
+      clearEditingMeal: () => set({
+        editingMealId: null,
+        editingMealItems: null,
+        editingMealSlot: null,
+        editingMealName: null,
+      }),
     }),
     {
       name: 'luma-ui',

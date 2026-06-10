@@ -76,7 +76,11 @@ class SmokeRunner:
         status: int | None = None
         detail = ""
         ok = False
-        resp: requests.Response | None = None
+        if method.upper() != "GET":
+            csrf_token = self.session.cookies.get("csrf_token")
+            if csrf_token:
+                headers = kwargs.setdefault("headers", {})
+                headers["X-CSRF-Token"] = csrf_token
 
         try:
             resp = self.session.request(method, url, timeout=timeout, verify=self.verify_tls, **kwargs)

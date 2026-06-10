@@ -52,6 +52,7 @@ function FoodLibCard({ food, onClick }: { food: FoodResult; onClick?: () => void
   const protein = food.nutrients_per_100g?.protein_g ?? 0
   const fiber = food.nutrients_per_100g?.dietary_fiber_g ?? food.nutrients_per_100g?.soluble_fiber_g ?? 0
   const carbs = food.nutrients_per_100g?.carbohydrates_g ?? 0
+  const sugar = food.nutrients_per_100g?.sugars_g ?? 0
   const fat = food.nutrients_per_100g?.fat_g ?? 0
 
   const CardComponent = onClick ? 'button' : 'div'
@@ -130,6 +131,12 @@ function FoodLibCard({ food, onClick }: { food: FoodResult; onClick?: () => void
           <span className="food-db-macro-label">Carbs</span>
           <span className="num food-db-macro-val food-db-macro-val--carbs">
             {carbs.toFixed(1)}g
+          </span>
+        </div>
+        <div className="food-db-macro-col">
+          <span className="food-db-macro-label">Sugar</span>
+          <span className="num food-db-macro-val" style={{ color: 'var(--aurora-pink)' }}>
+            {sugar.toFixed(1)}g
           </span>
         </div>
         <div className="food-db-macro-col">

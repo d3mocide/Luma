@@ -6,7 +6,7 @@ import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { getCurrentSlot } from '../lib/format'
 import type { DraftItem, Favorite, FavoriteItem } from '../components/log-sheet/types'
-import { toNutrients, scaleByRatio } from '../lib/nutrients'
+import { toNutrients, scaleByRatio, sumNutrients } from '../lib/nutrients'
 import { ShareWithFamilyButton } from '../components/ShareWithFamilyButton'
 
 function mapFavoriteItemToDraft(i: FavoriteItem): DraftItem {
@@ -40,6 +40,16 @@ function totalSatFat(items: FavoriteItem[]): number {
 
 function totalSolFiber(items: FavoriteItem[]): number {
   const val = items.reduce((sum, i) => sum + (i.nutrients.soluble_fiber_g ?? 0), 0)
+  return Math.round(val * 10) / 10
+}
+
+function totalSugar(items: FavoriteItem[]): number {
+  const val = items.reduce((sum, i) => sum + (i.nutrients.sugars_g ?? 0), 0)
+  return Math.round(val * 10) / 10
+}
+
+function totalProtein(items: FavoriteItem[]): number {
+  const val = items.reduce((sum, i) => sum + (i.nutrients.protein_g ?? 0), 0)
   return Math.round(val * 10) / 10
 }
 
@@ -143,9 +153,10 @@ export default function FavoritesRoute() {
             fat_g: acc.fat_g + (n.fat_g || 0),
             fiber_g: acc.fiber_g + (n.fiber_g || 0),
             sodium_mg: acc.sodium_mg + (n.sodium_mg || 0),
+            sugars_g: acc.sugars_g + (n.sugars_g || 0),
           }
         },
-        { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0 }
+        { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0, sugars_g: 0 }
       )
       return api.post('/log/meal', {
         slot,
@@ -265,6 +276,9 @@ export default function FavoritesRoute() {
                   >
                     <span className="fav-title-text" style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-primary)', transition: 'color 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {fav.name}
+                      <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--fg-quiet)', marginLeft: 8 }}>
+                        ({fav.items.length} {fav.items.length === 1 ? 'item' : 'items'})
+                      </span>
                     </span>
                     <ChevronDown
                       size={14}
@@ -282,7 +296,7 @@ export default function FavoritesRoute() {
                     <div
                       className="favorite-card-info"
                       onClick={() => toggleExpand(fav.id)}
-                      style={{ cursor: 'pointer', fontSize: 12, color: 'var(--fg-quiet)', flex: 1, minWidth: 0 }}
+                      style={{ cursor: 'pointer', flex: 1, minWidth: 0 }}
                       onMouseEnter={(e) => {
                         const card = e.currentTarget.closest('.glass') as HTMLElement
                         const titleEl = card?.querySelector('.fav-title-text') as HTMLElement
@@ -294,10 +308,28 @@ export default function FavoritesRoute() {
                         if (titleEl) titleEl.style.color = 'var(--fg-primary)'
                       }}
                     >
-                      {fav.items.length} {fav.items.length === 1 ? 'item' : 'items'} ·{' '}
-                      <span className="num" style={{ color: 'var(--sky-400)' }}>{totalKcal(fav.items)}</span> kcal ·{' '}
-                      <span className="num" style={{ color: 'var(--bad)' }}>{totalSatFat(fav.items)}</span>g sat ·{' '}
-                      <span className="num" style={{ color: 'var(--good)' }}>{totalSolFiber(fav.items)}</span>g fiber
+                      <div className="favorite-macro-grid">
+                        <div className="favorite-macro-col">
+                          <span className="favorite-macro-label">Cal</span>
+                          <span className="num favorite-macro-val" style={{ color: 'var(--sky-400)' }}>{totalKcal(fav.items)}</span>
+                        </div>
+                        <div className="favorite-macro-col">
+                          <span className="favorite-macro-label">Sat Fat</span>
+                          <span className="num favorite-macro-val" style={{ color: 'var(--bad)' }}>{totalSatFat(fav.items)}g</span>
+                        </div>
+                        <div className="favorite-macro-col">
+                          <span className="favorite-macro-label">Sol Fib</span>
+                          <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{totalSolFiber(fav.items)}g</span>
+                        </div>
+                        <div className="favorite-macro-col">
+                          <span className="favorite-macro-label">Sugar</span>
+                          <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{totalSugar(fav.items)}g</span>
+                        </div>
+                        <div className="favorite-macro-col">
+                          <span className="favorite-macro-label">Protein</span>
+                          <span className="num favorite-macro-val" style={{ color: '#a78bfa' }}>{totalProtein(fav.items)}g</span>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="favorite-card-actions">
@@ -397,6 +429,14 @@ export default function FavoritesRoute() {
                                 </span>
                               </>
                             )}
+                            {item.nutrients.sugars_g != null && item.nutrients.sugars_g > 0 && (
+                              <>
+                                <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
+                                <span style={{ color: 'var(--aurora-pink)' }}>
+                                  {Math.round(item.nutrients.sugars_g * 10) / 10}g sugar
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -441,6 +481,35 @@ export default function FavoritesRoute() {
               emptyStateMessage="Search above to add ingredients to this favorite."
             />
           </div>
+
+          {/* Cumulative Nutrition Grid */}
+          {items.length > 0 && (
+            <div style={{ marginBottom: 22 }}>
+              <div className="eyebrow" style={{ marginBottom: 8, fontSize: 10 }}>Cumulative nutrition</div>
+              <div className="favorite-macro-grid">
+                <div className="favorite-macro-col">
+                  <span className="favorite-macro-label">Cal</span>
+                  <span className="num favorite-macro-val" style={{ color: 'var(--sky-400)' }}>{Math.round(sumNutrients(items).calories)}</span>
+                </div>
+                <div className="favorite-macro-col">
+                  <span className="favorite-macro-label">Sat Fat</span>
+                  <span className="num favorite-macro-val" style={{ color: 'var(--bad)' }}>{sumNutrients(items).saturated_fat_g.toFixed(1)}g</span>
+                </div>
+                <div className="favorite-macro-col">
+                  <span className="favorite-macro-label">Sol Fib</span>
+                  <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{sumNutrients(items).soluble_fiber_g.toFixed(1)}g</span>
+                </div>
+                <div className="favorite-macro-col">
+                  <span className="favorite-macro-label">Sugar</span>
+                  <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{sumNutrients(items).sugars_g.toFixed(1)}g</span>
+                </div>
+                <div className="favorite-macro-col">
+                  <span className="favorite-macro-label">Protein</span>
+                  <span className="num favorite-macro-val" style={{ color: '#a78bfa' }}>{sumNutrients(items).protein_g.toFixed(1)}g</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Name input */}
           <div style={{ marginBottom: 22 }}>

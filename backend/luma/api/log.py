@@ -73,6 +73,7 @@ class MealEventUpdate(BaseModel):
     nutrition: dict[str, Any] | None = None
     plan_slot_id: UUID | None = None
     ts: datetime | None = None
+    raw_input: str | None = None
 
 
 @router.post("/meal/barcode")
@@ -232,6 +233,8 @@ async def patch_meal(
         event.plan_slot_id = req.plan_slot_id
     if req.ts is not None:
         event.ts = req.ts
+    if req.raw_input is not None:
+        event.raw_input = req.raw_input
         
     await db.commit()
     await db.refresh(event)

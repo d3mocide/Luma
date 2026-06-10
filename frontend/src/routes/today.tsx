@@ -14,10 +14,12 @@ import { TodayShell, LoadingSkeleton, ErrorCard } from '../components/today/Toda
 import { RingLegend } from '../components/today/RingLegend'
 import { BioTile } from '../components/today/BioTile'
 import { PlanRow } from '../components/today/PlanRow'
-import { RecentMealsCard } from '../components/today/RecentMealsCard'
+import { RecentMealsCard, RecentMeal } from '../components/today/RecentMealsCard'
 import { NutrientBreakdownSheet } from '../components/today/NutrientBreakdownSheet'
+import { StreakHistorySheet } from '../components/today/StreakHistorySheet'
 import { NutritionCalculatorCard } from '../components/today/NutritionCalculatorCard'
 import { useHiddenMetrics } from '../lib/hidden-metrics'
+import { useUIStore } from '../stores'
 
 export default function TodayRoute() {
   const forceMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === '1'
@@ -28,6 +30,7 @@ export default function TodayRoute() {
   const [loggingMealId, setLoggingMealId] = useState<string | null>(null)
   const [deletingMealId, setDeletingMealId] = useState<string | null>(null)
   const [showDayBreakdown, setShowDayBreakdown] = useState(false)
+  const [showStreakHistory, setShowStreakHistory] = useState(false)
   const [dismissedNudgeIds, setDismissedNudgeIds] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem('luma_dismissed_nudges')
@@ -104,6 +107,17 @@ export default function TodayRoute() {
     },
   })
 
+  const startEditingMeal = useUIStore((s) => s.startEditingMeal)
+
+  const handleEditMeal = (meal: RecentMeal) => {
+    startEditingMeal(
+      meal.id,
+      meal.items || [],
+      meal.slot as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+      meal.raw_input || meal.headline || ''
+    )
+  }
+
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   if (isLoading && !forceMockData) return <TodayShell><LoadingSkeleton/></TodayShell>
@@ -122,12 +136,23 @@ export default function TodayRoute() {
     return acc
   }, {})
 
-  const rings: [number, number, number] = [
-    (adherence?.calories?.pct ?? 0) / 100,
+  const rings = [
     (adherence?.sat_fat_g?.pct ?? 0) / 100,
     // Fiber: cap at 1.0 — exceeding the fiber target is good, not an overage to flag
     Math.min((adherence?.soluble_fiber_g?.pct ?? 0) / 100, 1.0),
+    (adherence?.sugars_g?.pct ?? 0) / 100,
   ]
+  const ringColors = [
+    { from: '#fde68a', to: '#fbbf24', glow: 'rgba(251,191,36,0.5)' }, // Yellow (Sat fat)
+    { from: '#86efac', to: '#34d399', glow: 'rgba(52,211,153,0.5)' }, // Green (Fiber)
+    { from: '#f472b6', to: '#ec4899', glow: 'rgba(244,114,182,0.5)' }, // Pink (Sugar)
+  ]
+  const onTargetCount = [
+    ((adherence?.calories?.pct ?? 0) / 100) >= 0.9 && ((adherence?.calories?.pct ?? 0) / 100) <= 1.1,
+    ((adherence?.sat_fat_g?.pct ?? 0) / 100) <= 1.0,
+    ((adherence?.soluble_fiber_g?.pct ?? 0) / 100) >= 0.9,
+    ((adherence?.sugars_g?.pct ?? 0) / 100) <= 1.0,
+  ].filter(Boolean).length
   const weightUnit = measurementWeightUnit(measurementSystem)
   const slopeUnit = measurementSlopeUnit(measurementSystem)
   const latestWeight = convertWeight(data.weight.latest_kg, measurementSystem)
@@ -210,9 +235,9 @@ export default function TodayRoute() {
           </div>
         </header>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gridTemplateRows: '1fr 1fr', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 20, alignItems: 'stretch' }}>
           {/* Weight card */}
-          <div className="glass" style={{ gridRow: 'span 2', padding: 28, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div className="glass" style={{ padding: 28, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div style={{ position: 'absolute', top: -150, right: -180, width: 560, height: 460, background: 'radial-gradient(ellipse 60% 56% at 68% 34%, rgba(56,189,248,0.28), transparent 70%), radial-gradient(ellipse 56% 60% at 86% 78%, rgba(56,189,248,0.12), transparent 72%)', filter: 'blur(18px)', opacity: 0.92, pointerEvents: 'none' }}/>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
               <div>
@@ -237,52 +262,67 @@ export default function TodayRoute() {
             </div>
           </div>
 
-          {/* Rings */}
-          <div className="glass" style={{ padding: 24, display: 'flex', gap: 22, alignItems: 'center' }}>
-            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: 150, height: 150, position: 'relative' }}>
-                <ActivityRings size={150} values={rings} thickness={11} gap={5}/>
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div className="num" style={{ fontSize: 20, lineHeight: 1, fontWeight: 500, color: 'var(--fg-primary)' }}>
-                    {rings.filter(r => r >= 0.9).length} / 3
+          {/* Right Column Stack */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Rings */}
+            <div
+              className="glass"
+              onClick={Object.keys(dayNutrition).length > 0 ? () => setShowDayBreakdown(true) : undefined}
+              style={{
+                padding: 24,
+                display: 'flex',
+                gap: 28,
+                alignItems: 'center',
+                cursor: Object.keys(dayNutrition).length > 0 ? 'pointer' : 'default',
+                userSelect: 'none',
+                flex: 1,
+              }}
+            >
+              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ width: 180, height: 180, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityRings size={180} values={rings} colors={ringColors} thickness={14} gap={6}/>
+                  <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', pointerEvents: 'none', marginTop: 2 }}>
+                    <span className="num" style={{ fontSize: 26, fontWeight: 300, color: 'var(--fg-primary)' }}>{onTargetCount}</span>
+                    <span style={{ fontSize: 16, color: 'var(--fg-quiet)', margin: '0 2px' }}>/</span>
+                    <span className="num" style={{ fontSize: 18, color: 'var(--fg-tertiary)' }}>4</span>
                   </div>
                 </div>
               </div>
-              <div style={{ marginTop: 8, fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="eyebrow">Today</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-                <RingLegend color="var(--sky-400)" label="Calories" value={`${fmt(adherence?.calories?.logged, 0)} / ${fmt(adherence?.calories?.target, 0)}`} pct={adherence?.calories?.pct ?? 0}/>
-                <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
-                <RingLegend color="var(--good)" label="Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
-              </div>
-              {Object.keys(dayNutrition).length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowDayBreakdown(true)}
-                  style={{ display: 'block', width: '100%', marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--fg-tertiary)', textDecoration: 'underline', textAlign: 'right' }}
-                >
-                  Full breakdown →
-                </button>
-              )}
-            </div>
-          </div>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                {/* Calories horizontal gauge */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>Calories</span>
+                    <span className="num" style={{ fontSize: 13, color: 'var(--fg-secondary)' }}>
+                      <strong>{fmt(adherence?.calories?.logged, 0)}</strong> / {fmt(adherence?.calories?.target, 0)} kcal
+                    </span>
+                  </div>
+                  <div style={{ height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{
+                      position: 'absolute', top: 0, left: 0, bottom: 0,
+                      width: `${Math.min(adherence?.calories?.pct ?? 0, 100)}%`,
+                      background: 'linear-gradient(90deg, var(--sky-400), var(--sky-500))',
+                      borderRadius: 999,
+                      boxShadow: '0 0 8px rgba(56,189,248,0.4)',
+                    }}/>
+                  </div>
+                </div>
 
-          {/* Streak */}
-          <div className="glass" style={{ padding: 22, position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: -125, right: -110, width: 320, height: 280, background: 'radial-gradient(ellipse 58% 56% at 62% 38%, rgba(251,191,36,0.17), transparent 70%), radial-gradient(ellipse 52% 52% at 88% 82%, rgba(251,191,36,0.08), transparent 74%)', filter: 'blur(14px)', opacity: 0.88, pointerEvents: 'none' }}/>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-              <div>
-                <div className="eyebrow">Streak</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
-                  <Flame size={22} color="var(--sun-300)"/>
-                  <span className="num" style={{ fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>{data.streak_days ?? 0}</span>
-                  <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>days on track</span>
+                <hr style={{ border: 'none', borderTop: '1px solid var(--glass-edge)', margin: '0 0 14px' }} />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
+                  <RingLegend color="var(--good)" label="Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
+                  <RingLegend color="var(--aurora-pink)" label="Sugar" value={`${fmt(adherence?.sugars_g?.logged, 1, 'g')} / ${fmt(adherence?.sugars_g?.target, 1, 'g')}`} pct={adherence?.sugars_g?.pct ?? 0} invert/>
                 </div>
               </div>
             </div>
-            <StreakStrip days={data.streak_days ?? 0} ofMax={14}/>
+
+            {/* Streak */}
+            <div className="glass" style={{ padding: 0, position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+              <div style={{ position: 'absolute', top: -125, right: -110, width: 320, height: 280, background: 'radial-gradient(ellipse 58% 56% at 62% 38%, rgba(251,191,36,0.17), transparent 70%), radial-gradient(ellipse 52% 52% at 88% 82%, rgba(251,191,36,0.08), transparent 74%)', filter: 'blur(14px)', opacity: 0.88, pointerEvents: 'none' }}/>
+              <StreakStrip days={data.streak_days ?? 0} adherence={adherence} onShowHistory={() => setShowStreakHistory(true)}/>
+            </div>
           </div>
         </div>
 
@@ -383,7 +423,7 @@ export default function TodayRoute() {
         <NutritionCalculatorCard adherence={data.adherence_today} compact={false}/>
 
         {/* Recent Meals — full width, bottom */}
-        <RecentMealsCard meals={data.recent_meals ?? []} compact={false} onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} />
+        <RecentMealsCard meals={data.recent_meals ?? []} compact={false} onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} onEdit={handleEditMeal} />
 
       </div>
 
@@ -417,51 +457,63 @@ export default function TodayRoute() {
         </div>
 
         {/* Rings */}
-        <div className="glass" style={{ padding: 24, display: 'flex', gap: 22, alignItems: 'center', marginBottom: 14 }}>
+        <div
+          className="glass"
+          onClick={Object.keys(dayNutrition).length > 0 ? () => setShowDayBreakdown(true) : undefined}
+          style={{
+            padding: 20,
+            display: 'flex',
+            gap: 20,
+            alignItems: 'center',
+            marginBottom: 14,
+            cursor: Object.keys(dayNutrition).length > 0 ? 'pointer' : 'default',
+            userSelect: 'none',
+          }}
+        >
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: 150, height: 150, position: 'relative' }}>
-              <ActivityRings size={150} values={rings} thickness={11} gap={5}/>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div className="num" style={{ fontSize: 20, lineHeight: 1, fontWeight: 500, color: 'var(--fg-primary)' }}>
-                  {rings.filter(r => r >= 0.9).length} / 3
-                </div>
+            <div style={{ width: 160, height: 160, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ActivityRings size={160} values={rings} colors={ringColors} thickness={12} gap={5}/>
+              <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', pointerEvents: 'none', marginTop: 2 }}>
+                <span className="num" style={{ fontSize: 24, fontWeight: 300, color: 'var(--fg-primary)' }}>{onTargetCount}</span>
+                <span style={{ fontSize: 14, color: 'var(--fg-quiet)', margin: '0 2px' }}>/</span>
+                <span className="num" style={{ fontSize: 16, color: 'var(--fg-tertiary)' }}>4</span>
               </div>
             </div>
-            <div style={{ marginTop: 8, fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="eyebrow">Today</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-              <RingLegend color="var(--sky-400)" label="Calories" value={`${fmt(adherence?.calories?.logged, 0)} / ${fmt(adherence?.calories?.target, 0)}`} pct={adherence?.calories?.pct ?? 0}/>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+            {/* Calories horizontal gauge */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-primary)' }}>Calories</span>
+                <span className="num" style={{ fontSize: 12, color: 'var(--fg-secondary)' }}>
+                  <strong>{fmt(adherence?.calories?.logged, 0)}</strong> / {fmt(adherence?.calories?.target, 0)}
+                </span>
+              </div>
+              <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, bottom: 0,
+                  width: `${Math.min(adherence?.calories?.pct ?? 0, 100)}%`,
+                  background: 'linear-gradient(90deg, var(--sky-400), var(--sky-500))',
+                  borderRadius: 999,
+                  boxShadow: '0 0 6px rgba(56,189,248,0.4)',
+                }}/>
+              </div>
+            </div>
+
+            <hr style={{ border: 'none', borderTop: '1px solid var(--glass-edge)', margin: '0 0 10px' }} />
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
               <RingLegend color="var(--good)" label="Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
+              <RingLegend color="var(--aurora-pink)" label="Sugar" value={`${fmt(adherence?.sugars_g?.logged, 1, 'g')} / ${fmt(adherence?.sugars_g?.target, 1, 'g')}`} pct={adherence?.sugars_g?.pct ?? 0} invert/>
             </div>
-            {Object.keys(dayNutrition).length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowDayBreakdown(true)}
-                style={{ display: 'block', width: '100%', marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--fg-tertiary)', textDecoration: 'underline', textAlign: 'right' }}
-              >
-                Full breakdown →
-              </button>
-            )}
           </div>
         </div>
 
         {/* Streak */}
-        <div className="glass" style={{ padding: 18, marginBottom: 14, position: 'relative', overflow: 'hidden' }}>
+        <div className="glass" style={{ padding: 0, marginBottom: 14, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={{ position: 'absolute', top: -100, right: -90, width: 260, height: 220, background: 'radial-gradient(ellipse 58% 56% at 62% 38%, rgba(251,191,36,0.17), transparent 70%), radial-gradient(ellipse 52% 52% at 88% 82%, rgba(251,191,36,0.08), transparent 74%)', filter: 'blur(12px)', opacity: 0.88, pointerEvents: 'none' }}/>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-            <div>
-              <div className="eyebrow">Streak</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
-                <Flame size={18} color="var(--sun-300)"/>
-                <span className="num" style={{ fontSize: 26, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>{data.streak_days ?? 0}</span>
-                <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>days on track</span>
-              </div>
-            </div>
-          </div>
-          <StreakStrip days={data.streak_days ?? 0} ofMax={14}/>
+          <StreakStrip days={data.streak_days ?? 0} adherence={adherence} onShowHistory={() => setShowStreakHistory(true)}/>
         </div>
 
         {/* Weight */}
@@ -590,7 +642,7 @@ export default function TodayRoute() {
           )}
         </div>
 
-        <RecentMealsCard meals={data.recent_meals ?? []} compact onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} />
+        <RecentMealsCard meals={data.recent_meals ?? []} compact onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} onEdit={handleEditMeal} />
       </div>
 
       {showDayBreakdown && Object.keys(dayNutrition).length > 0 && (
@@ -600,6 +652,13 @@ export default function TodayRoute() {
           onClose={() => setShowDayBreakdown(false)}
         />
       )}
+
+      <StreakHistorySheet
+        isOpen={showStreakHistory}
+        onClose={() => setShowStreakHistory(false)}
+        days={data.streak_days ?? 0}
+        adherence={adherence}
+      />
 
     </TodayShell>
   )

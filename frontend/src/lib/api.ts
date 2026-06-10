@@ -1,4 +1,5 @@
 import { handleMockApiRequest, isMockApiEnabled, MockApiError } from './mock-api'
+import type { DraftItem } from '../components/log-sheet/types'
 
 const BASE = '/api/v1'
 
@@ -109,6 +110,7 @@ export interface TodayData {
     calories: { logged: number | null; target: number | null; pct: number | null }
     sat_fat_g: { logged: number | null; target: number | null; pct: number | null }
     soluble_fiber_g: { logged: number | null; target: number | null; pct: number | null }
+    sugars_g: { logged: number | null; target: number | null; pct: number | null }
   }
   biometrics_latest: {
     hrv_ms: number | null
@@ -142,6 +144,8 @@ export interface TodayData {
     item_count: number
     calories: number
     headline: string
+    items?: DraftItem[]
+    raw_input?: string | null
   }>
   active_insight: {
     id: string
