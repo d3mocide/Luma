@@ -43,30 +43,6 @@ export default function AppShell() {
     retry: false,
   })
 
-  useEffect(() => {
-    const visualViewport = window.visualViewport
-    if (!visualViewport) return
-
-    const handleResize = () => {
-      const height = visualViewport.height
-      document.documentElement.style.setProperty('--visual-viewport-height', `${height}px`)
-      // Prevent layout viewport scroll offsets on iOS when keyboard is active
-      if (window.scrollY > 0) {
-        window.scrollTo(0, 0)
-        document.body.scrollTop = 0
-      }
-    }
-
-    visualViewport.addEventListener('resize', handleResize)
-    visualViewport.addEventListener('scroll', handleResize)
-    handleResize()
-
-    return () => {
-      visualViewport.removeEventListener('resize', handleResize)
-      visualViewport.removeEventListener('scroll', handleResize)
-    }
-  }, [])
-
   if (isLoading || !swReady) {
     return <SplashScreen />
   }
@@ -82,18 +58,7 @@ export default function AppShell() {
   const initials = getUserInitials(user.display_name)
 
   return (
-    <div
-      className="luma-bg"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 'var(--visual-viewport-height, 100vh)',
-        display: 'flex',
-        flexDirection: 'row',
-      }}
-    >
+    <div className="luma-bg" style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'row' }}>
       <LogSheet />
 
       {/* Desktop Sidebar */}
