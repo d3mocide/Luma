@@ -43,10 +43,29 @@ export default function AppShell() {
     retry: false,
   })
 
-  // Soft keyboard is handled natively: on mobile the document scrolls (see the
-  // .app-shell-* / mobile native-scroll rules in index.css), so iOS reveals
-  // focused inputs by scrolling the page itself and the sticky header stays
-  // pinned — no visualViewport math, no shell resizing.
+  useEffect(() => {
+    const visualViewport = window.visualViewport
+    if (!visualViewport) return
+
+    const handleResize = () => {
+      const height = visualViewport.height
+      document.documentElement.style.setProperty('--visual-viewport-height', `${height}px`)
+      // Prevent layout viewport scroll offsets on iOS when keyboard is active
+      if (window.scrollY > 0) {
+        window.scrollTo(0, 0)
+        document.body.scrollTop = 0
+      }
+    }
+
+    visualViewport.addEventListener('resize', handleResize)
+    visualViewport.addEventListener('scroll', handleResize)
+    handleResize()
+
+    return () => {
+      visualViewport.removeEventListener('resize', handleResize)
+      visualViewport.removeEventListener('scroll', handleResize)
+    }
+  }, [])
 
   if (isLoading || !swReady) {
     return <SplashScreen />
@@ -63,24 +82,43 @@ export default function AppShell() {
   const initials = getUserInitials(user.display_name)
 
   return (
-    <div className="luma-bg app-shell-root">
+    <div
+      className="luma-bg"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 'var(--visual-viewport-height, 100vh)',
+        display: 'flex',
+        flexDirection: 'row',
+      }}
+    >
       <LogSheet />
 
       {/* Desktop Sidebar */}
       <DesktopSidebar user={user} isTodayLoading={isTodayLoading} />
 
-      {/* Content column. Desktop: fixed flex column with an inner scrolling
-          <main>. Mobile: native document scroll (see .app-shell-* in css). */}
-      <div className="app-shell-col">
-        {/* Mobile header — sticky-pinned on mobile */}
+      {/* Content column — flex column so mobile header/nav are in-flow (not fixed) */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+        {/* Mobile header anchored to top of column */}
         {!isLogRoute && <MobileHeader initials={initials} />}
 
-        {/* Page content */}
-        <main className="thin-scroll mobile-shell-main app-shell-main">
+        {/* Scrollable page content */}
+        <main
+          className="thin-scroll mobile-shell-main"
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
+            position: 'relative',
+          }}
+        >
           <Outlet />
         </main>
 
-        {/* Mobile nav — fixed to the viewport bottom on mobile */}
+        {/* Mobile nav anchored to bottom of column */}
         {!isLogRoute && <MobileNav />}
       </div>
     </div>

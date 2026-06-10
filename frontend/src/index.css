@@ -315,82 +315,6 @@ layer(base);
   .luma-bg { min-height: 100lvh; }
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
- * APP SHELL — desktop is a fixed sidebar layout with an inner scrolling <main>;
- * mobile (below) switches to NATIVE document scrolling so iOS handles the soft
- * keyboard itself (smooth scroll-to-input, pinned sticky header). The mobile
- * override is the keyboard fix: no visualViewport math, no shell resizing.
- * ══════════════════════════════════════════════════════════════════════════ */
-.app-shell-root {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  flex-direction: row;
-  overflow: clip;
-}
-.app-shell-col {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-}
-.app-shell-main {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  position: relative;
-}
-
-@media (max-width: 767.98px) {
-  /* Let the document scroll natively. iOS then reveals focused inputs by
-     scrolling the page (the behavior every normal app gets for free) instead
-     of panning a position:fixed shell. */
-  html, body, #root {
-    height: auto;
-    min-height: 100lvh;
-    overflow: visible;
-  }
-  body {
-    position: static;
-    inset: auto;
-  }
-  .app-shell-root {
-    position: static;
-    inset: auto;
-    display: block;
-    overflow: visible;
-    min-height: 100lvh;
-  }
-  .app-shell-col {
-    display: block;
-    overflow: visible;
-  }
-  .app-shell-main {
-    overflow: visible;
-    min-height: 0;
-  }
-  /* Header rides the page scroll but stays pinned to the top — content slides
-     under its blur, matching the reference UX. */
-  .mobile-header {
-    position: sticky;
-    top: 0;
-  }
-  /* Bottom nav pinned to the viewport (not the now-tall document). When the
-     keyboard opens it simply sits behind it. */
-  .mobile-nav-wrap {
-    position: fixed;
-  }
-  /* Today's inner scroller would otherwise trap scrolling in a nested box and
-     defeat native keyboard reveal — let it flow into the document scroll. */
-  .today-mobile-scroll {
-    height: auto;
-    overflow-y: visible;
-  }
-}
-
 [data-theme="light"] .luma-bg {
   background: linear-gradient(180deg, #fbf6ec 0%, #f1f4fb 60%, #f6f4ef 100%);
 }
@@ -1877,7 +1801,7 @@ input[type="search"]::-webkit-search-results-decoration {
 
 @media (max-width: 900px) {
   .meals-page {
-    padding: 16px 16px calc(92px + env(safe-area-inset-bottom, 0px));
+    padding: 16px 16px 80px;
   }
 
 }
@@ -2973,19 +2897,6 @@ input[type="search"]::-webkit-search-results-decoration {
 
   .coach-composer {
     padding: 12px 16px calc(92px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
-  /* Native scroll: coach flows in the document (no inner scroll box) so iOS
-     scrolls the composer above the keyboard on focus and the sticky app header
-     stays pinned. Override the desktop inline height/overflow on the page and
-     its messages list. */
-  .coach-page {
-    height: auto !important;
-    min-height: calc(100lvh - 112px);
-    overflow: visible !important;
-  }
-  .coach-messages {
-    overflow: visible !important;
   }
 }
 
