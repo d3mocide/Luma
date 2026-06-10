@@ -320,9 +320,18 @@ layer(base);
    This is what stops iOS panning the whole app to reveal an occluded field —
    nothing is occluded, so the header stays and bottom-pinned inputs land just
    above the keyboard. Overrides the static 100lvh height + min-height above. */
-body.keyboard-open .luma-bg {
+body.keyboard-open .luma-bg,
+body.keyboard-closing .luma-bg {
   height: var(--app-height, 100lvh) !important;
   min-height: var(--app-height, 100lvh) !important;
+}
+
+/* Closing only: animate the shell back to full height so the keyboard dismiss
+   feels like the app growing down, not a snap. Opening stays instant — a
+   transition there would re-open the window in which iOS decides to pan. */
+body.keyboard-closing .luma-bg {
+  --app-height: 100lvh;
+  transition: height 220ms ease, min-height 220ms ease;
 }
 
 [data-theme="light"] .luma-bg {
