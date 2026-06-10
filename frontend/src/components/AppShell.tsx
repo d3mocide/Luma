@@ -48,6 +48,7 @@ export default function AppShell() {
 
     let pendingField: HTMLElement | null = null
     let lastHeight = -1
+    let lastOffsetTop = -1
 
     // Native focus-scrolling fails here: inputs live inside an inner overflow
     // container under a position:fixed shell, so the browser scrolls the locked
@@ -62,29 +63,31 @@ export default function AppShell() {
       el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
     }
 
-    const handleResize = () => {
+    // Keep the fixed shell exactly overlaid on the visual viewport. The keyboard
+    // both shrinks the visual viewport (height) AND offsets it downward within
+    // the layout viewport (offsetTop) to reveal the focused field. A fixed
+    // top:0 element stays glued to the layout-viewport top, so without matching
+    // offsetTop the shell's top — the header — slides up out of sight.
+    const syncViewport = () => {
       if (!visualViewport) return
       const height = Math.round(visualViewport.height)
-      // Only touch the DOM when the height actually changes — writing the var on
-      // every event thrashes layout and makes inputs flash during the keyboard
-      // open animation.
+      // Only touch the DOM when a value actually changes — writing on every
+      // event thrashes layout and flashes inputs during the keyboard animation.
       if (height !== lastHeight) {
         lastHeight = height
         document.documentElement.style.setProperty('--visual-viewport-height', `${height}px`)
+      }
+      const offsetTop = Math.max(0, Math.round(visualViewport.offsetTop))
+      if (offsetTop !== lastOffsetTop) {
+        lastOffsetTop = offsetTop
+        document.documentElement.style.setProperty('--visual-viewport-offset-top', `${offsetTop}px`)
       }
       // The on-screen keyboard shrinks the visual viewport well below the layout
       // viewport (window.innerHeight). Detect that gap so the shell can surface
       // the composer above the keyboard instead of behind the floating nav.
       const keyboardOpen = window.innerHeight - height > 120
       document.body.classList.toggle('keyboard-open', keyboardOpen)
-      if (keyboardOpen) {
-        // iOS can pan the layout viewport to reveal a focused field, leaving the
-        // fixed shell scrolled off-screen. Re-pin to the top — only here, on
-        // keyboard show/hide, never on every scroll frame (which flickers).
-        if (window.scrollY > 0) window.scrollTo(0, 0)
-        // The viewport has settled around the keyboard — now place the field.
-        revealField()
-      }
+      if (keyboardOpen) revealField()
     }
 
     const handleFocusIn = (e: FocusEvent) => {
@@ -96,12 +99,14 @@ export default function AppShell() {
       window.setTimeout(revealField, 350)
     }
 
-    visualViewport?.addEventListener('resize', handleResize)
+    visualViewport?.addEventListener('resize', syncViewport)
+    visualViewport?.addEventListener('scroll', syncViewport)
     document.addEventListener('focusin', handleFocusIn)
-    handleResize()
+    syncViewport()
 
     return () => {
-      visualViewport?.removeEventListener('resize', handleResize)
+      visualViewport?.removeEventListener('resize', syncViewport)
+      visualViewport?.removeEventListener('scroll', syncViewport)
       document.removeEventListener('focusin', handleFocusIn)
       document.body.classList.remove('keyboard-open')
     }
@@ -126,7 +131,7 @@ export default function AppShell() {
       className="luma-bg"
       style={{
         position: 'fixed',
-        top: 0,
+        top: 'var(--visual-viewport-offset-top, 0px)',
         left: 0,
         right: 0,
         height: 'var(--visual-viewport-height, 100vh)',
