@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import secrets
 import string
@@ -12,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from luma.db.models import User
 from luma.deps import DbDep, require_role
+from luma.services.email import send_welcome_email, send_password_reset_email
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -94,6 +96,13 @@ async def create_user(body: CreateUserRequest, admin: AdminUser, db: DbDep) -> C
         logger.exception("Failed to create user")
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database error")
 
+    asyncio.create_task(
+        send_welcome_email(
+            to_email=str(user.email),
+            display_name=user.display_name,
+            temporary_password=temp_pw,
+        )
+    )
     return CreateUserResponse(user=UserAdminOut.model_validate(user), temporary_password=temp_pw)
 
 
@@ -153,6 +162,13 @@ async def reset_password(user_id: UUID, admin: AdminUser, db: DbDep) -> ResetPas
         logger.exception("Failed to reset password")
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database error")
 
+    asyncio.create_task(
+        send_password_reset_email(
+            to_email=str(user.email),
+            display_name=user.display_name,
+            temporary_password=temp_pw,
+        )
+    )
     return ResetPasswordResponse(temporary_password=temp_pw)
 
 
@@ -179,3 +195,89 @@ async def delete_user(user_id: UUID, admin: AdminUser, db: DbDep) -> dict:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database error")
 
     return {"detail": "deleted"}
+
+
+class SmtpConfigSnapshot(BaseModel):
+    send_path: str           # graph | xoauth2 | basic_auth | disabled
+    smtp_host: str
+    smtp_port: int
+    smtp_from: str
+    smtp_user: str
+    smtp_use_tls: bool
+    smtp_oauth_token_url: str
+    smtp_oauth_client_id: str
+    smtp_oauth_client_secret_set: bool
+    app_base_url: str
+
+
+class TestEmailResponse(BaseModel):
+    ok: bool
+    to: str
+    config: SmtpConfigSnapshot
+    error: str | None = None
+
+
+@router.post("/test-email")
+async def test_email(admin: AdminUser) -> TestEmailResponse:
+    """
+    Send a real test email to the authenticated admin's address using whatever
+    send path is currently configured (Graph API, XOAUTH2 SMTP, or basic auth).
+    Surfaces the full error detail and a redacted config snapshot for diagnosis.
+    """
+    from email.message import EmailMessage
+    from luma.config import settings
+    from luma.services.email import active_send_path, _dispatch
+
+    path = active_send_path()
+
+    config_snapshot = SmtpConfigSnapshot(
+        send_path=path,
+        smtp_host=settings.smtp_host,
+        smtp_port=settings.smtp_port,
+        smtp_from=settings.smtp_from,
+        smtp_user=settings.smtp_user,
+        smtp_use_tls=settings.smtp_use_tls,
+        smtp_oauth_token_url=settings.smtp_oauth_token_url,
+        smtp_oauth_client_id=settings.smtp_oauth_client_id,
+        smtp_oauth_client_secret_set=bool(settings.smtp_oauth_client_secret),
+        app_base_url=settings.app_base_url,
+    )
+
+    if path == "disabled":
+        return TestEmailResponse(
+            ok=False,
+            to=admin.email,
+            config=config_snapshot,
+            error=(
+                "No email send path is configured. "
+                "For Microsoft 365 set SMTP_OAUTH_TOKEN_URL, SMTP_OAUTH_CLIENT_ID, "
+                "SMTP_OAUTH_CLIENT_SECRET, and SMTP_FROM. "
+                "For basic SMTP also set SMTP_HOST."
+            ),
+        )
+
+    msg = EmailMessage()
+    msg["From"] = settings.smtp_from
+    msg["To"] = admin.email
+    msg["Subject"] = "Luma email test"
+    msg.set_content(
+        f"This is a test email from your Luma instance.\n\n"
+        f"If you received this, your email configuration is working correctly.\n\n"
+        f"  Sent to:    {admin.email}\n"
+        f"  Send path:  {path}\n"
+        f"  From:       {settings.smtp_from}\n"
+    )
+
+    try:
+        await _dispatch(msg)
+        logger.info("Test email sent to %s via %s", admin.email, path)
+        return TestEmailResponse(ok=True, to=admin.email, config=config_snapshot)
+    except Exception as exc:
+        error_detail = f"{type(exc).__name__}: {exc}"
+        logger.exception("Test email failed via %s", path)
+        return TestEmailResponse(
+            ok=False,
+            to=admin.email,
+            config=config_snapshot,
+            error=error_detail,
+        )

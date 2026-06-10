@@ -433,6 +433,146 @@ interface AdminResetPasswordResponse {
 interface TempPasswordAlert {
   label: string
   password: string
+  emailSent?: boolean
+}
+
+interface SmtpConfigSnapshot {
+  send_path: string
+  smtp_host: string
+  smtp_port: number
+  smtp_from: string
+  smtp_user: string
+  smtp_use_tls: boolean
+  smtp_oauth_token_url: string
+  smtp_oauth_client_id: string
+  smtp_oauth_client_secret_set: boolean
+  app_base_url: string
+}
+
+interface TestEmailResponse {
+  ok: boolean
+  to: string
+  config: SmtpConfigSnapshot
+  error: string | null
+}
+
+// ── SMTP Diagnostic Card ───────────────────────────────────────────────────────
+
+function SmtpDiagnosticCard() {
+  const [result, setResult] = useState<TestEmailResponse | null>(null)
+  const [sending, setSending] = useState(false)
+
+  const handleTest = async () => {
+    setSending(true)
+    setResult(null)
+    try {
+      const data = await api.post<TestEmailResponse>('/admin/test-email')
+      setResult(data)
+    } catch (err) {
+      setResult({
+        ok: false,
+        to: '',
+        config: {
+          send_path: 'disabled',
+          smtp_host: '',
+          smtp_port: 587,
+          smtp_from: '',
+          smtp_user: '',
+          smtp_use_tls: true,
+          smtp_oauth_token_url: '',
+          smtp_oauth_client_id: '',
+          smtp_oauth_client_secret_set: false,
+          app_base_url: '',
+        },
+        error: err instanceof Error ? err.message : String(err),
+      })
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const cfgRow = (label: string, value: string | number | boolean) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--glass-edge)' }}>
+      <span style={{ fontSize: 12, color: 'var(--fg-tertiary)', flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 12, fontFamily: 'var(--font-mono, monospace)', color: typeof value === 'boolean' ? (value ? 'var(--good)' : 'var(--bad)') : 'var(--fg-secondary)', textAlign: 'right', marginLeft: 12, wordBreak: 'break-all' }}>
+        {String(value)}
+      </span>
+    </div>
+  )
+
+  const PATH_LABELS: Record<string, { label: string; color: string }> = {
+    graph:      { label: 'Microsoft Graph API', color: 'var(--sky-400)' },
+    xoauth2:    { label: 'SMTP XOAUTH2',        color: 'var(--sun-300)' },
+    basic_auth: { label: 'SMTP Basic Auth',      color: 'var(--fg-secondary)' },
+    disabled:   { label: 'Disabled',             color: 'var(--bad)' },
+  }
+
+  return (
+    <div className="glass settings-card" style={{ padding: 24 }}>
+      <div className="eyebrow" style={{ marginBottom: 4 }}>Email Diagnostics</div>
+      <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--fg-tertiary)', lineHeight: 1.5 }}>
+        Send a real test email to your admin address and inspect the active configuration.
+      </p>
+
+      <button
+        type="button"
+        className="btn"
+        onClick={handleTest}
+        disabled={sending}
+        style={{ width: '100%', marginBottom: 16, opacity: sending ? 0.7 : 1 }}
+      >
+        {sending ? 'Sending…' : 'Send test email'}
+      </button>
+
+      {result && (
+        <>
+          <div style={{
+            padding: '10px 14px',
+            borderRadius: 10,
+            marginBottom: 14,
+            background: result.ok ? 'rgba(16,185,129,0.08)' : 'rgba(251,113,133,0.08)',
+            border: `1px solid ${result.ok ? 'rgba(16,185,129,0.25)' : 'rgba(251,113,133,0.25)'}`,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: result.ok ? 'var(--good)' : 'var(--bad)', marginBottom: result.error ? 6 : 0 }}>
+              {result.ok ? `✓ Email sent to ${result.to}` : '✗ Send failed'}
+            </div>
+            {result.error && (
+              <div style={{ fontSize: 12, color: 'var(--bad)', fontFamily: 'var(--font-mono, monospace)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                {result.error}
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="eyebrow" style={{ fontSize: 9 }}>Active Config</div>
+            {(() => {
+              const p = PATH_LABELS[result.config.send_path] ?? { label: result.config.send_path, color: 'var(--fg-quiet)' }
+              return (
+                <span style={{
+                  fontSize: 10, fontWeight: 600,
+                  color: p.color,
+                  background: 'var(--glass-2)',
+                  border: '1px solid var(--glass-edge)',
+                  padding: '2px 8px', borderRadius: 6,
+                }}>{p.label}</span>
+              )
+            })()}
+          </div>
+          <div style={{ marginBottom: 0 }}>
+            {cfgRow('smtp_from', result.config.smtp_from || '(not set)')}
+            {cfgRow('smtp_host', result.config.smtp_host || '(not set)')}
+            {cfgRow('smtp_port', result.config.smtp_port)}
+            {cfgRow('smtp_use_tls', result.config.smtp_use_tls)}
+            {cfgRow('smtp_user', result.config.smtp_user || '(not set)')}
+            {cfgRow('oauth_token_url', result.config.smtp_oauth_token_url || '(not set)')}
+            {cfgRow('oauth_client_id', result.config.smtp_oauth_client_id || '(not set)')}
+            {cfgRow('oauth_secret_set', result.config.smtp_oauth_client_secret_set)}
+            {cfgRow('app_base_url', result.config.app_base_url)}
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 // ── Admin tab ──────────────────────────────────────────────────────────────────
@@ -492,7 +632,11 @@ function AdminTab({ currentUserId }: { currentUserId: string }) {
       api.post<AdminCreateUserResponse>('/admin/users', body),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      setTempAlert({ label: `New user: ${data.user.display_name}`, password: data.temporary_password })
+      setTempAlert({
+        label: `New user: ${data.user.display_name}`,
+        password: data.temporary_password,
+        emailSent: true,
+      })
       setCreateForm({ email: '', display_name: '', role: 'user' })
       setCreateError(null)
     },
@@ -556,6 +700,11 @@ function AdminTab({ currentUserId }: { currentUserId: string }) {
                 {tempAlert.password}
               </span>
             </div>
+            {tempAlert.emailSent && (
+              <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginTop: 4 }}>
+                📧 Welcome email dispatched (if SMTP is configured)
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             <button type="button" onClick={handleCopyAlert} style={{
@@ -751,10 +900,12 @@ function AdminTab({ currentUserId }: { currentUserId: string }) {
                 {createUserMutation.isPending ? 'Creating…' : 'Create user'}
               </button>
               <p style={{ margin: 0, fontSize: 12, color: 'var(--fg-quiet)' }}>
-                A temporary password will be generated. Share it securely with the new user.
+                A temporary password is generated and a welcome email dispatched if SMTP is configured.
               </p>
             </div>
           </div>
+
+          <SmtpDiagnosticCard />
         </div>
       </div>
     </div>

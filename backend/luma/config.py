@@ -92,6 +92,11 @@ class Settings(BaseSettings):
             raise ValueError(f"Unknown timezone {v!r} — use an IANA name like 'America/New_York'.")
         return v
 
+    @field_validator("app_base_url")
+    @classmethod
+    def strip_trailing_slash(cls, v: str) -> str:
+        return v.rstrip('/')
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors(cls, v: Any) -> list[str]:
