@@ -450,8 +450,9 @@ async def coach_stream(
                     res = json.dumps({"error": "tool execution failed"})
                 return tc, fn_name, res
 
-            tasks = [_run_tool_db_safe(tc) for tc in msg.tool_calls]
-            results = await asyncio.gather(*tasks)
+            results = []
+            for tc in msg.tool_calls:
+                results.append(await _run_tool_db_safe(tc))
 
             for tc, fn_name, result in results:
                 yield "data: " + json.dumps({"type": "tool_call", "name": fn_name}) + "\n\n"
