@@ -13,7 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from luma.db.models import User
 from luma.deps import DbDep, require_role
-from luma.services.email import send_welcome_email, send_password_reset_email
+from luma.services.email import send_password_reset_email, send_welcome_email
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -225,8 +225,9 @@ async def test_email(admin: AdminUser) -> TestEmailResponse:
     Surfaces the full error detail and a redacted config snapshot for diagnosis.
     """
     from email.message import EmailMessage
+
     from luma.config import settings
-    from luma.services.email import active_send_path, _dispatch
+    from luma.services.email import _dispatch, active_send_path
 
     path = active_send_path()
 
