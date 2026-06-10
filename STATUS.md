@@ -1,6 +1,6 @@
 # Luma — Status
 
-Last updated: 2026-06-08
+Last updated: 2026-06-10
 
 ## Phase 0 — Foundations
 
@@ -37,9 +37,9 @@ Last updated: 2026-06-08
 Fully implemented, verified, stabilized, and bug-fixed.
 
 ### Backend
-- [x] `POST /log/meal/voice` — multipart audio → Whisper → food-extractor (Llama3) → draft meal event
+- [x] `POST /log/meal/voice` — multipart audio → Whisper → food-extractor agent → draft meal event
 - [x] `POST /log/meal/barcode` — barcode → OFF local cache → food + portion picker
-- [x] `POST /log/meal/text` — plain-text description → food-extractor (Llama3) → draft meal event
+- [x] `POST /log/meal/text` — plain-text description → food-extractor agent → draft meal event
 - [x] `POST /log/meal` — save confirmed meal event
 - [x] `PATCH|DELETE /log/meal/{id}`
 - [x] `GET /foods/search` — pg_trgm fuzzy search against foods table
@@ -87,9 +87,9 @@ Fully implemented, verified, stabilized, and bug-fixed.
   - LDL-risk foods (high sat fat + low fiber day)
   - Positive milestone (e.g. 7-day streak, target weight approach)
 - [x] `alerts` scheduled worker task via arq (every 30 min)
-- [x] Insight narrator agent (`agents/insight_narrator.py`) — Claude Sonnet; headline + body + thread_seed
+- [x] Insight narrator agent (`agents/insight_narrator.py`) — routed via `INSIGHT_NARRATOR_MODEL`; headline + body + thread_seed
 - [x] `GET /insights` + `POST /insights/{id}/ack`
-- [x] Coach agent with tool calls (`agents/coach.py`) — Claude Sonnet, streaming SSE
+- [x] Coach agent with tool calls (`agents/coach.py`) — routed via `COACH_MODEL`, streaming SSE
 - [x] `POST /coach/threads` + `POST /coach/threads/{id}/messages` — SSE streaming
 - [x] Coach tool implementations (7 tools):
   - `query_biometric_trend`, `query_nutrition_rollup`, `get_recent_meals`
@@ -144,11 +144,13 @@ Fully implemented, verified, stabilized, and bug-fixed.
 ### Food database backlog (completed late Phase 3)
 - [x] Threshold heuristics for `inflammatory` and `processed` auto-flags — compound AND rules added to `_COMPOUND_FLAG_RULES` in `food_flags.py`; `inflammatory` fires when `saturated_fat_g > 5` AND `sugars_g > 10` AND `fiber_g < 2`; `processed` fires when `sodium_mg > 1000` AND `fiber_g < 1`; omega-6/omega-3 omitted (not in USDA or OFF payloads); covers all three ingestion paths: USDA live search cache, OFF barcode lookup, seed script
 
-### Future enhancement ideas (post-Phase 3)
-- **Multi-user / family support** — `role = family | viewer`, read-only sharing link (deferred from Phase 3 — significant auth/data isolation overhaul)
+### Completed post-Phase-3 enhancements
+- [x] **Multi-user / family support** — family groups, email invitations, role-based access (owner / member), shared food library; `family_groups`, `family_memberships`, `family_invitations` tables
+- [x] **Recipe import** — paste any URL → `recipe_importer` agent (routed via `RECIPE_IMPORT_MODEL`) extracts ingredients + nutrition; stored as user recipe
+
+### Future enhancement ideas
 - **Wearable-native integrations** — Garmin Connect IQ data bridge, Oura Ring API (HRV, readiness score), Withings scale direct sync
-- **Recipe import** — paste any URL → Claude extracts ingredients + nutrition; store as user recipe
-- **Barcode camera scan** — replace text-entry fallback with `html5-qrcode` live camera in BarcodeTab
+- **Barcode camera scan** — live camera preview in BarcodeTab (currently uses text-entry fallback alongside `html5-qrcode`)
 - **Meal photo history** — gallery view of logged photos with detected items overlaid
 - **LDL simulator** — "what if" tool: adjust sat fat / fiber targets and project estimated LDL impact over 8 weeks using established risk equations
 - **Export / data portability** — CSV and JSON export of all biometrics + meal logs; importable into Apple Health / Google Fit
@@ -168,4 +170,4 @@ Fully implemented, verified, stabilized, and bug-fixed.
 - [ ] Log rotation config for nginx
 - [ ] Backup cron for postgres volume
 - [ ] Remote Local AI setup & model dependencies documented (e.g. `llama3.1:8b-instruct`, `moondream2`)
-- [ ] `.env` secret generation documented (openssl rand -hex 32)
+- [x] `.env` secret generation documented (openssl rand -hex 32) — covered in `docs/SETUP.md`
