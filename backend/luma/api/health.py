@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from luma.config import settings
-from luma.db.models import Medication, MealEvent, Supplement
+from luma.db.models import MealEvent, Medication, Supplement
 from luma.deps import CurrentUser, DbDep
 
 router = APIRouter()
@@ -388,7 +388,6 @@ async def ldl_simulate(body: LdlSimulateIn, user: CurrentUser, db: DbDep) -> dic
     goal = goal_row.scalar_one_or_none()
 
     current_ldl = float(goal.current_ldl_mg_dl) if goal and goal.current_ldl_mg_dl else None
-    calorie_target = float(goal.daily_calorie_target) if goal and goal.daily_calorie_target else 2000.0
 
     # Compute 7-day average sat fat % and soluble fiber from meal events
     seven_days_ago = datetime.now(UTC) - timedelta(days=7)
