@@ -91,10 +91,10 @@ function readMetrics(): Metrics {
   const innerH = window.innerHeight
   const vvH = vv ? vv.height : innerH
   const vvTop = vv ? vv.offsetTop : 0
-  // Inferred keyboard band: the layout viewport extends behind the keyboard,
-  // the visual viewport does not. What's hidden below the visible region is the
-  // keyboard (plus any browser chrome).
-  const keyboard = Math.max(0, Math.round(innerH - vvH - vvTop))
+  // Keyboard height = layout viewport − visible region. vv.offsetTop is the
+  // separate "pan" amount (how far iOS has scrolled the visual viewport to
+  // reveal a focused field) and must NOT be folded into the keyboard height.
+  const keyboard = Math.max(0, Math.round(innerH - vvH))
 
   const cs = getComputedStyle(document.documentElement)
   const el = document.activeElement as HTMLElement | null
@@ -153,7 +153,7 @@ function formatMetrics(m: Metrics): string {
     `mode      ${m.standalone ? 'standalone PWA' : 'browser tab'}`,
     `inner     ${m.innerW} × ${m.innerH}   clientH ${m.clientH}`,
     `visualVP  ${m.vvW} × ${m.vvH}   top ${m.vvTop}  scale ${m.vvScale}`,
-    `KEYBOARD  ${m.keyboard}px  (inner − vvH − vvTop)`,
+    `KEYBOARD  ${m.keyboard}px  (inner − vvH)   pan ${m.vvTop}px`,
     `kbInset   ${m.kbInset}   ← AppShell estimate`,
     `scroll    win.y ${m.winScrollY}   doc.top ${m.docScrollTop}   vv.pageTop ${m.vvPageTop}`,
     `safe-area sat ${m.sat}   sab ${m.sab}`,

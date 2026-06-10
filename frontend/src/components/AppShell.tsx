@@ -61,8 +61,13 @@ export default function AppShell() {
     const root = document.documentElement
 
     const apply = () => {
-      // Layout viewport minus the visible region = the keyboard band.
-      const keyboard = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))
+      // Keyboard height = layout viewport − visible region. NOTE: do not
+      // subtract vv.offsetTop — offsetTop is how far iOS has *panned* the
+      // visual viewport (large when a bottom-pinned field like the coach
+      // composer is focused), not part of the keyboard. Subtracting it made
+      // the measured height collapse below threshold exactly when the page
+      // panned, so the shell never shrank and the pan was left in place.
+      const keyboard = Math.max(0, Math.round(window.innerHeight - vv.height))
       if (keyboard > 80) {
         root.style.setProperty('--app-height', `${Math.round(vv.height)}px`)
         root.style.setProperty('--keyboard-inset', `${keyboard}px`)
