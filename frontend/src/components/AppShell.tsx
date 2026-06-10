@@ -45,10 +45,25 @@ export default function AppShell() {
 
   useEffect(() => {
     const visualViewport = window.visualViewport
-    if (!visualViewport) return
 
+    let pendingField: HTMLElement | null = null
     let lastHeight = -1
+
+    // Native focus-scrolling fails here: inputs live inside an inner overflow
+    // container under a position:fixed shell, so the browser scrolls the locked
+    // layout viewport (and snaps back) instead of the real scroller. Once the
+    // keyboard has resized the viewport, pull the focused field into view inside
+    // its own scroll parent — block:'nearest' so already-visible fields don't
+    // move and off-screen fields scroll the minimum needed.
+    const revealField = () => {
+      const el = pendingField
+      if (!el || !el.isConnected) return
+      pendingField = null
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+
     const handleResize = () => {
+      if (!visualViewport) return
       const height = Math.round(visualViewport.height)
       // Only touch the DOM when the height actually changes — writing the var on
       // every event thrashes layout and makes inputs flash during the keyboard
@@ -62,20 +77,32 @@ export default function AppShell() {
       // the composer above the keyboard instead of behind the floating nav.
       const keyboardOpen = window.innerHeight - height > 120
       document.body.classList.toggle('keyboard-open', keyboardOpen)
-      // iOS can pan the layout viewport to reveal a focused field, leaving the
-      // fixed shell scrolled off-screen. Re-pin to the top — but only here, on
-      // keyboard show/hide. Doing this on every visualViewport scroll frame
-      // fights iOS's native scroll-into-view and flickers the whole app.
-      if (keyboardOpen && window.scrollY > 0) {
-        window.scrollTo(0, 0)
+      if (keyboardOpen) {
+        // iOS can pan the layout viewport to reveal a focused field, leaving the
+        // fixed shell scrolled off-screen. Re-pin to the top — only here, on
+        // keyboard show/hide, never on every scroll frame (which flickers).
+        if (window.scrollY > 0) window.scrollTo(0, 0)
+        // The viewport has settled around the keyboard — now place the field.
+        revealField()
       }
     }
 
-    visualViewport.addEventListener('resize', handleResize)
+    const handleFocusIn = (e: FocusEvent) => {
+      const el = e.target as HTMLElement | null
+      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return
+      pendingField = el
+      // Fallback for when the keyboard is already open (switching fields fires
+      // no resize): reveal after the keyboard settle window.
+      window.setTimeout(revealField, 350)
+    }
+
+    visualViewport?.addEventListener('resize', handleResize)
+    document.addEventListener('focusin', handleFocusIn)
     handleResize()
 
     return () => {
-      visualViewport.removeEventListener('resize', handleResize)
+      visualViewport?.removeEventListener('resize', handleResize)
+      document.removeEventListener('focusin', handleFocusIn)
       document.body.classList.remove('keyboard-open')
     }
   }, [])
