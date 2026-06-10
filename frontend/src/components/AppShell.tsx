@@ -49,6 +49,8 @@ export default function AppShell() {
     let pendingField: HTMLElement | null = null
     let lastHeight = -1
     let lastOffsetTop = -1
+    let rafId = 0
+    let trackUntil = 0
 
     // Native focus-scrolling fails here: inputs live inside an inner overflow
     // container under a position:fixed shell, so the browser scrolls the locked
@@ -68,16 +70,17 @@ export default function AppShell() {
     // the layout viewport (offsetTop) to reveal the focused field. A fixed
     // top:0 element stays glued to the layout-viewport top, so without matching
     // offsetTop the shell's top — the header — slides up out of sight.
-    const syncViewport = () => {
-      if (!visualViewport) return
+    const syncViewport = (): boolean => {
+      if (!visualViewport) return false
       const height = Math.round(visualViewport.height)
+      const offsetTop = Math.max(0, Math.round(visualViewport.offsetTop))
+      const changed = height !== lastHeight || offsetTop !== lastOffsetTop
       // Only touch the DOM when a value actually changes — writing on every
-      // event thrashes layout and flashes inputs during the keyboard animation.
+      // frame thrashes layout and flashes inputs during the keyboard animation.
       if (height !== lastHeight) {
         lastHeight = height
         document.documentElement.style.setProperty('--visual-viewport-height', `${height}px`)
       }
-      const offsetTop = Math.max(0, Math.round(visualViewport.offsetTop))
       if (offsetTop !== lastOffsetTop) {
         lastOffsetTop = offsetTop
         document.documentElement.style.setProperty('--visual-viewport-offset-top', `${offsetTop}px`)
@@ -88,25 +91,48 @@ export default function AppShell() {
       const keyboardOpen = window.innerHeight - height > 120
       document.body.classList.toggle('keyboard-open', keyboardOpen)
       if (keyboardOpen) revealField()
+      return changed
+    }
+
+    // iOS delivers visual-viewport resize/scroll events sparsely while the
+    // keyboard (and its focus pan) animates, so a purely event-driven shell
+    // holds a stale height/offsetTop pair mid-animation and visibly jumps —
+    // the whole app shoved down with a black band above the header. Instead,
+    // any trigger starts a short per-frame tracking window that keeps the two
+    // values sampled together until they settle.
+    const track = () => {
+      const changed = syncViewport()
+      const now = performance.now()
+      if (changed) trackUntil = Math.max(trackUntil, now + 300)
+      rafId = now < trackUntil ? requestAnimationFrame(track) : 0
+    }
+
+    const startTracking = () => {
+      trackUntil = performance.now() + 700
+      if (!rafId) rafId = requestAnimationFrame(track)
     }
 
     const handleFocusIn = (e: FocusEvent) => {
       const el = e.target as HTMLElement | null
       if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return
       pendingField = el
+      // Focus is what kicks off the keyboard + pan animation; events alone may
+      // not arrive until it ends, so open the tracking window now.
+      startTracking()
       // Fallback for when the keyboard is already open (switching fields fires
       // no resize): reveal after the keyboard settle window.
       window.setTimeout(revealField, 350)
     }
 
-    visualViewport?.addEventListener('resize', syncViewport)
-    visualViewport?.addEventListener('scroll', syncViewport)
+    visualViewport?.addEventListener('resize', startTracking)
+    visualViewport?.addEventListener('scroll', startTracking)
     document.addEventListener('focusin', handleFocusIn)
     syncViewport()
 
     return () => {
-      visualViewport?.removeEventListener('resize', syncViewport)
-      visualViewport?.removeEventListener('scroll', syncViewport)
+      if (rafId) cancelAnimationFrame(rafId)
+      visualViewport?.removeEventListener('resize', startTracking)
+      visualViewport?.removeEventListener('scroll', startTracking)
       document.removeEventListener('focusin', handleFocusIn)
       document.body.classList.remove('keyboard-open')
     }

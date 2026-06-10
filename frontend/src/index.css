@@ -2911,6 +2911,22 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 }
 
+/* Installed (standalone) iOS PWAs float the form-assistant pill (prev/next/
+   done) over the page just above the keyboard instead of docking it inside
+   the keyboard, so anything flush with the bottom of the visual viewport —
+   the coach composer, a field revealed with block:'nearest' — sits exactly
+   underneath it. Keep keyboard-adjacent fields clear of that strip. */
+@media (display-mode: standalone) {
+  body.keyboard-open .coach-composer {
+    padding-bottom: 60px !important;
+  }
+
+  body.keyboard-open .mobile-shell-main,
+  body.keyboard-open .coach-messages {
+    scroll-padding-bottom: 72px;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
  * SETTINGS ROUTE
  * ══════════════════════════════════════════════════════════════════════════ */
