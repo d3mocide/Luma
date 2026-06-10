@@ -315,6 +315,16 @@ layer(base);
   .luma-bg { min-height: 100lvh; }
 }
 
+/* Soft-keyboard open (toggled from AppShell on touch devices): collapse the
+   fixed shell to the visible region reported by visualViewport (--app-height).
+   This is what stops iOS panning the whole app to reveal an occluded field —
+   nothing is occluded, so the header stays and bottom-pinned inputs land just
+   above the keyboard. Overrides the static 100lvh height + min-height above. */
+body.keyboard-open .luma-bg {
+  height: var(--app-height, 100lvh) !important;
+  min-height: var(--app-height, 100lvh) !important;
+}
+
 [data-theme="light"] .luma-bg {
   background: linear-gradient(180deg, #fbf6ec 0%, #f1f4fb 60%, #f6f4ef 100%);
 }
@@ -2911,15 +2921,12 @@ input[type="search"]::-webkit-search-results-decoration {
     transition: padding-bottom 220ms ease-out;
   }
 
-  /* The composer is pinned to the bottom of the height-constrained coach
-     column and has no scroller to be revealed in, so iOS would reveal it by
-     panning the whole shell (header slides off-screen). Instead, lift the
-     input above where the keyboard will land — the messages area (flex:1)
-     absorbs the difference, so only the composer moves. The lift must be
-     instant: iOS decides whether to pan based on where the field sits when
-     the keyboard appears. */
+  /* With the shell collapsed to the visible region (body.keyboard-open
+     .luma-bg above), the composer already sits at the bottom of the visible
+     area — just above the keyboard. The nav is hidden, so it only needs a
+     small gap; no estimate-based lift. */
   body.keyboard-open .coach-composer {
-    padding-bottom: calc(var(--keyboard-inset, 340px) + 8px) !important;
+    padding-bottom: 12px !important;
     transition: none;
   }
 }
