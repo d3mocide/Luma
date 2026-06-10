@@ -2900,14 +2900,13 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 
   /* When the soft keyboard is open the floating nav would otherwise wedge
-     between the composer and the keyboard. Hide it and drop the composer's
-     nav-clearance padding so the text box sits flush above the keyboard. */
+     between the composer and the keyboard. Hide it — the nav is absolutely
+     positioned so nothing reflows, and the composer keeps its nav-clearance
+     padding, which doubles as breathing room above the keyboard (and the
+     floating form-assistant pill in installed PWAs) once iOS's native pan
+     brings the focused field into view. */
   body.keyboard-open .mobile-nav-wrap {
     display: none !important;
-  }
-
-  body.keyboard-open .coach-composer {
-    padding-bottom: 12px !important;
   }
 }
 
