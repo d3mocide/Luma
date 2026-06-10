@@ -1586,6 +1586,197 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 }
 
+/* AI Price Calculator Rework styles */
+.ai-price-calculator-card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ai-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ai-actual-spent-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 20px;
+  align-items: center;
+}
+
+.ai-actual-spent-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-left: 1px solid var(--glass-edge);
+  padding-left: 20px;
+}
+
+.ai-models-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.ai-rate-edit-inputs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ai-rate-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 120px;
+}
+
+.ai-projection-inputs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.ai-projections-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+/* Custom range input styling */
+.ai-price-calculator-card input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 20px;
+}
+
+.ai-price-calculator-card input[type="range"]::-webkit-slider-runnable-track {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-edge);
+  height: 6px;
+  border-radius: 3px;
+}
+
+.ai-price-calculator-card input[type="range"]::-moz-range-track {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-edge);
+  height: 6px;
+  border-radius: 3px;
+}
+
+.ai-price-calculator-card input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -6px;
+  background-color: var(--thumb-color, var(--sky-400));
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.15));
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  transition: transform 0.1s ease;
+}
+
+.ai-price-calculator-card input[type="range"]::-moz-range-thumb {
+  background-color: var(--thumb-color, var(--sky-400));
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.15));
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  transition: transform 0.1s ease;
+}
+
+.ai-price-calculator-card input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.25);
+}
+
+.ai-price-calculator-card input[type="range"]::-moz-range-thumb:active {
+  transform: scale(1.25);
+}
+
+/* Mobile responsive media query (max-width: 600px) */
+@media (max-width: 600px) {
+  .ai-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .ai-actual-spent-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .ai-actual-spent-breakdown {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--glass-edge);
+    padding-top: 16px;
+  }
+
+  .ai-models-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding-bottom: 8px;
+    margin-bottom: -4px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ai-models-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ai-models-grid > button {
+    flex: 0 0 155px;
+    margin: 0;
+  }
+
+  .ai-projection-inputs-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .ai-projections-breakdown-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .ai-proj-col-monthly {
+    grid-column: span 2;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--glass-edge);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .ai-proj-col-monthly > div:last-child {
+    margin-top: 0 !important;
+    font-size: 22px !important;
+  }
+
+  .ai-proj-col-detail {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--glass-edge);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
  * PLAN ROUTE
  * ══════════════════════════════════════════════════════════════════════════ */

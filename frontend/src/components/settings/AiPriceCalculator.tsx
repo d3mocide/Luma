@@ -357,9 +357,9 @@ export function AiPriceCalculator() {
   }
 
   return (
-    <div className="glass settings-card" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="glass settings-card ai-price-calculator-card">
       {/* Title */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+      <div className="ai-card-header">
         <div>
           <div className="eyebrow" style={{ margin: 0 }}>AI Cost Analysis</div>
           <p style={{ color: 'var(--fg-tertiary)', fontSize: 13, margin: '4px 0 0' }}>
@@ -386,7 +386,7 @@ export function AiPriceCalculator() {
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20, alignItems: 'center' }}>
+        <div className="ai-actual-spent-grid">
           <div>
             <div style={{ fontSize: 11, color: 'var(--fg-tertiary)' }}>Total Cost</div>
             <div className="num" style={{ fontSize: 24, fontWeight: 600, color: 'var(--sun-400)', marginTop: 4 }}>
@@ -399,7 +399,7 @@ export function AiPriceCalculator() {
             )}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, borderLeft: '1px solid var(--glass-edge)', paddingLeft: 20 }}>
+          <div className="ai-actual-spent-breakdown">
             {actualCostList.length > 0 ? (
               actualCostList.map(item => (
                 <div key={item.modelKey} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
@@ -435,7 +435,7 @@ export function AiPriceCalculator() {
             </span>
             <span style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>Select model to configure rates</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+          <div className="ai-models-grid">
             {activeModels.map((model) => {
               const isSelected = selectedModel.originalKey === model.originalKey
               const activeColor = getProviderColor(model.provider)
@@ -489,8 +489,8 @@ export function AiPriceCalculator() {
                   <span style={{ fontSize: 10, color: 'var(--sky-400)' }}>Saving overrides...</span>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 120 }}>
+              <div className="ai-rate-edit-inputs">
+                <div className="ai-rate-edit-field">
                   <label htmlFor="custom-input-cost" style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>Input Cost ($/M tokens)</label>
                   <input
                     id="custom-input-cost"
@@ -511,7 +511,7 @@ export function AiPriceCalculator() {
                     }}
                   />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 120 }}>
+                <div className="ai-rate-edit-field">
                   <label htmlFor="custom-output-cost" style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>Output Cost ($/M tokens)</label>
                   <input
                     id="custom-output-cost"
@@ -606,7 +606,7 @@ export function AiPriceCalculator() {
         </div>
 
         {/* Dynamic Sliders / Inputs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
+        <div className="ai-projection-inputs-grid">
           {/* Token settings */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
@@ -625,6 +625,7 @@ export function AiPriceCalculator() {
                   width: '100%',
                   accentColor: getProviderColor(selectedModel.provider),
                   cursor: 'pointer',
+                  ['--thumb-color' as any]: getProviderColor(selectedModel.provider),
                 }}
               />
             </div>
@@ -645,6 +646,7 @@ export function AiPriceCalculator() {
                   width: '100%',
                   accentColor: getProviderColor(selectedModel.provider),
                   cursor: 'pointer',
+                  ['--thumb-color' as any]: getProviderColor(selectedModel.provider),
                 }}
               />
             </div>
@@ -699,6 +701,7 @@ export function AiPriceCalculator() {
                   width: '100%',
                   accentColor: getProviderColor(selectedModel.provider),
                   cursor: 'pointer',
+                  ['--thumb-color' as any]: getProviderColor(selectedModel.provider),
                 }}
               />
             </div>
@@ -739,23 +742,23 @@ export function AiPriceCalculator() {
             Cost Projections
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-            <div>
+          <div className="ai-projections-breakdown-grid">
+            <div className="ai-proj-col-monthly">
+              <div style={{ fontSize: 11, color: 'var(--fg-tertiary)' }}>Monthly Projection</div>
+              <div className="num" style={{ fontSize: 20, fontWeight: 600, color: getProviderColor(selectedModel.provider), marginTop: 4 }}>
+                {monthlyCost === 0 ? 'Free' : `$${monthlyCost.toFixed(2)}`}
+              </div>
+            </div>
+            <div className="ai-proj-col-detail">
               <div style={{ fontSize: 11, color: 'var(--fg-tertiary)' }}>Per Call</div>
               <div className="num" style={{ fontSize: 18, fontWeight: 500, color: 'var(--fg-primary)', marginTop: 4 }}>
                 {costPerCall === 0 ? 'Free' : `$${costPerCall.toFixed(4)}`}
               </div>
             </div>
-            <div>
+            <div className="ai-proj-col-detail">
               <div style={{ fontSize: 11, color: 'var(--fg-tertiary)' }}>Daily Total</div>
               <div className="num" style={{ fontSize: 18, fontWeight: 500, color: 'var(--fg-primary)', marginTop: 4 }}>
                 {dailyCost === 0 ? 'Free' : `$${dailyCost.toFixed(2)}`}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--fg-tertiary)' }}>Monthly Projection</div>
-              <div className="num" style={{ fontSize: 20, fontWeight: 600, color: getProviderColor(selectedModel.provider), marginTop: 4 }}>
-                {monthlyCost === 0 ? 'Free' : `$${monthlyCost.toFixed(2)}`}
               </div>
             </div>
           </div>
