@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 /**
  * KeyboardDebugOverlay — on-device telemetry for the iOS PWA keyboard / input
@@ -14,35 +14,52 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * field's rect, and a timestamped event timeline — so the behavior can be
  * diagnosed from data instead of guessed at.
  *
- * HOW to turn it on (no devtools needed):
- *   - Append `?kbdebug=1` to the URL once. The flag persists in localStorage,
- *     so it survives reloads and PWA relaunches.
- *   - Turn it off with `?kbdebug=0`, or tap the × in the panel.
+ * HOW to turn it on (no URL bar needed — a PWA has none):
+ *   - A small ⌨ launcher button sits in the bottom-left corner on touch
+ *     devices. Tap it to open the panel; close the panel to hide it again.
+ *   - On desktop (or to force it open), append `?kbdebug=1` to the URL; the
+ *     state persists in localStorage. `?kbdebug=0` clears it.
  *
  * The overlay never contains a focusable text field, so it cannot itself
  * trigger or perturb the soft keyboard. All measurement is imperative (rAF +
  * direct textContent writes) to keep React re-renders out of the hot path.
  */
 
-const STORAGE_KEY = 'luma:kbdebug'
+const OPEN_KEY = 'luma:kbdebug:open'
 const MAX_LOG = 240
 const Z = 2147483600
 
-function readEnabled(): boolean {
+function isCoarsePointer(): boolean {
   try {
-    const params = new URLSearchParams(window.location.search)
-    const q = params.get('kbdebug')
+    return window.matchMedia('(pointer: coarse)').matches
+  } catch {
+    return false
+  }
+}
+
+function readOpen(): boolean {
+  try {
+    const q = new URLSearchParams(window.location.search).get('kbdebug')
     if (q === '1' || q === 'true') {
-      localStorage.setItem(STORAGE_KEY, '1')
+      localStorage.setItem(OPEN_KEY, '1')
       return true
     }
     if (q === '0' || q === 'false') {
-      localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(OPEN_KEY)
       return false
     }
-    return localStorage.getItem(STORAGE_KEY) === '1'
+    return localStorage.getItem(OPEN_KEY) === '1'
   } catch {
     return false
+  }
+}
+
+function persistOpen(open: boolean): void {
+  try {
+    if (open) localStorage.setItem(OPEN_KEY, '1')
+    else localStorage.removeItem(OPEN_KEY)
+  } catch {
+    /* ignore */
   }
 }
 
@@ -154,8 +171,10 @@ interface LogEntry {
 }
 
 export default function KeyboardDebugOverlay() {
-  const [enabled, setEnabled] = useState(readEnabled)
-  const [collapsed, setCollapsed] = useState(false)
+  // The launcher is meaningful on touch devices (the bug is iOS-only); `?kbdebug`
+  // can still force the whole system on anywhere (e.g. desktop testing).
+  const launcherAvailable = useMemo(() => isCoarsePointer() || readOpen(), [])
+  const [open, setOpen] = useState(readOpen)
   const [showBands, setShowBands] = useState(true)
   const [, forceRender] = useState(0)
 
@@ -165,6 +184,11 @@ export default function KeyboardDebugOverlay() {
   const logRef = useRef<LogEntry[]>([])
   const t0Ref = useRef<number>(performance.now())
   const copyBtnRef = useRef<HTMLButtonElement>(null)
+
+  const setOpenPersist = useCallback((next: boolean) => {
+    persistOpen(next)
+    setOpen(next)
+  }, [])
 
   const pushLog = useCallback((kind: string, detail: string) => {
     const entry: LogEntry = {
@@ -180,7 +204,7 @@ export default function KeyboardDebugOverlay() {
 
   // Live metrics loop + visual band positioning. Imperative on purpose.
   useEffect(() => {
-    if (!enabled || collapsed) return
+    if (!open) return
     let raf = 0
     const tick = () => {
       const m = readMetrics()
@@ -200,11 +224,11 @@ export default function KeyboardDebugOverlay() {
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [enabled, collapsed, showBands])
+  }, [open, showBands])
 
   // Event instrumentation.
   useEffect(() => {
-    if (!enabled) return
+    if (!open) return
 
     const snap = () => {
       const m = readMetrics()
@@ -256,16 +280,7 @@ export default function KeyboardDebugOverlay() {
       vv?.removeEventListener('scroll', onVvScroll)
       mo.disconnect()
     }
-  }, [enabled, pushLog])
-
-  const disable = useCallback(() => {
-    try {
-      localStorage.removeItem(STORAGE_KEY)
-    } catch {
-      /* ignore */
-    }
-    setEnabled(false)
-  }, [])
+  }, [open, pushLog])
 
   const resetLog = useCallback(() => {
     logRef.current = []
@@ -323,7 +338,42 @@ export default function KeyboardDebugOverlay() {
     }
   }, [])
 
-  if (!enabled) return null
+  // Nothing to show: not a touch device and not force-enabled.
+  if (!launcherAvailable && !open) return null
+
+  // Collapsed state: just the floating launcher button.
+  if (!open) {
+    return (
+      <button
+        type="button"
+        aria-label="Open keyboard debug overlay"
+        onClick={() => setOpenPersist(true)}
+        style={{
+          position: 'fixed',
+          left: 'max(env(safe-area-inset-left, 0px), 10px)',
+          bottom: 'calc(max(env(safe-area-inset-bottom, 0px), 10px) + 76px)',
+          zIndex: Z,
+          width: 38,
+          height: 38,
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 17,
+          lineHeight: 1,
+          color: '#7dd3fc',
+          background: 'rgba(8,12,20,0.72)',
+          border: '1px solid rgba(56,189,248,0.4)',
+          boxShadow: '0 4px 18px rgba(0,0,0,0.45)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
+          opacity: 0.78,
+        }}
+      >
+        ⌨
+      </button>
+    )
+  }
 
   const log = logRef.current
 
@@ -332,7 +382,7 @@ export default function KeyboardDebugOverlay() {
       {/* Visual viewport bands — illustrate where the device thinks the visible
           region ends and the keyboard begins. pointer-events:none so they never
           intercept taps. */}
-      {showBands && !collapsed && (
+      {showBands && (
         <>
           <div
             ref={bandVisibleRef}
@@ -379,7 +429,7 @@ export default function KeyboardDebugOverlay() {
           boxShadow: '0 8px 40px rgba(0,0,0,0.55)',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
-          maxHeight: collapsed ? undefined : '52vh',
+          maxHeight: '52vh',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -392,7 +442,7 @@ export default function KeyboardDebugOverlay() {
             alignItems: 'center',
             gap: 6,
             padding: '7px 8px',
-            borderBottom: collapsed ? 'none' : '1px solid rgba(255,255,255,0.08)',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
             flexShrink: 0,
           }}
         >
@@ -400,58 +450,51 @@ export default function KeyboardDebugOverlay() {
             ⌨ kbdebug
           </span>
           <span style={{ flex: 1 }} />
-          <Btn onClick={() => setCollapsed((c) => !c)}>{collapsed ? 'show' : 'hide'}</Btn>
-          {!collapsed && (
-            <>
-              <Btn onClick={() => setShowBands((b) => !b)}>{showBands ? 'bands✓' : 'bands'}</Btn>
-              <Btn onClick={resetLog}>reset</Btn>
-              <Btn onClick={copyAll} btnRef={copyBtnRef}>
-                copy
-              </Btn>
-            </>
-          )}
-          <Btn onClick={disable} danger>
+          <Btn onClick={() => setShowBands((b) => !b)}>{showBands ? 'bands✓' : 'bands'}</Btn>
+          <Btn onClick={resetLog}>reset</Btn>
+          <Btn onClick={copyAll} btnRef={copyBtnRef}>
+            copy
+          </Btn>
+          <Btn onClick={() => setOpenPersist(false)} danger>
             ×
           </Btn>
         </div>
 
-        {!collapsed && (
-          <div style={{ overflowY: 'auto', overscrollBehavior: 'contain', padding: '8px' }}>
-            <pre
-              ref={metricsRef}
-              style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#bfdbfe' }}
-            />
-            <div
-              style={{
-                margin: '8px 0 4px',
-                color: '#7dd3fc',
-                borderTop: '1px solid rgba(255,255,255,0.08)',
-                paddingTop: 6,
-              }}
-            >
-              timeline · {log.length} events
-            </div>
-            <div>
-              {log.length === 0 && (
-                <div style={{ color: '#64748b' }}>tap an input field to capture events…</div>
-              )}
-              {log
-                .slice()
-                .reverse()
-                .map((e, i) => (
-                  <div key={log.length - i} style={{ display: 'flex', gap: 6, padding: '1px 0' }}>
-                    <span style={{ color: '#475569', flexShrink: 0 }}>
-                      +{String(e.t).padStart(5, ' ')}
-                    </span>
-                    <span style={{ color: kindColor(e.kind), flexShrink: 0, width: 72 }}>
-                      {e.kind}
-                    </span>
-                    <span style={{ color: '#cbd5e1', wordBreak: 'break-word' }}>{e.detail}</span>
-                  </div>
-                ))}
-            </div>
+        <div style={{ overflowY: 'auto', overscrollBehavior: 'contain', padding: '8px' }}>
+          <pre
+            ref={metricsRef}
+            style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#bfdbfe' }}
+          />
+          <div
+            style={{
+              margin: '8px 0 4px',
+              color: '#7dd3fc',
+              borderTop: '1px solid rgba(255,255,255,0.08)',
+              paddingTop: 6,
+            }}
+          >
+            timeline · {log.length} events
           </div>
-        )}
+          <div>
+            {log.length === 0 && (
+              <div style={{ color: '#64748b' }}>tap an input field to capture events…</div>
+            )}
+            {log
+              .slice()
+              .reverse()
+              .map((e, i) => (
+                <div key={log.length - i} style={{ display: 'flex', gap: 6, padding: '1px 0' }}>
+                  <span style={{ color: '#475569', flexShrink: 0 }}>
+                    +{String(e.t).padStart(5, ' ')}
+                  </span>
+                  <span style={{ color: kindColor(e.kind), flexShrink: 0, width: 72 }}>
+                    {e.kind}
+                  </span>
+                  <span style={{ color: '#cbd5e1', wordBreak: 'break-word' }}>{e.detail}</span>
+                </div>
+              ))}
+          </div>
+        </div>
       </div>
     </>
   )
