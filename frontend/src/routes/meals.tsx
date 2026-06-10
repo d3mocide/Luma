@@ -44,64 +44,109 @@ function SatFatBadge({ level, range }: { level: FoodCategory['satFatLevel']; ran
 }
 
 
-// ── Food comparison card (curated category browse) ────────────────────────────
+// ── Shared Food Database Card Component ───────────────────────────────────────
 
-function FoodCompareCard({ food, onClick }: { food: FoodResult; onClick: () => void }) {
+function FoodLibCard({ food, onClick }: { food: FoodResult; onClick?: () => void }) {
   const satFat = food.nutrients_per_100g?.saturated_fat_g ?? 0
   const calories = food.nutrients_per_100g?.calories ?? 0
   const protein = food.nutrients_per_100g?.protein_g ?? 0
   const fiber = food.nutrients_per_100g?.dietary_fiber_g ?? food.nutrients_per_100g?.soluble_fiber_g ?? 0
+  const carbs = food.nutrients_per_100g?.carbohydrates_g ?? 0
+  const fat = food.nutrients_per_100g?.fat_g ?? 0
+
+  const CardComponent = onClick ? 'button' : 'div'
+  const satFatColor = satFat < 3 ? 'var(--good)' : satFat < 8 ? 'var(--warn)' : 'var(--bad)'
+  const satFatText = satFat < 3 ? 'Low' : satFat < 8 ? 'Medium' : 'High'
 
   return (
-    <button
+    <CardComponent
       onClick={onClick}
-      className="glass-bright"
-      style={{
-        padding: '14px 16px',
-        borderRadius: 14,
-        textAlign: 'left',
-        cursor: 'pointer',
-        border: '1px solid var(--glass-edge)',
-        transition: 'border-color 150ms, background 150ms, transform 150ms',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-        width: '100%',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'var(--glass-edge-strong)'
-        e.currentTarget.style.transform = 'translateY(-2px)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--glass-edge)'
-        e.currentTarget.style.transform = 'translateY(0)'
-      }}
+      type={onClick ? 'button' : undefined}
+      className={`glass ${onClick ? 'food-db-card food-db-card-clickable' : 'food-db-card'}`}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', width: '100%', gap: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{food.name}</div>
-        <div className="num" style={{ fontSize: 11, color: 'var(--fg-secondary)', flexShrink: 0 }}>{Math.round(calories)} kcal</div>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--fg-quiet)', marginBottom: 2 }}>
-            <span className="eyebrow" style={{ fontSize: 8 }}>Sat fat / 100g</span>
-            <span className="num" style={{ fontWeight: 600, color: satFat < 3 ? 'var(--good)' : satFat < 8 ? 'var(--warn)' : 'var(--bad)' }}>{satFat.toFixed(1)}g</span>
+      {/* Header: Name, Brand/Source, Calories */}
+      <div className="food-db-card-header">
+        <div className="food-db-card-title-group">
+          <div className="food-db-card-name-row">
+            <span className="food-db-card-name">{food.name}</span>
+            {food.brand === 'USDA Reference' ? (
+              <span className="food-db-card-source-pill food-db-card-source-pill--usda-ref">
+                USDA Reference
+              </span>
+            ) : food.source === 'user' ? (
+              <span className="food-db-card-source-pill food-db-card-source-pill--custom">
+                Custom
+              </span>
+            ) : food.source ? (
+              <span className="food-db-card-source-pill food-db-card-source-pill--other">
+                {food.source === 'off' ? 'Open Food Facts' : 'USDA API'}
+              </span>
+            ) : null}
           </div>
-          <div style={{ height: 3, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${Math.min((satFat / 30) * 100, 100)}%`, background: satFat < 3 ? 'var(--good)' : satFat < 8 ? 'var(--warn)' : 'var(--bad)', borderRadius: 2 }} />
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, borderTop: '1px solid var(--glass-edge)', paddingTop: 6, marginTop: 2 }}>
-          <span style={{ color: 'var(--fg-tertiary)' }}>Protein: <span className="num" style={{ color: '#a78bfa', fontWeight: 600 }}>{protein.toFixed(1)}g</span></span>
-          {fiber > 0 && (
-            <span style={{ color: 'var(--fg-tertiary)' }}>Fiber: <span className="num" style={{ color: 'var(--sky-400)', fontWeight: 600 }}>{fiber.toFixed(1)}g</span></span>
+          {food.brand && food.brand !== 'USDA Reference' && (
+            <div className="food-db-card-brand">{food.brand}</div>
           )}
         </div>
+        <div className="food-db-card-calories">
+          <div className="num food-db-card-cal-num">{Math.round(calories)} kcal</div>
+          <div className="food-db-card-cal-sub">per 100g</div>
+        </div>
       </div>
-    </button>
+
+      {/* Saturated Fat Meter */}
+      <div className="food-db-sat-fat-section">
+        <div className="food-db-sat-fat-header">
+          <span className="food-db-sat-fat-label">Saturated Fat / 100g</span>
+          <span className="food-db-sat-fat-val" style={{ color: satFatColor }}>
+            {satFat.toFixed(1)}g ({satFatText})
+          </span>
+        </div>
+        <div className="food-db-sat-fat-bar-track">
+          <div
+            className="food-db-sat-fat-bar-fill"
+            style={{
+              width: `${Math.min((satFat / 30) * 100, 100)}%`,
+              backgroundColor: satFatColor,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Macronutrients Grid */}
+      <div className="food-db-macro-grid">
+        <div className="food-db-macro-col">
+          <span className="food-db-macro-label">Protein</span>
+          <span className="num food-db-macro-val food-db-macro-val--protein">
+            {protein.toFixed(1)}g
+          </span>
+        </div>
+        <div className="food-db-macro-col">
+          <span className="food-db-macro-label">Fiber</span>
+          <span className="num food-db-macro-val food-db-macro-val--fiber">
+            {fiber.toFixed(1)}g
+          </span>
+        </div>
+        <div className="food-db-macro-col">
+          <span className="food-db-macro-label">Carbs</span>
+          <span className="num food-db-macro-val food-db-macro-val--carbs">
+            {carbs.toFixed(1)}g
+          </span>
+        </div>
+        <div className="food-db-macro-col">
+          <span className="food-db-macro-label">Fat</span>
+          <span className="num food-db-macro-val food-db-macro-val--fat">
+            {fat.toFixed(1)}g
+          </span>
+        </div>
+      </div>
+    </CardComponent>
   )
+}
+
+// ── Food comparison card (curated category browse) ────────────────────────────
+
+function FoodCompareCard({ food, onClick }: { food: FoodResult; onClick: () => void }) {
+  return <FoodLibCard food={food} onClick={onClick} />
 }
 
 // ── Curated category browse (whole group from the local database) ──────────────
@@ -199,24 +244,6 @@ function CategoryGrid({
   )
 }
 
-// ── Sat fat level indicator (inline bar) ──────────────────────────────────────
-
-function SatFatBar({ value }: { value: number }) {
-  // Scale: 0–30g maps to 0–100%, cap at 30g visually
-  const pct = Math.min((value / 30) * 100, 100)
-  const color = value < 3 ? 'var(--good)' : value < 8 ? 'var(--warn)' : 'var(--bad)'
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ flex: 1, height: 3, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2 }} />
-      </div>
-      <span className="num" style={{ fontSize: 11, color, fontWeight: 600, minWidth: 40, textAlign: 'right' }}>
-        {value.toFixed(1)}g
-      </span>
-    </div>
-  )
-}
-
 // ── Search results list ───────────────────────────────────────────────────────
 
 function FoodSearchResults({ results, isLoading }: { results: FoodResult[] | undefined; isLoading: boolean }) {
@@ -238,79 +265,10 @@ function FoodSearchResults({ results, isLoading }: { results: FoodResult[] | und
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {results.map((food) => {
-        const satFat = food.nutrients_per_100g?.saturated_fat_g ?? 0
-        const calories = food.nutrients_per_100g?.calories ?? 0
-        const protein = food.nutrients_per_100g?.protein_g ?? 0
-        return (
-          <div
-            key={food.id}
-            className="glass"
-            style={{
-              padding: '12px 16px',
-              borderRadius: 12,
-              border: '1px solid var(--glass-edge)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>
-                    {food.name}
-                  </span>
-                  {food.brand === 'USDA Reference' ? (
-                    <span style={{
-                      fontSize: 9, padding: '2px 8px', borderRadius: 20,
-                      background: 'rgba(56,189,248,0.15)', color: 'var(--sky-400)',
-                      border: '1px solid rgba(56,189,248,0.25)', fontWeight: 600,
-                      fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
-                    }}>
-                      USDA Reference
-                    </span>
-                  ) : food.source === 'user' ? (
-                    <span style={{
-                      fontSize: 9, padding: '2px 8px', borderRadius: 20,
-                      background: 'rgba(167,139,250,0.15)', color: '#c084fc',
-                      border: '1px solid rgba(167,139,250,0.25)', fontWeight: 600,
-                      fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
-                    }}>
-                      Custom
-                    </span>
-                  ) : (
-                    <span style={{
-                      fontSize: 9, padding: '2px 8px', borderRadius: 20,
-                      background: 'rgba(255,255,255,0.06)', color: 'var(--fg-tertiary)',
-                      border: '1px solid rgba(255,255,255,0.08)', fontWeight: 500,
-                      fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em'
-                    }}>
-                      {food.source === 'off' ? 'Open Food Facts' : 'USDA API'}
-                    </span>
-                  )}
-                </div>
-                {food.brand && food.brand !== 'USDA Reference' && (
-                  <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{food.brand}</div>
-                )}
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div className="num" style={{ fontSize: 13, color: 'var(--fg-secondary)' }}>{Math.round(calories)} kcal</div>
-                <div style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>per 100g</div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div className="eyebrow" style={{ fontSize: 9, marginBottom: 4 }}>Sat fat / 100g</div>
-                <SatFatBar value={satFat} />
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div className="eyebrow" style={{ fontSize: 9, marginBottom: 2 }}>Protein</div>
-                <span className="num" style={{ fontSize: 11, color: '#a78bfa' }}>{protein.toFixed(1)}g</span>
-              </div>
-            </div>
-          </div>
-        )
-      })}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {results.map((food) => (
+        <FoodLibCard key={food.id} food={food} />
+      ))}
     </div>
   )
 }
