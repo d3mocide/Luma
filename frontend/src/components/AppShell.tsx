@@ -47,23 +47,36 @@ export default function AppShell() {
     const visualViewport = window.visualViewport
     if (!visualViewport) return
 
+    let lastHeight = -1
     const handleResize = () => {
-      const height = visualViewport.height
-      document.documentElement.style.setProperty('--visual-viewport-height', `${height}px`)
-      // Prevent layout viewport scroll offsets on iOS when keyboard is active
-      if (window.scrollY > 0) {
+      const height = Math.round(visualViewport.height)
+      // Only touch the DOM when the height actually changes — writing the var on
+      // every event thrashes layout and makes inputs flash during the keyboard
+      // open animation.
+      if (height !== lastHeight) {
+        lastHeight = height
+        document.documentElement.style.setProperty('--visual-viewport-height', `${height}px`)
+      }
+      // The on-screen keyboard shrinks the visual viewport well below the layout
+      // viewport (window.innerHeight). Detect that gap so the shell can surface
+      // the composer above the keyboard instead of behind the floating nav.
+      const keyboardOpen = window.innerHeight - height > 120
+      document.body.classList.toggle('keyboard-open', keyboardOpen)
+      // iOS can pan the layout viewport to reveal a focused field, leaving the
+      // fixed shell scrolled off-screen. Re-pin to the top — but only here, on
+      // keyboard show/hide. Doing this on every visualViewport scroll frame
+      // fights iOS's native scroll-into-view and flickers the whole app.
+      if (keyboardOpen && window.scrollY > 0) {
         window.scrollTo(0, 0)
-        document.body.scrollTop = 0
       }
     }
 
     visualViewport.addEventListener('resize', handleResize)
-    visualViewport.addEventListener('scroll', handleResize)
     handleResize()
 
     return () => {
       visualViewport.removeEventListener('resize', handleResize)
-      visualViewport.removeEventListener('scroll', handleResize)
+      document.body.classList.remove('keyboard-open')
     }
   }, [])
 
