@@ -26,7 +26,7 @@ async def get_today(
     today_dt = datetime.now(resolved_tz).date()
 
     # 1. Fetch user's goals
-    from luma.db.models import Goal, MealEvent, MealPlan, MealPlanSlot
+    from luma.db.models import Goal, MealEvent, MealPlan, MealPlanSlot, Supplement
     stmt_goal = select(Goal).where(Goal.user_id == user.id)
     res_goal = await db.execute(stmt_goal)
     goal = res_goal.scalar_one_or_none()
@@ -64,6 +64,21 @@ async def get_today(
         logged_sat += float(nutr.get("saturated_fat_g") or 0.0)
         logged_sol += float(nutr.get("soluble_fiber_g") or 0.0)
         logged_sugar += float(nutr.get("sugars_g") or 0.0)
+
+    # Add active supplement nutrient contributions to daily totals
+    supp_rows = await db.execute(
+        select(Supplement).where(Supplement.user_id == user.id, Supplement.is_active.is_(True))
+    )
+    active_supps = supp_rows.scalars().all()
+    supplement_nutrients: dict[str, float] = {}
+    for s in active_supps:
+        for key, val in (s.nutrients_per_dose or {}).items():
+            supplement_nutrients[key] = supplement_nutrients.get(key, 0.0) + float(val or 0.0)
+
+    logged_cal += supplement_nutrients.get("calories", 0.0)
+    logged_sat += supplement_nutrients.get("saturated_fat_g", 0.0)
+    logged_sol += supplement_nutrients.get("soluble_fiber_g", 0.0)
+    logged_sugar += supplement_nutrients.get("sugars_g", 0.0)
         
     cal_pct = round((logged_cal / target_cal) * 100, 1) if target_cal else None
     sat_pct = round((logged_sat / target_sat) * 100, 1) if target_sat else None
@@ -225,6 +240,7 @@ async def get_today(
         ],
         "recent_meals": recent_meals,
         "streak_days": streak_days,
+        "supplement_nutrients": supplement_nutrients,
         "active_insight": await _get_active_insight(db, str(user.id)),
     }
 

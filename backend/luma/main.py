@@ -15,6 +15,7 @@ from luma.api import (
     foods,
     goals,
     hae_diagnostic,
+    health,
     ingest,
     insights,
     journal,
@@ -148,8 +149,9 @@ app.include_router(admin.router, prefix=f"{API_PREFIX}/admin", tags=["admin"])
 app.include_router(journal.router, prefix=f"{API_PREFIX}/journal", tags=["journal"])
 app.include_router(notifications.router, prefix=f"{API_PREFIX}/notifications", tags=["notifications"])
 app.include_router(family.router, prefix=f"{API_PREFIX}/family", tags=["family"])
+app.include_router(health.router, prefix=API_PREFIX, tags=["health"])
 
 
 @app.get("/health")
-async def health() -> dict:
+async def healthz() -> dict:
     return {"status": "ok"}

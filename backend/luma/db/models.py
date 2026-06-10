@@ -332,6 +332,37 @@ class FavoriteItem(Base):
     favorite = relationship("Favorite", back_populates="items")
 
 
+class Medication(Base):
+    __tablename__ = "medications"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    generic_name: Mapped[str | None] = mapped_column(Text)
+    dose: Mapped[str | None] = mapped_column(Text)
+    frequency: Mapped[str | None] = mapped_column(Text)
+    notes: Mapped[str | None] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    user = relationship("User")
+
+
+class Supplement(Base):
+    __tablename__ = "supplements"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    dose: Mapped[str | None] = mapped_column(Text)
+    frequency: Mapped[str | None] = mapped_column(Text)
+    nutrients_per_dose: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    user = relationship("User")
+
+
 class PushSubscription(Base):
     __tablename__ = "push_subscriptions"
 
