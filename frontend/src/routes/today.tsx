@@ -455,22 +455,6 @@ export default function TodayRoute() {
               <span className="serif-italic gradient-accent-text" style={{ background: 'var(--accent-gradient-hero)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>{greetingName}</span>.
             </h1>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/trends')}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '7px 14px', borderRadius: 999,
-              background: 'rgba(56,189,248,0.08)',
-              border: '1px solid rgba(56,189,248,0.22)',
-              color: 'var(--sky-300)',
-              fontSize: 12, fontWeight: 500, cursor: 'pointer',
-              letterSpacing: '0.01em', flexShrink: 0,
-            }}
-          >
-            <Activity size={13} strokeWidth={1.75} />
-            Trends
-          </button>
         </div>
 
         {/* Rings */}
