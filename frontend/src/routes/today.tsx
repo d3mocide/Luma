@@ -323,13 +323,8 @@ export default function TodayRoute() {
               {/* Detail row: rings + ring legends */}
               <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
                 <div style={{ flexShrink: 0 }}>
-                  <div style={{ width: 140, height: 140, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 140, height: 140 }}>
                     <ActivityRings size={140} values={rings} colors={ringColors} thickness={12} gap={5}/>
-                    <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', pointerEvents: 'none', marginTop: 2 }}>
-                      <span className="num" style={{ fontSize: 22, fontWeight: 300, color: 'var(--fg-primary)' }}>{onTargetCount}</span>
-                      <span style={{ fontSize: 13, color: 'var(--fg-quiet)', margin: '0 2px' }}>/</span>
-                      <span className="num" style={{ fontSize: 15, color: 'var(--fg-tertiary)' }}>{totalGoalCount}</span>
-                    </div>
                   </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -535,13 +530,8 @@ export default function TodayRoute() {
           {/* Detail row: rings + ring legends */}
           <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
             <div style={{ flexShrink: 0 }}>
-              <div style={{ width: 110, height: 110, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 110, height: 110 }}>
                 <ActivityRings size={110} values={rings} colors={ringColors} thickness={10} gap={4}/>
-                <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', pointerEvents: 'none', marginTop: 2 }}>
-                  <span className="num" style={{ fontSize: 18, fontWeight: 300, color: 'var(--fg-primary)' }}>{onTargetCount}</span>
-                  <span style={{ fontSize: 12, color: 'var(--fg-quiet)', margin: '0 2px' }}>/</span>
-                  <span className="num" style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>{totalGoalCount}</span>
-                </div>
               </div>
             </div>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
