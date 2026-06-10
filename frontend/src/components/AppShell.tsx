@@ -45,95 +45,26 @@ export default function AppShell() {
 
   useEffect(() => {
     const visualViewport = window.visualViewport
+    if (!visualViewport) return
 
-    let pendingField: HTMLElement | null = null
-    let lastHeight = -1
-    let lastOffsetTop = -1
-    let rafId = 0
-    let trackUntil = 0
-
-    // Native focus-scrolling fails here: inputs live inside an inner overflow
-    // container under a position:fixed shell, so the browser scrolls the locked
-    // layout viewport (and snaps back) instead of the real scroller. Once the
-    // keyboard has resized the viewport, pull the focused field into view inside
-    // its own scroll parent — block:'nearest' so already-visible fields don't
-    // move and off-screen fields scroll the minimum needed.
-    const revealField = () => {
-      const el = pendingField
-      if (!el || !el.isConnected) return
-      pendingField = null
-      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-    }
-
-    // Keep the fixed shell exactly overlaid on the visual viewport. The keyboard
-    // both shrinks the visual viewport (height) AND offsets it downward within
-    // the layout viewport (offsetTop) to reveal the focused field. A fixed
-    // top:0 element stays glued to the layout-viewport top, so without matching
-    // offsetTop the shell's top — the header — slides up out of sight.
-    const syncViewport = (): boolean => {
-      if (!visualViewport) return false
-      const height = Math.round(visualViewport.height)
-      const offsetTop = Math.max(0, Math.round(visualViewport.offsetTop))
-      const changed = height !== lastHeight || offsetTop !== lastOffsetTop
-      // Only touch the DOM when a value actually changes — writing on every
-      // frame thrashes layout and flashes inputs during the keyboard animation.
-      if (height !== lastHeight) {
-        lastHeight = height
-        document.documentElement.style.setProperty('--visual-viewport-height', `${height}px`)
-      }
-      if (offsetTop !== lastOffsetTop) {
-        lastOffsetTop = offsetTop
-        document.documentElement.style.setProperty('--visual-viewport-offset-top', `${offsetTop}px`)
-      }
-      // The on-screen keyboard shrinks the visual viewport well below the layout
-      // viewport (window.innerHeight). Detect that gap so the shell can surface
-      // the composer above the keyboard instead of behind the floating nav.
-      const keyboardOpen = window.innerHeight - height > 120
+    // Revealing focused fields, panning, and clearing the form-assistant bar
+    // are all left to iOS's native keyboard pan — resizing the fixed shell to
+    // the visual viewport from JS fights it and can never match its smoothness
+    // (iOS exposes no intermediate viewport values while the keyboard
+    // animates). The only thing detected here is the keyboard itself, which
+    // shrinks the visual viewport well below the layout viewport
+    // (window.innerHeight), so CSS can hide the floating nav that would
+    // otherwise wedge between the coach composer and the keyboard.
+    const syncKeyboard = () => {
+      const keyboardOpen = window.innerHeight - visualViewport.height > 120
       document.body.classList.toggle('keyboard-open', keyboardOpen)
-      if (keyboardOpen) revealField()
-      return changed
     }
 
-    // iOS delivers visual-viewport resize/scroll events sparsely while the
-    // keyboard (and its focus pan) animates, so a purely event-driven shell
-    // holds a stale height/offsetTop pair mid-animation and visibly jumps —
-    // the whole app shoved down with a black band above the header. Instead,
-    // any trigger starts a short per-frame tracking window that keeps the two
-    // values sampled together until they settle.
-    const track = () => {
-      const changed = syncViewport()
-      const now = performance.now()
-      if (changed) trackUntil = Math.max(trackUntil, now + 300)
-      rafId = now < trackUntil ? requestAnimationFrame(track) : 0
-    }
-
-    const startTracking = () => {
-      trackUntil = performance.now() + 700
-      if (!rafId) rafId = requestAnimationFrame(track)
-    }
-
-    const handleFocusIn = (e: FocusEvent) => {
-      const el = e.target as HTMLElement | null
-      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return
-      pendingField = el
-      // Focus is what kicks off the keyboard + pan animation; events alone may
-      // not arrive until it ends, so open the tracking window now.
-      startTracking()
-      // Fallback for when the keyboard is already open (switching fields fires
-      // no resize): reveal after the keyboard settle window.
-      window.setTimeout(revealField, 350)
-    }
-
-    visualViewport?.addEventListener('resize', startTracking)
-    visualViewport?.addEventListener('scroll', startTracking)
-    document.addEventListener('focusin', handleFocusIn)
-    syncViewport()
+    visualViewport.addEventListener('resize', syncKeyboard)
+    syncKeyboard()
 
     return () => {
-      if (rafId) cancelAnimationFrame(rafId)
-      visualViewport?.removeEventListener('resize', startTracking)
-      visualViewport?.removeEventListener('scroll', startTracking)
-      document.removeEventListener('focusin', handleFocusIn)
+      visualViewport.removeEventListener('resize', syncKeyboard)
       document.body.classList.remove('keyboard-open')
     }
   }, [])
@@ -153,18 +84,7 @@ export default function AppShell() {
   const initials = getUserInitials(user.display_name)
 
   return (
-    <div
-      className="luma-bg"
-      style={{
-        position: 'fixed',
-        top: 'var(--visual-viewport-offset-top, 0px)',
-        left: 0,
-        right: 0,
-        height: 'var(--visual-viewport-height, 100vh)',
-        display: 'flex',
-        flexDirection: 'row',
-      }}
-    >
+    <div className="luma-bg" style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'row' }}>
       <LogSheet />
 
       {/* Desktop Sidebar */}
