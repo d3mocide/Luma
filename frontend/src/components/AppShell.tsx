@@ -44,27 +44,85 @@ export default function AppShell() {
   })
 
   useEffect(() => {
-    const visualViewport = window.visualViewport
-    if (!visualViewport) return
+    // Soft-keyboard handling for touch devices. Standalone iOS gives no
+    // reliable viewport signal for the keyboard (visualViewport height/resize
+    // delivery is inconsistent), so keyboard presence is inferred from
+    // text-field focus, which is deterministic.
+    if (!window.matchMedia('(pointer: coarse)').matches) return
 
-    // Revealing focused fields, panning, and clearing the form-assistant bar
-    // are all left to iOS's native keyboard pan — resizing the fixed shell to
-    // the visual viewport from JS fights it and can never match its smoothness
-    // (iOS exposes no intermediate viewport values while the keyboard
-    // animates). The only thing detected here is the keyboard itself, which
-    // shrinks the visual viewport well below the layout viewport
-    // (window.innerHeight), so CSS can hide the floating nav that would
-    // otherwise wedge between the coach composer and the keyboard.
-    const syncKeyboard = () => {
-      const keyboardOpen = window.innerHeight - visualViewport.height > 120
-      document.body.classList.toggle('keyboard-open', keyboardOpen)
+    const isTextField = (node: EventTarget | Element | null): node is HTMLElement =>
+      node instanceof HTMLElement && (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA')
+
+    const scrollParentOf = (el: HTMLElement): HTMLElement | null => {
+      let node = el.parentElement
+      while (node) {
+        const { overflowY } = getComputedStyle(node)
+        if ((overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight) {
+          return node
+        }
+        node = node.parentElement
+      }
+      return null
     }
 
-    visualViewport.addEventListener('resize', syncKeyboard)
-    syncKeyboard()
+    // When the focused field sits low on screen, iOS reveals it by panning
+    // the whole fixed shell — the header slides off the top and the page
+    // bottom (nav included) gets dragged up into view. Deny it the reason to
+    // pan: keep the field in the top third of the screen, above the keyboard
+    // wherever iOS finally puts it, by moving the field's own scroller
+    // instead. Fields already high enough don't move at all. Instant (not
+    // smooth) so the field is in place before the keyboard lands.
+    const positionField = (el: HTMLElement) => {
+      if (!el.isConnected || document.activeElement !== el) return
+      const scroller = scrollParentOf(el)
+      if (!scroller) return
+      const fieldTop = el.getBoundingClientRect().top
+      if (fieldTop <= window.innerHeight * 0.33) return
+      scroller.scrollTo({ top: scroller.scrollTop + fieldTop - window.innerHeight * 0.25, behavior: 'instant' })
+    }
+
+    let blurTimer = 0
+
+    // Estimated soft-keyboard height (plus the floating form-assistant pill
+    // and a small margin). iOS exposes no keyboard-height API in standalone
+    // mode, so bottom-pinned fields that can't be scrolled — the coach
+    // composer — are lifted by this estimate instead, sized to clear the
+    // keyboard on iPhone portrait layouts so iOS never needs to pan.
+    const keyboardInset = () =>
+      Math.min(Math.round(window.innerHeight * 0.44) + 52, 430)
+
+    const handleFocusIn = (e: FocusEvent) => {
+      if (!isTextField(e.target)) return
+      window.clearTimeout(blurTimer)
+      // Set the inset before the class so the lift happens in one paint.
+      document.documentElement.style.setProperty('--keyboard-inset', `${keyboardInset()}px`)
+      document.body.classList.add('keyboard-open')
+      const el = e.target
+      positionField(el)
+      // Re-check once the keyboard has settled, in case iOS adjusted the
+      // viewport in the meantime.
+      window.setTimeout(() => positionField(el), 350)
+    }
+
+    const handleFocusOut = (e: FocusEvent) => {
+      if (!isTextField(e.target)) return
+      // Swapping fields fires focusout→focusin back to back; only drop the
+      // class once focus has really left all text fields.
+      window.clearTimeout(blurTimer)
+      blurTimer = window.setTimeout(() => {
+        if (!isTextField(document.activeElement)) {
+          document.body.classList.remove('keyboard-open')
+        }
+      }, 100)
+    }
+
+    document.addEventListener('focusin', handleFocusIn)
+    document.addEventListener('focusout', handleFocusOut)
 
     return () => {
-      visualViewport.removeEventListener('resize', syncKeyboard)
+      window.clearTimeout(blurTimer)
+      document.removeEventListener('focusin', handleFocusIn)
+      document.removeEventListener('focusout', handleFocusOut)
       document.body.classList.remove('keyboard-open')
     }
   }, [])

@@ -2901,12 +2901,26 @@ input[type="search"]::-webkit-search-results-decoration {
 
   /* When the soft keyboard is open the floating nav would otherwise wedge
      between the composer and the keyboard. Hide it — the nav is absolutely
-     positioned so nothing reflows, and the composer keeps its nav-clearance
-     padding, which doubles as breathing room above the keyboard (and the
-     floating form-assistant pill in installed PWAs) once iOS's native pan
-     brings the focused field into view. */
+     positioned so nothing reflows. */
   body.keyboard-open .mobile-nav-wrap {
     display: none !important;
+  }
+
+  /* Drop animated so the composer rides the keyboard's dismiss slide. */
+  .coach-composer {
+    transition: padding-bottom 220ms ease-out;
+  }
+
+  /* The composer is pinned to the bottom of the height-constrained coach
+     column and has no scroller to be revealed in, so iOS would reveal it by
+     panning the whole shell (header slides off-screen). Instead, lift the
+     input above where the keyboard will land — the messages area (flex:1)
+     absorbs the difference, so only the composer moves. The lift must be
+     instant: iOS decides whether to pan based on where the field sits when
+     the keyboard appears. */
+  body.keyboard-open .coach-composer {
+    padding-bottom: calc(var(--keyboard-inset, 340px) + 8px) !important;
+    transition: none;
   }
 }
 

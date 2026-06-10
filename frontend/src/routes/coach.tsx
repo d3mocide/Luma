@@ -369,6 +369,9 @@ export default function CoachRoute() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
+                  // The keyboard-open lift shrinks the messages area; re-pin
+                  // the conversation to its latest message after that reflow.
+                  onFocus={() => requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ block: 'end' }))}
                   placeholder="Ask Luma…"
                   disabled={streaming}
                   style={{
