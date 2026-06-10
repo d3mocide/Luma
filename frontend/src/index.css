@@ -2457,42 +2457,50 @@ input[type="search"]::-webkit-search-results-decoration {
 /* ══════════════════════════════════════════════════════════════════════════
  * COACH ROUTE
  * ══════════════════════════════════════════════════════════════════════════ */
+.coach-tab-actions {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .coach-header {
-    padding: 20px 16px 14px 16px !important;
-    align-items: flex-start !important;
-    gap: 10px;
+    display: none !important;
   }
 
-  .coach-header-main {
-    min-width: 0;
-    flex: 1;
-    align-items: flex-start !important;
+  .coach-tab-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
-  .coach-header-copy {
-    min-width: 0;
-  }
-
-  .coach-header-title {
-    line-height: 1.1;
-  }
-
-  .coach-header-subtitle {
-    max-width: 26ch;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .coach-new-thread-btn {
-    padding: 7px 10px !important;
-    font-size: 11px !important;
-    align-self: flex-start;
+  .coach-tabs-container {
+    padding: 0 16px !important;
   }
 
   .coach-messages {
-    padding: 18px 16px !important;
+    padding: 12px 16px !important;
+  }
+
+  .coach-tab-content {
+    padding: 24px 16px calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .coach-messages-container {
+    gap: 16px !important;
+  }
+
+  .coach-message-card {
+    padding: 14px 16px !important;
+  }
+
+  .coach-suggestions {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    padding: 0 16px !important;
+    margin-top: 20px !important;
+  }
+
+  .coach-suggestions button {
+    text-align: center !important;
   }
 
   .coach-composer {
@@ -2500,15 +2508,19 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 }
 
-@media (max-width: 420px) {
-  .coach-header {
-    padding-top: 14px !important;
-    padding-right: 68px !important;
-  }
+/* Keyboard open states (global overrides) */
+body.keyboard-open .mobile-nav-wrap {
+  display: none !important;
+}
 
-  .coach-header-subtitle {
-    display: none !important;
-  }
+body.keyboard-open .mobile-header {
+  display: none !important;
+}
+
+
+
+body.keyboard-open .coach-composer {
+  padding-bottom: 12px !important;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -2696,8 +2708,16 @@ input[type="search"]::-webkit-search-results-decoration {
 
 @media (max-width: 640px) {
   .favorite-card-row {
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .favorite-card-info {
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .favorite-card-actions {
@@ -2705,7 +2725,12 @@ input[type="search"]::-webkit-search-results-decoration {
     flex-direction: row;
     align-items: center;
     gap: 6px;
-    width: auto;
+    width: 100%;
+  }
+
+  .favorite-card-actions .favorite-action-btn--primary {
+    flex: 1;
+    justify-content: center;
   }
 
   .favorite-card-actions .btn-label {
@@ -2734,7 +2759,3 @@ input[type="search"]::-webkit-search-results-decoration {
     display: inline;
   }
 }
-
-
-
-

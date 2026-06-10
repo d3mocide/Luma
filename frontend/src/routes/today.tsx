@@ -264,7 +264,7 @@ export default function TodayRoute() {
                   onClick={() => setShowDayBreakdown(true)}
                   style={{ display: 'block', width: '100%', marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--fg-tertiary)', textDecoration: 'underline', textAlign: 'right' }}
                 >
-                  Full nutrient breakdown →
+                  Full breakdown →
                 </button>
               )}
             </div>
@@ -441,7 +441,7 @@ export default function TodayRoute() {
                 onClick={() => setShowDayBreakdown(true)}
                 style={{ display: 'block', width: '100%', marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--fg-tertiary)', textDecoration: 'underline', textAlign: 'right' }}
               >
-                Full nutrient breakdown →
+                Full breakdown →
               </button>
             )}
           </div>

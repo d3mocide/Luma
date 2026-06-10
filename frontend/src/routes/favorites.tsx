@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check } from 'lucide-react'
+import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, ChevronDown } from 'lucide-react'
 import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { getCurrentSlot } from '../lib/format'
@@ -33,6 +33,16 @@ function totalKcal(items: FavoriteItem[]): number {
   return Math.round(items.reduce((sum, i) => sum + (i.nutrients.calories ?? 0), 0))
 }
 
+function totalSatFat(items: FavoriteItem[]): number {
+  const val = items.reduce((sum, i) => sum + (i.nutrients.saturated_fat_g ?? 0), 0)
+  return Math.round(val * 10) / 10
+}
+
+function totalSolFiber(items: FavoriteItem[]): number {
+  const val = items.reduce((sum, i) => sum + (i.nutrients.soluble_fiber_g ?? 0), 0)
+  return Math.round(val * 10) / 10
+}
+
 export default function FavoritesRoute() {
   const queryClient = useQueryClient()
   const location = useLocation()
@@ -42,6 +52,14 @@ export default function FavoritesRoute() {
   const [favName, setFavName] = useState('')
   const [items, setItems] = useState<DraftItem[]>([])
   const [successModal, setSuccessModal] = useState<{ name: string; slot: string } | null>(null)
+  const [expandedFavIds, setExpandedFavIds] = useState<Record<string, boolean>>({})
+
+  const toggleExpand = (id: string) => {
+    setExpandedFavIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }))
+  }
 
   const { data: favoritesData, isLoading } = useQuery<{ favorites: Favorite[] }>({
     queryKey: ['favorites', 'frequency'],
@@ -232,13 +250,54 @@ export default function FavoritesRoute() {
                   className="glass"
                   style={{ padding: '16px 18px', borderRadius: 14 }}
                 >
-                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-primary)', marginBottom: 8 }}>
-                    {fav.name}
+                  {/* Click-to-expand Title header */}
+                  <div
+                    onClick={() => toggleExpand(fav.id)}
+                    style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}
+                    onMouseEnter={(e) => {
+                      const titleEl = e.currentTarget.querySelector('.fav-title-text') as HTMLElement
+                      if (titleEl) titleEl.style.color = 'var(--sky-300)'
+                    }}
+                    onMouseLeave={(e) => {
+                      const titleEl = e.currentTarget.querySelector('.fav-title-text') as HTMLElement
+                      if (titleEl) titleEl.style.color = 'var(--fg-primary)'
+                    }}
+                  >
+                    <span className="fav-title-text" style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-primary)', transition: 'color 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {fav.name}
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      style={{
+                        transform: expandedFavIds[fav.id] ? 'rotate(180deg)' : 'none',
+                        transition: 'transform 0.2s ease',
+                        color: 'var(--fg-quiet)',
+                        flexShrink: 0,
+                      }}
+                    />
                   </div>
+
                   <div className="favorite-card-row">
-                    <div className="favorite-card-info" style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>
+                    {/* Click-to-expand Info header */}
+                    <div
+                      className="favorite-card-info"
+                      onClick={() => toggleExpand(fav.id)}
+                      style={{ cursor: 'pointer', fontSize: 12, color: 'var(--fg-quiet)', flex: 1, minWidth: 0 }}
+                      onMouseEnter={(e) => {
+                        const card = e.currentTarget.closest('.glass') as HTMLElement
+                        const titleEl = card?.querySelector('.fav-title-text') as HTMLElement
+                        if (titleEl) titleEl.style.color = 'var(--sky-300)'
+                      }}
+                      onMouseLeave={(e) => {
+                        const card = e.currentTarget.closest('.glass') as HTMLElement
+                        const titleEl = card?.querySelector('.fav-title-text') as HTMLElement
+                        if (titleEl) titleEl.style.color = 'var(--fg-primary)'
+                      }}
+                    >
                       {fav.items.length} {fav.items.length === 1 ? 'item' : 'items'} ·{' '}
-                      <span className="num" style={{ color: 'var(--sky-400)' }}>{totalKcal(fav.items)}</span> kcal
+                      <span className="num" style={{ color: 'var(--sky-400)' }}>{totalKcal(fav.items)}</span> kcal ·{' '}
+                      <span className="num" style={{ color: 'var(--bad)' }}>{totalSatFat(fav.items)}</span>g sat ·{' '}
+                      <span className="num" style={{ color: 'var(--good)' }}>{totalSolFiber(fav.items)}</span>g fiber
                     </div>
 
                     <div className="favorite-card-actions">
@@ -271,6 +330,78 @@ export default function FavoritesRoute() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Expanded ingredients drawer list */}
+                  {expandedFavIds[fav.id] && (
+                    <div style={{
+                      marginTop: 12,
+                      borderTop: '1px solid var(--glass-edge)',
+                      paddingTop: 12,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12,
+                    }}>
+                      {fav.items.map((item, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 3,
+                          }}
+                        >
+                          {/* Ingredient Name & Brand */}
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)', lineHeight: 1.4 }}>
+                              {item.food_name}
+                            </span>
+                            {item.brand && (
+                              <span style={{ fontSize: 10, color: 'var(--fg-quiet)', whiteSpace: 'nowrap' }}>
+                                {item.brand}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Metrics Breakdown */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 11,
+                            color: 'var(--fg-secondary)',
+                            flexWrap: 'wrap',
+                          }}>
+                            <span style={{ color: 'var(--sky-300)' }}>{item.quantity_g}g</span>
+                            <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
+                            {item.nutrients.calories != null && (
+                              <>
+                                <span style={{ color: 'var(--fg-quiet)' }}>
+                                  {Math.round(item.nutrients.calories)} kcal
+                                </span>
+                              </>
+                            )}
+                            {item.nutrients.saturated_fat_g != null && item.nutrients.saturated_fat_g > 0 && (
+                              <>
+                                <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
+                                <span style={{ color: 'var(--bad)' }}>
+                                  {Math.round(item.nutrients.saturated_fat_g * 10) / 10}g sat
+                                </span>
+                              </>
+                            )}
+                            {item.nutrients.soluble_fiber_g != null && item.nutrients.soluble_fiber_g > 0 && (
+                              <>
+                                <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
+                                <span style={{ color: 'var(--good)' }}>
+                                  {Math.round(item.nutrients.soluble_fiber_g * 10) / 10}g fiber
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
