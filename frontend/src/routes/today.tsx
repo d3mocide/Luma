@@ -286,46 +286,6 @@ export default function TodayRoute() {
           </div>
         </div>
 
-        {/* Insight */}
-        {data.active_insight ? (
-          <div className="glass" style={{ display: 'flex', flexDirection: 'column', padding: 24, position: 'relative', overflow: 'hidden', background: 'var(--insight-card-bg)' }}>
-            <div style={{ position: 'absolute', top: -80, right: -70, width: 300, height: 240, background: 'radial-gradient(ellipse 56% 52% at 76% 30%, rgba(251,191,36,0.30), transparent 68%), radial-gradient(ellipse 48% 52% at 90% 80%, rgba(251,191,36,0.10), transparent 72%)', filter: 'blur(14px)', opacity: 0.9, pointerEvents: 'none' }}/>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 10, background: 'var(--insight-icon-bg)', border: '1px solid var(--insight-icon-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--insight-icon-fg)' }}>
-                <Sparkles size={15}/>
-              </div>
-              <span className="eyebrow" style={{ color: 'var(--insight-icon-fg)' }}>{data.active_insight.severity}</span>
-            </div>
-            <p style={{ margin: 0, fontSize: 18, lineHeight: 1.45, fontFamily: 'var(--font-sans)', fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--fg-primary)' }}>
-              {data.active_insight.headline}
-            </p>
-            {data.active_insight.cta && (
-              <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.5, color: 'var(--fg-secondary)' }}>
-                {data.active_insight.cta}
-              </p>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 24 }}>
-              <button
-                className="btn today-insight-cta"
-                style={{ padding: '8px 14px', fontSize: 13, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}
-                onClick={() => navigate('/coach', { state: { thread_seed: data.active_insight?.thread_seed } })}
-              >
-                <Sparkles size={13}/> Ask Luma
-              </button>
-              <button
-                onClick={() => navigate('/coach?tab=insights')}
-                style={{ fontSize: 12, color: 'var(--fg-quiet)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-              >
-                See all →
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="glass" style={{ padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ color: 'var(--fg-quiet)', fontSize: 14 }}>No insights yet.</p>
-          </div>
-        )}
-
         {/* Biometrics */}
         {(() => {
           const tiles = [
@@ -353,11 +313,50 @@ export default function TodayRoute() {
           )
         })()}
 
-        <NutritionCalculatorCard adherence={data.adherence_today} compact={false}/>
+        {/* Insight + Today's Plan side-by-side */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 20, alignItems: 'stretch' }}>
+          {/* Insight */}
+          {data.active_insight ? (
+            <div className="glass" style={{ display: 'flex', flexDirection: 'column', padding: 24, position: 'relative', overflow: 'hidden', background: 'var(--insight-card-bg)' }}>
+              <div style={{ position: 'absolute', top: -80, right: -70, width: 300, height: 240, background: 'radial-gradient(ellipse 56% 52% at 76% 30%, rgba(251,191,36,0.30), transparent 68%), radial-gradient(ellipse 48% 52% at 90% 80%, rgba(251,191,36,0.10), transparent 72%)', filter: 'blur(14px)', opacity: 0.9, pointerEvents: 'none' }}/>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 10, background: 'var(--insight-icon-bg)', border: '1px solid var(--insight-icon-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--insight-icon-fg)' }}>
+                  <Sparkles size={15}/>
+                </div>
+                <span className="eyebrow" style={{ color: 'var(--insight-icon-fg)' }}>{data.active_insight.severity}</span>
+              </div>
+              <p style={{ margin: 0, fontSize: 18, lineHeight: 1.45, fontFamily: 'var(--font-sans)', fontWeight: 400, letterSpacing: '-0.01em', color: 'var(--fg-primary)' }}>
+                {data.active_insight.headline}
+              </p>
+              {data.active_insight.cta && (
+                <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.5, color: 'var(--fg-secondary)' }}>
+                  {data.active_insight.cta}
+                </p>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 24 }}>
+                <button
+                  className="btn today-insight-cta"
+                  style={{ padding: '8px 14px', fontSize: 13, background: 'var(--insight-cta-bg)', borderColor: 'var(--insight-cta-border)', color: 'var(--insight-cta-fg)' }}
+                  onClick={() => navigate('/coach', { state: { thread_seed: data.active_insight?.thread_seed } })}
+                >
+                  <Sparkles size={13}/> Ask Luma
+                </button>
+                <button
+                  onClick={() => navigate('/coach?tab=insights')}
+                  style={{ fontSize: 12, color: 'var(--fg-quiet)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  See all →
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="glass" style={{ padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <p style={{ color: 'var(--fg-quiet)', fontSize: 14 }}>No insights yet.</p>
+            </div>
+          )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 20 }}>
           {/* Today's plan */}
-          <div className="glass" style={{ padding: 24 }}>
+          <div className="glass" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
                 <div className="eyebrow">Today's plan</div>
@@ -377,10 +376,17 @@ export default function TodayRoute() {
               </div>
             )}
           </div>
-
-          <RecentMealsCard meals={data.recent_meals ?? []} compact={false} onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} />
         </div>
+
+
+
+        <NutritionCalculatorCard adherence={data.adherence_today} compact={false}/>
+
+        {/* Recent Meals — full width, bottom */}
+        <RecentMealsCard meals={data.recent_meals ?? []} compact={false} onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} />
+
       </div>
+
 
       {/* Mobile layout */}
       <div className="md:hidden thin-scroll today-mobile-scroll">

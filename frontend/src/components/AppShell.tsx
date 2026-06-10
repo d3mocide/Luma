@@ -31,9 +31,15 @@ const DESKTOP_NAV_ITEMS = [
 
 export default function AppShell() {
   const location = useLocation()
+  const mainRef = useRef<HTMLElement | null>(null)
   const todayFetchCount = useIsFetching({ queryKey: ['today'] })
   const isTodayLoading = location.pathname === '/today' && todayFetchCount > 0
   const isLogRoute = location.pathname === '/log'
+
+  // Reset scroll position on every route change
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: 'instant' })
+  }, [location.pathname])
 
   const swReady = useSwReady()
 
@@ -71,6 +77,7 @@ export default function AppShell() {
 
         {/* Scrollable page content */}
         <main
+          ref={mainRef}
           className="thin-scroll mobile-shell-main"
           style={{
             flex: 1,
