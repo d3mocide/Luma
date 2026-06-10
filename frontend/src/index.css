@@ -2508,21 +2508,6 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 }
 
-/* Keyboard open states (global overrides) */
-body.keyboard-open .mobile-nav-wrap {
-  display: none !important;
-}
-
-body.keyboard-open .mobile-header {
-  display: none !important;
-}
-
-
-
-body.keyboard-open .coach-composer {
-  padding-bottom: 12px !important;
-}
-
 /* ══════════════════════════════════════════════════════════════════════════
  * SETTINGS ROUTE
  * ══════════════════════════════════════════════════════════════════════════ */

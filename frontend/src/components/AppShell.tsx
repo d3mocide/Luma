@@ -43,32 +43,6 @@ export default function AppShell() {
     retry: false,
   })
 
-  useEffect(() => {
-    const handleFocus = (e: FocusEvent) => {
-      const target = e.target as HTMLElement
-      if (
-        target &&
-        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') &&
-        window.location.pathname === '/coach'
-      ) {
-        document.body.classList.add('keyboard-open')
-      }
-    }
-    const handleBlur = (e: FocusEvent) => {
-      const target = e.target as HTMLElement
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-        document.body.classList.remove('keyboard-open')
-      }
-    }
-    document.addEventListener('focusin', handleFocus)
-    document.addEventListener('focusout', handleBlur)
-    return () => {
-      document.removeEventListener('focusin', handleFocus)
-      document.removeEventListener('focusout', handleBlur)
-      document.body.classList.remove('keyboard-open')
-    }
-  }, [])
-
   if (isLoading || !swReady) {
     return <SplashScreen />
   }
