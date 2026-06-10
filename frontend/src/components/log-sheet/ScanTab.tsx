@@ -114,7 +114,7 @@ export function ScanTab({ onAddItems }: Props) {
               nutrients_per_100g: food.nutrients_per_100g as Record<string, number>,
               household_measures: food.household_measures as HouseholdMeasure[] | undefined,
             })
-            const hasMeasures = ((food.household_measures as any)?.length ?? 0) > 0
+            const hasMeasures = (food.household_measures?.length ?? 0) > 0
             setPendingUnit(hasMeasures ? 'hm:0' : 'g')
             setPendingQty(String(hasMeasures ? 1 : Math.round((food.serving_size_g as number) || 100)))
             setTimeout(() => qtyRef.current?.select(), 60)
