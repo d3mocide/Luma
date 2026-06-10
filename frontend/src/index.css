@@ -2898,6 +2898,19 @@ input[type="search"]::-webkit-search-results-decoration {
   .coach-composer {
     padding: 12px 16px calc(92px + env(safe-area-inset-bottom, 0px)) !important;
   }
+
+  /* Keyboard open overrides */
+  body.keyboard-open .mobile-nav-wrap {
+    display: none !important;
+  }
+
+  body.keyboard-open .mobile-header {
+    display: none !important;
+  }
+
+  body.keyboard-open .coach-composer {
+    padding-bottom: 12px !important;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
