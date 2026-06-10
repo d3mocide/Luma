@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useId } from 'react'
-import { Camera, ImagePlus, X, CheckCircle2, Heart, Plus, Search, Shield, Wheat, Dumbbell, Sprout, Flame, CheckCircle } from 'lucide-react'
+import { Camera, ImagePlus, X, Plus, CheckCircle } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api, csrfHeaders } from '../../lib/api'
-import { toNutrients, scaleByRatio, scaleNutrients } from '../../lib/nutrients'
+import { toNutrients, scaleNutrients } from '../../lib/nutrients'
 import {
   type PortionUnit,
   type HouseholdMeasure,
