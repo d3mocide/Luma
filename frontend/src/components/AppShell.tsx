@@ -44,85 +44,49 @@ export default function AppShell() {
   })
 
   useEffect(() => {
-    // Soft-keyboard handling for touch devices. Standalone iOS gives no
-    // reliable viewport signal for the keyboard (visualViewport height/resize
-    // delivery is inconsistent), so keyboard presence is inferred from
-    // text-field focus, which is deterministic.
+    // Soft-keyboard handling for touch devices. On iOS standalone the keyboard
+    // IS reported reliably through visualViewport (on-device captures show
+    // vv.resize firing ~70ms after focus with the exact keyboard height). The
+    // old approach guessed the height and let iOS pan the whole fixed shell to
+    // reveal occluded fields (header sliding off-screen, composer flying up).
+    //
+    // Instead, size the app to the visible region: when .luma-bg is only as
+    // tall as visualViewport.height, the focused field is never hidden behind
+    // the keyboard, so iOS has no reason to pan. The header stays put and a
+    // bottom-pinned field (the coach composer) lands just above the keyboard.
     if (!window.matchMedia('(pointer: coarse)').matches) return
+    const vv = window.visualViewport
+    if (!vv) return
 
-    const isTextField = (node: EventTarget | Element | null): node is HTMLElement =>
-      node instanceof HTMLElement && (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA')
+    const root = document.documentElement
 
-    const scrollParentOf = (el: HTMLElement): HTMLElement | null => {
-      let node = el.parentElement
-      while (node) {
-        const { overflowY } = getComputedStyle(node)
-        if ((overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight) {
-          return node
-        }
-        node = node.parentElement
+    const apply = () => {
+      // Layout viewport minus the visible region = the keyboard band.
+      const keyboard = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))
+      if (keyboard > 80) {
+        root.style.setProperty('--app-height', `${Math.round(vv.height)}px`)
+        root.style.setProperty('--keyboard-inset', `${keyboard}px`)
+        document.body.classList.add('keyboard-open')
+        // iOS can begin panning the layout viewport before honoring the
+        // resize; undo that pan so the shrunk app stays glued to the top of
+        // the visible region rather than drifting up behind the notch.
+        if (window.scrollY !== 0) window.scrollTo(0, 0)
+      } else {
+        root.style.removeProperty('--app-height')
+        root.style.removeProperty('--keyboard-inset')
+        document.body.classList.remove('keyboard-open')
       }
-      return null
     }
 
-    // When the focused field sits low on screen, iOS reveals it by panning
-    // the whole fixed shell — the header slides off the top and the page
-    // bottom (nav included) gets dragged up into view. Deny it the reason to
-    // pan: keep the field in the top third of the screen, above the keyboard
-    // wherever iOS finally puts it, by moving the field's own scroller
-    // instead. Fields already high enough don't move at all. Instant (not
-    // smooth) so the field is in place before the keyboard lands.
-    const positionField = (el: HTMLElement) => {
-      if (!el.isConnected || document.activeElement !== el) return
-      const scroller = scrollParentOf(el)
-      if (!scroller) return
-      const fieldTop = el.getBoundingClientRect().top
-      if (fieldTop <= window.innerHeight * 0.33) return
-      scroller.scrollTo({ top: scroller.scrollTop + fieldTop - window.innerHeight * 0.25, behavior: 'instant' })
-    }
-
-    let blurTimer = 0
-
-    // Estimated soft-keyboard height (plus the floating form-assistant pill
-    // and a small margin). iOS exposes no keyboard-height API in standalone
-    // mode, so bottom-pinned fields that can't be scrolled — the coach
-    // composer — are lifted by this estimate instead, sized to clear the
-    // keyboard on iPhone portrait layouts so iOS never needs to pan.
-    const keyboardInset = () =>
-      Math.min(Math.round(window.innerHeight * 0.44) + 52, 430)
-
-    const handleFocusIn = (e: FocusEvent) => {
-      if (!isTextField(e.target)) return
-      window.clearTimeout(blurTimer)
-      // Set the inset before the class so the lift happens in one paint.
-      document.documentElement.style.setProperty('--keyboard-inset', `${keyboardInset()}px`)
-      document.body.classList.add('keyboard-open')
-      const el = e.target
-      positionField(el)
-      // Re-check once the keyboard has settled, in case iOS adjusted the
-      // viewport in the meantime.
-      window.setTimeout(() => positionField(el), 350)
-    }
-
-    const handleFocusOut = (e: FocusEvent) => {
-      if (!isTextField(e.target)) return
-      // Swapping fields fires focusout→focusin back to back; only drop the
-      // class once focus has really left all text fields.
-      window.clearTimeout(blurTimer)
-      blurTimer = window.setTimeout(() => {
-        if (!isTextField(document.activeElement)) {
-          document.body.classList.remove('keyboard-open')
-        }
-      }, 100)
-    }
-
-    document.addEventListener('focusin', handleFocusIn)
-    document.addEventListener('focusout', handleFocusOut)
+    vv.addEventListener('resize', apply)
+    vv.addEventListener('scroll', apply)
+    apply()
 
     return () => {
-      window.clearTimeout(blurTimer)
-      document.removeEventListener('focusin', handleFocusIn)
-      document.removeEventListener('focusout', handleFocusOut)
+      vv.removeEventListener('resize', apply)
+      vv.removeEventListener('scroll', apply)
+      root.style.removeProperty('--app-height')
+      root.style.removeProperty('--keyboard-inset')
       document.body.classList.remove('keyboard-open')
     }
   }, [])
