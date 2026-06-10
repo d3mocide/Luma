@@ -14,6 +14,7 @@ import { unitToGrams } from '../lib/portions'
 import PlanRoute from './plan'
 import RecipesRoute from './recipes'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
+import { useUIStore } from '../stores'
 
 const BARCODE_FORMATS = [
   Html5QrcodeSupportedFormats.EAN_13,
@@ -1012,11 +1013,13 @@ function BatchPlanner({ items, total }: { items: DraftItem[]; total: NutrientTot
 
 function CalculatorTab() {
   const queryClient = useQueryClient()
+  const { theme } = useUIStore()
   const [items, setItems] = useState<DraftItem[]>([])
   const [servings, setServings] = useState(1)
   const [mealName, setMealName] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [showPerServing, setShowPerServing] = useState(true)
+  const [mode, setMode] = useState<'portions' | 'batch'>('portions')
 
   const total = useMemo(() => sumNutrients(items), [items])
   const perServing = useMemo(() => divideNutrients(total, servings), [total, servings])
@@ -1104,106 +1107,128 @@ function CalculatorTab() {
       {/* Servings + results — only shown when there are items */}
       {hasItems && (
         <>
-          {/* Servings control */}
-          <div className="glass-inset" style={{ padding: '14px 16px', borderRadius: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <div>
-                <div className="eyebrow" style={{ fontSize: 10, marginBottom: 3 }}>Servings / portions</div>
-                <div style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>
-                  How many servings does this recipe make?
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                <button
-                  onClick={() => setServings((s) => Math.max(1, s - 1))}
-                  style={{
-                    width: 30, height: 30, borderRadius: 8, fontSize: 16,
-                    background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
-                    color: 'var(--fg-primary)', cursor: 'pointer', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center',
-                  }}
-                  aria-label="Decrease servings"
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={servings}
-                  onChange={(e) => setServings(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="field-input num"
-                  style={{
-                    width: 52, textAlign: 'center', borderRadius: 8, padding: '5px 4px',
-                    fontSize: 16, fontWeight: 700, border: '1px solid var(--glass-edge)',
-                    color: 'var(--sky-400)', fontFamily: 'var(--font-mono)',
-                  }}
-                />
-                <button
-                  onClick={() => setServings((s) => Math.min(100, s + 1))}
-                  style={{
-                    width: 30, height: 30, borderRadius: 8, fontSize: 16,
-                    background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
-                    color: 'var(--fg-primary)', cursor: 'pointer', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center',
-                  }}
-                  aria-label="Increase servings"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Nutrition results */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <NutritionPanel totals={total} label={`TOTAL RECIPE (${items.length} ingredient${items.length === 1 ? '' : 's'})`} />
-
-            {servings > 1 && (
-              <div>
-                <button
-                  onClick={() => setShowPerServing((v) => !v)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    padding: '4px 0 10px', color: 'var(--fg-secondary)',
-                  }}
-                >
-                  <span className="eyebrow" style={{ fontSize: 10 }}>PER SERVING (÷ {servings})</span>
-                  {showPerServing
-                    ? <ChevronUp size={13} strokeWidth={2} style={{ color: 'var(--fg-quiet)' }} />
-                    : <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--fg-quiet)' }} />
-                  }
-                </button>
-                {showPerServing && (
-                  <NutritionPanel totals={perServing} label={`PER SERVING (÷ ${servings})`} />
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Batch planner */}
-          <BatchPlanner items={items} total={total} />
-
-          {/* Save as favorite */}
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {/* Mode Selector */}
+          <div className={`theme-toggle ${theme === 'light' ? 'light-mode' : ''}`} style={{ width: '100%', marginBottom: 12 }}>
             <button
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending || saveSuccess}
-              className="btn btn-primary"
-              style={{
-                flex: 1, padding: '11px', fontSize: 13, justifyContent: 'center',
-                gap: 7, opacity: saveMutation.isPending ? 0.7 : 1,
-              }}
+              type="button"
+              data-active={mode === 'portions' ? 'true' : 'false'}
+              onClick={() => setMode('portions')}
             >
-              {saveSuccess
-                ? <><Check size={14} /> Saved to favorites</>
-                : saveMutation.isPending
-                  ? 'Saving…'
-                  : <><Heart size={14} strokeWidth={2} /> Save as favorite</>
-              }
+              Recipe / Portions
+            </button>
+            <button
+              type="button"
+              data-active={mode === 'batch' ? 'true' : 'false'}
+              onClick={() => setMode('batch')}
+            >
+              Batch / Bulk Planner
             </button>
           </div>
+
+          {mode === 'portions' ? (
+            <>
+              {/* Servings control */}
+              <div className="glass-inset" style={{ padding: '14px 16px', borderRadius: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div>
+                    <div className="eyebrow" style={{ fontSize: 10, marginBottom: 3 }}>Servings / portions</div>
+                    <div style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>
+                      How many servings does this recipe make?
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <button
+                      onClick={() => setServings((s) => Math.max(1, s - 1))}
+                      style={{
+                        width: 30, height: 30, borderRadius: 8, fontSize: 16,
+                        background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+                        color: 'var(--fg-primary)', cursor: 'pointer', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                      }}
+                      aria-label="Decrease servings"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={servings}
+                      onChange={(e) => setServings(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="field-input num"
+                      style={{
+                        width: 52, textAlign: 'center', borderRadius: 8, padding: '5px 4px',
+                        fontSize: 16, fontWeight: 700, border: '1px solid var(--glass-edge)',
+                        color: 'var(--sky-400)', fontFamily: 'var(--font-mono)',
+                      }}
+                    />
+                    <button
+                      onClick={() => setServings((s) => Math.min(100, s + 1))}
+                      style={{
+                        width: 30, height: 30, borderRadius: 8, fontSize: 16,
+                        background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+                        color: 'var(--fg-primary)', cursor: 'pointer', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                      }}
+                      aria-label="Increase servings"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Nutrition results */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <NutritionPanel totals={total} label={`TOTAL RECIPE (${items.length} ingredient${items.length === 1 ? '' : 's'})`} />
+
+                {servings > 1 && (
+                  <div>
+                    <button
+                      onClick={() => setShowPerServing((v) => !v)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        padding: '4px 0 10px', color: 'var(--fg-secondary)',
+                      }}
+                    >
+                      <span className="eyebrow" style={{ fontSize: 10 }}>PER SERVING (÷ {servings})</span>
+                      {showPerServing
+                        ? <ChevronUp size={13} strokeWidth={2} style={{ color: 'var(--fg-quiet)' }} />
+                        : <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--fg-quiet)' }} />
+                      }
+                    </button>
+                    {showPerServing && (
+                      <NutritionPanel totals={perServing} label={`PER SERVING (÷ ${servings})`} />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Save as favorite */}
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button
+                  onClick={() => saveMutation.mutate()}
+                  disabled={saveMutation.isPending || saveSuccess}
+                  className="btn btn-primary"
+                  style={{
+                    flex: 1, padding: '11px', fontSize: 13, justifyContent: 'center',
+                    gap: 7, opacity: saveMutation.isPending ? 0.7 : 1,
+                  }}
+                >
+                  {saveSuccess
+                    ? <><Check size={14} /> Saved to favorites</>
+                    : saveMutation.isPending
+                      ? 'Saving…'
+                      : <><Heart size={14} strokeWidth={2} /> Save as favorite</>
+                  }
+                </button>
+              </div>
+            </>
+          ) : (
+            /* Batch planner */
+            <BatchPlanner items={items} total={total} />
+          )}
         </>
       )}
     </div>

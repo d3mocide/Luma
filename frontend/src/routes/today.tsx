@@ -418,30 +418,32 @@ export default function TodayRoute() {
         {/* Rings */}
         <div className="glass" style={{ padding: 20, marginBottom: 14, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: -115, right: -130, width: 320, height: 280, background: 'radial-gradient(ellipse 60% 56% at 68% 34%, rgba(56,189,248,0.24), transparent 70%), radial-gradient(ellipse 54% 56% at 88% 78%, rgba(56,189,248,0.10), transparent 72%)', filter: 'blur(14px)', opacity: 0.88, pointerEvents: 'none' }}/>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div className="eyebrow">Today</div>
-          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: 130, height: 130, position: 'relative' }}>
-                <ActivityRings size={130} values={rings} thickness={10} gap={4}/>
+              <div style={{ width: 150, height: 150, position: 'relative' }}>
+                <ActivityRings size={150} values={rings} thickness={11} gap={5}/>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div className="num" style={{ fontSize: 18, lineHeight: 1, fontWeight: 500, color: 'var(--fg-primary)' }}>{rings.filter(r => r >= 0.9).length} / 3</div>
+                  <div className="num" style={{ fontSize: 20, lineHeight: 1, fontWeight: 500, color: 'var(--fg-primary)' }}>
+                    {rings.filter(r => r >= 0.9).length} / 3
+                  </div>
                 </div>
               </div>
-              <div style={{ marginTop: 7, fontSize: 9, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
+              <div style={{ marginTop: 8, fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>on target</div>
             </div>
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <RingLegend color="var(--sky-400)" label="Calories" value={fmt(adherence?.calories?.logged, 0)} pct={adherence?.calories?.pct ?? 0}/>
-              <RingLegend color="var(--sun-400)" label="Sat fat" value={fmt(adherence?.sat_fat_g?.logged, 1, 'g')} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
-              <RingLegend color="var(--good)" label="Fiber" value={fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="eyebrow">Today</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
+                <RingLegend color="var(--sky-400)" label="Calories" value={`${fmt(adherence?.calories?.logged, 0)} / ${fmt(adherence?.calories?.target, 0)}`} pct={adherence?.calories?.pct ?? 0}/>
+                <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
+                <RingLegend color="var(--good)" label="Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
+              </div>
               {Object.keys(dayNutrition).length > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowDayBreakdown(true)}
-                  style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11, color: 'var(--fg-tertiary)', textDecoration: 'underline', textAlign: 'left' }}
+                  style={{ marginTop: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, color: 'var(--fg-tertiary)', textDecoration: 'underline', textAlign: 'left' }}
                 >
-                  Full breakdown →
+                  Full nutrient breakdown →
                 </button>
               )}
             </div>
