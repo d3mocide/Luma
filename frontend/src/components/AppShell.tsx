@@ -83,9 +83,19 @@ export default function AppShell() {
 
     let blurTimer = 0
 
+    // Estimated soft-keyboard height (plus the floating form-assistant pill
+    // and a small margin). iOS exposes no keyboard-height API in standalone
+    // mode, so bottom-pinned fields that can't be scrolled — the coach
+    // composer — are lifted by this estimate instead, sized to clear the
+    // keyboard on iPhone portrait layouts so iOS never needs to pan.
+    const keyboardInset = () =>
+      Math.min(Math.round(window.innerHeight * 0.44) + 52, 430)
+
     const handleFocusIn = (e: FocusEvent) => {
       if (!isTextField(e.target)) return
       window.clearTimeout(blurTimer)
+      // Set the inset before the class so the lift happens in one paint.
+      document.documentElement.style.setProperty('--keyboard-inset', `${keyboardInset()}px`)
       document.body.classList.add('keyboard-open')
       const el = e.target
       positionField(el)
