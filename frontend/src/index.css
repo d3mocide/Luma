@@ -315,23 +315,80 @@ layer(base);
   .luma-bg { min-height: 100lvh; }
 }
 
-/* Soft-keyboard open (toggled from AppShell on touch devices): collapse the
-   fixed shell to the visible region reported by visualViewport (--app-height).
-   This is what stops iOS panning the whole app to reveal an occluded field —
-   nothing is occluded, so the header stays and bottom-pinned inputs land just
-   above the keyboard. Overrides the static 100lvh height + min-height above. */
-body.keyboard-open .luma-bg,
-body.keyboard-closing .luma-bg {
-  height: var(--app-height, 100lvh) !important;
-  min-height: var(--app-height, 100lvh) !important;
+/* ══════════════════════════════════════════════════════════════════════════
+ * APP SHELL — desktop is a fixed sidebar layout with an inner scrolling <main>;
+ * mobile (below) switches to NATIVE document scrolling so iOS handles the soft
+ * keyboard itself (smooth scroll-to-input, pinned sticky header). The mobile
+ * override is the keyboard fix: no visualViewport math, no shell resizing.
+ * ══════════════════════════════════════════════════════════════════════════ */
+.app-shell-root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: row;
+  overflow: clip;
+}
+.app-shell-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+.app-shell-main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  position: relative;
 }
 
-/* Closing only: animate the shell back to full height so the keyboard dismiss
-   feels like the app growing down, not a snap. Opening stays instant — a
-   transition there would re-open the window in which iOS decides to pan. */
-body.keyboard-closing .luma-bg {
-  --app-height: 100lvh;
-  transition: height 220ms ease, min-height 220ms ease;
+@media (max-width: 767.98px) {
+  /* Let the document scroll natively. iOS then reveals focused inputs by
+     scrolling the page (the behavior every normal app gets for free) instead
+     of panning a position:fixed shell. */
+  html, body, #root {
+    height: auto;
+    min-height: 100lvh;
+    overflow: visible;
+  }
+  body {
+    position: static;
+    inset: auto;
+  }
+  .app-shell-root {
+    position: static;
+    inset: auto;
+    display: block;
+    overflow: visible;
+    min-height: 100lvh;
+  }
+  .app-shell-col {
+    display: block;
+    overflow: visible;
+  }
+  .app-shell-main {
+    overflow: visible;
+    min-height: 0;
+  }
+  /* Header rides the page scroll but stays pinned to the top — content slides
+     under its blur, matching the reference UX. */
+  .mobile-header {
+    position: sticky;
+    top: 0;
+  }
+  /* Bottom nav pinned to the viewport (not the now-tall document). When the
+     keyboard opens it simply sits behind it. */
+  .mobile-nav-wrap {
+    position: fixed;
+  }
+  /* Today's inner scroller would otherwise trap scrolling in a nested box and
+     defeat native keyboard reveal — let it flow into the document scroll. */
+  .today-mobile-scroll {
+    height: auto;
+    overflow-y: visible;
+  }
 }
 
 [data-theme="light"] .luma-bg {
@@ -1820,7 +1877,7 @@ input[type="search"]::-webkit-search-results-decoration {
 
 @media (max-width: 900px) {
   .meals-page {
-    padding: 16px 16px 80px;
+    padding: 16px 16px calc(92px + env(safe-area-inset-bottom, 0px));
   }
 
 }
@@ -2918,25 +2975,17 @@ input[type="search"]::-webkit-search-results-decoration {
     padding: 12px 16px calc(92px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
-  /* When the soft keyboard is open the floating nav would otherwise wedge
-     between the composer and the keyboard. Hide it — the nav is absolutely
-     positioned so nothing reflows. */
-  body.keyboard-open .mobile-nav-wrap {
-    display: none !important;
+  /* Native scroll: coach flows in the document (no inner scroll box) so iOS
+     scrolls the composer above the keyboard on focus and the sticky app header
+     stays pinned. Override the desktop inline height/overflow on the page and
+     its messages list. */
+  .coach-page {
+    height: auto !important;
+    min-height: calc(100lvh - 112px);
+    overflow: visible !important;
   }
-
-  /* Drop animated so the composer rides the keyboard's dismiss slide. */
-  .coach-composer {
-    transition: padding-bottom 220ms ease-out;
-  }
-
-  /* With the shell collapsed to the visible region (body.keyboard-open
-     .luma-bg above), the composer already sits at the bottom of the visible
-     area — just above the keyboard. The nav is hidden, so it only needs a
-     small gap; no estimate-based lift. */
-  body.keyboard-open .coach-composer {
-    padding-bottom: 12px !important;
-    transition: none;
+  .coach-messages {
+    overflow: visible !important;
   }
 }
 
