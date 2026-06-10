@@ -3,7 +3,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CircleDot, Utensils, Activity, Sparkles, Settings, Plus, Moon, Sun, Loader2, ChevronDown,
-  Lock, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight, Heart, Users, HeartPulse,
+  Lock, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight, Star, Users, HeartPulse,
 } from 'lucide-react'
 import { api, TodayData, User } from '../lib/api'
 import { useUIStore } from '../stores'
@@ -19,7 +19,7 @@ const NAV_ITEMS = [
   { to: '/meals',     label: 'Meals',   Icon: Utensils   },
   { to: '/trends',    label: 'Trends',  Icon: Activity   },
   { to: '/health',    label: 'Health',  Icon: HeartPulse },
-  { to: '/favorites', label: 'Favs',    Icon: Heart      },
+  { to: '/favorites', label: 'Favs',    Icon: Star       },
   { to: '/coach',     label: 'Coach',   Icon: Sparkles   },
 ]
 
@@ -27,7 +27,7 @@ const DESKTOP_NAV_ITEMS = [
   { to: '/today',     label: 'Today',     Icon: CircleDot  },
   { to: '/trends',    label: 'Trends',    Icon: Activity   },
   { to: '/health',    label: 'Health',    Icon: HeartPulse },
-  { to: '/favorites', label: 'Favorites', Icon: Heart      },
+  { to: '/favorites', label: 'Favorites', Icon: Star       },
   { to: '/meals',     label: 'Meals',     Icon: Utensils   },
   { to: '/coach',     label: 'Coach',     Icon: Sparkles   },
   { to: '/family',    label: 'Family',    Icon: Users      },

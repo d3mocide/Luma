@@ -273,67 +273,66 @@ export default function TodayRoute() {
               style={{
                 padding: 24,
                 display: 'flex',
-                gap: 28,
-                alignItems: 'center',
+                flexDirection: 'column',
                 cursor: Object.keys(dayNutrition).length > 0 ? 'pointer' : 'default',
                 userSelect: 'none',
                 flex: 1,
               }}
             >
-              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ width: 180, height: 180, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ActivityRings size={180} values={rings} colors={ringColors} thickness={14} gap={6}/>
-                  <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', pointerEvents: 'none', marginTop: 2 }}>
-                    <span className="num" style={{ fontSize: 26, fontWeight: 300, color: 'var(--fg-primary)' }}>{onTargetCount}</span>
-                    <span style={{ fontSize: 16, color: 'var(--fg-quiet)', margin: '0 2px' }}>/</span>
-                    <span className="num" style={{ fontSize: 18, color: 'var(--fg-tertiary)' }}>{totalGoalCount}</span>
+              {/* Headline row: calories (primary) + protein (secondary) */}
+              <div style={{ display: 'grid', gridTemplateColumns: adherence?.protein_g?.target != null ? '1fr 1fr' : '1fr', gap: 0 }}>
+                <div style={{ paddingRight: adherence?.protein_g?.target != null ? 20 : 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Calories</span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 3 }}>
+                    <span className="num" style={{ fontSize: 30, fontWeight: 300, color: 'var(--fg-primary)', letterSpacing: '-0.03em', lineHeight: 1 }}>{fmt(adherence?.calories?.logged, 0)}</span>
+                    <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence?.calories?.target, 0)} kcal</span>
                   </div>
-                </div>
-              </div>
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                {/* Calories horizontal gauge */}
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>Calories</span>
-                    <span className="num" style={{ fontSize: 13, color: 'var(--fg-secondary)' }}>
-                      <strong>{fmt(adherence?.calories?.logged, 0)}</strong> / {fmt(adherence?.calories?.target, 0)} kcal
-                    </span>
-                  </div>
-                  <div style={{ height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ marginTop: 8, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                     <div style={{
-                      position: 'absolute', top: 0, left: 0, bottom: 0,
                       width: `${Math.min(adherence?.calories?.pct ?? 0, 100)}%`,
-                      background: 'linear-gradient(90deg, var(--sky-400), var(--sky-500))',
+                      height: '100%',
                       borderRadius: 999,
+                      background: 'linear-gradient(90deg, var(--sky-400), var(--sky-500))',
                       boxShadow: '0 0 8px rgba(56,189,248,0.4)',
                     }}/>
                   </div>
                 </div>
 
-                {/* Protein floor gauge — only shown when goal is set */}
                 {adherence?.protein_g?.target != null && (
-                  <div style={{ marginBottom: 14 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>Protein</span>
-                      <span className="num" style={{ fontSize: 13, color: 'var(--fg-secondary)' }}>
-                        <strong>{fmt(adherence.protein_g.logged, 0)}</strong> / {fmt(adherence.protein_g.target, 0)} g
-                      </span>
+                  <div style={{ paddingLeft: 20, borderLeft: '1px solid var(--glass-edge)' }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Protein</span>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 3 }}>
+                      <span className="num" style={{ fontSize: 22, fontWeight: 300, color: 'var(--fg-primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>{fmt(adherence.protein_g.logged, 0)}</span>
+                      <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence.protein_g.target, 0)} g</span>
                     </div>
-                    <div style={{ height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ marginTop: 8, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                       <div style={{
-                        position: 'absolute', top: 0, left: 0, bottom: 0,
                         width: `${Math.min(adherence.protein_g.pct ?? 0, 100)}%`,
-                        background: 'linear-gradient(90deg, var(--aurora-violet), #a78bfa)',
+                        height: '100%',
                         borderRadius: 999,
+                        background: 'linear-gradient(90deg, var(--aurora-violet), #a78bfa)',
                         boxShadow: '0 0 8px rgba(139,92,246,0.4)',
                       }}/>
                     </div>
                   </div>
                 )}
+              </div>
 
-                <hr style={{ border: 'none', borderTop: '1px solid var(--glass-edge)', margin: '0 0 14px' }} />
+              <hr style={{ border: 'none', borderTop: '1px solid var(--glass-edge)', margin: '16px 0' }} />
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Detail row: rings + ring legends */}
+              <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
+                <div style={{ flexShrink: 0 }}>
+                  <div style={{ width: 140, height: 140, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ActivityRings size={140} values={rings} colors={ringColors} thickness={12} gap={5}/>
+                    <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', pointerEvents: 'none', marginTop: 2 }}>
+                      <span className="num" style={{ fontSize: 22, fontWeight: 300, color: 'var(--fg-primary)' }}>{onTargetCount}</span>
+                      <span style={{ fontSize: 13, color: 'var(--fg-quiet)', margin: '0 2px' }}>/</span>
+                      <span className="num" style={{ fontSize: 15, color: 'var(--fg-tertiary)' }}>{totalGoalCount}</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
                   <RingLegend color="var(--good)" label="Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
                   <RingLegend color="var(--aurora-pink)" label="Sugar" value={`${fmt(adherence?.sugars_g?.logged, 1, 'g')} / ${fmt(adherence?.sugars_g?.target, 1, 'g')}`} pct={adherence?.sugars_g?.pct ?? 0} invert/>
@@ -484,69 +483,68 @@ export default function TodayRoute() {
           className="glass"
           onClick={Object.keys(dayNutrition).length > 0 ? () => setShowDayBreakdown(true) : undefined}
           style={{
-            padding: 20,
+            padding: 18,
             display: 'flex',
-            gap: 20,
-            alignItems: 'center',
+            flexDirection: 'column',
             marginBottom: 14,
             cursor: Object.keys(dayNutrition).length > 0 ? 'pointer' : 'default',
             userSelect: 'none',
           }}
         >
-          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: 160, height: 160, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ActivityRings size={160} values={rings} colors={ringColors} thickness={12} gap={5}/>
-              <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', pointerEvents: 'none', marginTop: 2 }}>
-                <span className="num" style={{ fontSize: 24, fontWeight: 300, color: 'var(--fg-primary)' }}>{onTargetCount}</span>
-                <span style={{ fontSize: 14, color: 'var(--fg-quiet)', margin: '0 2px' }}>/</span>
-                <span className="num" style={{ fontSize: 16, color: 'var(--fg-tertiary)' }}>{totalGoalCount}</span>
+          {/* Headline row: calories (primary) + protein (secondary) */}
+          <div style={{ display: 'grid', gridTemplateColumns: adherence?.protein_g?.target != null ? '1fr 1fr' : '1fr', gap: 0 }}>
+            <div style={{ paddingRight: adherence?.protein_g?.target != null ? 16 : 0 }}>
+              <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Calories</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 2 }}>
+                <span className="num" style={{ fontSize: 26, fontWeight: 300, color: 'var(--fg-primary)', letterSpacing: '-0.03em', lineHeight: 1 }}>{fmt(adherence?.calories?.logged, 0)}</span>
+                <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence?.calories?.target, 0)} kcal</span>
               </div>
-            </div>
-          </div>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-            {/* Calories horizontal gauge */}
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-primary)' }}>Calories</span>
-                <span className="num" style={{ fontSize: 12, color: 'var(--fg-secondary)' }}>
-                  <strong>{fmt(adherence?.calories?.logged, 0)}</strong> / {fmt(adherence?.calories?.target, 0)}
-                </span>
-              </div>
-              <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ marginTop: 7, height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                 <div style={{
-                  position: 'absolute', top: 0, left: 0, bottom: 0,
                   width: `${Math.min(adherence?.calories?.pct ?? 0, 100)}%`,
-                  background: 'linear-gradient(90deg, var(--sky-400), var(--sky-500))',
+                  height: '100%',
                   borderRadius: 999,
+                  background: 'linear-gradient(90deg, var(--sky-400), var(--sky-500))',
                   boxShadow: '0 0 6px rgba(56,189,248,0.4)',
                 }}/>
               </div>
             </div>
 
-            {/* Protein floor gauge — only shown when goal is set */}
             {adherence?.protein_g?.target != null && (
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-primary)' }}>Protein</span>
-                  <span className="num" style={{ fontSize: 12, color: 'var(--fg-secondary)' }}>
-                    <strong>{fmt(adherence.protein_g.logged, 0)}</strong> / {fmt(adherence.protein_g.target, 0)} g
-                  </span>
+              <div style={{ paddingLeft: 16, borderLeft: '1px solid var(--glass-edge)' }}>
+                <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Protein</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 2 }}>
+                  <span className="num" style={{ fontSize: 20, fontWeight: 300, color: 'var(--fg-primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>{fmt(adherence.protein_g.logged, 0)}</span>
+                  <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence.protein_g.target, 0)} g</span>
                 </div>
-                <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ marginTop: 7, height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                   <div style={{
-                    position: 'absolute', top: 0, left: 0, bottom: 0,
                     width: `${Math.min(adherence.protein_g.pct ?? 0, 100)}%`,
-                    background: 'linear-gradient(90deg, var(--aurora-violet), #a78bfa)',
+                    height: '100%',
                     borderRadius: 999,
+                    background: 'linear-gradient(90deg, var(--aurora-violet), #a78bfa)',
                     boxShadow: '0 0 6px rgba(139,92,246,0.4)',
                   }}/>
                 </div>
               </div>
             )}
+          </div>
 
-            <hr style={{ border: 'none', borderTop: '1px solid var(--glass-edge)', margin: '0 0 10px' }} />
+          <hr style={{ border: 'none', borderTop: '1px solid var(--glass-edge)', margin: '14px 0' }} />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Detail row: rings + ring legends */}
+          <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
+            <div style={{ flexShrink: 0 }}>
+              <div style={{ width: 110, height: 110, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityRings size={110} values={rings} colors={ringColors} thickness={10} gap={4}/>
+                <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', pointerEvents: 'none', marginTop: 2 }}>
+                  <span className="num" style={{ fontSize: 18, fontWeight: 300, color: 'var(--fg-primary)' }}>{onTargetCount}</span>
+                  <span style={{ fontSize: 12, color: 'var(--fg-quiet)', margin: '0 2px' }}>/</span>
+                  <span className="num" style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>{totalGoalCount}</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
               <RingLegend color="var(--good)" label="Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
               <RingLegend color="var(--aurora-pink)" label="Sugar" value={`${fmt(adherence?.sugars_g?.logged, 1, 'g')} / ${fmt(adherence?.sugars_g?.target, 1, 'g')}`} pct={adherence?.sugars_g?.pct ?? 0} invert/>
