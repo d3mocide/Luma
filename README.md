@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/TimescaleDB-0ea5e9?style=flat-square&logo=timescale&logoColor=white" alt="TimescaleDB"/>
   <img src="https://img.shields.io/badge/Docker_Compose-0ea5e9?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose"/>
   <img src="https://img.shields.io/badge/PWA-fbbf24?style=flat-square&logo=pwa&logoColor=black" alt="PWA"/>
+  <img src="https://img.shields.io/badge/License-GPLv3-0ea5e9?style=flat-square&logo=gnu&logoColor=white" alt="License: GPLv3"/>
 </p>
 
 ---
@@ -56,6 +57,51 @@ Host (80 / 443)
 LLM inference is handled in-process via the `litellm` SDK — no separate container. Each AI role (food extraction, meal planning, coaching, insight narration) is routed independently to local Ollama or cloud providers, configured entirely through environment variables.
 
 For a full architectural breakdown including the database schema and data-flow diagrams, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+
+---
+
+## Tech Stack
+
+Pinned versions are the source of truth in `backend/pyproject.toml` and `frontend/package.json`.
+
+### Backend — Python 3.12
+
+| Dependency | Version | Role |
+|---|---|---|
+| FastAPI | 0.136.3 | Async web framework |
+| Uvicorn | 0.48.0 | ASGI server |
+| SQLAlchemy | 2.0.50 | Async ORM |
+| asyncpg | 0.31.0 | PostgreSQL driver |
+| Alembic | 1.18.4 | Schema migrations |
+| Pydantic | 2.13.4 | Validation & schema |
+| pydantic-settings | 2.14.1 | Env-based config |
+| argon2-cffi | 25.1.0 | Argon2id password hashing |
+| PyJWT | 2.13.0 | JWT access/refresh tokens |
+| httpx | 0.28.1 | Async HTTP client |
+| arq | 0.28.0 | Redis-backed task queue |
+| redis | 5.3.1 | Cache / queue broker |
+| LiteLLM | 1.88.1 | LLM routing (local + cloud) |
+| scikit-learn | 1.6.1 | IsolationForest anomaly detection |
+| pywebpush | 2.3.0 | VAPID Web Push |
+| aiosmtplib | 5.1.1 | Async SMTP for invitations |
+
+### Frontend — React 18
+
+| Dependency | Version | Role |
+|---|---|---|
+| React / React DOM | 18.3.1 | UI runtime |
+| TypeScript | 5.7.3 | Typed JS (strict mode) |
+| Vite | 8.0.16 | Build tool / dev server |
+| TanStack Query | 5.101.0 | Server state |
+| Zustand | 5.0.13 | Client-only state |
+| React Router | 7.17.0 | Routing |
+| Tailwind CSS | 4.3.0 | Styling (`@theme` tokens) |
+| Recharts | 2.15.0 | Charts |
+| react-markdown | 10.1.0 | Coach message rendering |
+| html5-qrcode | 2.3.8 | Barcode scanning |
+| vite-plugin-pwa | 0.20.5 | Service worker / manifest |
+
+> Adding a dependency? See **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** for the Python and npm workflows.
 
 ---
 
@@ -210,4 +256,4 @@ See **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** for migrations, testing, loca
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+GPLv3 — see [LICENSE](LICENSE).
