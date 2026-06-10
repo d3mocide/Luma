@@ -95,7 +95,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
     onSuccess: (updated) => {
       onSlotUpdated(updated)
       queryClient.invalidateQueries({ queryKey: ['plan'] })
-      setView('detail')
+      onClose()
     },
   })
 
@@ -120,10 +120,10 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
       api.post<MealSlot>(`/plan/slot/${slotId}/replace`, { food_id: foodId, serving_g: serving }),
     onSuccess: (updated) => {
       onSlotUpdated(updated)
-      setView('detail')
       setSelectedFood(null)
       setFoodQuery('')
       queryClient.invalidateQueries({ queryKey: ['plan'] })
+      onClose()
     },
   })
 
@@ -144,7 +144,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="glass thin-scroll" style={{ maxWidth: 520, width: '100%', padding: 28, borderRadius: 24, position: 'relative', maxHeight: '80vh', overflowY: 'auto' }}>
+      <div className="glass thin-scroll slot-modal-container">
         <style dangerouslySetInnerHTML={{ __html: `
           .luma-browser-input {
             width: 100%; box-sizing: border-box;
@@ -239,7 +239,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
 
             <div style={{ marginBottom: 20 }}>
               <div className="eyebrow" style={{ marginBottom: 10 }}>Nutrition</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              <div className="slot-modal-nutrition-grid">
                 {KEY_NUTRIENTS.map(({ key, label, unit, color }) => (
                   <div key={key} className="glass-inset" style={{ padding: '10px 12px', textAlign: 'center' }}>
                     <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginBottom: 4 }}>{label}</div>
@@ -257,7 +257,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="slot-modal-button-grid">
                 <button className="btn" onClick={openBrowser} disabled={slot.locked}>
                   <Utensils size={13}/> Browse Foods
                 </button>
@@ -267,7 +267,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
                   <Check size={13}/> {logEatenMutation.isPending ? 'Logging…' : 'Log as eaten'}
                 </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="slot-modal-button-grid">
                 <button
                   className="btn"
                   onClick={openAlternatives}
@@ -492,7 +492,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
                   {previewNutrition && (
                     <div style={{ borderTop: '1px solid var(--glass-edge)', paddingTop: 14 }}>
                       <div className="eyebrow" style={{ marginBottom: 10 }}>Preview Nutrition</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                      <div className="slot-modal-nutrition-grid" style={{ gap: 8 }}>
                         {KEY_NUTRIENTS.map(({ key, label, unit, color }) => (
                           <div key={key} className="glass-inset" style={{ padding: '8px 10px', textAlign: 'center', background: 'rgba(0,0,0,0.1)' }}>
                             <div style={{ fontSize: 9, color: 'var(--fg-quiet)', marginBottom: 4 }}>{label}</div>
@@ -503,7 +503,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
                     </div>
                   )}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="slot-modal-button-grid" style={{ gap: 12 }}>
                   <button className="btn" onClick={() => setSelectedFood(null)}>Cancel</button>
                   <button className="btn btn-primary"
                     disabled={!previewNutrition || replaceMutation.isPending}
@@ -555,7 +555,7 @@ export function SlotModal({ slot, planId, onClose, onSlotUpdated }: Props) {
                     {alt.notes && <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', lineHeight: 1.4 }}>{alt.notes}</div>}
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 12 }}>
+                <div className="slot-modal-nutrition-grid" style={{ gap: 6, marginBottom: 12 }}>
                   {KEY_NUTRIENTS.map(({ key, label, unit, color }) => (
                     <div key={key} style={{ textAlign: 'center', padding: '6px 4px', background: 'var(--glass-1)', borderRadius: 8 }}>
                       <div style={{ fontSize: 9, color: 'var(--fg-quiet)', marginBottom: 2 }}>{label}</div>
