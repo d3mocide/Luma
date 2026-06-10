@@ -2005,13 +2005,6 @@ input[type="search"]::-webkit-search-results-decoration {
   color: var(--fg-secondary);
 }
 
-@media (max-width: 480px) {
-  .food-db-macro-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
-  }
-}
-
 
 .plan-header {
   display: flex;
