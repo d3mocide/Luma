@@ -152,7 +152,9 @@ export default function TodayRoute() {
     ((adherence?.sat_fat_g?.pct ?? 0) / 100) <= 1.0,
     ((adherence?.soluble_fiber_g?.pct ?? 0) / 100) >= 0.9,
     ((adherence?.sugars_g?.pct ?? 0) / 100) <= 1.0,
+    adherence?.protein_g?.target != null && ((adherence?.protein_g?.pct ?? 0) / 100) >= 1.0,
   ].filter(Boolean).length
+  const totalGoalCount = adherence?.protein_g?.target != null ? 5 : 4
   const weightUnit = measurementWeightUnit(measurementSystem)
   const slopeUnit = measurementSlopeUnit(measurementSystem)
   const latestWeight = convertWeight(data.weight.latest_kg, measurementSystem)
@@ -284,13 +286,13 @@ export default function TodayRoute() {
                   <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', pointerEvents: 'none', marginTop: 2 }}>
                     <span className="num" style={{ fontSize: 26, fontWeight: 300, color: 'var(--fg-primary)' }}>{onTargetCount}</span>
                     <span style={{ fontSize: 16, color: 'var(--fg-quiet)', margin: '0 2px' }}>/</span>
-                    <span className="num" style={{ fontSize: 18, color: 'var(--fg-tertiary)' }}>4</span>
+                    <span className="num" style={{ fontSize: 18, color: 'var(--fg-tertiary)' }}>{totalGoalCount}</span>
                   </div>
                 </div>
               </div>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                 {/* Calories horizontal gauge */}
-                <div style={{ marginBottom: 14 }}>
+                <div style={{ marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                     <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>Calories</span>
                     <span className="num" style={{ fontSize: 13, color: 'var(--fg-secondary)' }}>
@@ -307,6 +309,27 @@ export default function TodayRoute() {
                     }}/>
                   </div>
                 </div>
+
+                {/* Protein floor gauge — only shown when goal is set */}
+                {adherence?.protein_g?.target != null && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>Protein</span>
+                      <span className="num" style={{ fontSize: 13, color: 'var(--fg-secondary)' }}>
+                        <strong>{fmt(adherence.protein_g.logged, 0)}</strong> / {fmt(adherence.protein_g.target, 0)} g
+                      </span>
+                    </div>
+                    <div style={{ height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
+                      <div style={{
+                        position: 'absolute', top: 0, left: 0, bottom: 0,
+                        width: `${Math.min(adherence.protein_g.pct ?? 0, 100)}%`,
+                        background: 'linear-gradient(90deg, var(--aurora-violet), #a78bfa)',
+                        borderRadius: 999,
+                        boxShadow: '0 0 8px rgba(139,92,246,0.4)',
+                      }}/>
+                    </div>
+                  </div>
+                )}
 
                 <hr style={{ border: 'none', borderTop: '1px solid var(--glass-edge)', margin: '0 0 14px' }} />
 
@@ -476,13 +499,13 @@ export default function TodayRoute() {
               <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', pointerEvents: 'none', marginTop: 2 }}>
                 <span className="num" style={{ fontSize: 24, fontWeight: 300, color: 'var(--fg-primary)' }}>{onTargetCount}</span>
                 <span style={{ fontSize: 14, color: 'var(--fg-quiet)', margin: '0 2px' }}>/</span>
-                <span className="num" style={{ fontSize: 16, color: 'var(--fg-tertiary)' }}>4</span>
+                <span className="num" style={{ fontSize: 16, color: 'var(--fg-tertiary)' }}>{totalGoalCount}</span>
               </div>
             </div>
           </div>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
             {/* Calories horizontal gauge */}
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
                 <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-primary)' }}>Calories</span>
                 <span className="num" style={{ fontSize: 12, color: 'var(--fg-secondary)' }}>
@@ -499,6 +522,27 @@ export default function TodayRoute() {
                 }}/>
               </div>
             </div>
+
+            {/* Protein floor gauge — only shown when goal is set */}
+            {adherence?.protein_g?.target != null && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-primary)' }}>Protein</span>
+                  <span className="num" style={{ fontSize: 12, color: 'var(--fg-secondary)' }}>
+                    <strong>{fmt(adherence.protein_g.logged, 0)}</strong> / {fmt(adherence.protein_g.target, 0)} g
+                  </span>
+                </div>
+                <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{
+                    position: 'absolute', top: 0, left: 0, bottom: 0,
+                    width: `${Math.min(adherence.protein_g.pct ?? 0, 100)}%`,
+                    background: 'linear-gradient(90deg, var(--aurora-violet), #a78bfa)',
+                    borderRadius: 999,
+                    boxShadow: '0 0 6px rgba(139,92,246,0.4)',
+                  }}/>
+                </div>
+              </div>
+            )}
 
             <hr style={{ border: 'none', borderTop: '1px solid var(--glass-edge)', margin: '0 0 10px' }} />
 
