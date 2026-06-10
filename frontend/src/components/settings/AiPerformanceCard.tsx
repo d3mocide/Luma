@@ -58,7 +58,7 @@ export function AiPerformanceCard() {
   }
 
   const stats = calculateStats()
-  const maxLatency = Math.max(...stats.map((s) => s.avgLatency), 4000) // reference ceiling for the bar scale
+  const LATENCY_CEILING_MS = 60_000 // fixed scale so bars are comparable across loads
 
   return (
     <div className="glass settings-card" style={{ padding: 24 }}>
@@ -76,7 +76,8 @@ export function AiPerformanceCard() {
           {stats.map((prov) => {
             const hasData = prov.totalRequests > 0
             const successRate = hasData ? Math.round((prov.totalSuccesses / prov.totalRequests) * 100) : 0
-            const latencyPercent = hasData ? Math.min((prov.avgLatency / maxLatency) * 100, 100) : 0
+            const latencyPercent = hasData ? Math.min((prov.avgLatency / LATENCY_CEILING_MS) * 100, 100) : 0
+            const successColor = successRate === 100 ? '#10b981' : 'var(--sun-400)'
 
             return (
               <div key={prov.key} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -124,24 +125,61 @@ export function AiPerformanceCard() {
                 </div>
 
                 {hasData ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{
-                      width: '100%', height: 6, borderRadius: 3,
-                      background: 'rgba(255, 255, 255, 0.05)', overflow: 'hidden',
-                      position: 'relative',
-                    }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{
+                        fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase',
+                        letterSpacing: '0.08em', width: 52, flexShrink: 0,
+                      }}>
+                        Success
+                      </span>
                       <div style={{
-                        width: `${latencyPercent}%`, height: '100%', borderRadius: 3,
-                        background: prov.color,
-                        boxShadow: `0 0 10px ${prov.color}`,
-                        transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-                      }} />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontSize: 11, color: successRate === 100 ? '#10b981' : 'var(--sun-400)' }}>
-                        <span>{successRate}% success rate</span>
+                        flex: 1, height: 6, borderRadius: 3,
+                        background: 'rgba(255, 255, 255, 0.05)', overflow: 'hidden',
+                      }}>
+                        <div style={{
+                          width: `${successRate}%`, height: '100%', borderRadius: 3,
+                          background: successColor,
+                          boxShadow: `0 0 10px ${successColor}`,
+                          transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                        }} />
                       </div>
-                      <span style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>Max reference ceiling: {(maxLatency / 1000).toFixed(1)}s</span>
+                      <span style={{
+                        fontSize: 11, fontFamily: 'var(--font-mono)', color: successColor,
+                        width: 56, textAlign: 'right', flexShrink: 0,
+                      }}>
+                        {successRate}%
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{
+                        fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase',
+                        letterSpacing: '0.08em', width: 52, flexShrink: 0,
+                      }}>
+                        Latency
+                      </span>
+                      <div style={{
+                        flex: 1, height: 6, borderRadius: 3,
+                        background: 'rgba(255, 255, 255, 0.05)', overflow: 'hidden',
+                      }}>
+                        <div style={{
+                          width: `${latencyPercent}%`, height: '100%', borderRadius: 3,
+                          background: prov.color,
+                          boxShadow: `0 0 10px ${prov.color}`,
+                          transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                        }} />
+                      </div>
+                      <span style={{
+                        fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--fg-secondary)',
+                        width: 56, textAlign: 'right', flexShrink: 0,
+                      }}>
+                        {(prov.avgLatency / 1000).toFixed(1)}s
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <span style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>
+                        Latency scale: 0–{LATENCY_CEILING_MS / 1000}s
+                      </span>
                     </div>
                   </div>
                 ) : (
