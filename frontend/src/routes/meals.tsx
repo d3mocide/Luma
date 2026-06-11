@@ -1215,12 +1215,14 @@ export default function MealsRoute() {
 
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab)
   const tabsRef = useRef<HTMLDivElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const el = tabsRef.current
-    if (!el) return
+    const wrapper = wrapperRef.current
+    if (!el || !wrapper) return
     const check = () => {
-      el.classList.toggle('overflow-right', el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+      wrapper.classList.toggle('overflow-right', el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
     }
     check()
     el.addEventListener('scroll', check, { passive: true })
@@ -1274,7 +1276,7 @@ export default function MealsRoute() {
       </header>
 
       {/* Tab bar */}
-      <div className="settings-tabs-wrapper">
+      <div ref={wrapperRef} className="settings-tabs-wrapper">
         <div ref={tabsRef} className="settings-tabs" role="tablist">
           {([
             { key: 'foods',      label: 'Foods'      },

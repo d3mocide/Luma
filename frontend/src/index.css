@@ -1367,20 +1367,24 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .settings-tabs-wrapper {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: linear-gradient(165deg, var(--glass-3), var(--glass-2));
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
+  position: relative;
 }
 
-/* Fade the tab text/border itself to transparent — no colour dependency */
-.settings-tabs.overflow-right {
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 44px), transparent 100%);
-  mask-image: linear-gradient(to right, black calc(100% - 44px), transparent 100%);
+.settings-tabs-wrapper::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 1px; /* sit above the border-bottom line */
+  width: 48px;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--bg-0));
+  opacity: 0;
+  transition: opacity 180ms;
+}
+
+.settings-tabs-wrapper.overflow-right::after {
+  opacity: 1;
 }
 
 .settings-grid {
