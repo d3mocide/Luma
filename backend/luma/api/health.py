@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, text
 
 from luma.config import settings
-from luma.db.models import MealEvent, Medication, Supplement
+from luma.db.models import MealEvent, Medication, MedicationLog, Supplement, SupplementLog
 from luma.deps import CurrentUser, DbDep
 
 router = APIRouter()
@@ -181,13 +181,38 @@ def _run_interaction_rules(
 # ---------------------------------------------------------------------------
 
 @router.get("/health/medications")
-async def list_medications(user: CurrentUser, db: DbDep) -> list[dict[str, Any]]:
+async def list_medications(
+    user: CurrentUser,
+    db: DbDep,
+    tz: str = Query(default=None, alias="tz"),
+) -> list[dict[str, Any]]:
+    try:
+        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
+    except Exception:
+        resolved_tz = ZoneInfo(settings.server_timezone)
+
+    today_dt = datetime.now(resolved_tz).date()
+    today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
+    today_end = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
+
     rows = await db.execute(
         select(Medication)
         .where(Medication.user_id == user.id)
         .order_by(Medication.created_at)
     )
     meds = rows.scalars().all()
+
+    # Load medication log IDs for today
+    log_rows = await db.execute(
+        select(MedicationLog.medication_id)
+        .where(
+            MedicationLog.user_id == user.id,
+            MedicationLog.ts >= today_start,
+            MedicationLog.ts < today_end,
+        )
+    )
+    taken_med_ids = set(log_rows.scalars().all())
+
     return [
         {
             "id": str(m.id),
@@ -198,6 +223,7 @@ async def list_medications(user: CurrentUser, db: DbDep) -> list[dict[str, Any]]
             "notes": m.notes,
             "is_active": m.is_active,
             "created_at": m.created_at.isoformat(),
+            "taken_today": m.id in taken_med_ids,
         }
         for m in meds
     ]
@@ -255,13 +281,38 @@ async def delete_medication(med_id: str, user: CurrentUser, db: DbDep) -> None:
 # ---------------------------------------------------------------------------
 
 @router.get("/health/supplements")
-async def list_supplements(user: CurrentUser, db: DbDep) -> list[dict[str, Any]]:
+async def list_supplements(
+    user: CurrentUser,
+    db: DbDep,
+    tz: str = Query(default=None, alias="tz"),
+) -> list[dict[str, Any]]:
+    try:
+        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
+    except Exception:
+        resolved_tz = ZoneInfo(settings.server_timezone)
+
+    today_dt = datetime.now(resolved_tz).date()
+    today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
+    today_end = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
+
     rows = await db.execute(
         select(Supplement)
         .where(Supplement.user_id == user.id)
         .order_by(Supplement.created_at)
     )
     supps = rows.scalars().all()
+
+    # Load supplement log IDs for today
+    log_rows = await db.execute(
+        select(SupplementLog.supplement_id)
+        .where(
+            SupplementLog.user_id == user.id,
+            SupplementLog.ts >= today_start,
+            SupplementLog.ts < today_end,
+        )
+    )
+    taken_supp_ids = set(log_rows.scalars().all())
+
     return [
         {
             "id": str(s.id),
@@ -271,6 +322,7 @@ async def list_supplements(user: CurrentUser, db: DbDep) -> list[dict[str, Any]]
             "nutrients_per_dose": s.nutrients_per_dose or {},
             "is_active": s.is_active,
             "created_at": s.created_at.isoformat(),
+            "taken_today": s.id in taken_supp_ids,
         }
         for s in supps
     ]
@@ -553,3 +605,165 @@ async def protein_simulate(user: CurrentUser, db: DbDep) -> dict[str, Any]:
         "zone": zone,
         "note": "Optimal zone (1.6–2.2 g/kg/day) supports muscle protein synthesis. Based on ISSN Position Stand 2017.",
     }
+
+
+# ---------------------------------------------------------------------------
+# Medication Intake Logging
+# ---------------------------------------------------------------------------
+
+@router.post("/health/medications/{med_id}/log", status_code=status.HTTP_201_CREATED)
+async def log_medication_taken(
+    med_id: str,
+    user: CurrentUser,
+    db: DbDep,
+    tz: str = Query(default=None, alias="tz"),
+) -> dict[str, Any]:
+    med_uuid = uuid.UUID(med_id)
+    med_row = await db.execute(
+        select(Medication).where(Medication.id == med_uuid, Medication.user_id == user.id)
+    )
+    med = med_row.scalar_one_or_none()
+    if not med:
+        raise HTTPException(status_code=404, detail="Medication not found")
+
+    try:
+        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
+    except Exception:
+        resolved_tz = ZoneInfo(settings.server_timezone)
+
+    today_dt = datetime.now(resolved_tz).date()
+    today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
+    today_end = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
+
+    existing_row = await db.execute(
+        select(MedicationLog).where(
+            MedicationLog.user_id == user.id,
+            MedicationLog.medication_id == med_uuid,
+            MedicationLog.ts >= today_start,
+            MedicationLog.ts < today_end,
+        )
+    )
+    existing = existing_row.scalar_one_or_none()
+    if existing:
+        return {"id": str(existing.id), "status": "already_logged"}
+
+    log = MedicationLog(
+        user_id=user.id,
+        medication_id=med_uuid,
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return {"id": str(log.id), "status": "logged"}
+
+
+@router.delete("/health/medications/{med_id}/log", status_code=status.HTTP_204_NO_CONTENT)
+async def unlog_medication_taken(
+    med_id: str,
+    user: CurrentUser,
+    db: DbDep,
+    tz: str = Query(default=None, alias="tz"),
+) -> None:
+    med_uuid = uuid.UUID(med_id)
+    try:
+        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
+    except Exception:
+        resolved_tz = ZoneInfo(settings.server_timezone)
+
+    today_dt = datetime.now(resolved_tz).date()
+    today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
+    today_end = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
+
+    existing_rows = await db.execute(
+        select(MedicationLog).where(
+            MedicationLog.user_id == user.id,
+            MedicationLog.medication_id == med_uuid,
+            MedicationLog.ts >= today_start,
+            MedicationLog.ts < today_end,
+        )
+    )
+    logs = existing_rows.scalars().all()
+    for log in logs:
+        await db.delete(log)
+    await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Supplement Intake Logging
+# ---------------------------------------------------------------------------
+
+@router.post("/health/supplements/{supp_id}/log", status_code=status.HTTP_201_CREATED)
+async def log_supplement_taken(
+    supp_id: str,
+    user: CurrentUser,
+    db: DbDep,
+    tz: str = Query(default=None, alias="tz"),
+) -> dict[str, Any]:
+    supp_uuid = uuid.UUID(supp_id)
+    supp_row = await db.execute(
+        select(Supplement).where(Supplement.id == supp_uuid, Supplement.user_id == user.id)
+    )
+    supp = supp_row.scalar_one_or_none()
+    if not supp:
+        raise HTTPException(status_code=404, detail="Supplement not found")
+
+    try:
+        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
+    except Exception:
+        resolved_tz = ZoneInfo(settings.server_timezone)
+
+    today_dt = datetime.now(resolved_tz).date()
+    today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
+    today_end = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
+
+    existing_row = await db.execute(
+        select(SupplementLog).where(
+            SupplementLog.user_id == user.id,
+            SupplementLog.supplement_id == supp_uuid,
+            SupplementLog.ts >= today_start,
+            SupplementLog.ts < today_end,
+        )
+    )
+    existing = existing_row.scalar_one_or_none()
+    if existing:
+        return {"id": str(existing.id), "status": "already_logged"}
+
+    log = SupplementLog(
+        user_id=user.id,
+        supplement_id=supp_uuid,
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return {"id": str(log.id), "status": "logged"}
+
+
+@router.delete("/health/supplements/{supp_id}/log", status_code=status.HTTP_204_NO_CONTENT)
+async def unlog_supplement_taken(
+    supp_id: str,
+    user: CurrentUser,
+    db: DbDep,
+    tz: str = Query(default=None, alias="tz"),
+) -> None:
+    supp_uuid = uuid.UUID(supp_id)
+    try:
+        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
+    except Exception:
+        resolved_tz = ZoneInfo(settings.server_timezone)
+
+    today_dt = datetime.now(resolved_tz).date()
+    today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
+    today_end = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
+
+    existing_rows = await db.execute(
+        select(SupplementLog).where(
+            SupplementLog.user_id == user.id,
+            SupplementLog.supplement_id == supp_uuid,
+            SupplementLog.ts >= today_start,
+            SupplementLog.ts < today_end,
+        )
+    )
+    logs = existing_rows.scalars().all()
+    for log in logs:
+        await db.delete(log)
+    await db.commit()

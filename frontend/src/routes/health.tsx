@@ -5,7 +5,7 @@ import {
 } from 'recharts'
 import {
   Pill, Leaf, ShieldAlert, Plus, Trash2, Pencil, X, AlertTriangle, Info,
-  ChevronRight, FlaskConical, Settings, TrendingDown, Dumbbell,
+  FlaskConical, Settings, TrendingDown, Dumbbell, CheckCircle2, Circle,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { NavLink } from 'react-router-dom'
@@ -23,6 +23,7 @@ interface Medication {
   notes: string | null
   is_active: boolean
   created_at: string
+  taken_today?: boolean
 }
 
 interface Supplement {
@@ -33,6 +34,7 @@ interface Supplement {
   nutrients_per_dose: Record<string, number>
   is_active: boolean
   created_at: string
+  taken_today?: boolean
 }
 
 interface InteractionAlert {
@@ -429,10 +431,11 @@ function ModalField({ label, value, onChange, placeholder }: { label: string; va
 function MedicationsTab() {
   const qc = useQueryClient()
   const [modal, setModal] = useState<'add' | Medication | null>(null)
+  const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
   const { data: meds = [], isLoading } = useQuery<Medication[]>({
-    queryKey: ['health', 'medications'],
-    queryFn: () => api.get('/health/medications'),
+    queryKey: ['health', 'medications', clientTz],
+    queryFn: () => api.get(`/health/medications?tz=${encodeURIComponent(clientTz)}`),
   })
 
   const createMut = useMutation({
@@ -451,56 +454,136 @@ function MedicationsTab() {
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['health', 'medications'] }); void qc.invalidateQueries({ queryKey: ['health', 'interactions'] }) },
   })
 
+  const toggleLogMut = useMutation({
+    mutationFn: ({ id, taken }: { id: string; taken: boolean }) => {
+      if (taken) {
+        return api.post(`/health/medications/${id}/log?tz=${encodeURIComponent(clientTz)}`)
+      } else {
+        return api.delete(`/health/medications/${id}/log?tz=${encodeURIComponent(clientTz)}`)
+      }
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['health', 'medications'] })
+      void qc.invalidateQueries({ queryKey: ['health', 'interactions'] })
+    },
+  })
+
   if (isLoading) return <div style={{ padding: 24, color: 'var(--fg-quiet)', fontSize: 13 }}>Loading…</div>
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-        <button type="button" className="btn btn-primary" style={{ gap: 6 }} onClick={() => setModal('add')}>
-          <Plus size={14} /> Add medication
-        </button>
+    <div className="health-grid">
+      {/* Left column: List & Action */}
+      <div className="settings-stack">
+        {meds.length === 0 ? (
+          <EmptyState icon={Pill} message="No medications added yet. Add your medications to enable interaction checking." />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {meds.map((med) => (
+              <div key={med.id} className="glass" style={{ padding: '14px 16px', borderRadius: 14, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                {med.is_active ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleLogMut.mutate({ id: med.id, taken: !med.taken_today })}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: med.taken_today ? 'var(--good)' : 'var(--fg-tertiary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginTop: 2,
+                      transition: 'all 0.15s ease',
+                    }}
+                    title={med.taken_today ? "Mark as not taken today" : "Mark as taken today"}
+                  >
+                    {med.taken_today ? (
+                      <CheckCircle2 size={18} style={{ filter: 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.4))' }} />
+                    ) : (
+                      <Circle size={18} />
+                    )}
+                  </button>
+                ) : (
+                  <div style={{ width: 18, height: 18, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-quiet)', opacity: 0.3 }} title="Inactive medication">
+                    <Circle size={18} style={{ strokeDasharray: '2, 2' }} />
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg-primary)' }}>{med.name}</span>
+                    {med.generic_name && (
+                      <span style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>({med.generic_name})</span>
+                    )}
+                    <ActivePill active={med.is_active} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                    {med.dose && <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>{med.dose}</span>}
+                    {med.frequency && <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>{med.frequency}</span>}
+                  </div>
+                  {med.notes && <div style={{ fontSize: 12, color: 'var(--fg-quiet)', marginTop: 4 }}>{med.notes}</div>}
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => setModal(med)}
+                    aria-label={`Edit ${med.name}`}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', padding: 4 }}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { if (confirm(`Delete ${med.name}?`)) deleteMut.mutate(med.id) }}
+                    aria-label={`Delete ${med.name}`}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', padding: 4 }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="health-action-btn-wrap">
+          <button type="button" className="btn btn-primary health-action-btn" onClick={() => setModal('add')}>
+            <Plus size={14} /> Add medication
+          </button>
+        </div>
       </div>
 
-      {meds.length === 0 ? (
-        <EmptyState icon={Pill} message="No medications added yet. Add your medications to enable interaction checking." />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {meds.map((med) => (
-            <div key={med.id} className="glass" style={{ padding: '14px 16px', borderRadius: 14, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg-primary)' }}>{med.name}</span>
-                  {med.generic_name && (
-                    <span style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>({med.generic_name})</span>
-                  )}
-                  <ActivePill active={med.is_active} />
-                </div>
-                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                  {med.dose && <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>{med.dose}</span>}
-                  {med.frequency && <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>{med.frequency}</span>}
-                </div>
-                {med.notes && <div style={{ fontSize: 12, color: 'var(--fg-quiet)', marginTop: 4 }}>{med.notes}</div>}
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <button
-                  type="button"
-                  onClick={() => setModal(med)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', padding: 4 }}
-                >
-                  <Pencil size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { if (confirm(`Delete ${med.name}?`)) deleteMut.mutate(med.id) }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', padding: 4 }}
-                >
-                  <Trash2 size={14} />
-                </button>
+      {/* Right column: Summary & Clinical context */}
+      <div className="settings-stack">
+        <div className="glass settings-card" style={{ padding: 24 }}>
+          <div className="eyebrow" style={{ marginBottom: 16 }}>Overview</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 16 }}>
+            <div style={{
+              padding: '12px 14px', borderRadius: 12,
+              background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Total tracked</div>
+              <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--fg-primary)', fontFamily: 'var(--font-mono)' }}>{meds.length}</div>
+            </div>
+            <div style={{
+              padding: '12px 14px', borderRadius: 12,
+              background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Active</div>
+              <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--good)', fontFamily: 'var(--font-mono)' }}>
+                {meds.filter((m) => m.is_active).length}
               </div>
             </div>
-          ))}
+          </div>
+          
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Privacy & Sovereignty</div>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-quiet)', lineHeight: 1.5 }}>
+            Your medication logs, schedules, and clinical notes are stored entirely on your self-hosted instance. No data is transmitted to external providers.
+          </p>
         </div>
-      )}
+      </div>
 
       {modal === 'add' && (
         <MedicationModal
@@ -528,10 +611,11 @@ function MedicationsTab() {
 function SupplementsTab() {
   const qc = useQueryClient()
   const [modal, setModal] = useState<'add' | Supplement | null>(null)
+  const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
   const { data: supps = [], isLoading } = useQuery<Supplement[]>({
-    queryKey: ['health', 'supplements'],
-    queryFn: () => api.get('/health/supplements'),
+    queryKey: ['health', 'supplements', clientTz],
+    queryFn: () => api.get(`/health/supplements?tz=${encodeURIComponent(clientTz)}`),
   })
 
   const createMut = useMutation({
@@ -550,73 +634,166 @@ function SupplementsTab() {
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['health', 'supplements'] }); void qc.invalidateQueries({ queryKey: ['today'] }) },
   })
 
+  const toggleLogMut = useMutation({
+    mutationFn: ({ id, taken }: { id: string; taken: boolean }) => {
+      if (taken) {
+        return api.post(`/health/supplements/${id}/log?tz=${encodeURIComponent(clientTz)}`)
+      } else {
+        return api.delete(`/health/supplements/${id}/log?tz=${encodeURIComponent(clientTz)}`)
+      }
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['health', 'supplements'] })
+      void qc.invalidateQueries({ queryKey: ['today'] })
+    },
+  })
+
   if (isLoading) return <div style={{ padding: 24, color: 'var(--fg-quiet)', fontSize: 13 }}>Loading…</div>
 
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-        <button type="button" className="btn btn-primary" style={{ gap: 6 }} onClick={() => setModal('add')}>
-          <Plus size={14} /> Add supplement
-        </button>
-      </div>
+  const activeSupps = supps.filter((s) => s.is_active)
+  const aggregateNutrients: Record<string, number> = {}
+  for (const s of activeSupps) {
+    for (const [key, val] of Object.entries(s.nutrients_per_dose || {})) {
+      if (val > 0) {
+        aggregateNutrients[key] = (aggregateNutrients[key] ?? 0) + val
+      }
+    }
+  }
+  const aggregateEntries = Object.entries(aggregateNutrients).filter(([, val]) => val > 0)
 
-      {supps.length === 0 ? (
-        <EmptyState icon={Leaf} message="No supplements added yet. Supplement nutrients are automatically added to your daily totals." />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {supps.map((s) => {
-            const significantNutrients = Object.entries(s.nutrients_per_dose)
-              .filter(([, v]) => v > 0)
-              .slice(0, 5)
-            return (
-              <div key={s.id} className="glass" style={{ padding: '14px 16px', borderRadius: 14, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg-primary)' }}>{s.name}</span>
-                    <ActivePill active={s.is_active} />
-                  </div>
-                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: significantNutrients.length ? 6 : 0 }}>
-                    {s.dose && <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>{s.dose}</span>}
-                    {s.frequency && <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>{s.frequency}</span>}
-                  </div>
-                  {significantNutrients.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {significantNutrients.map(([key, val]) => {
-                        const field = SUPPLEMENT_NUTRIENT_FIELDS.find((f) => f.key === key)
-                        return (
-                          <span key={key} style={{
-                            fontSize: 11, padding: '2px 8px', borderRadius: 99,
-                            background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
-                            color: 'var(--fg-quiet)',
-                          }}>
-                            {field?.label ?? key}: {val}{field?.unit ?? ''}
-                          </span>
-                        )
-                      })}
+  return (
+    <div className="health-grid">
+      {/* Left column: List & Action */}
+      <div className="settings-stack">
+        {supps.length === 0 ? (
+          <EmptyState icon={Leaf} message="No supplements added yet. Supplement nutrients are automatically added to your daily totals." />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {supps.map((s) => {
+              const significantNutrients = Object.entries(s.nutrients_per_dose)
+                .filter(([, v]) => v > 0)
+                .slice(0, 5)
+              return (
+                <div key={s.id} className="glass" style={{ padding: '14px 16px', borderRadius: 14, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  {s.is_active ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleLogMut.mutate({ id: s.id, taken: !s.taken_today })}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        color: s.taken_today ? 'var(--good)' : 'var(--fg-tertiary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: 2,
+                        transition: 'all 0.15s ease',
+                      }}
+                      title={s.taken_today ? "Mark as not taken today" : "Mark as taken today"}
+                    >
+                      {s.taken_today ? (
+                        <CheckCircle2 size={18} style={{ filter: 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.4))' }} />
+                      ) : (
+                        <Circle size={18} />
+                      )}
+                    </button>
+                  ) : (
+                    <div style={{ width: 18, height: 18, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-quiet)', opacity: 0.3 }} title="Inactive supplement">
+                      <Circle size={18} style={{ strokeDasharray: '2, 2' }} />
                     </div>
                   )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg-primary)' }}>{s.name}</span>
+                      <ActivePill active={s.is_active} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: significantNutrients.length ? 6 : 0 }}>
+                      {s.dose && <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>{s.dose}</span>}
+                      {s.frequency && <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>{s.frequency}</span>}
+                    </div>
+                    {significantNutrients.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {significantNutrients.map(([key, val]) => {
+                          const field = SUPPLEMENT_NUTRIENT_FIELDS.find((f) => f.key === key)
+                          return (
+                            <span key={key} style={{
+                              fontSize: 11, padding: '2px 8px', borderRadius: 99,
+                              background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+                              color: 'var(--fg-quiet)',
+                            }}>
+                              {field?.label ?? key}: {val}{field?.unit ?? ''}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => setModal(s)}
+                      aria-label={`Edit ${s.name}`}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', padding: 4 }}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { if (confirm(`Delete ${s.name}?`)) deleteMut.mutate(s.id) }}
+                      aria-label={`Delete ${s.name}`}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', padding: 4 }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  <button
-                    type="button"
-                    onClick={() => setModal(s)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', padding: 4 }}
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { if (confirm(`Delete ${s.name}?`)) deleteMut.mutate(s.id) }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', padding: 4 }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+        )}
+
+        <div className="health-action-btn-wrap">
+          <button type="button" className="btn btn-primary health-action-btn" onClick={() => setModal('add')}>
+            <Plus size={14} /> Add supplement
+          </button>
         </div>
-      )}
+      </div>
+
+      {/* Right column: Dynamic Aggregation */}
+      <div className="settings-stack">
+        <div className="glass settings-card" style={{ padding: 24 }}>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Supplement Nutrients</div>
+          {aggregateEntries.length === 0 ? (
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-quiet)', lineHeight: 1.5 }}>
+              No active supplements. Active supplements' nutrients are aggregated here.
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 12px' }}>
+              {aggregateEntries.map(([key, val]) => {
+                const field = SUPPLEMENT_NUTRIENT_FIELDS.find((f) => f.key === key)
+                return (
+                  <div key={key} className="glass-inset" style={{
+                    padding: '8px 10px', borderRadius: 8,
+                    display: 'flex', flexDirection: 'column', gap: 2,
+                  }}>
+                    <span style={{ fontSize: 9, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {field?.label ?? key}
+                    </span>
+                    <span className="num" style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>
+                      {val.toFixed(1).replace(/\.0$/, '')} <span style={{ fontSize: 11, color: 'var(--fg-tertiary)', fontWeight: 400 }}>{field?.unit ?? ''}</span>
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--glass-edge)', fontSize: 12, color: 'var(--fg-quiet)', lineHeight: 1.4 }}>
+            Active supplements' nutrients are automatically integrated into your daily totals in the Today dashboard.
+          </div>
+        </div>
+      </div>
 
       {modal === 'add' && (
         <SupplementModal
@@ -642,15 +819,17 @@ function SupplementsTab() {
 // ---------------------------------------------------------------------------
 
 function InteractionsTab() {
+  const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+
   const { data, isLoading, error } = useQuery<InteractionsResponse>({
-    queryKey: ['health', 'interactions'],
-    queryFn: () => api.get('/health/interactions'),
+    queryKey: ['health', 'interactions', clientTz],
+    queryFn: () => api.get(`/health/interactions?tz=${encodeURIComponent(clientTz)}`),
     refetchOnWindowFocus: true,
   })
 
   const { data: meds = [] } = useQuery<Medication[]>({
-    queryKey: ['health', 'medications'],
-    queryFn: () => api.get('/health/medications'),
+    queryKey: ['health', 'medications', clientTz],
+    queryFn: () => api.get(`/health/medications?tz=${encodeURIComponent(clientTz)}`),
   })
 
   const activeMeds = meds.filter((m) => m.is_active)
@@ -658,71 +837,102 @@ function InteractionsTab() {
   if (isLoading) return <div style={{ padding: 24, color: 'var(--fg-quiet)', fontSize: 13 }}>Checking interactions…</div>
   if (error) return <div style={{ padding: 24, color: 'var(--bad)', fontSize: 13 }}>Failed to check interactions.</div>
 
-  if (activeMeds.length === 0) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '40px 24px', textAlign: 'center' }}>
-        <ShieldAlert size={28} strokeWidth={1.2} style={{ opacity: 0.4, color: 'var(--fg-quiet)' }} />
-        <span style={{ fontSize: 13, color: 'var(--fg-quiet)', maxWidth: 260, lineHeight: 1.5 }}>
-          Add medications in the Medications tab to enable interaction checking.
-        </span>
-        <ChevronRight size={14} style={{ color: 'var(--fg-quiet)', opacity: 0.5 }} />
-      </div>
-    )
-  }
-
   const alerts = data?.alerts ?? []
 
   return (
-    <div>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
-        padding: '10px 14px', borderRadius: 12,
-        background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-edge)',
-      }}>
-        <Info size={13} strokeWidth={1.5} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
-        <span style={{ fontSize: 12, color: 'var(--fg-quiet)', lineHeight: 1.4 }}>
-          Checked {data?.medications_checked ?? activeMeds.length} medication{activeMeds.length !== 1 ? 's' : ''} against {data?.meal_events_today ?? 0} meal event{data?.meal_events_today !== 1 ? 's' : ''} logged today. Rules run locally — no data leaves your instance.
-        </span>
-      </div>
-
-      {alerts.length === 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '32px 24px', textAlign: 'center' }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(52,211,153,0.10)', border: '1px solid rgba(52,211,153,0.2)',
-          }}>
-            <ShieldAlert size={22} strokeWidth={1.5} color="var(--good)" />
+    <div className="health-grid">
+      {/* Left column: Alerts list / Empty states */}
+      <div className="settings-stack">
+        {activeMeds.length === 0 ? (
+          <div className="glass" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '40px 24px', textAlign: 'center', borderRadius: 14 }}>
+            <ShieldAlert size={28} strokeWidth={1.2} style={{ opacity: 0.4, color: 'var(--fg-quiet)' }} />
+            <span style={{ fontSize: 13, color: 'var(--fg-quiet)', maxWidth: 260, lineHeight: 1.5 }}>
+              Add and enable medications in the Medications tab to enable active interaction checking.
+            </span>
           </div>
-          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg-primary)' }}>No interactions flagged</span>
-          <span style={{ fontSize: 13, color: 'var(--fg-quiet)', maxWidth: 260, lineHeight: 1.5 }}>
-            Today's meals look clear based on your medication list.
-          </span>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {alerts.map((alert) => (
-            <div key={alert.rule_id} style={{
-              padding: '14px 16px', borderRadius: 14,
-              background: severityBg(alert.severity),
-              border: `1px solid ${severityColor(alert.severity)}33`,
+        ) : alerts.length === 0 ? (
+          <div className="glass" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '40px 24px', textAlign: 'center', borderRadius: 14 }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(52,211,153,0.10)', border: '1px solid rgba(52,211,153,0.2)',
             }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <div style={{ flexShrink: 0, marginTop: 1 }}>
-                  <SeverityIcon sev={alert.severity} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: severityColor(alert.severity), marginBottom: 4 }}>
-                    {alert.title}
+              <ShieldAlert size={22} strokeWidth={1.5} color="var(--good)" />
+            </div>
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg-primary)' }}>No interactions flagged</span>
+            <span style={{ fontSize: 13, color: 'var(--fg-quiet)', maxWidth: 260, lineHeight: 1.5 }}>
+              Today's meals look clear based on your active medication list.
+            </span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {alerts.map((alert) => (
+              <div key={alert.rule_id} style={{
+                padding: '14px 16px', borderRadius: 14,
+                background: severityBg(alert.severity),
+                border: `1px solid ${severityColor(alert.severity)}33`,
+              }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <div style={{ flexShrink: 0, marginTop: 1 }}>
+                    <SeverityIcon sev={alert.severity} />
                   </div>
-                  <div style={{ fontSize: 13, color: 'var(--fg-secondary)', lineHeight: 1.5 }}>
-                    {alert.message}
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: severityColor(alert.severity), marginBottom: 4 }}>
+                      {alert.title}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--fg-secondary)', lineHeight: 1.5 }}>
+                      {alert.message}
+                    </div>
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Right column: Checked metrics & local rules info */}
+      <div className="settings-stack">
+        <div className="glass settings-card" style={{ padding: 24 }}>
+          <div className="eyebrow" style={{ marginBottom: 16 }}>Checking Status</div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 16 }}>
+            <div style={{
+              padding: '12px 14px', borderRadius: 12,
+              background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 9, color: 'var(--fg-quiet)', marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Meds checked</div>
+              <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--fg-primary)', fontFamily: 'var(--font-mono)' }}>
+                {data?.medications_checked ?? activeMeds.length}
+              </div>
             </div>
-          ))}
+            <div style={{
+              padding: '12px 14px', borderRadius: 12,
+              background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 9, color: 'var(--fg-quiet)', marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Meals today</div>
+              <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--fg-primary)', fontFamily: 'var(--font-mono)' }}>
+                {data?.meal_events_today ?? 0}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--glass-1)', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--glass-edge)' }}>
+            <Info size={14} strokeWidth={1.5} style={{ color: 'var(--fg-quiet)', flexShrink: 0, marginTop: 1 }} />
+            <span style={{ fontSize: 12, color: 'var(--fg-quiet)', lineHeight: 1.4 }}>
+              Interaction screening runs entirely within your browser and backend container. No health data is uploaded to third-party APIs.
+            </span>
+          </div>
         </div>
-      )}
+
+        <div className="glass settings-card" style={{ padding: 24, border: '1px solid rgba(251,191,36,0.2)' }}>
+          <div className="eyebrow" style={{ marginBottom: 8, color: 'var(--sun-400)' }}>Clinical Guidance</div>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-secondary)', lineHeight: 1.5 }}>
+            Luma helps you track adherence and screen for dietary interactions based on local rule engines. Always consult your primary care physician or pharmacist before starting, modifying, or terminating any drug regimen.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
@@ -1175,10 +1385,12 @@ function ProteinSimulator() {
 
 function SimulationsTab() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="health-simulators-grid">
       <LdlSimulator />
       <WeightLossSimulator />
-      <ProteinSimulator />
+      <div className="health-simulators-protein-wrapper">
+        <ProteinSimulator />
+      </div>
     </div>
   )
 }
@@ -1200,18 +1412,20 @@ export default function HealthRoute() {
   const [tab, setTab] = useState<TabId>('medications')
 
   return (
-    <div style={{ padding: '20px 20px 120px', maxWidth: 680, margin: '0 auto' }}>
-      <div style={{ marginBottom: 22 }}>
-        <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
-          Health
-        </h1>
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-quiet)' }}>
-          Medications, supplements, interactions &amp; dietary simulations
-        </p>
-      </div>
+    <div className="thin-scroll health-page">
+      <header className="mobile-hero health-hero" style={{ marginBottom: 20 }}>
+        <div className="mobile-hero-content">
+          <h1 style={{ margin: '0 0 4px', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
+            Health
+          </h1>
+          <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-tertiary)' }}>
+            Medications, supplements, interactions &amp; dietary simulations.
+          </p>
+        </div>
+      </header>
 
       {/* Tab bar */}
-      <div className="settings-tabs" role="tablist">
+      <div className="settings-tabs" role="tablist" style={{ marginBottom: 20 }}>
         {TABS.map(({ id, label }) => (
           <button
             key={id}

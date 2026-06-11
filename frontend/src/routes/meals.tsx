@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, X, Plus, BookOpen, ArrowLeft, BatteryLow, Battery, BatteryMedium, Zap, Flame, Frown, Meh, Smile, SmilePlus, Laugh, CircleDashed, Circle, CircleDot, Disc, CheckCircle2, RotateCcw, Heart, Check, ChevronDown, ChevronUp, Camera, Shield, Wheat, Dumbbell, Sprout } from 'lucide-react'
+import { Search, X, Plus, BookOpen, ArrowLeft, BatteryLow, Battery, BatteryMedium, BatteryFull, Flame, Frown, Meh, Smile, Laugh, Angry, CircleDashed, Circle, CircleDot, Disc, CheckCircle2, RotateCcw, Heart, Check, ChevronDown, ChevronUp, Camera, Shield, Wheat, Dumbbell, Sprout } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { api } from '../lib/api'
 import { type FoodResult } from '../components/plan/types'
@@ -704,10 +704,10 @@ interface Correlation {
 type ScoreType = 'energy' | 'digestion' | 'mood' | 'satiety'
 
 const SCORE_ICONS: Record<ScoreType, LucideIcon[]> = {
-  energy:    [BatteryLow, Battery, BatteryMedium, Zap, Flame],
-  digestion: [Frown, Meh, Smile, SmilePlus, Laugh],
-  mood:      [Frown, Meh, Smile, SmilePlus, Laugh],
-  satiety:   [CircleDashed, Circle, CircleDot, Disc, CheckCircle2],
+  energy:    [Battery, BatteryLow, BatteryMedium, BatteryFull, Flame],
+  digestion: [Angry, Frown, Meh, Smile, Laugh],
+  mood:      [Angry, Frown, Meh, Smile, Laugh],
+  satiety:   [CircleDashed, Circle, CircleDot, CheckCircle2, Disc],
 }
 
 function ScoreChip({ label, value, type }: { label: string; value: number; type: ScoreType }) {
