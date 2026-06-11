@@ -147,14 +147,6 @@ export default function TodayRoute() {
     { from: '#86efac', to: '#34d399', glow: 'rgba(52,211,153,0.5)' }, // Green (Fiber)
     { from: '#f472b6', to: '#ec4899', glow: 'rgba(244,114,182,0.5)' }, // Pink (Sugar)
   ]
-  const onTargetCount = [
-    ((adherence?.calories?.pct ?? 0) / 100) >= 0.9 && ((adherence?.calories?.pct ?? 0) / 100) <= 1.1,
-    ((adherence?.sat_fat_g?.pct ?? 0) / 100) <= 1.0,
-    ((adherence?.soluble_fiber_g?.pct ?? 0) / 100) >= 0.9,
-    ((adherence?.sugars_g?.pct ?? 0) / 100) <= 1.0,
-    adherence?.protein_g?.target != null && ((adherence?.protein_g?.pct ?? 0) / 100) >= 1.0,
-  ].filter(Boolean).length
-  const totalGoalCount = adherence?.protein_g?.target != null ? 5 : 4
   const weightUnit = measurementWeightUnit(measurementSystem)
   const slopeUnit = measurementSlopeUnit(measurementSystem)
   const latestWeight = convertWeight(data.weight.latest_kg, measurementSystem)
