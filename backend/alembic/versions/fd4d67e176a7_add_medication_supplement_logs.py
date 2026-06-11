@@ -4,16 +4,16 @@ Revision ID: fd4d67e176a7
 Revises: 0024_medications_supplements
 Create Date: 2026-06-11 02:56:26.557887
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision: str = 'fd4d67e176a7'
-down_revision: Union[str, None] = '0024_medications_supplements'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '0024_medications_supplements'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
