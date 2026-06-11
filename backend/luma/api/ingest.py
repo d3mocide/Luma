@@ -74,7 +74,7 @@ async def ingest_hae_authenticated(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid JSON")
 
     try:
-        rows_inserted = await normalize_hae_payload(payload, db, user.id)
+        rows_inserted = await normalize_hae_payload(payload, db, user.id, data_source=user.data_source)
     except Exception as exc:
         await hae_metrics_tracker.record_ingest(rows_inserted=0, error=str(exc))
         raise
@@ -110,7 +110,7 @@ async def ingest_hae(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid JSON")
 
     try:
-        rows_inserted = await normalize_hae_payload(payload, db, user.id)
+        rows_inserted = await normalize_hae_payload(payload, db, user.id, data_source=user.data_source)
     except Exception as exc:
         await hae_metrics_tracker.record_ingest(rows_inserted=0, error=str(exc))
         raise

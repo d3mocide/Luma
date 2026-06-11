@@ -52,6 +52,10 @@ class User(Base):
     biological_sex: Mapped[str | None] = mapped_column(Text)
     height_cm: Mapped[Decimal | None] = mapped_column(Numeric(5, 1))
     activity_level: Mapped[str | None] = mapped_column(Text)
+    # Which health ecosystem the user ingests from. Gates additive metrics
+    # (steps/distance/energy) so iOS + Android don't double-count. Default keeps
+    # existing HAE users on Apple Health.
+    data_source: Mapped[str] = mapped_column(String(20), nullable=False, default="apple_health", server_default="'apple_health'")
 
     goals = relationship("Goal", back_populates="user", uselist=False, cascade="all, delete-orphan")
     preferences = relationship("Preference", back_populates="user", cascade="all, delete-orphan")
