@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from luma.config import settings
 from luma.db.models import MealEvent, Medication, Supplement
@@ -59,6 +59,11 @@ class LdlSimulateIn(BaseModel):
     target_sat_fat_pct: float
     target_soluble_fiber_g: float
     weeks: int = 8
+
+
+class WeightSimulateIn(BaseModel):
+    target_weekly_loss_kg: float
+    weeks: int = 12
 
 
 # ---------------------------------------------------------------------------
@@ -438,4 +443,113 @@ async def ldl_simulate(body: LdlSimulateIn, user: CurrentUser, db: DbDep) -> dic
         "trajectory": trajectory,
         "weeks": weeks,
         "note": "Projection based on Hegsted/Mensink-Katan dietary fat equations. Individual results vary.",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Weight loss simulator (Hall energy balance model)
+# ---------------------------------------------------------------------------
+
+@router.post("/health/weight-simulate")
+async def weight_simulate(body: WeightSimulateIn, user: CurrentUser, db: DbDep) -> dict[str, Any]:
+    from luma.db.models import Goal
+
+    weeks = min(max(body.weeks, 4), 52)
+    rate = min(max(body.target_weekly_loss_kg, 0.1), 1.5)
+
+    goal_row = await db.execute(select(Goal).where(Goal.user_id == user.id))
+    goal = goal_row.scalar_one_or_none()
+    target_weight_kg = float(goal.target_weight_kg) if goal and goal.target_weight_kg else None
+    calorie_target = int(goal.daily_calorie_target) if goal and goal.daily_calorie_target else None
+
+    wt_row = await db.execute(
+        text("SELECT value FROM biometrics WHERE user_id = :uid AND metric = 'weight_kg' ORDER BY ts DESC LIMIT 1"),
+        {"uid": str(user.id)},
+    )
+    wt = wt_row.fetchone()
+    current_weight_kg = float(wt[0]) if wt else None
+
+    if current_weight_kg is None:
+        raise HTTPException(status_code=400, detail="no_weight_data")
+
+    # Hall model: 1 kg body fat ≈ 7,700 kcal
+    required_daily_deficit = round((rate * 7700) / 7)
+    suggested_daily_kcal = calorie_target - required_daily_deficit if calorie_target else None
+
+    trajectory = [
+        {"week": w, "kg": round(current_weight_kg - rate * w, 2)}
+        for w in range(weeks + 1)
+    ]
+
+    weeks_to_goal: int | None = None
+    if target_weight_kg is not None and target_weight_kg < current_weight_kg:
+        weeks_to_goal = round((current_weight_kg - target_weight_kg) / rate)
+
+    return {
+        "current_weight_kg": round(current_weight_kg, 1),
+        "goal_weight_kg": round(target_weight_kg, 1) if target_weight_kg is not None else None,
+        "target_weekly_loss_kg": rate,
+        "required_daily_deficit_kcal": required_daily_deficit,
+        "suggested_daily_kcal": suggested_daily_kcal,
+        "trajectory": trajectory,
+        "weeks_to_goal": weeks_to_goal,
+        "weeks": weeks,
+        "note": "Projection based on the Hall energy balance model (1 kg ≈ 7,700 kcal). Actual rate varies with metabolic adaptation.",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Protein adequacy simulator (ISSN zones)
+# ---------------------------------------------------------------------------
+
+@router.get("/health/protein-simulate")
+async def protein_simulate(user: CurrentUser, db: DbDep) -> dict[str, Any]:
+    from luma.db.models import Goal
+
+    goal_row = await db.execute(select(Goal).where(Goal.user_id == user.id))
+    goal = goal_row.scalar_one_or_none()
+    target_protein_g = float(goal.daily_protein_g_min) if goal and goal.daily_protein_g_min else None
+
+    wt_row = await db.execute(
+        text("SELECT value FROM biometrics WHERE user_id = :uid AND metric = 'weight_kg' ORDER BY ts DESC LIMIT 1"),
+        {"uid": str(user.id)},
+    )
+    wt = wt_row.fetchone()
+    body_weight_kg = float(wt[0]) if wt else None
+
+    seven_days_ago = datetime.now(UTC) - timedelta(days=7)
+    recent_rows = await db.execute(
+        select(MealEvent).where(
+            MealEvent.user_id == user.id,
+            MealEvent.ts >= seven_days_ago,
+        )
+    )
+    recent_events = recent_rows.scalars().all()
+
+    avg_protein_g: float | None = None
+    if recent_events:
+        total_protein = sum(float((e.nutrition or {}).get("protein_g") or 0.0) for e in recent_events)
+        days = max(1, len({e.ts.date() for e in recent_events}))
+        avg_protein_g = round(total_protein / days, 1)
+
+    g_per_kg: float | None = None
+    zone = "unknown"
+    if avg_protein_g is not None and body_weight_kg:
+        g_per_kg = round(avg_protein_g / body_weight_kg, 2)
+        if g_per_kg < 1.2:
+            zone = "low"
+        elif g_per_kg < 1.6:
+            zone = "maintenance"
+        elif g_per_kg <= 2.2:
+            zone = "optimal"
+        else:
+            zone = "above"
+
+    return {
+        "avg_protein_g": avg_protein_g,
+        "target_protein_g": target_protein_g,
+        "body_weight_kg": round(body_weight_kg, 1) if body_weight_kg is not None else None,
+        "g_per_kg": g_per_kg,
+        "zone": zone,
+        "note": "Optimal zone (1.6–2.2 g/kg/day) supports muscle protein synthesis. Based on ISSN Position Stand 2017.",
     }

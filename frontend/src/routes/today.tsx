@@ -147,14 +147,6 @@ export default function TodayRoute() {
     { from: '#86efac', to: '#34d399', glow: 'rgba(52,211,153,0.5)' }, // Green (Fiber)
     { from: '#f472b6', to: '#ec4899', glow: 'rgba(244,114,182,0.5)' }, // Pink (Sugar)
   ]
-  const onTargetCount = [
-    ((adherence?.calories?.pct ?? 0) / 100) >= 0.9 && ((adherence?.calories?.pct ?? 0) / 100) <= 1.1,
-    ((adherence?.sat_fat_g?.pct ?? 0) / 100) <= 1.0,
-    ((adherence?.soluble_fiber_g?.pct ?? 0) / 100) >= 0.9,
-    ((adherence?.sugars_g?.pct ?? 0) / 100) <= 1.0,
-    adherence?.protein_g?.target != null && ((adherence?.protein_g?.pct ?? 0) / 100) >= 1.0,
-  ].filter(Boolean).length
-  const totalGoalCount = adherence?.protein_g?.target != null ? 5 : 4
   const weightUnit = measurementWeightUnit(measurementSystem)
   const slopeUnit = measurementSlopeUnit(measurementSystem)
   const latestWeight = convertWeight(data.weight.latest_kg, measurementSystem)
@@ -321,15 +313,10 @@ export default function TodayRoute() {
               <hr style={{ border: 'none', borderTop: '1px solid var(--glass-edge)', margin: '16px 0' }} />
 
               {/* Detail row: rings + ring legends */}
-              <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                 <div style={{ flexShrink: 0 }}>
-                  <div style={{ width: 140, height: 140, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ActivityRings size={140} values={rings} colors={ringColors} thickness={12} gap={5}/>
-                    <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', pointerEvents: 'none', marginTop: 2 }}>
-                      <span className="num" style={{ fontSize: 22, fontWeight: 300, color: 'var(--fg-primary)' }}>{onTargetCount}</span>
-                      <span style={{ fontSize: 13, color: 'var(--fg-quiet)', margin: '0 2px' }}>/</span>
-                      <span className="num" style={{ fontSize: 15, color: 'var(--fg-tertiary)' }}>{totalGoalCount}</span>
-                    </div>
+                  <div style={{ width: 160, height: 160 }}>
+                    <ActivityRings size={160} values={rings} colors={ringColors} thickness={13} gap={5}/>
                   </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -460,22 +447,6 @@ export default function TodayRoute() {
               <span className="serif-italic gradient-accent-text" style={{ background: 'var(--accent-gradient-hero)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>{greetingName}</span>.
             </h1>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/trends')}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '7px 14px', borderRadius: 999,
-              background: 'rgba(56,189,248,0.08)',
-              border: '1px solid rgba(56,189,248,0.22)',
-              color: 'var(--sky-300)',
-              fontSize: 12, fontWeight: 500, cursor: 'pointer',
-              letterSpacing: '0.01em', flexShrink: 0,
-            }}
-          >
-            <Activity size={13} strokeWidth={1.75} />
-            Trends
-          </button>
         </div>
 
         {/* Rings */}
@@ -533,15 +504,10 @@ export default function TodayRoute() {
           <hr style={{ border: 'none', borderTop: '1px solid var(--glass-edge)', margin: '14px 0' }} />
 
           {/* Detail row: rings + ring legends */}
-          <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             <div style={{ flexShrink: 0 }}>
-              <div style={{ width: 110, height: 110, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <ActivityRings size={110} values={rings} colors={ringColors} thickness={10} gap={4}/>
-                <div style={{ position: 'absolute', display: 'flex', alignItems: 'baseline', justifyContent: 'center', pointerEvents: 'none', marginTop: 2 }}>
-                  <span className="num" style={{ fontSize: 18, fontWeight: 300, color: 'var(--fg-primary)' }}>{onTargetCount}</span>
-                  <span style={{ fontSize: 12, color: 'var(--fg-quiet)', margin: '0 2px' }}>/</span>
-                  <span className="num" style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>{totalGoalCount}</span>
-                </div>
+              <div style={{ width: 140, height: 140 }}>
+                <ActivityRings size={140} values={rings} colors={ringColors} thickness={12} gap={5}/>
               </div>
             </div>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
