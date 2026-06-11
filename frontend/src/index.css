@@ -1366,27 +1366,6 @@ input[type="search"]::-webkit-search-results-decoration {
   cursor: not-allowed;
 }
 
-.settings-tabs-wrapper {
-  position: relative;
-}
-
-.settings-tabs-wrapper::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 1px; /* sit above the border-bottom line */
-  width: 48px;
-  pointer-events: none;
-  background: linear-gradient(to right, transparent, var(--bg-0));
-  opacity: 0;
-  transition: opacity 180ms;
-}
-
-.settings-tabs-wrapper.overflow-right::after {
-  opacity: 1;
-}
-
 .settings-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
