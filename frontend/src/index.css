@@ -1319,6 +1319,10 @@ input[type="search"]::-webkit-search-results-decoration {
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  /* WHY: stops the row from rubber-banding past its ends on touch, which left
+     blank gaps and made the strip feel like it could be dragged anywhere. */
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
 }
@@ -1340,6 +1344,7 @@ input[type="search"]::-webkit-search-results-decoration {
   transition: color 140ms;
   white-space: nowrap;
   flex-shrink: 0;
+  scroll-snap-align: start;
 }
 
 .settings-tab:hover {

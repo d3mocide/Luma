@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useId } from 'react'
-import { Search, Plus, X, Utensils, Heart, Shield, Wheat, Dumbbell, Sprout, Flame, Camera } from 'lucide-react'
+import { Search, Plus, X, Utensils, Camera } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api } from '../../lib/api'
 import {
@@ -59,15 +59,6 @@ const POSITIVE_FLAGS = new Set([
   'keto-friendly', 'high-protein', 'high-fiber', 'low-sodium',
 ])
 
-const FILTER_CHIPS = [
-  { label: 'Heart Healthy', flag: 'heart-healthy',     color: 'rgba(34,197,94,0.15)',  icon: Heart },
-  { label: 'Anti-Inflam',   flag: 'anti-inflammatory', color: 'rgba(20,184,166,0.15)', icon: Shield },
-  { label: 'Gluten Free',   flag: 'gluten-free',       color: 'rgba(139,92,246,0.15)', icon: Wheat },
-  { label: 'High Protein',  flag: 'high-protein',      color: 'rgba(56,189,248,0.15)',  icon: Dumbbell },
-  { label: 'High Fiber',    flag: 'high-fiber',        color: 'rgba(132,204,22,0.15)',  icon: Sprout },
-  { label: 'Keto',          flag: 'keto-friendly',     color: 'rgba(249,115,22,0.15)',  icon: Flame },
-]
-
 function FlagBadges({ flags }: { flags?: string[] }) {
   if (!flags?.length) return null
   const sorted = [...flags].sort((a, b) => (POSITIVE_FLAGS.has(b) ? 1 : 0) - (POSITIVE_FLAGS.has(a) ? 1 : 0))
@@ -98,7 +89,6 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   const [query, setQuery]               = useState('')
   const [results, setResults]           = useState<FoodResult[]>([])
   const [isSearching, setIsSearching]   = useState(false)
-  const [activeFlags, setActiveFlags]   = useState<string[]>([])
   const [pending, setPending]           = useState<FoodResult | null>(null)
   const [pendingQty, setPendingQty]     = useState('')
   const [pendingUnit, setPendingUnit]   = useState<string>('g')
@@ -112,19 +102,14 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   const uid = useId()
   const scannerDomId = `ingredient-scanner-${uid.replace(/:/g, '')}`
 
-  function toggleFlag(flag: string) {
-    setActiveFlags((prev) => prev.includes(flag) ? prev.filter((f) => f !== flag) : [...prev, flag])
-  }
-
   useEffect(() => {
     if (pending) { setResults([]); return }
-    if (!query.trim() && activeFlags.length === 0) { setResults([]); return }
+    if (!query.trim()) { setResults([]); return }
     const t = setTimeout(async () => {
       setIsSearching(true)
       try {
         const params = new URLSearchParams()
-        if (query.trim()) params.set('q', query.trim())
-        if (activeFlags.length) params.set('flags', activeFlags.join(','))
+        params.set('q', query.trim())
         const res: unknown = await api.get(`/foods/search?${params.toString()}`)
         const foods = Array.isArray(res) ? res : ((res as Record<string, unknown>)?.results ?? []) as FoodResult[]
         setResults(foods as FoodResult[])
@@ -133,7 +118,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
       }
     }, 300)
     return () => clearTimeout(t)
-  }, [query, activeFlags, pending])
+  }, [query, pending])
 
   function selectFood(food: FoodResult) {
     setPending(food)
@@ -414,33 +399,6 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
           )}
         </div>
       )}
-
-      {/* ── Filter chips ── */}
-      <div style={{ display: 'flex', gap: '6px 4px', flexWrap: 'wrap' }}>
-        {FILTER_CHIPS.map(({ label, flag, color, icon: Icon }) => {
-          const on = activeFlags.includes(flag)
-          return (
-            <button
-              key={flag}
-              onClick={() => toggleFlag(flag)}
-              style={{
-                padding: '4.5px 9px', borderRadius: 999, fontSize: 10, fontWeight: 600,
-                cursor: 'pointer', transition: 'all 150ms', letterSpacing: 0,
-                flexShrink: 0,
-                background: on ? color : 'var(--glass-1)',
-                border: on ? `1px solid ${color.replace('0.15', '0.5')}` : '1px solid var(--glass-edge)',
-                color: on ? 'var(--fg-primary)' : 'var(--fg-secondary)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-              }}
-            >
-              <Icon size={12} strokeWidth={2.2} />
-              {label}
-            </button>
-          )
-        })}
-      </div>
 
       {/* ── Search results ── */}
       {results.length > 0 && (
