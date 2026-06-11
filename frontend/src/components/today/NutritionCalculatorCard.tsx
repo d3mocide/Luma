@@ -1166,7 +1166,7 @@ export function NutritionCalculatorCard({
             {hasItemsOrFood ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>
-                  Adds <span className="num">{addCalories}</span> kcal · <span className="num">{addSatFat}</span>g sat fat · <span className="num">{addSolFiber}</span>g soluble fiber
+                  Adds <span className="num">{addCalories}</span> kcal · <span className="num">{addSatFat}</span>g sat fat · <span className="num">{addSolFiber}</span>g soluble fiber · <span className="num">{addSugars}</span>g sugar · <span className="num">{addProtein}</span>g protein
                 </div>
                 {fitSignal && (
                   <div style={{ fontSize: 12, fontWeight: 500, color: fitColor }}>
