@@ -8,6 +8,8 @@ import {
   type PortionUnit, type HouseholdMeasure, PORTION_UNITS, PORTION_UNIT_LABELS, PRESETS_BY_UNIT,
   unitToGrams, densityForFood, defaultQtyForUnit,
 } from '../../lib/portions'
+import type { Favorite } from '../log-sheet/types'
+
 
 const CALC_SCANNER_ID = 'calc-barcode-scanner'
 const FOOD_FORMATS = [
@@ -107,6 +109,13 @@ export function NutritionCalculatorCard({
   compact?: boolean
 }) {
   const queryClient = useQueryClient()
+  const { data: favoritesData } = useQuery<{ favorites: Favorite[] }>({
+    queryKey: ['favorites', 'frequency'],
+    queryFn: () => api.get('/favorites?sort=frequency'),
+    staleTime: 30_000,
+  })
+  const favorites = favoritesData?.favorites ?? []
+
   const [mealItems, setMealItems] = useState<MealBuilderItem[]>([])
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [editingItemGrams, setEditingItemGrams] = useState<string>('')
@@ -123,6 +132,22 @@ export function NutritionCalculatorCard({
   const [isScanning, setIsScanning] = useState(false)
   const [barcodeError, setBarcodeError] = useState('')
   const handleSelectRef = useRef<(food: FoodResult) => void>(() => {})
+
+  const handleSelectFavorite = (favId: string) => {
+    const fav = favorites.find((f) => f.id === favId)
+    if (!fav) return
+    const newItems: MealBuilderItem[] = fav.items.map((item) => ({
+      id: Math.random().toString(),
+      name: item.food_name,
+      brand: item.brand,
+      serving_g: item.quantity_g,
+      nutrition: item.nutrients,
+    }))
+    setMealItems((prev) => [...prev, ...newItems])
+    const selectEl = document.getElementById('budget-fav-select') as HTMLSelectElement | null
+    if (selectEl) selectEl.value = ''
+  }
+
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 350)
@@ -450,7 +475,7 @@ export function NutritionCalculatorCard({
       </div>
 
       <div className="glass-inset" style={{ padding: compact ? 8 : 12, display: 'grid', gap: 10, minWidth: 0, width: '100%' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr auto', gap: compact ? 8 : 12, alignItems: 'start', minWidth: 0, width: '100%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr 1fr auto', gap: compact ? 8 : 12, alignItems: 'start', minWidth: 0, width: '100%' }}>
 
           {/* Food search */}
           <label style={{ display: 'grid', gap: 6, minWidth: 0, width: '100%' }}>
@@ -610,6 +635,40 @@ export function NutritionCalculatorCard({
                   No results found.
                 </div>
               )}
+            </div>
+          </label>
+
+          {/* Favorites selection */}
+          <label style={{ display: 'grid', gap: 6, minWidth: 0, width: '100%' }}>
+            <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
+              Or Select Favorite
+            </span>
+            <div style={{ display: 'flex', alignItems: 'stretch', height: '100%', minHeight: compact ? 34 : 40 }}>
+              <select
+                id="budget-fav-select"
+                defaultValue=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    handleSelectFavorite(e.target.value)
+                  }
+                }}
+                style={{
+                  borderRadius: 10, padding: compact ? '8px 10px' : '10px 12px', fontSize: 13, width: '100%',
+                  border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
+                  color: 'var(--fg-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                  outline: 'none', height: '100%', minHeight: compact ? 34 : 40,
+                }}
+              >
+                <option value="" style={{ background: 'var(--bg-2)', color: 'var(--fg-quiet)' }}>Select a favorite...</option>
+                {favorites.map((fav) => {
+                  const calories = Math.round(fav.items.reduce((s, i) => s + (i.nutrients.calories ?? 0), 0))
+                  return (
+                    <option key={fav.id} value={fav.id} style={{ background: 'var(--bg-2)', color: 'var(--fg-primary)' }}>
+                      {fav.name} ({calories} kcal)
+                    </option>
+                  )
+                })}
+              </select>
             </div>
           </label>
 
