@@ -40,7 +40,7 @@ Brand/UI reference: `refrence/BRAND-GUIDE.md` is the canonical source for visual
 - React 18 + TypeScript (strict mode)
 - TanStack Query for all server state — no raw fetch in components
 - Zustand for client-only state (log sheet open/close, theme, layout)
-- Tailwind CSS v4 + shadcn/ui components (do not add other UI libraries); config lives in `src/index.css` via `@theme` — there is no `tailwind.config.js`
+- Tailwind CSS v4 + a custom "glass" design system: inline `CSSProperties` plus CSS custom-property tokens defined in `src/index.css` via `@theme`, with `lucide-react` for icons. The visual language is shadcn-inspired but does NOT use shadcn/ui — do not add shadcn/ui or any other UI component library. There is no `tailwind.config.js`
 - Recharts for charts — do not add Chart.js or D3 directly
 - React Router v6 for routing
 - vite-plugin-pwa for service worker/manifest
