@@ -233,14 +233,20 @@ export function NutritionCalculatorCard({
   const currentCalories  = selectedFood ? round1((n.calories         ?? 0) * factor) : 0
   const currentSatFat    = selectedFood ? round1((n.saturated_fat_g   ?? 0) * factor) : 0
   const currentSolFiber  = selectedFood ? round1((n.soluble_fiber_g   ?? 0) * factor) : 0
+  const currentSugars    = selectedFood ? round1((n.sugars_g          ?? 0) * factor) : 0
+  const currentProtein   = selectedFood ? round1((n.protein_g         ?? 0) * factor) : 0
 
   const mealCalories = mealItems.reduce((sum, item) => sum + (item.nutrition.calories ?? 0), 0)
   const mealSatFat = mealItems.reduce((sum, item) => sum + (item.nutrition.saturated_fat_g ?? 0), 0)
   const mealSolFiber = mealItems.reduce((sum, item) => sum + (item.nutrition.soluble_fiber_g ?? 0), 0)
+  const mealSugars = mealItems.reduce((sum, item) => sum + (item.nutrition.sugars_g ?? 0), 0)
+  const mealProtein = mealItems.reduce((sum, item) => sum + (item.nutrition.protein_g ?? 0), 0)
 
   const addCalories = round1(mealCalories + currentCalories)
   const addSatFat = round1(mealSatFat + currentSatFat)
   const addSolFiber = round1(mealSolFiber + currentSolFiber)
+  const addSugars = round1(mealSugars + currentSugars)
+  const addProtein = round1(mealProtein + currentProtein)
 
   const calTarget  = adherence.calories.target ?? 0
   const calLogged  = adherence.calories.logged ?? 0
@@ -257,15 +263,25 @@ export function NutritionCalculatorCard({
   const solRemain  = round1(solTarget - solLogged)
   const solProjected = round1(solRemain - addSolFiber)
 
+  const sugarsTarget  = adherence.sugars_g?.target ?? 0
+  const sugarsLogged  = adherence.sugars_g?.logged ?? 0
+  const sugarsRemain  = round1(sugarsTarget - sugarsLogged)
+  const sugarsProjected = round1(sugarsRemain - addSugars)
+
+  const proteinTarget  = adherence.protein_g?.target ?? 0
+  const proteinLogged  = adherence.protein_g?.logged ?? 0
+  const proteinRemain  = round1(proteinTarget - proteinLogged)
+  const proteinProjected = round1(proteinRemain - addProtein)
+
   const hasItemsOrFood = selectedFood !== null || mealItems.length > 0
   const showResults = !selectedFood && debouncedQuery.length >= 2
 
   type FitSignal = 'fits' | 'tight' | 'over'
   let fitSignal: FitSignal | null = null
   if (hasItemsOrFood && calTarget > 0) {
-    if (calProjected < 0 || (satTarget > 0 && satProjected < 0)) {
+    if (calProjected < 0 || (satTarget > 0 && satProjected < 0) || (sugarsTarget > 0 && sugarsProjected < 0)) {
       fitSignal = 'over'
-    } else if (calProjected < calTarget * 0.08 || (satTarget > 0 && satProjected < satTarget * 0.08)) {
+    } else if (calProjected < calTarget * 0.08 || (satTarget > 0 && satProjected < satTarget * 0.08) || (sugarsTarget > 0 && sugarsProjected < sugarsTarget * 0.08)) {
       fitSignal = 'tight'
     } else {
       fitSignal = 'fits'
@@ -482,10 +498,17 @@ export function NutritionCalculatorCard({
         <div className="eyebrow">Budget check</div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: compact ? 6 : 10, marginBottom: 12 }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: compact ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)',
+        gap: compact ? 6 : 10,
+        marginBottom: 12
+      }}>
         <BudgetStat label="Calories" remaining={calRemain} projected={calProjected} unit="kcal" showProjected={hasItemsOrFood} noTarget={calTarget === 0} compact={compact} />
         <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    showProjected={hasItemsOrFood} noTarget={satTarget === 0} compact={compact} />
         <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   showProjected={hasItemsOrFood} noTarget={solTarget === 0} compact={compact} />
+        <BudgetStat label="Sugar"     remaining={sugarsRemain} projected={sugarsProjected} unit="g" showProjected={hasItemsOrFood} noTarget={sugarsTarget === 0} compact={compact} />
+        <BudgetStat label="Protein"   remaining={proteinRemain} projected={proteinProjected} unit="g" showProjected={hasItemsOrFood} noTarget={proteinTarget === 0} compact={compact} />
       </div>
 
       <div className="glass-inset" style={{ padding: compact ? 8 : 12, display: 'grid', gap: 10, minWidth: 0, width: '100%' }}>
