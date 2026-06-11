@@ -1043,7 +1043,6 @@ export default function SettingsRoute() {
     <div className="thin-scroll settings-page" style={{ height: '100%', overflowY: 'auto', padding: '32px 40px 40px' }}>
       <header className="mobile-hero settings-hero" style={{ marginBottom: 20 }}>
         <div className="mobile-hero-content">
-          <div className="eyebrow" style={{ marginBottom: 8 }}>Settings</div>
           <h1 className="mobile-hero-title" style={{ margin: 0, fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
             Your account
           </h1>

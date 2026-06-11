@@ -208,7 +208,6 @@ export default function FavoritesRoute() {
           {/* Page header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
             <div>
-              <div className="eyebrow" style={{ marginBottom: 6 }}>Saved meals</div>
               <h1 style={{ margin: 0, fontSize: 26, fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
                 Favorites
               </h1>

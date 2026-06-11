@@ -1235,7 +1235,6 @@ export default function MealsRoute() {
     <div className="meals-page thin-scroll">
       {/* Page header */}
       <header style={{ marginBottom: 24 }}>
-        <div className="eyebrow" style={{ marginBottom: 6 }}>MEALS</div>
         <h1 style={{
           margin: '0 0 6px', fontSize: 32, fontWeight: 400,
           letterSpacing: '-0.02em', color: 'var(--fg-primary)',
