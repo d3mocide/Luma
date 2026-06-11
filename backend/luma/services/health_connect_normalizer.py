@@ -47,8 +47,9 @@ _ADDITIVE_MAP: dict[str, tuple[str, str, float]] = {
     "active_calories": ("active_kcal", "calories", 1.0),
 }
 
-# Stage names (Health Connect SleepSessionRecord) that count as time asleep.
-_AWAKE_STAGES = ("awake", "out_of_bed")
+# Sleep stage names (Health Connect SleepSessionRecord) that do NOT count as
+# time asleep. Matched as substrings of the stage string.
+_NON_SLEEP_STAGES = ("awake", "out_of_bed", "unknown")
 
 
 def _parse_iso_ts(value: str) -> datetime:
@@ -115,20 +116,32 @@ def _blood_pressure_rows(user_id: Any, records: list[dict]) -> list[dict]:
     return rows
 
 
+def _stage_minutes(stage: dict) -> float | None:
+    """Stage length in minutes — prefer the record's own duration_seconds."""
+    secs = stage.get("duration_seconds")
+    if secs is not None:
+        try:
+            return float(secs) / 60.0
+        except (ValueError, TypeError):
+            pass
+    try:
+        return (_parse_iso_ts(stage["end_time"]) - _parse_iso_ts(stage["start_time"])).total_seconds() / 60.0
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
 def _asleep_minutes(stages: list[dict]) -> float | None:
     """Sum the duration of stages that count as time asleep. None if unknowable."""
     total = 0.0
     counted = False
     for stage in stages:
         name = str(stage.get("stage") or stage.get("type") or stage.get("name") or "").lower()
-        if not name or any(a in name for a in _AWAKE_STAGES):
+        if not name or any(a in name for a in _NON_SLEEP_STAGES):
             continue
-        try:
-            start = _parse_iso_ts(stage["start_time"])
-            end = _parse_iso_ts(stage["end_time"])
-        except (KeyError, ValueError, TypeError):
+        mins = _stage_minutes(stage)
+        if mins is None:
             continue
-        total += (end - start).total_seconds() / 60.0
+        total += mins
         counted = True
     return total if counted else None
 

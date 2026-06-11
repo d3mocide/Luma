@@ -49,10 +49,11 @@ SAMPLE_HC_PAYLOAD = {
             "session_end_time": "2026-05-19T06:30:00Z",
             "duration_seconds": 28800,  # 8h in bed
             "stages": [
-                {"stage": "deep",  "start_time": "2026-05-18T22:30:00Z", "end_time": "2026-05-19T00:30:00Z"},   # 2h
-                {"stage": "light", "start_time": "2026-05-19T00:30:00Z", "end_time": "2026-05-19T04:30:00Z"},   # 4h
-                {"stage": "rem",   "start_time": "2026-05-19T04:30:00Z", "end_time": "2026-05-19T06:00:00Z"},   # 1.5h
-                {"stage": "awake", "start_time": "2026-05-19T06:00:00Z", "end_time": "2026-05-19T06:30:00Z"},   # 0.5h (excluded)
+                {"stage": "deep",    "duration_seconds": 7200,  "start_time": "2026-05-18T22:30:00Z", "end_time": "2026-05-19T00:30:00Z"},   # 2h
+                {"stage": "light",   "duration_seconds": 14400, "start_time": "2026-05-19T00:30:00Z", "end_time": "2026-05-19T04:30:00Z"},   # 4h
+                {"stage": "rem",     "duration_seconds": 5400,  "start_time": "2026-05-19T04:30:00Z", "end_time": "2026-05-19T06:00:00Z"},   # 1.5h
+                {"stage": "awake",   "duration_seconds": 1800,  "start_time": "2026-05-19T06:00:00Z", "end_time": "2026-05-19T06:30:00Z"},   # 0.5h (excluded)
+                {"stage": "unknown", "duration_seconds": 600,   "start_time": "2026-05-19T06:30:00Z", "end_time": "2026-05-19T06:40:00Z"},   # 10m (excluded)
             ],
         }
     ],
