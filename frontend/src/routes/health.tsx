@@ -1199,14 +1199,12 @@ type TabId = typeof TABS[number]['id']
 export default function HealthRoute() {
   const [tab, setTab] = useState<TabId>('medications')
   const tabsRef = useRef<HTMLDivElement>(null)
-  const wrapperRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const el = tabsRef.current
-    const wrapper = wrapperRef.current
-    if (!el || !wrapper) return
+    if (!el) return
     const check = () => {
-      wrapper.classList.toggle('overflow-right', el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+      el.classList.toggle('overflow-right', el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
     }
     check()
     el.addEventListener('scroll', check, { passive: true })
@@ -1234,7 +1232,7 @@ export default function HealthRoute() {
       </div>
 
       {/* Tab bar */}
-      <div ref={wrapperRef} className="settings-tabs-wrapper">
+      <div className="settings-tabs-wrapper">
         <div ref={tabsRef} className="settings-tabs" role="tablist">
           {TABS.map(({ id, label }) => (
             <button
