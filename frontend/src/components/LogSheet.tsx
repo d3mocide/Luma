@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useUIStore } from '../stores'
 import { api } from '../lib/api'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { X, Heart } from 'lucide-react'
+import { X, Heart, ChevronDown } from 'lucide-react'
 import { VoiceTab } from './log-sheet/VoiceTab'
 import { SearchTab } from './log-sheet/SearchTab'
 import { ScanTab } from './log-sheet/ScanTab'
@@ -46,8 +46,8 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const [draftItems, setDraftItems] = useState<DraftItem[]>([])
   const [transcription, setTranscription] = useState('')
   const [mealName, setMealName] = useState('')
-  const [savingFav, setSavingFav] = useState(false)
-  const [favName, setFavName] = useState('')
+  const [favorited, setFavorited] = useState(false)
+  const [nutritionOpen, setNutritionOpen] = useState(false)
 
   const { data: favoritesData } = useQuery<{ favorites: Favorite[] }>({
     queryKey: ['favorites', 'frequency'],
@@ -90,6 +90,12 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   }
 
   const totals = sumNutrients(draftItems)
+
+  // Gate against re-adding: treat the meal as favorited if it was just saved
+  // this session, or if a favorite already exists under the same name.
+  const trimmedName = mealName.trim().toLowerCase()
+  const nameExists = trimmedName.length > 0 && favorites.some((f) => f.name.trim().toLowerCase() === trimmedName)
+  const isFavorited = favorited || nameExists
 
   const saveMutation = useMutation({
     mutationFn: () => {
@@ -135,10 +141,13 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['favorites'] })
-      setSavingFav(false)
-      setFavName('')
+      setFavorited(true)
     },
   })
+
+  // Clear the "already favorited" gate whenever the meal contents or name
+  // change, so an edited meal can be saved as a fresh favorite.
+  useEffect(() => { setFavorited(false) }, [draftItems, mealName])
 
   const logFavoriteDirect = useMutation({
     mutationFn: ({ items, name, favoriteId }: { items: DraftItem[]; name: string; favoriteId: string }) => {
@@ -250,72 +259,66 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
         {/* Footer / save */}
         {draftItems.length > 0 && (
           <div className="log-sheet-footer" style={{ padding: '16px 20px calc(env(safe-area-inset-bottom) + 16px)', borderTop: '1px solid var(--glass-edge)', background: 'linear-gradient(180deg, rgba(8,13,26,0.98), rgba(5,8,17,0.98))', display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', zIndex: 1 }}>
-            <div className="eyebrow">Cumulative nutrition</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
-              {[
-                { l: 'Calories', v: Math.round(totals.calories), c: 'var(--fg-primary)' },
-                { l: 'Sat Fat', v: `${totals.saturated_fat_g.toFixed(1)}g`, c: 'var(--bad)' },
-                { l: 'Sol Fiber', v: `${totals.soluble_fiber_g.toFixed(1)}g`, c: 'var(--good)' },
-                { l: 'Sugar', v: `${totals.sugars_g.toFixed(1)}g`, c: 'var(--aurora-pink)' },
-                { l: 'Protein', v: `${totals.protein_g.toFixed(1)}g`, c: 'var(--aurora-violet)' },
-              ].map((n) => (
-                <div key={n.l} className="glass-inset" style={{ padding: '8px 10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginBottom: 2 }}>{n.l}</div>
-                  <div className="num" style={{ fontSize: 14, fontWeight: 600, color: n.c }}>{n.v}</div>
-                </div>
-              ))}
-            </div>
-            <input
-              type="text"
-              value={mealName}
-              onChange={(e) => setMealName(e.target.value)}
-              placeholder="Name this meal… (optional)"
-              className="field-input"
-              style={{
-                width: '100%', padding: '9px 12px', fontSize: 13,
-                background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
-                borderRadius: 8, color: 'var(--fg-primary)', boxSizing: 'border-box',
-              }}
-            />
-            {savingFav ? (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  autoFocus
-                  type="text"
-                  value={favName}
-                  onChange={(e) => setFavName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') favMutation.mutate(favName); if (e.key === 'Escape') setSavingFav(false) }}
-                  placeholder="Name this favorite…"
-                  className="field-input flex-1 rounded-lg px-3 py-2 text-sm"
-                  style={{ border: '1px solid var(--glass-edge)' }}
-                />
-                <button
-                  onClick={() => favMutation.mutate(favName)}
-                  disabled={favMutation.isPending}
-                  className="px-4 py-2 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
-                >
-                  Save
-                </button>
-                <button onClick={() => setSavingFav(false)} className="px-3 py-2 text-slate-400 hover:text-white text-sm rounded-lg transition-colors">
-                  Cancel
-                </button>
+            <button
+              onClick={() => setNutritionOpen((o) => !o)}
+              aria-expanded={nutritionOpen}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
+              <span className="eyebrow">Cumulative nutrition</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {!nutritionOpen && (
+                  <span className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--fg-tertiary)' }}>{Math.round(totals.calories)} kcal</span>
+                )}
+                <ChevronDown size={14} style={{ color: 'var(--fg-quiet)', transform: nutritionOpen ? 'rotate(180deg)' : 'none', transition: 'transform 160ms ease-out' }} />
+              </span>
+            </button>
+            {nutritionOpen && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                {[
+                  { l: 'Calories', v: Math.round(totals.calories), c: 'var(--fg-primary)' },
+                  { l: 'Sat Fat', v: `${totals.saturated_fat_g.toFixed(1)}g`, c: 'var(--bad)' },
+                  { l: 'Sol Fiber', v: `${totals.soluble_fiber_g.toFixed(1)}g`, c: 'var(--good)' },
+                  { l: 'Sugar', v: `${totals.sugars_g.toFixed(1)}g`, c: 'var(--aurora-pink)' },
+                  { l: 'Protein', v: `${totals.protein_g.toFixed(1)}g`, c: 'var(--aurora-violet)' },
+                ].map((n) => (
+                  <div key={n.l} className="glass-inset" style={{ padding: '8px 10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginBottom: 2 }}>{n.l}</div>
+                    <div className="num" style={{ fontSize: 14, fontWeight: 600, color: n.c }}>{n.v}</div>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <button
-                onClick={() => {
-                  if (mealName.trim()) {
-                    favMutation.mutate(mealName)
-                  } else {
-                    setSavingFav(true)
-                  }
-                }}
-                disabled={favMutation.isPending}
-                className="w-full py-2 text-sm text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <Heart size={14} />
-                {favMutation.isPending ? 'Saving favorite…' : favMutation.isSuccess ? 'Saved to favorites' : 'Save as favorite'}
-              </button>
             )}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+              <input
+                type="text"
+                value={mealName}
+                onChange={(e) => setMealName(e.target.value)}
+                placeholder="Name this meal… (optional)"
+                className="field-input"
+                style={{
+                  flex: 1, minWidth: 0, padding: '9px 12px', fontSize: 13,
+                  background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+                  borderRadius: 8, color: 'var(--fg-primary)', boxSizing: 'border-box',
+                }}
+              />
+              <button
+                onClick={() => { if (!isFavorited && !favMutation.isPending) favMutation.mutate(mealName) }}
+                disabled={isFavorited || favMutation.isPending}
+                aria-pressed={isFavorited}
+                aria-label={isFavorited ? 'Saved to favorites' : 'Save as favorite'}
+                title={isFavorited ? 'Saved to favorites' : 'Save as favorite'}
+                style={{
+                  flexShrink: 0, width: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: isFavorited ? 'rgba(244,114,182,0.12)' : 'var(--glass-1)',
+                  border: `1px solid ${isFavorited ? 'rgba(244,114,182,0.4)' : 'var(--glass-edge)'}`,
+                  borderRadius: 8, color: isFavorited ? 'var(--aurora-pink)' : 'var(--fg-tertiary)',
+                  cursor: isFavorited || favMutation.isPending ? 'default' : 'pointer',
+                  transition: 'color 160ms ease-out, background 160ms ease-out, border-color 160ms ease-out',
+                }}
+              >
+                <Heart size={16} fill={isFavorited ? 'currentColor' : 'none'} />
+              </button>
+            </div>
             <button className="btn btn-primary" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} style={{ width: '100%', padding: '13px', fontSize: 14, opacity: saveMutation.isPending ? 0.7 : 1 }}>
               {saveMutation.isPending ? (editingMealId ? 'Saving…' : 'Logging…') : (editingMealId ? 'Save changes' : 'Save meal log')}
             </button>
