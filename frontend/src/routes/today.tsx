@@ -321,10 +321,10 @@ export default function TodayRoute() {
               <hr style={{ border: 'none', borderTop: '1px solid var(--glass-edge)', margin: '16px 0' }} />
 
               {/* Detail row: rings + ring legends */}
-              <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                 <div style={{ flexShrink: 0 }}>
-                  <div style={{ width: 140, height: 140 }}>
-                    <ActivityRings size={140} values={rings} colors={ringColors} thickness={12} gap={5}/>
+                  <div style={{ width: 160, height: 160 }}>
+                    <ActivityRings size={160} values={rings} colors={ringColors} thickness={13} gap={5}/>
                   </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -512,10 +512,10 @@ export default function TodayRoute() {
           <hr style={{ border: 'none', borderTop: '1px solid var(--glass-edge)', margin: '14px 0' }} />
 
           {/* Detail row: rings + ring legends */}
-          <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             <div style={{ flexShrink: 0 }}>
-              <div style={{ width: 110, height: 110 }}>
-                <ActivityRings size={110} values={rings} colors={ringColors} thickness={10} gap={4}/>
+              <div style={{ width: 140, height: 140 }}>
+                <ActivityRings size={140} values={rings} colors={ringColors} thickness={12} gap={5}/>
               </div>
             </div>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
