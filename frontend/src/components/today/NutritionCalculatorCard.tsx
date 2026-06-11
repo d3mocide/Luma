@@ -681,6 +681,7 @@ export function NutritionCalculatorCard({
                     )}
                   </div>
                 )}
+
                 <button
                   type="button"
                   onClick={() => { setBarcodeError(''); setIsScanning((v) => !v) }}
@@ -690,12 +691,14 @@ export function NutritionCalculatorCard({
                     border: isScanning ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--glass-edge)',
                     color: isScanning ? 'var(--sky-300)' : 'var(--fg-secondary)',
                     cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: compact ? 4 : 6,
+                    display: 'flex', alignItems: 'center', gap: compact ? 0 : 6,
+                    justifyContent: 'center',
                     fontSize: 13, transition: 'all 150ms',
                   }}
+                  title={isScanning ? 'Stop Scanning' : 'Scan Barcode'}
                 >
                   <Camera size={14} />
-                  Scan
+                  {!compact && 'Scan'}
                 </button>
               </div>
               {isScanning && (
