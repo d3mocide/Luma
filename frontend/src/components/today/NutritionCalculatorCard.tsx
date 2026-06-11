@@ -117,7 +117,18 @@ export function NutritionCalculatorCard({
   const favorites = favoritesData?.favorites ?? []
 
   const [budgetMode, setBudgetMode] = useState<'search' | 'favorite'>('search')
+  const [isFavOpen, setIsFavOpen] = useState(false)
+  const favDropdownRef = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (favDropdownRef.current && !favDropdownRef.current.contains(event.target as Node)) {
+        setIsFavOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const [mealItems, setMealItems] = useState<MealBuilderItem[]>([])
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
@@ -545,33 +556,97 @@ export function NutritionCalculatorCard({
                     )}
                   </div>
                 ) : (
-                  <select
-                    id="budget-fav-select"
-                    defaultValue=""
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        handleSelectFavorite(e.target.value)
-                      }
-                    }}
-                    style={{
-                      borderRadius: 10, padding: compact ? '8px 10px' : '10px 12px', fontSize: 13, flex: 1, minWidth: 0,
-                      border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
-                      color: 'var(--fg-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                      outline: 'none', height: '100%', minHeight: compact ? 34 : 40,
-                    }}
-                  >
-                    <option value="" style={{ background: 'var(--bg-2)', color: 'var(--fg-quiet)' }}>Select a favorite...</option>
-                    {favorites.map((fav) => {
-                      const calories = Math.round(fav.items.reduce((s, i) => s + (i.nutrients.calories ?? 0), 0))
-                      return (
-                        <option key={fav.id} value={fav.id} style={{ background: 'var(--bg-2)', color: 'var(--fg-primary)' }}>
-                          {fav.name} ({calories} kcal)
-                        </option>
-                      )
-                    })}
-                  </select>
-                )}
+                  <div ref={favDropdownRef} style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsFavOpen(!isFavOpen)}
+                      style={{
+                        width: '100%',
+                        borderRadius: 10,
+                        padding: compact ? '8px 10px' : '10px 12px',
+                        fontSize: 13,
+                        border: '1px solid var(--glass-edge)',
+                        background: 'var(--glass-1)',
+                        color: 'var(--fg-secondary)',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        height: '100%',
+                        minHeight: compact ? 34 : 40,
+                        outline: 'none',
+                      }}
+                    >
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        Select a favorite...
+                      </span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.7 }}>
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
 
+                    {isFavOpen && (
+                      <div
+                        className="glass-bright"
+                        style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          zIndex: 20,
+                          marginTop: 4,
+                          overflow: 'hidden',
+                          maxHeight: 200,
+                          overflowY: 'auto',
+                          borderRadius: 10,
+                          border: '1px solid var(--glass-edge)',
+                        }}
+                      >
+                        {favorites.length === 0 ? (
+                          <div style={{ padding: '9px 12px', fontSize: 13, color: 'var(--fg-quiet)' }}>
+                            No favorites saved yet.
+                          </div>
+                        ) : (
+                          favorites.map((fav) => {
+                            const calories = Math.round(fav.items.reduce((s, i) => s + (i.nutrients.calories ?? 0), 0))
+                            return (
+                              <button
+                                key={fav.id}
+                                type="button"
+                                onClick={() => {
+                                  handleSelectFavorite(fav.id)
+                                  setIsFavOpen(false)
+                                }}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  background: 'none',
+                                  border: 'none',
+                                  borderBottom: '1px solid var(--glass-edge)',
+                                  padding: '9px 12px',
+                                  cursor: 'pointer',
+                                  fontSize: 13,
+                                  color: 'var(--fg-primary)',
+                                  display: 'block',
+                                  fontFamily: 'var(--font-sans)',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--glass-1)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                              >
+                                {fav.name} <span style={{ fontSize: 11, color: 'var(--fg-quiet)', marginLeft: 4 }}>({calories} kcal)</span>
+                              </button>
+                            )
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => { setBarcodeError(''); setIsScanning((v) => !v) }}
