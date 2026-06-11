@@ -1366,23 +1366,6 @@ input[type="search"]::-webkit-search-results-decoration {
   cursor: not-allowed;
 }
 
-.settings-tabs-wrapper {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: linear-gradient(165deg, var(--glass-3), var(--glass-2));
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-}
-
-/* Fade the tab text/border itself to transparent — no colour dependency */
-.settings-tabs.overflow-right {
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 44px), transparent 100%);
-  mask-image: linear-gradient(to right, black calc(100% - 44px), transparent 100%);
-}
-
 .settings-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);

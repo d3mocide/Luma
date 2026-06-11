@@ -1214,27 +1214,6 @@ export default function MealsRoute() {
   })()
 
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab)
-  const tabsRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = tabsRef.current
-    if (!el) return
-    const check = () => {
-      el.classList.toggle('overflow-right', el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
-    }
-    check()
-    el.addEventListener('scroll', check, { passive: true })
-    window.addEventListener('resize', check, { passive: true })
-    return () => {
-      el.removeEventListener('scroll', check)
-      window.removeEventListener('resize', check)
-    }
-  }, [])
-
-  useEffect(() => {
-    const active = tabsRef.current?.querySelector('[aria-selected="true"]') as HTMLElement | null
-    active?.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' })
-  }, [activeTab])
 
   // Journal prefill from URL (mealId + mealName passed from Today nudge)
   const prefillMealId = searchParams.get('mealId')
@@ -1274,26 +1253,24 @@ export default function MealsRoute() {
       </header>
 
       {/* Tab bar */}
-      <div className="settings-tabs-wrapper">
-        <div ref={tabsRef} className="settings-tabs" role="tablist">
-          {([
-            { key: 'foods',      label: 'Foods'      },
-            { key: 'plan',       label: 'Plan'       },
-            { key: 'journal',    label: 'Journal'    },
-            { key: 'calculator', label: 'Calculator' },
-            { key: 'recipes',    label: 'Recipes'    },
-          ] as const).map(({ key, label }) => (
-            <button
-              key={key}
-              role="tab"
-              aria-selected={activeTab === key}
-              className="settings-tab"
-              onClick={() => switchTab(key)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      <div className="settings-tabs" role="tablist">
+        {([
+          { key: 'foods',      label: 'Foods'      },
+          { key: 'plan',       label: 'Plan'       },
+          { key: 'journal',    label: 'Journal'    },
+          { key: 'calculator', label: 'Calculator' },
+          { key: 'recipes',    label: 'Recipes'    },
+        ] as const).map(({ key, label }) => (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={activeTab === key}
+            className="settings-tab"
+            onClick={() => switchTab(key)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Tab content */}
