@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, X, Search, Camera, Trash2, Heart, Check, Edit2 } from 'lucide-react'
+import { Plus, X, Search, Camera, Trash2, Heart, Check, Edit2, Star } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api, TodayData } from '../../lib/api'
 import { getCurrentSlot } from '../../lib/format'
@@ -115,6 +115,9 @@ export function NutritionCalculatorCard({
     staleTime: 30_000,
   })
   const favorites = favoritesData?.favorites ?? []
+
+  const [budgetMode, setBudgetMode] = useState<'search' | 'favorite'>('search')
+
 
   const [mealItems, setMealItems] = useState<MealBuilderItem[]>([])
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
@@ -475,43 +478,100 @@ export function NutritionCalculatorCard({
       </div>
 
       <div className="glass-inset" style={{ padding: compact ? 8 : 12, display: 'grid', gap: 10, minWidth: 0, width: '100%' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr 1fr auto', gap: compact ? 8 : 12, alignItems: 'start', minWidth: 0, width: '100%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr auto', gap: compact ? 8 : 12, alignItems: 'start', minWidth: 0, width: '100%' }}>
 
           {/* Food search */}
           <label style={{ display: 'grid', gap: 6, minWidth: 0, width: '100%' }}>
             <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
-              Food
+              {budgetMode === 'search' ? 'Food search' : 'Favorite'}
             </span>
             <div style={{ position: 'relative' }}>
               <div style={{ display: 'flex', gap: compact ? 6 : 8, alignItems: 'stretch' }}>
-                <div style={{
-                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-                  padding: compact ? '8px 10px' : '10px 12px', borderRadius: 10,
-                  border: `1px solid ${selectedFood ? 'var(--sky-400)' : 'var(--glass-edge)'}`,
-                  background: 'var(--glass-1)',
-                }}>
-                  <Search size={13} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
-                  <input
-                    value={query}
+                <button
+                  type="button"
+                  onClick={() => setBudgetMode((prev) => (prev === 'search' ? 'favorite' : 'search'))}
+                  title={budgetMode === 'search' ? 'Switch to Favorites' : 'Switch to Search'}
+                  style={{
+                    padding: compact ? '0 10px' : '0 12px',
+                    borderRadius: 10,
+                    flexShrink: 0,
+                    background: 'var(--glass-1)',
+                    border: `1px solid ${budgetMode === 'favorite' ? 'rgba(251,191,36,0.3)' : 'var(--glass-edge)'}`,
+                    color: budgetMode === 'favorite' ? 'var(--sun-400)' : 'var(--fg-secondary)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 150ms',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = budgetMode === 'favorite' ? 'var(--sun-400)' : 'var(--sky-400)'
+                    e.currentTarget.style.color = budgetMode === 'favorite' ? 'var(--sun-300)' : 'var(--sky-300)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = budgetMode === 'favorite' ? 'rgba(251,191,36,0.3)' : 'var(--glass-edge)'
+                    e.currentTarget.style.color = budgetMode === 'favorite' ? 'var(--fg-secondary)' : 'var(--fg-secondary)'
+                  }}
+                >
+                  {budgetMode === 'search' ? <Search size={14} /> : <Star size={14} />}
+                </button>
+
+                {budgetMode === 'search' ? (
+                  <div style={{
+                    flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+                    padding: compact ? '8px 10px' : '10px 12px', borderRadius: 10,
+                    border: `1px solid ${selectedFood ? 'var(--sky-400)' : 'var(--glass-edge)'}`,
+                    background: 'var(--glass-1)',
+                  }}>
+                    <input
+                      value={query}
+                      onChange={(e) => {
+                        setQuery(e.target.value)
+                        if (selectedFood) setSelectedFood(null)
+                      }}
+                      placeholder="Search foods…"
+                      style={{
+                        flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                        color: 'var(--fg-primary)', fontSize: 13, minWidth: 0,
+                      }}
+                    />
+                    {selectedFood && (
+                      <button type="button" onClick={handleClear} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', alignItems: 'center' }}>
+                        <X size={13} />
+                      </button>
+                    )}
+                    {isFetching && !selectedFood && (
+                      <span style={{ fontSize: 10, color: 'var(--fg-quiet)', flexShrink: 0 }}>…</span>
+                    )}
+                  </div>
+                ) : (
+                  <select
+                    id="budget-fav-select"
+                    defaultValue=""
                     onChange={(e) => {
-                      setQuery(e.target.value)
-                      if (selectedFood) setSelectedFood(null)
+                      if (e.target.value) {
+                        handleSelectFavorite(e.target.value)
+                      }
                     }}
-                    placeholder="Search foods…"
                     style={{
-                      flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                      color: 'var(--fg-primary)', fontSize: 13, minWidth: 0,
+                      borderRadius: 10, padding: compact ? '8px 10px' : '10px 12px', fontSize: 13, flex: 1, minWidth: 0,
+                      border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
+                      color: 'var(--fg-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                      outline: 'none', height: '100%', minHeight: compact ? 34 : 40,
                     }}
-                  />
-                  {selectedFood && (
-                    <button type="button" onClick={handleClear} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', alignItems: 'center' }}>
-                      <X size={13} />
-                    </button>
-                  )}
-                  {isFetching && !selectedFood && (
-                    <span style={{ fontSize: 10, color: 'var(--fg-quiet)', flexShrink: 0 }}>…</span>
-                  )}
-                </div>
+                  >
+                    <option value="" style={{ background: 'var(--bg-2)', color: 'var(--fg-quiet)' }}>Select a favorite...</option>
+                    {favorites.map((fav) => {
+                      const calories = Math.round(fav.items.reduce((s, i) => s + (i.nutrients.calories ?? 0), 0))
+                      return (
+                        <option key={fav.id} value={fav.id} style={{ background: 'var(--bg-2)', color: 'var(--fg-primary)' }}>
+                          {fav.name} ({calories} kcal)
+                        </option>
+                      )
+                    })}
+                  </select>
+                )}
+
                 <button
                   type="button"
                   onClick={() => { setBarcodeError(''); setIsScanning((v) => !v) }}
@@ -546,7 +606,7 @@ export function NutritionCalculatorCard({
               )}
 
               {/* Results list */}
-              {showResults && results.length > 0 && (
+              {budgetMode === 'search' && showResults && results.length > 0 && (
                 <div
                   className="glass-bright"
                   style={{
@@ -617,7 +677,7 @@ export function NutritionCalculatorCard({
                   ))}
                 </div>
               )}
-              {showResults && results.length === 0 && !isFetching && (
+              {budgetMode === 'search' && showResults && results.length === 0 && !isFetching && (
                 <div
                   className="glass-bright"
                   style={{
@@ -638,39 +698,7 @@ export function NutritionCalculatorCard({
             </div>
           </label>
 
-          {/* Favorites selection */}
-          <label style={{ display: 'grid', gap: 6, minWidth: 0, width: '100%' }}>
-            <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
-              Or Select Favorite
-            </span>
-            <div style={{ display: 'flex', alignItems: 'stretch', height: '100%', minHeight: compact ? 34 : 40 }}>
-              <select
-                id="budget-fav-select"
-                defaultValue=""
-                onChange={(e) => {
-                  if (e.target.value) {
-                    handleSelectFavorite(e.target.value)
-                  }
-                }}
-                style={{
-                  borderRadius: 10, padding: compact ? '8px 10px' : '10px 12px', fontSize: 13, width: '100%',
-                  border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
-                  color: 'var(--fg-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                  outline: 'none', height: '100%', minHeight: compact ? 34 : 40,
-                }}
-              >
-                <option value="" style={{ background: 'var(--bg-2)', color: 'var(--fg-quiet)' }}>Select a favorite...</option>
-                {favorites.map((fav) => {
-                  const calories = Math.round(fav.items.reduce((s, i) => s + (i.nutrients.calories ?? 0), 0))
-                  return (
-                    <option key={fav.id} value={fav.id} style={{ background: 'var(--bg-2)', color: 'var(--fg-primary)' }}>
-                      {fav.name} ({calories} kcal)
-                    </option>
-                  )
-                })}
-              </select>
-            </div>
-          </label>
+
 
           {/* Serving */}
           <div style={{ display: 'grid', gap: 6, width: '100%', minWidth: 0 }}>
