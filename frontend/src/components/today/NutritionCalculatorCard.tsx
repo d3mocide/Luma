@@ -59,6 +59,7 @@ function BudgetStat({
   showProjected,
   noTarget,
   compact,
+  style,
 }: {
   label: string
   remaining: number
@@ -67,10 +68,11 @@ function BudgetStat({
   showProjected: boolean
   noTarget: boolean
   compact?: boolean
+  style?: React.CSSProperties
 }) {
   const over = showProjected && projected < 0
   return (
-    <div className="glass-inset" style={{ padding: compact ? '8px 6px' : '10px 12px', textAlign: compact ? 'center' : 'left' }}>
+    <div className="glass-inset" style={{ padding: compact ? '8px 6px' : '10px 12px', textAlign: compact ? 'center' : 'left', ...style }}>
       <div style={{ fontSize: compact ? 9.5 : 11.5, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {label}
       </div>
@@ -500,11 +502,20 @@ export function NutritionCalculatorCard({
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: compact ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)',
+        gridTemplateColumns: compact ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
         gap: compact ? 6 : 10,
         marginBottom: 12
       }}>
-        <BudgetStat label="Calories" remaining={calRemain} projected={calProjected} unit="kcal" showProjected={hasItemsOrFood} noTarget={calTarget === 0} compact={compact} />
+        <BudgetStat
+          label="Calories"
+          remaining={calRemain}
+          projected={calProjected}
+          unit="kcal"
+          showProjected={hasItemsOrFood}
+          noTarget={calTarget === 0}
+          compact={compact}
+          style={compact ? { gridColumn: 'span 2' } : undefined}
+        />
         <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    showProjected={hasItemsOrFood} noTarget={satTarget === 0} compact={compact} />
         <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   showProjected={hasItemsOrFood} noTarget={solTarget === 0} compact={compact} />
         <BudgetStat label="Sugar"     remaining={sugarsRemain} projected={sugarsProjected} unit="g" showProjected={hasItemsOrFood} noTarget={sugarsTarget === 0} compact={compact} />
