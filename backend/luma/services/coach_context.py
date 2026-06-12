@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from luma.services.units import UnitSystem, fmt_weight, fmt_weight_trend
+
 logger = logging.getLogger(__name__)
 
 # Case file LLM prompt — kept tight to produce a bounded output
@@ -60,6 +62,22 @@ async def refresh_coach_context(user_id: str, db: AsyncSession) -> None:
     fresh = await _build_context(user_id, db)
     await _upsert_context(user_id, fresh, db)
     await db.commit()
+
+
+async def get_measurement_system(user_id: str, db: AsyncSession) -> UnitSystem:
+    """Return the user's preferred unit system, defaulting to metric."""
+    row = await db.execute(
+        text("""
+            SELECT value FROM preferences
+            WHERE user_id = :uid AND kind = 'measurement_system'
+              AND value IN ('metric', 'imperial')
+        """),
+        {"uid": user_id},
+    )
+    result = row.scalar_one_or_none()
+    if result == "imperial":
+        return "imperial"
+    return "metric"
 
 
 async def update_case_file(user_id: str, db: AsyncSession) -> None:
@@ -314,16 +332,28 @@ async def _build_context(user_id: str, db: AsyncSession) -> dict:
     return ctx
 
 
-def format_context_for_prompt(ctx: dict, case_file: str = "", query: str = "") -> str:
-    """Render context blob + case file as a system prompt addendum, filtering by relevance to the query if provided."""
+def format_context_for_prompt(
+    ctx: dict,
+    case_file: str = "",
+    query: str = "",
+    unit_system: UnitSystem = "metric",
+) -> str:
+    """Render context blob + case file as a system prompt addendum.
+
+    Values are converted to the user's preferred unit system so the LLM
+    responds in matching units. Metric storage is never mutated here.
+    """
     query_lower = query.lower() if query else ""
-    
+
     # Determine relevance flags
     show_nutrition = not query_lower or any(w in query_lower for w in ["diet", "fiber", "fat", "calor", "protein", "eat", "food", "meal", "breakfast", "lunch", "dinner", "snack", "nutrition", "sat", "carb", "sugar"])
-    show_biometrics = not query_lower or any(w in query_lower for w in ["weight", "kg", "scale", "hrv", "rhr", "sleep", "heart", "pulse", "bpm", "ms", "fit", "health", "biometric"])
+    show_biometrics = not query_lower or any(w in query_lower for w in ["weight", "kg", "lb", "pound", "scale", "hrv", "rhr", "sleep", "heart", "pulse", "bpm", "ms", "fit", "health", "biometric"])
     show_alerts = not query_lower or any(w in query_lower for w in ["alert", "insight", "narrat", "notification", "warning"])
-    
+
     lines = ["## User snapshot (auto-updated every 2 hours)"]
+
+    if unit_system == "imperial":
+        lines.append("**Unit preference:** imperial — always respond using lbs and ft/in for body measurements")
 
     if goals := ctx.get("goals"):
         parts = []
@@ -334,7 +364,7 @@ def format_context_for_prompt(ctx: dict, case_file: str = "", query: str = "") -
         if goals.get("daily_soluble_fiber_g"):
             parts.append(f"fiber ≥{goals['daily_soluble_fiber_g']}g")
         if goals.get("target_weight_kg"):
-            parts.append(f"goal weight {goals['target_weight_kg']} kg")
+            parts.append(f"goal weight {fmt_weight(goals['target_weight_kg'], unit_system)}")
         if goals.get("dietary_pattern"):
             parts.append(goals["dietary_pattern"])
         if parts:
@@ -356,7 +386,7 @@ def format_context_for_prompt(ctx: dict, case_file: str = "", query: str = "") -
         if bio := ctx.get("biometrics_latest"):
             parts = []
             if bio.get("weight_kg"):
-                parts.append(f"weight {bio['weight_kg']} kg")
+                parts.append(f"weight {fmt_weight(bio['weight_kg'], unit_system)}")
             if bio.get("hrv_ms"):
                 parts.append(f"HRV {bio['hrv_ms']} ms")
             if bio.get("sleep_score"):
@@ -366,7 +396,8 @@ def format_context_for_prompt(ctx: dict, case_file: str = "", query: str = "") -
 
         if (slope := ctx.get("weight_trend_kg_per_week")) is not None:
             direction = "↓" if slope < 0 else "↑" if slope > 0 else "→"
-            lines.append(f"**Weight trend (28d):** {direction} {abs(slope):.2f} kg/week")
+            trend_str = fmt_weight_trend(slope, unit_system)
+            lines.append(f"**Weight trend (28d):** {direction} {trend_str}")
 
     if ctx.get("recent_logging_days_30d") is not None:
         lines.append(f"**Logging consistency:** {ctx['recent_logging_days_30d']}/30 days logged")

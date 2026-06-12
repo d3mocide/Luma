@@ -146,7 +146,7 @@ def _normalize_reasoning_response(response: Any) -> None:
         logger.warning("Failed to normalize reasoning response: %s", exc)
 
 
-async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str, trigger: str | None = None, **kwargs: Any) -> Any:
+async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str, trigger: str | None = None, user_id: str | None = None, **kwargs: Any) -> Any:
     started = perf_counter()
     provider = _get_provider(model_alias, target)
 
@@ -179,6 +179,7 @@ async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str
             model=model_alias,
             provider=provider,
             attempt=attempt,
+            user_id=user_id,
             elapsed_ms=elapsed_ms,
             prompt_tokens=usage["prompt_tokens"],
             completion_tokens=usage["completion_tokens"],
@@ -206,6 +207,7 @@ async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str
             model=model_alias,
             provider=provider,
             attempt=attempt,
+            user_id=user_id,
             elapsed_ms=elapsed_ms,
             error_type=type(exc).__name__,
             trigger=trigger,
@@ -253,6 +255,7 @@ async def call_llm(
     fallback_model: str,
     *,
     trigger: str | None = None,
+    user_id: str | None = None,
     **kwargs: Any,
 ) -> Any:
     """Call LiteLLM with automatic fallback.
@@ -276,7 +279,7 @@ async def call_llm(
         fallback = build_litellm_target(fallback_model)
         logger.debug("LLM call configured with fallback", extra={"llm_model": primary_model, "llm_fallback_model": fallback_model})
         try:
-            return await _call_target(primary, model_alias=primary_model, attempt="primary", trigger=trigger, **kwargs)
+            return await _call_target(primary, model_alias=primary_model, attempt="primary", trigger=trigger, user_id=user_id, **kwargs)
         except Exception:
             await llm_metrics_tracker.record_event(
                 event="fallback_retry",
@@ -291,7 +294,7 @@ async def call_llm(
                 extra={"llm_event": "fallback_retry", "llm_model": primary_model, "llm_fallback_model": fallback_model},
             )
             await asyncio.sleep(1)
-            return await _call_target(fallback, model_alias=fallback_model, attempt="fallback", trigger=trigger, **kwargs)
+            return await _call_target(fallback, model_alias=fallback_model, attempt="fallback", trigger=trigger, user_id=user_id, **kwargs)
 
     logger.debug("LLM call configured without fallback", extra={"llm_model": primary_model})
-    return await _call_target(primary, model_alias=primary_model, attempt="primary", trigger=trigger, **kwargs)
+    return await _call_target(primary, model_alias=primary_model, attempt="primary", trigger=trigger, user_id=user_id, **kwargs)

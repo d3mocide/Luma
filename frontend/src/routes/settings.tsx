@@ -16,6 +16,8 @@ import { LlmMetricsCard } from '../components/settings/LlmMetricsCard'
 import { AiConfigCard } from '../components/settings/AiConfigCard'
 import { AiPerformanceCard } from '../components/settings/AiPerformanceCard'
 import { AiPriceCalculator } from '../components/settings/AiPriceCalculator'
+import { AiUsageCard } from '../components/settings/AiUsageCard'
+import { AiDataRoutingCard } from '../components/settings/AiDataRoutingCard'
 import { HaeMetricsCard } from '../components/settings/HaeMetricsCard'
 import { HaeImportCard } from '../components/settings/HaeImportCard'
 import { HealthConnectCard } from '../components/settings/HealthConnectCard'
@@ -29,11 +31,12 @@ import { useMeasurementSystem, convertWeightToKg } from '../lib/measurements'
 
 const KG_TO_LB = 2.2046226218
 
-type SettingsTab = 'account' | 'data-sources' | 'ai-routing' | 'admin'
+type SettingsTab = 'account' | 'data-sources' | 'ai-usage' | 'ai-routing' | 'admin'
 
 const TAB_META: Record<SettingsTab, { label: string; minRole?: string }> = {
   'account':        { label: 'Settings' },
   'data-sources':   { label: 'Data Sources' },
+  'ai-usage':       { label: 'AI Usage' },
   'ai-routing':     { label: 'AI Routing', minRole: 'operator' },
   'admin':          { label: 'Users', minRole: 'admin' },
 }
@@ -396,6 +399,19 @@ function DataSourcesTab({ user, isOperator }: { user: User | undefined; isOperat
   )
 }
 
+function AiUsageTab() {
+  return (
+    <div className="settings-grid">
+      <div className="settings-stack settings-primary">
+        <AiUsageCard />
+      </div>
+      <div className="settings-stack settings-secondary">
+        <AiDataRoutingCard />
+      </div>
+    </div>
+  )
+}
+
 function AiRoutingTab({ isOperator }: { isOperator: boolean }) {
   if (!isOperator) return <AccessDenied />
   return (
@@ -588,6 +604,12 @@ function AdminTab({ currentUserId }: { currentUserId: string }) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [tempAlert, setTempAlert] = useState<TempPasswordAlert | null>(null)
   const [alertCopied, setAlertCopied] = useState(false)
+  const [copiedUuid, setCopiedUuid] = useState<string | null>(null)
+  const copyUuid = (id: string) => {
+    navigator.clipboard.writeText(id)
+    setCopiedUuid(id)
+    window.setTimeout(() => setCopiedUuid(null), 2000)
+  }
   const [createForm, setCreateForm] = useState({ email: '', display_name: '', role: 'user' })
   const [createError, setCreateError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -781,6 +803,23 @@ function AdminTab({ currentUserId }: { currentUserId: string }) {
                         )}
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                      <button
+                        type="button"
+                        onClick={() => copyUuid(u.id)}
+                        style={{
+                          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                          textAlign: 'left', display: 'block', width: '100%',
+                        }}
+                        title="Copy UUID"
+                      >
+                        <span style={{
+                          fontSize: 10, fontFamily: 'var(--font-mono)',
+                          color: copiedUuid === u.id ? 'var(--fg-good)' : 'var(--fg-quiet)',
+                          display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {copiedUuid === u.id ? 'copied!' : u.id}
+                        </span>
+                      </button>
                     </div>
 
                     <select
@@ -1040,7 +1079,7 @@ export default function SettingsRoute() {
   }
 
   const isOperator = hasRole(user, 'operator')
-  const tabs: SettingsTab[] = ['account', 'data-sources', 'ai-routing', 'admin']
+  const tabs: SettingsTab[] = ['account', 'data-sources', 'ai-usage', 'ai-routing', 'admin']
   const visibleTabs = tabs.filter((id) => hasRole(user, TAB_META[id].minRole))
 
   return (
@@ -1115,6 +1154,12 @@ export default function SettingsRoute() {
       {activeTab === 'data-sources' && (
         <div role="tabpanel" id="settings-panel-data-sources" aria-labelledby="settings-tab-data-sources">
           <DataSourcesTab user={user} isOperator={isOperator} />
+        </div>
+      )}
+
+      {activeTab === 'ai-usage' && (
+        <div role="tabpanel" id="settings-panel-ai-usage" aria-labelledby="settings-tab-ai-usage">
+          <AiUsageTab />
         </div>
       )}
 
