@@ -147,3 +147,29 @@ export const SAT_FAT_COLORS: Record<FoodCategory['satFatLevel'], string> = {
   medium: 'var(--warn)',
   high: 'var(--bad)',
 }
+
+// Dietary flags each food group broadly satisfies, used to filter the browse
+// grid. This is a category-level approximation — individual foods carry their
+// own precise flags from the backend. Keep keys in sync with FOOD_CATEGORIES ids.
+export const CATEGORY_FLAGS: Record<string, string[]> = {
+  vegetables:       ['heart-healthy', 'anti-inflammatory', 'gluten-free', 'high-fiber'],
+  fruits:           ['heart-healthy', 'anti-inflammatory', 'gluten-free', 'high-fiber'],
+  legumes:          ['heart-healthy', 'anti-inflammatory', 'gluten-free', 'high-protein', 'high-fiber'],
+  grains:           ['heart-healthy', 'anti-inflammatory', 'high-fiber'],
+  fish:             ['heart-healthy', 'anti-inflammatory', 'gluten-free', 'high-protein', 'keto-friendly'],
+  poultry:          ['heart-healthy', 'gluten-free', 'high-protein', 'keto-friendly'],
+  eggs:             ['gluten-free', 'high-protein', 'keto-friendly'],
+  nuts:             ['heart-healthy', 'anti-inflammatory', 'gluten-free', 'high-fiber', 'keto-friendly'],
+  'low-fat-dairy':  ['heart-healthy', 'gluten-free', 'high-protein'],
+  'full-fat-dairy': ['gluten-free', 'keto-friendly'],
+  'red-meat':       ['gluten-free', 'high-protein', 'keto-friendly'],
+  'processed-meat': [],
+  'tropical-oils':  ['gluten-free', 'keto-friendly'],
+}
+
+// AND logic across active flags, matching the backend food-search semantics.
+export function categoryMatchesFlags(categoryId: string, activeFlags: string[]): boolean {
+  if (activeFlags.length === 0) return true
+  const flags = CATEGORY_FLAGS[categoryId] ?? []
+  return activeFlags.every((f) => flags.includes(f))
+}

@@ -258,7 +258,6 @@ export default function TrendsRoute() {
     <div className="thin-scroll trends-page">
       <header className="mobile-hero mobile-hero-with-controls trends-header" style={{ marginBottom: 24 }}>
         <div className="mobile-hero-content">
-          <div className="eyebrow">Trends</div>
           <h1 className="mobile-hero-title" style={{ margin: '6px 0 6px', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
             Ninety days of{' '}
             <span className="serif-italic" style={{

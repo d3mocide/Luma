@@ -26,7 +26,7 @@ async def get_today(
     today_dt = datetime.now(resolved_tz).date()
 
     # 1. Fetch user's goals
-    from luma.db.models import Goal, MealEvent, MealPlan, MealPlanSlot
+    from luma.db.models import Goal, MealEvent, MealPlan, MealPlanSlot, Supplement
     stmt_goal = select(Goal).where(Goal.user_id == user.id)
     res_goal = await db.execute(stmt_goal)
     goal = res_goal.scalar_one_or_none()
@@ -35,6 +35,7 @@ async def get_today(
     target_sat = float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else None
     target_sol = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else None
     target_sugar = float(goal.daily_sugar_g_max) if goal and goal.daily_sugar_g_max else None
+    target_protein = float(goal.daily_protein_g_min) if goal and goal.daily_protein_g_min else None
 
     # All boundaries are computed in the configured local timezone then converted
     # to UTC so queries align with the user's calendar day, not the server clock.
@@ -58,17 +59,36 @@ async def get_today(
     logged_sat = 0.0
     logged_sol = 0.0
     logged_sugar = 0.0
+    logged_protein = 0.0
     for e in today_events:
         nutr = e.nutrition or {}
         logged_cal += float(nutr.get("calories") or 0.0)
         logged_sat += float(nutr.get("saturated_fat_g") or 0.0)
         logged_sol += float(nutr.get("soluble_fiber_g") or 0.0)
         logged_sugar += float(nutr.get("sugars_g") or 0.0)
+        logged_protein += float(nutr.get("protein_g") or 0.0)
+
+    # Add active supplement nutrient contributions to daily totals
+    supp_rows = await db.execute(
+        select(Supplement).where(Supplement.user_id == user.id, Supplement.is_active.is_(True))
+    )
+    active_supps = supp_rows.scalars().all()
+    supplement_nutrients: dict[str, float] = {}
+    for s in active_supps:
+        for key, val in (s.nutrients_per_dose or {}).items():
+            supplement_nutrients[key] = supplement_nutrients.get(key, 0.0) + float(val or 0.0)
+
+    logged_cal += supplement_nutrients.get("calories", 0.0)
+    logged_sat += supplement_nutrients.get("saturated_fat_g", 0.0)
+    logged_sol += supplement_nutrients.get("soluble_fiber_g", 0.0)
+    logged_sugar += supplement_nutrients.get("sugars_g", 0.0)
+    logged_protein += supplement_nutrients.get("protein_g", 0.0)
         
     cal_pct = round((logged_cal / target_cal) * 100, 1) if target_cal else None
     sat_pct = round((logged_sat / target_sat) * 100, 1) if target_sat else None
     sol_pct = round((logged_sol / target_sol) * 100, 1) if target_sol else None
     sugar_pct = round((logged_sugar / target_sugar) * 100, 1) if target_sugar else None
+    protein_pct = round((logged_protein / target_protein) * 100, 1) if target_protein else None
     
     # 3. Fetch today's meal plan slots
     stmt_plan = (
@@ -192,10 +212,11 @@ async def get_today(
             "target_kg": float(goal.target_weight_kg) if goal and goal.target_weight_kg else None,
         },
         "adherence_today": {
-            "calories":         {"logged": logged_cal, "target": target_cal, "pct": cal_pct},
-            "sat_fat_g":        {"logged": logged_sat, "target": target_sat, "pct": sat_pct},
-            "soluble_fiber_g":  {"logged": logged_sol, "target": target_sol, "pct": sol_pct},
-            "sugars_g":         {"logged": logged_sugar, "target": target_sugar, "pct": sugar_pct},
+            "calories":         {"logged": logged_cal,     "target": target_cal,     "pct": cal_pct},
+            "sat_fat_g":        {"logged": logged_sat,     "target": target_sat,     "pct": sat_pct},
+            "soluble_fiber_g":  {"logged": logged_sol,     "target": target_sol,     "pct": sol_pct},
+            "sugars_g":         {"logged": logged_sugar,   "target": target_sugar,   "pct": sugar_pct},
+            "protein_g":        {"logged": logged_protein, "target": target_protein, "pct": protein_pct},
         },
         "biometrics_latest": {
             "hrv_ms":              latest.get("hrv_ms"),
@@ -225,6 +246,7 @@ async def get_today(
         ],
         "recent_meals": recent_meals,
         "streak_days": streak_days,
+        "supplement_nutrients": supplement_nutrients,
         "active_insight": await _get_active_insight(db, str(user.id)),
     }
 

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { X, Check, BatteryLow, Battery, BatteryMedium, Zap, Flame, Frown, Meh, Smile, SmilePlus, Laugh, CircleDashed, Circle, CircleDot, Disc, CheckCircle2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Check, BatteryLow, Battery, BatteryMedium, BatteryFull, Flame, Frown, Meh, Smile, Laugh, Angry, CircleDashed, Circle, CircleDot, Disc, CheckCircle2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
@@ -28,25 +28,25 @@ const SCALES: Array<{
   {
     key: 'energy',
     label: 'Energy',
-    options: [BatteryLow, Battery, BatteryMedium, Zap, Flame],
+    options: [Battery, BatteryLow, BatteryMedium, BatteryFull, Flame],
     captions: ['Drained', 'Low', 'OK', 'Good', 'Excellent'],
   },
   {
     key: 'digestion',
     label: 'Digestion',
-    options: [Frown, Meh, Smile, SmilePlus, Laugh],
+    options: [Angry, Frown, Meh, Smile, Laugh],
     captions: ['Painful', 'Uncomfortable', 'OK', 'Good', 'Great'],
   },
   {
     key: 'mood',
     label: 'Mood',
-    options: [Frown, Meh, Smile, SmilePlus, Laugh],
+    options: [Angry, Frown, Meh, Smile, Laugh],
     captions: ['Low', 'Down', 'Neutral', 'Good', 'Great'],
   },
   {
     key: 'satiety',
     label: 'Satiety',
-    options: [CircleDashed, Circle, CircleDot, Disc, CheckCircle2],
+    options: [CircleDashed, Circle, CircleDot, CheckCircle2, Disc],
     captions: ['Still hungry', 'A bit hungry', 'OK', 'Satisfied', 'Very full'],
   },
 ]
@@ -57,6 +57,64 @@ const SYMPTOMS = [
 ]
 
 type Scores = Record<'energy' | 'digestion' | 'mood' | 'satiety', number>
+// Helper functions for rating button styling
+function getScoreClass(key: string, score: number): string {
+  if (key === 'digestion' || key === 'mood') {
+    switch (score) {
+      case 1: return 'score-bad'
+      case 2: return 'score-warn-heavy'
+      case 3: return 'score-warn-light'
+      case 4: return 'score-mint'
+      case 5: return 'score-good'
+    }
+  } else if (key === 'energy') {
+    switch (score) {
+      case 1: return 'score-bad'
+      case 2: return 'score-warn-heavy'
+      case 3: return 'score-warn-light'
+      case 4: return '' // default sky-400
+      case 5: return 'score-pink'
+    }
+  } else if (key === 'satiety') {
+    switch (score) {
+      case 1: return 'score-sky'
+      case 2: return '' // default sky-400
+      case 3: return 'score-mint'
+      case 4: return 'score-good'
+      case 5: return 'score-warn-heavy'
+    }
+  }
+  return ''
+}
+
+function getScaleTextColor(key: string, score: number): string {
+  if (key === 'digestion' || key === 'mood') {
+    switch (score) {
+      case 1: return 'var(--bad)'
+      case 2: return 'var(--sun-500)'
+      case 3: return 'var(--sun-300)'
+      case 4: return 'var(--aurora-mint)'
+      case 5: return 'var(--good)'
+    }
+  } else if (key === 'energy') {
+    switch (score) {
+      case 1: return 'var(--bad)'
+      case 2: return 'var(--sun-500)'
+      case 3: return 'var(--sun-300)'
+      case 4: return 'var(--sky-400)'
+      case 5: return 'var(--aurora-pink)'
+    }
+  } else if (key === 'satiety') {
+    switch (score) {
+      case 1: return 'var(--sky-300)'
+      case 2: return 'var(--sky-400)'
+      case 3: return 'var(--aurora-mint)'
+      case 4: return 'var(--good)'
+      case 5: return 'var(--warn)'
+    }
+  }
+  return 'var(--sky-400)'
+}
 
 // ── Scale row ─────────────────────────────────────────────────────────────────
 
@@ -71,35 +129,40 @@ function ScaleRow({
 }) {
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+      <div style={{ marginBottom: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{scale.label}</span>
-        {value > 0 && (
-          <span style={{ fontSize: 11, color: 'var(--fg-tertiary)' }}>
-            {scale.captions[value - 1]}
-          </span>
-        )}
       </div>
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
         {scale.options.map((Icon, i) => {
           const score = i + 1
           const selected = value === score
+          const scoreClass = getScoreClass(scale.key, score)
+          const btnClass = `journal-scale-btn ${selected ? 'selected' : ''} ${selected && scoreClass ? scoreClass : ''}`
+          
           return (
-            <button
-              key={score}
-              onClick={() => onChange(score)}
-              style={{
-                flex: 1, height: 44, borderRadius: 10,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: selected ? '2px solid var(--sky-400)' : '1px solid var(--glass-edge)',
-                background: selected ? 'rgba(56,189,248,0.12)' : 'var(--glass-1)',
-                color: selected ? 'var(--sky-400)' : 'var(--fg-secondary)',
-                cursor: 'pointer',
-                transition: 'all 120ms',
-                transform: selected ? 'scale(1.08)' : 'scale(1)',
-              }}
-            >
-              <Icon size={20} />
-            </button>
+            <div key={score} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <button
+                type="button"
+                onClick={() => onChange(score)}
+                className={btnClass}
+              >
+                <Icon size={20} />
+              </button>
+              <span style={{
+                fontSize: 9,
+                color: selected ? getScaleTextColor(scale.key, score) : 'var(--fg-quiet)',
+                textAlign: 'center',
+                fontWeight: selected ? 600 : 400,
+                lineHeight: 1.1,
+                minHeight: 22,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'color 120ms',
+              }}>
+                {scale.captions[i]}
+              </span>
+            </div>
           )
         })}
       </div>
@@ -132,7 +195,28 @@ export function JournalDrawer({ prefill, onClose }: Props) {
     enabled: !prefill,
     staleTime: 60_000,
   })
-  const recentMeals: RecentMeal[] = prefill ? [] : (todayData?.recent_meals ?? [])
+  const recentMeals: RecentMeal[] = prefill
+    ? [
+        {
+          id: prefill.meal_event_id,
+          ts: prefill.logged_at,
+          slot: prefill.slot,
+          source: 'prefill',
+          item_count: 1,
+          calories: 0,
+          headline: prefill.meal_name,
+        }
+      ]
+    : (todayData?.recent_meals ?? [])
+
+  useEffect(() => {
+    if (!prefill && !mealEventId && todayData?.recent_meals && todayData.recent_meals.length > 0) {
+      const first = todayData.recent_meals[0]
+      setMealName(first.headline)
+      setMealEventId(first.id)
+      setLoggedAt(first.ts)
+    }
+  }, [todayData, prefill, mealEventId])
 
   function selectMeal(meal: RecentMeal) {
     setMealName(meal.headline)
@@ -254,8 +338,8 @@ export function JournalDrawer({ prefill, onClose }: Props) {
           {/* Meal name */}
           <div>
             <div className="eyebrow" style={{ marginBottom: 8 }}>Meal</div>
-            {recentMeals.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+            {recentMeals.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {recentMeals.map((meal) => {
                   const selected = mealEventId === meal.id
                   return (
@@ -278,26 +362,11 @@ export function JournalDrawer({ prefill, onClose }: Props) {
                   )
                 })}
               </div>
+            ) : (
+              <div style={{ fontSize: 13, color: 'var(--fg-tertiary)', fontStyle: 'italic', padding: '4px 0' }}>
+                No logged meals found today. Log a meal first to record how you felt after.
+              </div>
             )}
-            <input
-              type="text"
-              value={mealName}
-              onChange={(e) => {
-                setMealName(e.target.value)
-                // Deselect linked meal if user edits the name manually
-                if (mealEventId && recentMeals.find((m) => m.id === mealEventId)?.headline !== e.target.value) {
-                  setMealEventId(null)
-                }
-              }}
-              placeholder={recentMeals.length > 0 ? 'Select above or type a meal name' : 'e.g. Grilled salmon with broccoli'}
-              className="field-input"
-              style={{
-                width: '100%', height: 42, borderRadius: 10,
-                fontSize: 14, border: '1px solid var(--glass-edge)',
-                background: 'var(--glass-1)', color: 'var(--fg-primary)',
-                padding: '0 14px', outline: 'none', boxSizing: 'border-box',
-              }}
-            />
           </div>
 
           {/* Score scales */}

@@ -18,6 +18,8 @@ import { AiPerformanceCard } from '../components/settings/AiPerformanceCard'
 import { AiPriceCalculator } from '../components/settings/AiPriceCalculator'
 import { HaeMetricsCard } from '../components/settings/HaeMetricsCard'
 import { HaeImportCard } from '../components/settings/HaeImportCard'
+import { HealthConnectCard } from '../components/settings/HealthConnectCard'
+import { DataSourcePicker } from '../components/settings/DataSourcePicker'
 import { HaeDiagnosticCard } from '../components/settings/HaeDiagnosticCard'
 import { HaeAnalyzeCard } from '../components/settings/HaeAnalyzeCard'
 import { InsightsDiagnosticCard } from '../components/settings/InsightsDiagnosticCard'
@@ -27,11 +29,11 @@ import { useMeasurementSystem, convertWeightToKg } from '../lib/measurements'
 
 const KG_TO_LB = 2.2046226218
 
-type SettingsTab = 'account' | 'health-import' | 'ai-routing' | 'admin'
+type SettingsTab = 'account' | 'data-sources' | 'ai-routing' | 'admin'
 
 const TAB_META: Record<SettingsTab, { label: string; minRole?: string }> = {
   'account':        { label: 'Settings' },
-  'health-import':  { label: 'Health Import' },
+  'data-sources':   { label: 'Data Sources' },
   'ai-routing':     { label: 'AI Routing', minRole: 'operator' },
   'admin':          { label: 'Users', minRole: 'admin' },
 }
@@ -362,12 +364,14 @@ function AccountTab({
   )
 }
 
-function HealthImportTab({ isOperator }: { isOperator: boolean }) {
+function DataSourcesTab({ user, isOperator }: { user: User | undefined; isOperator: boolean }) {
+  const source = user?.data_source ?? 'apple_health'
   return (
     <div className="settings-grid">
-      {/* Left: config + live metrics */}
+      {/* Left: source selection + the active source's config */}
       <div className="settings-stack settings-primary">
-        <HaeImportCard />
+        <DataSourcePicker />
+        {source === 'health_connect' ? <HealthConnectCard /> : <HaeImportCard />}
         <HaeMetricsCard />
         <MetricVisibilityCard />
       </div>
@@ -1036,14 +1040,13 @@ export default function SettingsRoute() {
   }
 
   const isOperator = hasRole(user, 'operator')
-  const tabs: SettingsTab[] = ['account', 'health-import', 'ai-routing', 'admin']
+  const tabs: SettingsTab[] = ['account', 'data-sources', 'ai-routing', 'admin']
   const visibleTabs = tabs.filter((id) => hasRole(user, TAB_META[id].minRole))
 
   return (
     <div className="thin-scroll settings-page" style={{ height: '100%', overflowY: 'auto', padding: '32px 40px 40px' }}>
       <header className="mobile-hero settings-hero" style={{ marginBottom: 20 }}>
         <div className="mobile-hero-content">
-          <div className="eyebrow" style={{ marginBottom: 8 }}>Settings</div>
           <h1 className="mobile-hero-title" style={{ margin: 0, fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--fg-primary)' }}>
             Your account
           </h1>
@@ -1109,9 +1112,9 @@ export default function SettingsRoute() {
         </div>
       )}
 
-      {activeTab === 'health-import' && (
-        <div role="tabpanel" id="settings-panel-health-import" aria-labelledby="settings-tab-health-import">
-          <HealthImportTab isOperator={isOperator} />
+      {activeTab === 'data-sources' && (
+        <div role="tabpanel" id="settings-panel-data-sources" aria-labelledby="settings-tab-data-sources">
+          <DataSourcesTab user={user} isOperator={isOperator} />
         </div>
       )}
 

@@ -148,19 +148,16 @@ Fully implemented, verified, stabilized, and bug-fixed.
 - [x] **Multi-user / family support** — family groups, email invitations, role-based access (owner / member), shared food library; `family_groups`, `family_memberships`, `family_invitations` tables
 - [x] **Recipe import** — paste any URL → `recipe_importer` agent (routed via `RECIPE_IMPORT_MODEL`) extracts ingredients + nutrition; stored as user recipe
 
+### In-progress enhancements
+- **Medication tracking + interaction alerts** — medications and supplements CRUD; local rule engine flags vitamin K/warfarin, grapefruit/statins, high sodium/antihypertensives; supplement nutrients feed into daily totals
+- **LDL simulator** — "what if" tool: adjust sat fat / fiber targets and project estimated LDL impact over 8 weeks using Mensink-Katan equation; lives on new Health page
+
 ### Future enhancement ideas
 - **Wearable-native integrations** — Garmin Connect IQ data bridge, Oura Ring API (HRV, readiness score), Withings scale direct sync
-- **Barcode camera scan** — live camera preview in BarcodeTab (currently uses text-entry fallback alongside `html5-qrcode`)
 - **Meal photo history** — gallery view of logged photos with detected items overlaid
-- **LDL simulator** — "what if" tool: adjust sat fat / fiber targets and project estimated LDL impact over 8 weeks using established risk equations
 - **Export / data portability** — CSV and JSON export of all biometrics + meal logs; importable into Apple Health / Google Fit
-- **Cronometer-style nutrient breakdown** — full micro/macronutrient detail view per meal (beyond the 8 tracked)
 - **Adaptive plan regeneration** — auto-regenerate plan mid-week if 2+ slots are unlogged, instead of waiting for manual trigger
-- **Voice wake word** — "Hey Luma, log breakfast" via Web Speech API continuous mode
-- **Smart grocery integration** — generate Instacart / AmazonFresh shopping cart from shopping list deep link
-- **Seasonal eating suggestions** — coach aware of in-season produce at user's location for cheaper, fresher plan slots
-- **Medication interaction awareness** — flag meals high in vitamin K if user has noted warfarin; grapefruit + statins alert
-- **Community recipes** — opt-in recipe sharing across self-hosted instances via ActivityPub-style federation
+- **Medication interaction awareness (expanded)** — novel supplement/drug combinations routed to Coach for LLM-powered analysis on demand
 
 ---
 

@@ -111,6 +111,7 @@ export interface TodayData {
     sat_fat_g: { logged: number | null; target: number | null; pct: number | null }
     soluble_fiber_g: { logged: number | null; target: number | null; pct: number | null }
     sugars_g: { logged: number | null; target: number | null; pct: number | null }
+    protein_g: { logged: number | null; target: number | null; pct: number | null }
   }
   biometrics_latest: {
     hrv_ms: number | null
@@ -199,6 +200,7 @@ export interface User {
   biological_sex?: 'male' | 'female' | 'prefer_not_to_say' | null
   height_cm?: number | null
   activity_level?: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | null
+  data_source?: 'apple_health' | 'health_connect'
   dri?: Dri | null
 }
 

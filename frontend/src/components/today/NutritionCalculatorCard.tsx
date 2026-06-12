@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, X, Search, Camera, Trash2, Heart, Check, Edit2 } from 'lucide-react'
+import { Plus, X, Search, Camera, Trash2, Heart, Check, Edit2, Star } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api, TodayData } from '../../lib/api'
 import { getCurrentSlot } from '../../lib/format'
@@ -8,6 +8,8 @@ import {
   type PortionUnit, type HouseholdMeasure, PORTION_UNITS, PORTION_UNIT_LABELS, PRESETS_BY_UNIT,
   unitToGrams, densityForFood, defaultQtyForUnit,
 } from '../../lib/portions'
+import type { Favorite } from '../log-sheet/types'
+
 
 const CALC_SCANNER_ID = 'calc-barcode-scanner'
 const FOOD_FORMATS = [
@@ -57,6 +59,7 @@ function BudgetStat({
   showProjected,
   noTarget,
   compact,
+  style,
 }: {
   label: string
   remaining: number
@@ -65,10 +68,11 @@ function BudgetStat({
   showProjected: boolean
   noTarget: boolean
   compact?: boolean
+  style?: React.CSSProperties
 }) {
   const over = showProjected && projected < 0
   return (
-    <div className="glass-inset" style={{ padding: compact ? '8px 6px' : '10px 12px', textAlign: compact ? 'center' : 'left' }}>
+    <div className="glass-inset" style={{ padding: compact ? '8px 6px' : '10px 12px', textAlign: compact ? 'center' : 'left', ...style }}>
       <div style={{ fontSize: compact ? 9.5 : 11.5, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {label}
       </div>
@@ -107,6 +111,27 @@ export function NutritionCalculatorCard({
   compact?: boolean
 }) {
   const queryClient = useQueryClient()
+  const { data: favoritesData } = useQuery<{ favorites: Favorite[] }>({
+    queryKey: ['favorites', 'frequency'],
+    queryFn: () => api.get('/favorites?sort=frequency'),
+    staleTime: 30_000,
+  })
+  const favorites = favoritesData?.favorites ?? []
+
+  const [budgetMode, setBudgetMode] = useState<'search' | 'favorite'>('search')
+  const [isFavOpen, setIsFavOpen] = useState(false)
+  const favDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (favDropdownRef.current && !favDropdownRef.current.contains(event.target as Node)) {
+        setIsFavOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   const [mealItems, setMealItems] = useState<MealBuilderItem[]>([])
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [editingItemGrams, setEditingItemGrams] = useState<string>('')
@@ -123,6 +148,22 @@ export function NutritionCalculatorCard({
   const [isScanning, setIsScanning] = useState(false)
   const [barcodeError, setBarcodeError] = useState('')
   const handleSelectRef = useRef<(food: FoodResult) => void>(() => {})
+
+  const handleSelectFavorite = (favId: string) => {
+    const fav = favorites.find((f) => f.id === favId)
+    if (!fav) return
+    const newItems: MealBuilderItem[] = fav.items.map((item) => ({
+      id: Math.random().toString(),
+      name: item.food_name,
+      brand: item.brand,
+      serving_g: item.quantity_g,
+      nutrition: item.nutrients,
+    }))
+    setMealItems((prev) => [...prev, ...newItems])
+    const selectEl = document.getElementById('budget-fav-select') as HTMLSelectElement | null
+    if (selectEl) selectEl.value = ''
+  }
+
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 350)
@@ -194,14 +235,20 @@ export function NutritionCalculatorCard({
   const currentCalories  = selectedFood ? round1((n.calories         ?? 0) * factor) : 0
   const currentSatFat    = selectedFood ? round1((n.saturated_fat_g   ?? 0) * factor) : 0
   const currentSolFiber  = selectedFood ? round1((n.soluble_fiber_g   ?? 0) * factor) : 0
+  const currentSugars    = selectedFood ? round1((n.sugars_g          ?? 0) * factor) : 0
+  const currentProtein   = selectedFood ? round1((n.protein_g         ?? 0) * factor) : 0
 
   const mealCalories = mealItems.reduce((sum, item) => sum + (item.nutrition.calories ?? 0), 0)
   const mealSatFat = mealItems.reduce((sum, item) => sum + (item.nutrition.saturated_fat_g ?? 0), 0)
   const mealSolFiber = mealItems.reduce((sum, item) => sum + (item.nutrition.soluble_fiber_g ?? 0), 0)
+  const mealSugars = mealItems.reduce((sum, item) => sum + (item.nutrition.sugars_g ?? 0), 0)
+  const mealProtein = mealItems.reduce((sum, item) => sum + (item.nutrition.protein_g ?? 0), 0)
 
   const addCalories = round1(mealCalories + currentCalories)
   const addSatFat = round1(mealSatFat + currentSatFat)
   const addSolFiber = round1(mealSolFiber + currentSolFiber)
+  const addSugars = round1(mealSugars + currentSugars)
+  const addProtein = round1(mealProtein + currentProtein)
 
   const calTarget  = adherence.calories.target ?? 0
   const calLogged  = adherence.calories.logged ?? 0
@@ -218,15 +265,25 @@ export function NutritionCalculatorCard({
   const solRemain  = round1(solTarget - solLogged)
   const solProjected = round1(solRemain - addSolFiber)
 
+  const sugarsTarget  = adherence.sugars_g?.target ?? 0
+  const sugarsLogged  = adherence.sugars_g?.logged ?? 0
+  const sugarsRemain  = round1(sugarsTarget - sugarsLogged)
+  const sugarsProjected = round1(sugarsRemain - addSugars)
+
+  const proteinTarget  = adherence.protein_g?.target ?? 0
+  const proteinLogged  = adherence.protein_g?.logged ?? 0
+  const proteinRemain  = round1(proteinTarget - proteinLogged)
+  const proteinProjected = round1(proteinRemain - addProtein)
+
   const hasItemsOrFood = selectedFood !== null || mealItems.length > 0
   const showResults = !selectedFood && debouncedQuery.length >= 2
 
   type FitSignal = 'fits' | 'tight' | 'over'
   let fitSignal: FitSignal | null = null
   if (hasItemsOrFood && calTarget > 0) {
-    if (calProjected < 0 || (satTarget > 0 && satProjected < 0)) {
+    if (calProjected < 0 || (satTarget > 0 && satProjected < 0) || (sugarsTarget > 0 && sugarsProjected < 0)) {
       fitSignal = 'over'
-    } else if (calProjected < calTarget * 0.08 || (satTarget > 0 && satProjected < satTarget * 0.08)) {
+    } else if (calProjected < calTarget * 0.08 || (satTarget > 0 && satProjected < satTarget * 0.08) || (sugarsTarget > 0 && sugarsProjected < sugarsTarget * 0.08)) {
       fitSignal = 'tight'
     } else {
       fitSignal = 'fits'
@@ -443,10 +500,26 @@ export function NutritionCalculatorCard({
         <div className="eyebrow">Budget check</div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: compact ? 6 : 10, marginBottom: 12 }}>
-        <BudgetStat label="Calories" remaining={calRemain} projected={calProjected} unit="kcal" showProjected={hasItemsOrFood} noTarget={calTarget === 0} compact={compact} />
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: compact ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
+        gap: compact ? 6 : 10,
+        marginBottom: 12
+      }}>
+        <BudgetStat
+          label="Calories"
+          remaining={calRemain}
+          projected={calProjected}
+          unit="kcal"
+          showProjected={hasItemsOrFood}
+          noTarget={calTarget === 0}
+          compact={compact}
+          style={compact ? { gridColumn: 'span 2' } : undefined}
+        />
         <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    showProjected={hasItemsOrFood} noTarget={satTarget === 0} compact={compact} />
         <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   showProjected={hasItemsOrFood} noTarget={solTarget === 0} compact={compact} />
+        <BudgetStat label="Sugar"     remaining={sugarsRemain} projected={sugarsProjected} unit="g" showProjected={hasItemsOrFood} noTarget={sugarsTarget === 0} compact={compact} />
+        <BudgetStat label="Protein"   remaining={proteinRemain} projected={proteinProjected} unit="g" showProjected={hasItemsOrFood} noTarget={proteinTarget === 0} compact={compact} />
       </div>
 
       <div className="glass-inset" style={{ padding: compact ? 8 : 12, display: 'grid', gap: 10, minWidth: 0, width: '100%' }}>
@@ -455,38 +528,160 @@ export function NutritionCalculatorCard({
           {/* Food search */}
           <label style={{ display: 'grid', gap: 6, minWidth: 0, width: '100%' }}>
             <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
-              Food
+              {budgetMode === 'search' ? 'Food search' : 'Favorite'}
             </span>
             <div style={{ position: 'relative' }}>
               <div style={{ display: 'flex', gap: compact ? 6 : 8, alignItems: 'stretch' }}>
-                <div style={{
-                  flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-                  padding: compact ? '8px 10px' : '10px 12px', borderRadius: 10,
-                  border: `1px solid ${selectedFood ? 'var(--sky-400)' : 'var(--glass-edge)'}`,
-                  background: 'var(--glass-1)',
-                }}>
-                  <Search size={13} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
-                  <input
-                    value={query}
-                    onChange={(e) => {
-                      setQuery(e.target.value)
-                      if (selectedFood) setSelectedFood(null)
-                    }}
-                    placeholder="Search foods…"
-                    style={{
-                      flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                      color: 'var(--fg-primary)', fontSize: 13, minWidth: 0,
-                    }}
-                  />
-                  {selectedFood && (
-                    <button type="button" onClick={handleClear} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', alignItems: 'center' }}>
-                      <X size={13} />
+                <button
+                  type="button"
+                  onClick={() => setBudgetMode((prev) => (prev === 'search' ? 'favorite' : 'search'))}
+                  title={budgetMode === 'search' ? 'Switch to Favorites' : 'Switch to Search'}
+                  style={{
+                    padding: compact ? '0 10px' : '0 12px',
+                    borderRadius: 10,
+                    flexShrink: 0,
+                    background: 'var(--glass-1)',
+                    border: `1px solid ${budgetMode === 'favorite' ? 'rgba(251,191,36,0.3)' : 'var(--glass-edge)'}`,
+                    color: budgetMode === 'favorite' ? 'var(--sun-400)' : 'var(--fg-secondary)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 150ms',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = budgetMode === 'favorite' ? 'var(--sun-400)' : 'var(--sky-400)'
+                    e.currentTarget.style.color = budgetMode === 'favorite' ? 'var(--sun-300)' : 'var(--sky-300)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = budgetMode === 'favorite' ? 'rgba(251,191,36,0.3)' : 'var(--glass-edge)'
+                    e.currentTarget.style.color = budgetMode === 'favorite' ? 'var(--fg-secondary)' : 'var(--fg-secondary)'
+                  }}
+                >
+                  {budgetMode === 'search' ? <Search size={14} /> : <Star size={14} />}
+                </button>
+
+                {budgetMode === 'search' ? (
+                  <div style={{
+                    flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+                    padding: compact ? '8px 10px' : '10px 12px', borderRadius: 10,
+                    border: `1px solid ${selectedFood ? 'var(--sky-400)' : 'var(--glass-edge)'}`,
+                    background: 'var(--glass-1)',
+                  }}>
+                    <input
+                      value={query}
+                      onChange={(e) => {
+                        setQuery(e.target.value)
+                        if (selectedFood) setSelectedFood(null)
+                      }}
+                      placeholder="Search foods…"
+                      style={{
+                        flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                        color: 'var(--fg-primary)', fontSize: 13, minWidth: 0,
+                      }}
+                    />
+                    {selectedFood && (
+                      <button type="button" onClick={handleClear} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', alignItems: 'center' }}>
+                        <X size={13} />
+                      </button>
+                    )}
+                    {isFetching && !selectedFood && (
+                      <span style={{ fontSize: 10, color: 'var(--fg-quiet)', flexShrink: 0 }}>…</span>
+                    )}
+                  </div>
+                ) : (
+                  <div ref={favDropdownRef} style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsFavOpen(!isFavOpen)}
+                      style={{
+                        width: '100%',
+                        borderRadius: 10,
+                        padding: compact ? '8px 10px' : '10px 12px',
+                        fontSize: 13,
+                        border: '1px solid var(--glass-edge)',
+                        background: 'var(--glass-1)',
+                        color: 'var(--fg-secondary)',
+                        cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        height: '100%',
+                        minHeight: compact ? 34 : 40,
+                        outline: 'none',
+                      }}
+                    >
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        Select a favorite...
+                      </span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.7 }}>
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
                     </button>
-                  )}
-                  {isFetching && !selectedFood && (
-                    <span style={{ fontSize: 10, color: 'var(--fg-quiet)', flexShrink: 0 }}>…</span>
-                  )}
-                </div>
+
+                    {isFavOpen && (
+                      <div
+                        className="glass-bright"
+                        style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          zIndex: 20,
+                          marginTop: 4,
+                          overflow: 'hidden',
+                          maxHeight: 200,
+                          overflowY: 'auto',
+                          borderRadius: 10,
+                          border: '1px solid var(--glass-edge)',
+                        }}
+                      >
+                        {favorites.length === 0 ? (
+                          <div style={{ padding: '9px 12px', fontSize: 13, color: 'var(--fg-quiet)' }}>
+                            No favorites saved yet.
+                          </div>
+                        ) : (
+                          favorites.map((fav) => {
+                            const calories = Math.round(fav.items.reduce((s, i) => s + (i.nutrients.calories ?? 0), 0))
+                            return (
+                              <button
+                                key={fav.id}
+                                type="button"
+                                onClick={() => {
+                                  handleSelectFavorite(fav.id)
+                                  setIsFavOpen(false)
+                                }}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  background: 'none',
+                                  border: 'none',
+                                  borderBottom: '1px solid var(--glass-edge)',
+                                  padding: '9px 12px',
+                                  cursor: 'pointer',
+                                  fontSize: 13,
+                                  color: 'var(--fg-primary)',
+                                  display: 'block',
+                                  fontFamily: 'var(--font-sans)',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--glass-1)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                              >
+                                {fav.name} <span style={{ fontSize: 11, color: 'var(--fg-quiet)', marginLeft: 4 }}>({calories} kcal)</span>
+                              </button>
+                            )
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={() => { setBarcodeError(''); setIsScanning((v) => !v) }}
@@ -496,12 +691,14 @@ export function NutritionCalculatorCard({
                     border: isScanning ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--glass-edge)',
                     color: isScanning ? 'var(--sky-300)' : 'var(--fg-secondary)',
                     cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: compact ? 4 : 6,
+                    display: 'flex', alignItems: 'center', gap: compact ? 0 : 6,
+                    justifyContent: 'center',
                     fontSize: 13, transition: 'all 150ms',
                   }}
+                  title={isScanning ? 'Stop Scanning' : 'Scan Barcode'}
                 >
                   <Camera size={14} />
-                  Scan
+                  {!compact && 'Scan'}
                 </button>
               </div>
               {isScanning && (
@@ -521,7 +718,7 @@ export function NutritionCalculatorCard({
               )}
 
               {/* Results list */}
-              {showResults && results.length > 0 && (
+              {budgetMode === 'search' && showResults && results.length > 0 && (
                 <div
                   className="glass-bright"
                   style={{
@@ -592,7 +789,7 @@ export function NutritionCalculatorCard({
                   ))}
                 </div>
               )}
-              {showResults && results.length === 0 && !isFetching && (
+              {budgetMode === 'search' && showResults && results.length === 0 && !isFetching && (
                 <div
                   className="glass-bright"
                   style={{
@@ -612,6 +809,8 @@ export function NutritionCalculatorCard({
               )}
             </div>
           </label>
+
+
 
           {/* Serving */}
           <div style={{ display: 'grid', gap: 6, width: '100%', minWidth: 0 }}>
@@ -981,7 +1180,7 @@ export function NutritionCalculatorCard({
             {hasItemsOrFood ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>
-                  Adds <span className="num">{addCalories}</span> kcal · <span className="num">{addSatFat}</span>g sat fat · <span className="num">{addSolFiber}</span>g soluble fiber
+                  Adds <span className="num">{addCalories}</span> kcal · <span className="num">{addSatFat}</span>g sat fat · <span className="num">{addSolFiber}</span>g soluble fiber · <span className="num">{addSugars}</span>g sugar · <span className="num">{addProtein}</span>g protein
                 </div>
                 {fitSignal && (
                   <div style={{ fontSize: 12, fontWeight: 500, color: fitColor }}>

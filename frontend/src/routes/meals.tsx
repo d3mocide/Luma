@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, X, Plus, BookOpen, ArrowLeft, BatteryLow, Battery, BatteryMedium, Zap, Flame, Frown, Meh, Smile, SmilePlus, Laugh, CircleDashed, Circle, CircleDot, Disc, CheckCircle2, RotateCcw, Heart, Check, ChevronDown, ChevronUp, Camera } from 'lucide-react'
+import { Search, X, Plus, BookOpen, ArrowLeft, BatteryLow, Battery, BatteryMedium, BatteryFull, Flame, Frown, Meh, Smile, Laugh, Angry, CircleDashed, Circle, CircleDot, Disc, CheckCircle2, RotateCcw, Heart, Check, ChevronDown, ChevronUp, Camera, Shield, Wheat, Dumbbell, Sprout } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { api } from '../lib/api'
 import { type FoodResult } from '../components/plan/types'
-import { FOOD_CATEGORIES, SAT_FAT_COLORS, type FoodCategory } from '../lib/food-categories'
+import { FOOD_CATEGORIES, SAT_FAT_COLORS, categoryMatchesFlags, type FoodCategory } from '../lib/food-categories'
 import { JournalDrawer, type PendingMeal } from '../components/journal/JournalDrawer'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import type { DraftItem } from '../components/log-sheet/types'
@@ -200,12 +200,24 @@ function CategoryComparisonGrid({ category, onPick }: { category: FoodCategory; 
 
 function CategoryGrid({
   onSelect,
+  activeFlags = [],
 }: {
   onSelect: (category: FoodCategory) => void
+  activeFlags?: string[]
 }) {
+  const categories = FOOD_CATEGORIES.filter((cat) => categoryMatchesFlags(cat.id, activeFlags))
+
+  if (categories.length === 0) {
+    return (
+      <p style={{ textAlign: 'center', color: 'var(--fg-quiet)', fontSize: 13, padding: '40px 0' }}>
+        No food groups match every selected filter. Try removing one.
+      </p>
+    )
+  }
+
   return (
     <div className="food-category-grid">
-      {FOOD_CATEGORIES.map((cat) => (
+      {categories.map((cat) => (
         <button
           key={cat.id}
           onClick={() => onSelect(cat)}
@@ -302,9 +314,19 @@ function SatFatLegend() {
 
 // ── Foods tab ────────────────────────────────────────────────────────────────
 
+const FILTER_CHIPS = [
+  { label: 'Heart Healthy', flag: 'heart-healthy',     color: 'rgba(34,197,94,0.15)',  icon: Heart },
+  { label: 'Anti-Inflam',   flag: 'anti-inflammatory', color: 'rgba(20,184,166,0.15)', icon: Shield },
+  { label: 'Gluten Free',   flag: 'gluten-free',       color: 'rgba(139,92,246,0.15)', icon: Wheat },
+  { label: 'High Protein',  flag: 'high-protein',      color: 'rgba(56,189,248,0.15)', icon: Dumbbell },
+  { label: 'High Fiber',    flag: 'high-fiber',        color: 'rgba(132,204,22,0.15)', icon: Sprout },
+  { label: 'Keto',          flag: 'keto-friendly',     color: 'rgba(249,115,22,0.15)', icon: Flame },
+]
+
 function FoodsTab() {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [activeFlags, setActiveFlags] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState<FoodCategory | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -359,13 +381,21 @@ function FoodsTab() {
   }, [barcodeScanning])
 
   const { data: searchResults, isFetching } = useQuery<FoodResult[]>({
-    queryKey: ['foods', debouncedQuery],
-    queryFn: () => api.get(`/foods/search?q=${encodeURIComponent(debouncedQuery)}`),
+    queryKey: ['foods', debouncedQuery, activeFlags],
+    queryFn: () => {
+      const params = new URLSearchParams({ q: debouncedQuery })
+      if (activeFlags.length) params.set('flags', activeFlags.join(','))
+      return api.get(`/foods/search?${params.toString()}`)
+    },
     enabled: debouncedQuery.length > 1,
     staleTime: 60_000,
   })
 
   const showResults = debouncedQuery.length > 1
+
+  function toggleFlag(flag: string) {
+    setActiveFlags((prev) => prev.includes(flag) ? prev.filter((f) => f !== flag) : [...prev, flag])
+  }
 
   function handleCategorySelect(cat: FoodCategory) {
     setSelectedCategory(cat)
@@ -431,6 +461,43 @@ function FoodsTab() {
           <Camera size={15} />
           Scan
         </button>
+      </div>
+
+      {/* Dietary filter chips */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+        {FILTER_CHIPS.map(({ label, flag, color, icon: Icon }) => {
+          const on = activeFlags.includes(flag)
+          return (
+            <button
+              key={flag}
+              onClick={() => toggleFlag(flag)}
+              aria-pressed={on}
+              style={{
+                padding: '6px 11px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+                cursor: 'pointer', transition: 'all 150ms',
+                background: on ? color : 'var(--glass-1)',
+                border: on ? `1px solid ${color.replace('0.15', '0.5')}` : '1px solid var(--glass-edge)',
+                color: on ? 'var(--fg-primary)' : 'var(--fg-secondary)',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <Icon size={13} strokeWidth={2.2} />
+              {label}
+            </button>
+          )
+        })}
+        {activeFlags.length > 0 && (
+          <button
+            onClick={() => setActiveFlags([])}
+            style={{
+              padding: '6px 11px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+              cursor: 'pointer', background: 'none', border: '1px solid var(--glass-edge)',
+              color: 'var(--fg-quiet)', display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}
+          >
+            <X size={12} /> Clear
+          </button>
+        )}
       </div>
 
       {barcodeScanning && (
@@ -599,7 +666,7 @@ function FoodsTab() {
           </div>
           <SatFatLegend />
           <div style={{ marginTop: 16 }}>
-            <CategoryGrid onSelect={handleCategorySelect} />
+            <CategoryGrid onSelect={handleCategorySelect} activeFlags={activeFlags} />
           </div>
         </>
       )}
@@ -637,10 +704,10 @@ interface Correlation {
 type ScoreType = 'energy' | 'digestion' | 'mood' | 'satiety'
 
 const SCORE_ICONS: Record<ScoreType, LucideIcon[]> = {
-  energy:    [BatteryLow, Battery, BatteryMedium, Zap, Flame],
-  digestion: [Frown, Meh, Smile, SmilePlus, Laugh],
-  mood:      [Frown, Meh, Smile, SmilePlus, Laugh],
-  satiety:   [CircleDashed, Circle, CircleDot, Disc, CheckCircle2],
+  energy:    [Battery, BatteryLow, BatteryMedium, BatteryFull, Flame],
+  digestion: [Angry, Frown, Meh, Smile, Laugh],
+  mood:      [Angry, Frown, Meh, Smile, Laugh],
+  satiety:   [CircleDashed, Circle, CircleDot, CheckCircle2, Disc],
 }
 
 function ScoreChip({ label, value, type }: { label: string; value: number; type: ScoreType }) {
@@ -1235,7 +1302,6 @@ export default function MealsRoute() {
     <div className="meals-page thin-scroll">
       {/* Page header */}
       <header style={{ marginBottom: 24 }}>
-        <div className="eyebrow" style={{ marginBottom: 6 }}>MEALS</div>
         <h1 style={{
           margin: '0 0 6px', fontSize: 32, fontWeight: 400,
           letterSpacing: '-0.02em', color: 'var(--fg-primary)',

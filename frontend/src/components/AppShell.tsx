@@ -3,7 +3,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CircleDot, Utensils, Activity, Sparkles, Settings, Plus, Moon, Sun, Loader2, ChevronDown,
-  Lock, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight, Heart, Users,
+  Lock, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight, Star, Users, HeartPulse,
 } from 'lucide-react'
 import { api, TodayData, User } from '../lib/api'
 import { useUIStore } from '../stores'
@@ -13,20 +13,24 @@ import LogSheet from './LogSheet'
 import Login from './Login'
 import { SplashScreen } from './SplashScreen'
 
+// Mobile: 3 + FAB + 3 (symmetric)
 const NAV_ITEMS = [
-  { to: '/today',     label: 'Today',     Icon: CircleDot },
-  { to: '/meals',     label: 'Meals',     Icon: Utensils  },
-  { to: '/favorites', label: 'Favorites', Icon: Heart     },
-  { to: '/coach',     label: 'Coach',     Icon: Sparkles  },
+  { to: '/today',     label: 'Today',   Icon: CircleDot  },
+  { to: '/meals',     label: 'Meals',   Icon: Utensils   },
+  { to: '/trends',    label: 'Trends',  Icon: Activity   },
+  { to: '/health',    label: 'Health',  Icon: HeartPulse },
+  { to: '/favorites', label: 'Favs',    Icon: Star       },
+  { to: '/coach',     label: 'Coach',   Icon: Sparkles   },
 ]
 
 const DESKTOP_NAV_ITEMS = [
-  { to: '/today',          label: 'Today',     Icon: CircleDot },
-  { to: '/trends',         label: 'Trends',    Icon: Activity  },
-  { to: '/favorites',      label: 'Favorites', Icon: Heart     },
-  { to: '/meals',          label: 'Meals',     Icon: Utensils  },
-  { to: '/coach',          label: 'Coach',     Icon: Sparkles  },
-  { to: '/family',         label: 'Family',    Icon: Users     },
+  { to: '/today',     label: 'Today',     Icon: CircleDot  },
+  { to: '/trends',    label: 'Trends',    Icon: Activity   },
+  { to: '/health',    label: 'Health',    Icon: HeartPulse },
+  { to: '/favorites', label: 'Favorites', Icon: Star       },
+  { to: '/meals',     label: 'Meals',     Icon: Utensils   },
+  { to: '/coach',     label: 'Coach',     Icon: Sparkles   },
+  { to: '/family',    label: 'Family',    Icon: Users      },
 ]
 
 export default function AppShell() {
@@ -506,8 +510,8 @@ function MobileNav() {
         position: 'relative',
         pointerEvents: 'auto',
       }}>
-        {/* Today + Plan */}
-        {NAV_ITEMS.slice(0, 2).map((item) => (
+        {/* Left 3 items */}
+        {NAV_ITEMS.slice(0, 3).map((item) => (
           <MobileNavItem key={item.to} {...item} />
         ))}
 
@@ -530,8 +534,8 @@ function MobileNav() {
           <Plus size={22} strokeWidth={2.5}/>
         </button>
 
-        {/* Trends + Luma */}
-        {NAV_ITEMS.slice(2).map((item) => (
+        {/* Right 3 items */}
+        {NAV_ITEMS.slice(3).map((item) => (
           <MobileNavItem key={item.to} {...item} />
         ))}
       </div>
