@@ -1310,19 +1310,20 @@ input[type="search"]::-webkit-search-results-decoration {
   position: relative;
 }
 
-/* Tab strip */
+/* Tab strip — pill style, matches .trends-tabs-container */
 .settings-tabs {
   display: flex;
-  gap: 2px;
-  border-bottom: 1px solid var(--glass-edge);
-  margin-bottom: 28px;
-  max-width: 100%;
+  gap: 8px;
+  padding: 4px;
+  background: var(--glass-1);
+  border: 1px solid var(--glass-edge);
+  border-radius: 16px;
+  margin-bottom: 20px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   /* WHY: stops the row from rubber-banding past its ends on touch, which left
      blank gaps and made the strip feel like it could be dragged anywhere. */
   overscroll-behavior-x: contain;
-  scroll-snap-type: x proximity;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
 }
@@ -1332,19 +1333,18 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .settings-tab {
-  position: relative;
-  background: none;
-  border: none;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
   padding: 10px 18px;
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 500;
-  color: var(--fg-quiet);
+  color: var(--fg-tertiary);
   cursor: pointer;
-  transition: color 140ms;
+  transition: all 150ms ease-out;
   white-space: nowrap;
   flex-shrink: 0;
-  scroll-snap-align: start;
 }
 
 .settings-tab:hover {
@@ -1352,18 +1352,24 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .settings-tab[aria-selected='true'] {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
   color: var(--fg-primary);
+  font-weight: 600;
 }
 
-.settings-tab[aria-selected='true']::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 12px;
-  right: 12px;
-  height: 2px;
-  background: linear-gradient(90deg, var(--sky-400), var(--sky-300));
-  border-radius: 1px 1px 0 0;
+@media (max-width: 640px) {
+  .settings-tabs {
+    padding: 3px;
+    gap: 4px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .settings-tab {
+    padding: 8px 12px;
+    font-size: 12px;
+    border-radius: 9px;
+  }
 }
 
 .settings-tab-locked {

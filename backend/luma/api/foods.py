@@ -10,12 +10,22 @@ from sqlalchemy import case, func, or_, select
 from luma.db.models import Food
 from luma.deps import CurrentUser, DbDep
 from luma.services import off_client, usda_client
-from luma.services.food_flags import merge_flags
+from luma.services.food_flags import compute_threshold_flags, merge_flags
 
 router = APIRouter()
 
 # Minimum local hits before we skip the live USDA fallback.
 _LOCAL_THRESHOLD = 5
+
+# Extended nutrients that OFF frequently omits for US branded packaged foods.
+# When more than half are absent the barcode endpoint attempts a USDA enrichment.
+_EXTENDED_NUTRIENT_KEYS: frozenset[str] = frozenset({
+    "monounsaturated_fat_g", "polyunsaturated_fat_g", "trans_fat_g", "cholesterol_mg",
+    "vitamin_a_mcg", "vitamin_c_mg", "vitamin_d_mcg", "vitamin_e_mg", "vitamin_k_mcg",
+    "thiamin_mg", "riboflavin_mg", "niacin_mg", "vitamin_b6_mg", "folate_mcg",
+    "vitamin_b12_mcg", "calcium_mg", "iron_mg", "magnesium_mg", "phosphorus_mg",
+    "zinc_mg", "selenium_mcg",
+})
 
 
 class FoodCreate(BaseModel):
@@ -196,6 +206,25 @@ async def lookup_barcode_food(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found. Try scanning a packaged food barcode.",
         )
+
+    # Enrich sparse OFF data with USDA Branded Foods nutrient panel.
+    # OFF often omits extended fats, cholesterol, vitamins, and minerals for US
+    # packaged goods. USDA FDC Branded Foods carries the full nutrition label for
+    # many of the same products. We do this once on first scan; the result is
+    # cached in the foods table so subsequent scans are instant.
+    off_nutrients = off_data["nutrients_per_100g"]
+    missing = sum(1 for k in _EXTENDED_NUTRIENT_KEYS if not off_nutrients.get(k))
+    if missing >= len(_EXTENDED_NUTRIENT_KEYS) // 2:
+        usda_nutrients = await usda_client.search_by_upc(barcode)
+        if usda_nutrients:
+            merged = False
+            for k in _EXTENDED_NUTRIENT_KEYS:
+                if not off_nutrients.get(k) and usda_nutrients.get(k):
+                    off_nutrients[k] = usda_nutrients[k]
+                    merged = True
+            if merged:
+                off_data["flags"] = compute_threshold_flags(off_nutrients)
+
     food = Food(
         id=uuid.uuid4(),
         source="off",
@@ -203,7 +232,7 @@ async def lookup_barcode_food(
         name=off_data["name"],
         brand=off_data.get("brand"),
         serving_size_g=off_data["serving_size_g"],
-        nutrients_per_100g=off_data["nutrients_per_100g"],
+        nutrients_per_100g=off_nutrients,
         household_measures=off_data.get("household_measures", []),
         tags=off_data.get("tags", []),
         flags=off_data.get("flags", []),

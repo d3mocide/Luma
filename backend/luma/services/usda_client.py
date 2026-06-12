@@ -230,6 +230,47 @@ async def search_foods(query: str, limit: int = 20) -> list[dict[str, Any]]:
     return results
 
 
+async def search_by_upc(barcode: str) -> dict[str, float] | None:
+    """Search USDA FDC Branded Foods by UPC/GTIN barcode.
+
+    Fires a search request then fetches the full detail record for an exact UPC
+    match. Returns the nutrient dict or None if not found / no API key.
+    Two network calls on a cache miss; results are caller-cached in the foods table.
+    """
+    if not settings.usda_api_key:
+        return None
+
+    params: dict[str, str | int] = {
+        "query": barcode,
+        "api_key": settings.usda_api_key,
+        "pageSize": 5,
+        "dataType": "Branded",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(f"{_FDC_BASE}/foods/search", params=params)
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.HTTPError as exc:
+        logger.warning("USDA UPC search failed for %s: %s", barcode, exc)
+        return None
+
+    # Leading-zero-normalised comparison: some databases pad UPCs differently.
+    barcode_norm = barcode.lstrip("0")
+    fdc_id: str | None = None
+    for f in data.get("foods", []):
+        gtin = str(f.get("gtinUpc") or "").lstrip("0")
+        if gtin and gtin == barcode_norm:
+            fdc_id = str(f.get("fdcId", ""))
+            break
+
+    if not fdc_id:
+        return None
+
+    detail = await get_food_detail(fdc_id)
+    return detail.get("nutrients_per_100g") if detail else None
+
+
 async def get_food_detail(fdc_id: str) -> dict[str, Any] | None:
     """Fetch the full FDC record for one food.
 
