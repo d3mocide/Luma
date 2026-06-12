@@ -87,6 +87,27 @@ fi
 
 # ── Common location blocks (identical in both modes) ─────────────────────────
 LOCATIONS=$(cat << EOF
+    # Drop common vulnerability/PHP/cgi scans immediately without response (444)
+    location ~* \.(php|aspx|jsp|pl|py|cgi|sh|bash)$ {
+        access_log off;
+        log_not_found off;
+        return 444;
+    }
+
+    # Match common scanner paths starting from root
+    location ~* ^/(wp-admin|wp-login|wp-content|xmlrpc\.php|websql|phpmyadmin|setup\.php|install\.php|admin\.php|admin/|wp-includes/) {
+        access_log off;
+        log_not_found off;
+        return 444;
+    }
+
+    # Match sensitive dotfiles/hidden configs at root
+    location ~* ^/\.(git|env|yaml|yml|bak|config) {
+        access_log off;
+        log_not_found off;
+        return 444;
+    }
+
     # Credential endpoints: strict per-IP limit; burst absorbs a legitimate
     # family sharing one NAT address.
     location = /api/v1/auth/login {
