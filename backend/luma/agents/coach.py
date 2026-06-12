@@ -389,11 +389,9 @@ async def coach_stream(
             get_coach_context,
             get_measurement_system,
         )
-        ctx, case_file, unit_system = await asyncio.gather(
-            get_coach_context(user_id, db),
-            get_case_file(user_id, db),
-            get_measurement_system(user_id, db),
-        )
+        ctx = await get_coach_context(user_id, db)
+        case_file = await get_case_file(user_id, db)
+        unit_system = await get_measurement_system(user_id, db)
 
         # Get the latest user query for dynamic context selection
         user_query = ""
