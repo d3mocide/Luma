@@ -12,6 +12,23 @@ from luma.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Lazy async engine used only for per-user llm_events writes (pool_size=2).
+# Kept separate from the main request engine so callers don't need to thread db.
+_db_engine: Any = None
+
+
+def _get_db_engine() -> Any:
+    global _db_engine
+    if _db_engine is None:
+        from sqlalchemy.ext.asyncio import create_async_engine
+        _db_engine = create_async_engine(
+            settings.database_url,
+            pool_size=2,
+            max_overflow=0,
+            pool_pre_ping=True,
+        )
+    return _db_engine
+
 METRICS_HASH_KEY = "luma:llm_metrics:totals"
 METRICS_EVENTS_KEY = "luma:llm_metrics:recent_events"
 METRICS_META_KEY = "luma:llm_metrics:meta"
@@ -34,6 +51,7 @@ class LLMMetricsTracker:
         model: str,
         provider: str,
         attempt: str,
+        user_id: str | None = None,
         elapsed_ms: float | None = None,
         prompt_tokens: int | None = None,
         completion_tokens: int | None = None,
@@ -95,6 +113,61 @@ class LLMMetricsTracker:
             await pipe.execute()
         except RedisError:
             logger.exception("Failed to record LLM metrics in Redis")
+
+        # Per-user Postgres write — only for success/failure, only when user_id provided
+        if user_id and event in ("success", "failure"):
+            await self._write_user_event(
+                user_id=user_id,
+                trigger=trigger or "",
+                model=model,
+                provider=provider,
+                event=event,
+                elapsed_ms=elapsed_ms,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
+            )
+
+    async def _write_user_event(
+        self,
+        *,
+        user_id: str,
+        trigger: str,
+        model: str,
+        provider: str,
+        event: str,
+        elapsed_ms: float | None,
+        prompt_tokens: int | None,
+        completion_tokens: int | None,
+        total_tokens: int | None,
+    ) -> None:
+        try:
+            from sqlalchemy import text
+            engine = _get_db_engine()
+            async with engine.begin() as conn:
+                await conn.execute(
+                    text("""
+                        INSERT INTO llm_events
+                            (user_id, trigger, model, provider, event,
+                             elapsed_ms, prompt_tokens, completion_tokens, total_tokens)
+                        VALUES
+                            (:user_id, :trigger, :model, :provider, :event,
+                             :elapsed_ms, :prompt_tokens, :completion_tokens, :total_tokens)
+                    """),
+                    {
+                        "user_id": user_id,
+                        "trigger": trigger,
+                        "model": model,
+                        "provider": provider,
+                        "event": event,
+                        "elapsed_ms": elapsed_ms,
+                        "prompt_tokens": prompt_tokens,
+                        "completion_tokens": completion_tokens,
+                        "total_tokens": total_tokens,
+                    },
+                )
+        except Exception:
+            logger.exception("Failed to write llm_event for user %s", user_id)
 
     async def snapshot(self) -> dict[str, Any]:
         try:

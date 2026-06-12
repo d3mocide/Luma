@@ -122,6 +122,7 @@ async def generate_meal_plan(
             primary_model=settings.meal_planner_model,
             fallback_model=settings.meal_planner_fallback_model,
             trigger="meal_plan",
+            user_id=str(user_id),
             messages=messages,
             temperature=0.2,
             timeout=600.0,

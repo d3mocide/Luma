@@ -295,7 +295,7 @@ async def _execute_tool(name: str, args: dict, user_id: str, db, unit_system: st
     return json.dumps({"error": f"unknown tool: {name}"})
 
 
-async def _compress_thread_if_needed(thread_id: str, messages: list[dict], db) -> list[dict]:
+async def _compress_thread_if_needed(thread_id: str, messages: list[dict], db, user_id: str | None = None) -> list[dict]:
     """
     If the thread has too many messages, summarize the oldest ones into a
     single summary message stored in the DB, then return the compressed history.
@@ -334,6 +334,7 @@ async def _compress_thread_if_needed(thread_id: str, messages: list[dict], db) -
             primary_model=settings.coach_model,
             fallback_model=settings.coach_fallback_model,
             trigger="coach_compress",
+            user_id=user_id,
             messages=compression_prompt,
             temperature=0.2,
             timeout=30.0,
@@ -375,7 +376,7 @@ async def coach_stream(
 ) -> AsyncGenerator[str, None]:
     """Yield SSE-formatted data lines from the coach agent."""
     # Compress thread history if needed
-    messages = await _compress_thread_if_needed(thread_id, messages, db)
+    messages = await _compress_thread_if_needed(thread_id, messages, db, user_id)
 
     # Inject user context snapshot + rolling case file into system prompt
     system_content = _SYSTEM_BASE
@@ -424,6 +425,7 @@ async def coach_stream(
                 temperature=1.0,
                 timeout=60.0,
                 trigger="coach_tool_call",
+                user_id=user_id,
             )
         except Exception:
             logger.exception("Coach LLM call failed")

@@ -502,6 +502,7 @@ async def swap_slot(slot_id: str, db: DbDep, current_user: CurrentUser) -> dict:
             primary_model=settings.meal_planner_model,
             fallback_model=settings.meal_planner_fallback_model,
             trigger="meal_alternatives",
+            user_id=str(current_user.id),
             messages=messages,
             temperature=0.6,
             timeout=60.0,

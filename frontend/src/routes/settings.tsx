@@ -16,6 +16,8 @@ import { LlmMetricsCard } from '../components/settings/LlmMetricsCard'
 import { AiConfigCard } from '../components/settings/AiConfigCard'
 import { AiPerformanceCard } from '../components/settings/AiPerformanceCard'
 import { AiPriceCalculator } from '../components/settings/AiPriceCalculator'
+import { AiUsageCard } from '../components/settings/AiUsageCard'
+import { AiDataRoutingCard } from '../components/settings/AiDataRoutingCard'
 import { HaeMetricsCard } from '../components/settings/HaeMetricsCard'
 import { HaeImportCard } from '../components/settings/HaeImportCard'
 import { HealthConnectCard } from '../components/settings/HealthConnectCard'
@@ -29,11 +31,12 @@ import { useMeasurementSystem, convertWeightToKg } from '../lib/measurements'
 
 const KG_TO_LB = 2.2046226218
 
-type SettingsTab = 'account' | 'data-sources' | 'ai-routing' | 'admin'
+type SettingsTab = 'account' | 'data-sources' | 'ai-usage' | 'ai-routing' | 'admin'
 
 const TAB_META: Record<SettingsTab, { label: string; minRole?: string }> = {
   'account':        { label: 'Settings' },
   'data-sources':   { label: 'Data Sources' },
+  'ai-usage':       { label: 'AI Usage' },
   'ai-routing':     { label: 'AI Routing', minRole: 'operator' },
   'admin':          { label: 'Users', minRole: 'admin' },
 }
@@ -391,6 +394,19 @@ function DataSourcesTab({ user, isOperator }: { user: User | undefined; isOperat
             </p>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function AiUsageTab() {
+  return (
+    <div className="settings-grid">
+      <div className="settings-stack settings-primary">
+        <AiUsageCard />
+      </div>
+      <div className="settings-stack settings-secondary">
+        <AiDataRoutingCard />
       </div>
     </div>
   )
@@ -1040,7 +1056,7 @@ export default function SettingsRoute() {
   }
 
   const isOperator = hasRole(user, 'operator')
-  const tabs: SettingsTab[] = ['account', 'data-sources', 'ai-routing', 'admin']
+  const tabs: SettingsTab[] = ['account', 'data-sources', 'ai-usage', 'ai-routing', 'admin']
   const visibleTabs = tabs.filter((id) => hasRole(user, TAB_META[id].minRole))
 
   return (
@@ -1115,6 +1131,12 @@ export default function SettingsRoute() {
       {activeTab === 'data-sources' && (
         <div role="tabpanel" id="settings-panel-data-sources" aria-labelledby="settings-tab-data-sources">
           <DataSourcesTab user={user} isOperator={isOperator} />
+        </div>
+      )}
+
+      {activeTab === 'ai-usage' && (
+        <div role="tabpanel" id="settings-panel-ai-usage" aria-labelledby="settings-tab-ai-usage">
+          <AiUsageTab />
         </div>
       )}
 
