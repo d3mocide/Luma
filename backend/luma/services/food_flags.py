@@ -93,7 +93,7 @@ def _check(val: float, threshold: float, op: str) -> bool:
     return False
 
 
-def compute_threshold_flags(nutrients: dict[str, float]) -> list[str]:
+def compute_threshold_flags(nutrients: dict[str, float | None]) -> list[str]:
     """Return auto-computed flags derived from per-100g nutrient values."""
     flags: list[str] = []
 
@@ -112,7 +112,7 @@ def compute_threshold_flags(nutrients: dict[str, float]) -> list[str]:
     return flags
 
 
-def merge_flags(curated: Sequence[str], nutrients: dict[str, float]) -> list[str]:
+def merge_flags(curated: Sequence[str], nutrients: dict[str, float | None]) -> list[str]:
     """Merge curated flags with auto-computed threshold flags.
 
     Returns a deduplicated, sorted list. Unknown curated flags are silently
