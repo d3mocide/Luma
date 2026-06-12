@@ -42,9 +42,9 @@ class _HealthCheckFilter(logging.Filter):
         return "GET /health" not in record.getMessage()
 
 
-# The HAE import path embeds a long-lived per-user credential; it must never
-# land in access logs (nginx already skips ingest paths — this covers uvicorn).
-_INGEST_TOKEN_RE = re.compile(r"(/api/v1/ingest/hae/)[^\s?\"]+")
+# The ingest paths embed a long-lived per-user credential; it must never land
+# in access logs (nginx already skips ingest paths — this covers uvicorn).
+_INGEST_TOKEN_RE = re.compile(r"(/api/v1/ingest/(?:hae|health-connect)/)[^\s?\"]+")
 
 
 class _IngestTokenRedactFilter(logging.Filter):

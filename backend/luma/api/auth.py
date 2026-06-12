@@ -77,6 +77,7 @@ class UserOut(BaseModel):
     biological_sex: str | None = None
     height_cm: float | None = None
     activity_level: str | None = None
+    data_source: str = "apple_health"
     dri: dict | None = None
 
     model_config = {"from_attributes": True}
@@ -196,6 +197,7 @@ async def me(user: CurrentUser) -> UserOut:
 
 _VALID_SEX = {"male", "female", "prefer_not_to_say"}
 _VALID_ACTIVITY = {"sedentary", "lightly_active", "moderately_active", "very_active"}
+_VALID_DATA_SOURCE = {"apple_health", "health_connect"}
 
 
 class UpdateProfileRequest(BaseModel):
@@ -204,6 +206,7 @@ class UpdateProfileRequest(BaseModel):
     biological_sex: str | None = None
     height_cm: float | None = None
     activity_level: str | None = None
+    data_source: str | None = None
 
 
 @router.patch("/me")
@@ -236,6 +239,11 @@ async def update_me(body: UpdateProfileRequest, user: CurrentUser, db: DbDep) ->
         if body.activity_level not in _VALID_ACTIVITY:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"activity_level must be one of {sorted(_VALID_ACTIVITY)}.")
         user.activity_level = body.activity_level
+
+    if body.data_source is not None:
+        if body.data_source not in _VALID_DATA_SOURCE:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"data_source must be one of {sorted(_VALID_DATA_SOURCE)}.")
+        user.data_source = body.data_source
 
     try:
         await db.commit()

@@ -9,6 +9,7 @@ from luma.config import settings
 from luma.deps import CurrentUser, DbDep
 from luma.services.hae_metrics import tracker as hae_metrics_tracker
 from luma.services.hae_normalizer import normalize_hae_payload
+from luma.services.health_connect_normalizer import normalize_health_connect_payload
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -74,7 +75,48 @@ async def ingest_hae_authenticated(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid JSON")
 
     try:
-        rows_inserted = await normalize_hae_payload(payload, db, user.id)
+        rows_inserted = await normalize_hae_payload(payload, db, user.id, data_source=user.data_source)
+    except Exception as exc:
+        await hae_metrics_tracker.record_ingest(rows_inserted=0, error=str(exc))
+        raise
+
+    await hae_metrics_tracker.record_ingest(rows_inserted=rows_inserted)
+    return {"status": "ok", "rows_inserted": rows_inserted}
+
+
+@router.post("/health-connect/{import_token}")
+async def ingest_health_connect(
+    import_token: UUID,
+    request: Request,
+    db: DbDep,
+) -> dict:
+    """Accept Android Health Connect data via the user's import token.
+
+    The off-the-shelf exporter cannot send a header secret, so the unguessable
+    per-user token in the path is the credential — gated further by replay
+    protection and HTTPS. No X-HAE-Signature check here.
+    """
+    body = await request.body()
+
+    from sqlalchemy import select
+
+    from luma.db.models import User
+
+    result = await db.execute(select(User).where(User.hae_import_token == import_token))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid import token")
+    replay_key = f"hc:{import_token}:{hashlib.sha256(body).hexdigest()}"
+    await _check_replay(replay_key)
+
+    import orjson
+    try:
+        payload = orjson.loads(body)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid JSON")
+
+    try:
+        rows_inserted = await normalize_health_connect_payload(payload, db, user.id, data_source=user.data_source)
     except Exception as exc:
         await hae_metrics_tracker.record_ingest(rows_inserted=0, error=str(exc))
         raise
@@ -110,7 +152,7 @@ async def ingest_hae(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid JSON")
 
     try:
-        rows_inserted = await normalize_hae_payload(payload, db, user.id)
+        rows_inserted = await normalize_hae_payload(payload, db, user.id, data_source=user.data_source)
     except Exception as exc:
         await hae_metrics_tracker.record_ingest(rows_inserted=0, error=str(exc))
         raise

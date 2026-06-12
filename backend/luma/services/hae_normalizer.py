@@ -5,6 +5,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from luma.services.biometric_store import persist_biometric_rows
+
 logger = logging.getLogger(__name__)
 
 # Standard metrics: data points have a single `qty` field.
@@ -132,23 +134,6 @@ def _convert(value: float, hae_unit: str, internal_metric: str) -> float:
     return value
 
 
-def _source_priority(source: str) -> int:
-    """Rank an HAE source so overlapping multi-device readings collapse to one.
-
-    Mirrors the SQL biometric_source_priority() function (migration 0007):
-    Apple Watch outranks iPhone, which outranks anything else. Apple Health
-    reports the same instant from several devices; summing all of them
-    double-counts energy, so we keep only the highest-ranked source per
-    (ts, metric).
-    """
-    s = (source or "").lower()
-    if "watch" in s:
-        return 3
-    if "phone" in s:
-        return 2
-    return 1
-
-
 def _parse_hae_ts(date_str: str) -> datetime:
     """Parse HAE date strings like '2026-05-22 07:14:00 -0700'."""
     # fromisoformat doesn't handle the ' -0700' offset format; use dateutil.
@@ -156,52 +141,14 @@ def _parse_hae_ts(date_str: str) -> datetime:
     return dtparser.parse(date_str).astimezone(UTC)
 
 
-def _compute_sleep_scores(rows: list[dict], user_id: str) -> list[dict]:
-    """Derive a sleep_score row for each timestamp that has sleep_duration_min.
-
-    Score (0–100):
-      Duration component  (0–60): scales linearly to 480 min (8 h), capped at 60.
-      Efficiency component (0–40): asleep/inBed ratio × 40. Falls back to 20
-                                   (neutral) when only inBed data is present.
-    """
-    sleep_by_ts: dict[datetime, dict[str, dict]] = {}
-    for row in rows:
-        if row["metric"] in ("sleep_duration_min", "sleep_asleep_min"):
-            sleep_by_ts.setdefault(row["ts"], {})[row["metric"]] = row
-
-    score_rows: list[dict] = []
-    for ts, sleep_rows in sleep_by_ts.items():
-        duration_row = sleep_rows.get("sleep_duration_min")
-        if not duration_row:
-            continue
-        duration = duration_row["value"]
-        asleep_row = sleep_rows.get("sleep_asleep_min")
-        asleep = asleep_row["value"] if asleep_row else None
-
-        duration_score = min(60.0, (duration / 480.0) * 60.0)
-        if asleep is not None and duration > 0:
-            efficiency_score = min(40.0, (asleep / duration) * 40.0)
-        else:
-            efficiency_score = 20.0  # neutral when efficiency is unknown
-
-        score_rows.append({
-            "user_id": user_id,
-            "ts": ts,
-            "metric": "sleep_score",
-            "value": round(duration_score + efficiency_score, 1),
-            "source": "hae",
-            "source_meta": {
-                "hae_source": duration_row["source_meta"]["hae_source"],
-                "hae_metric": "computed",
-            },
-        })
-    return score_rows
-
-
-async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_id: Any) -> int:
+async def normalize_hae_payload(
+    payload: dict[str, Any],
+    db: AsyncSession,
+    user_id: Any,
+    *,
+    data_source: str | None = None,
+) -> int:
     """Ingest an HAE webhook payload for the given user. Returns number of rows inserted."""
-    from sqlalchemy import text
-
     metrics_list: list[dict] = payload.get("data", {}).get("metrics", [])
     rows: list[dict] = []
 
@@ -356,84 +303,6 @@ async def normalize_hae_payload(payload: dict[str, Any], db: AsyncSession, user_
                 "source_meta": {"hae_source": source, "hae_metric": hae_name, "hae_unit": hae_unit},
             })
 
-    # Derive sleep_score from any sleep metrics in this payload.
-    rows.extend(_compute_sleep_scores(rows, str(user_id)))
-
-    if not rows:
-        return 0
-
-    # Collapse overlapping multi-device readings to one row per (ts, metric),
-    # keeping the highest-priority source. Required before the upsert: the DB
-    # key is now (user_id, ts, metric), and ON CONFLICT DO UPDATE rejects a
-    # statement that touches the same key twice. Tie-break on the smaller source
-    # string to match migration 0007's backfill.
-    deduped: dict[tuple[datetime, str], dict] = {}
-    for row in rows:
-        key = (row["ts"], row["metric"])
-        existing = deduped.get(key)
-        if existing is None:
-            deduped[key] = row
-            continue
-        new_p, old_p = _source_priority(row["source"]), _source_priority(existing["source"])
-        if new_p > old_p or (new_p == old_p and row["source"] < existing["source"]):
-            deduped[key] = row
-    rows = list(deduped.values())
-
-    # Upsert — idempotent on (user_id, ts, metric). A later-arriving
-    # higher-priority source replaces a previously stored lower-priority one.
-    # NB: bind param is wrapped in CAST(...) so SQLAlchemy's text() regex doesn't
-    # see `:rows::jsonb` (negative-lookahead on `::` would clip the param name).
-    await db.execute(
-        text("""
-            INSERT INTO biometrics (user_id, ts, metric, value, source, source_meta)
-            SELECT
-                (r->>'user_id')::uuid,
-                (r->>'ts')::timestamptz,
-                r->>'metric',
-                (r->>'value')::double precision,
-                r->>'source',
-                (r->>'source_meta')::jsonb
-            FROM jsonb_array_elements(CAST(:rows AS jsonb)) AS r
-            ON CONFLICT (user_id, ts, metric) DO UPDATE
-                SET value       = EXCLUDED.value,
-                    source      = EXCLUDED.source,
-                    source_meta = EXCLUDED.source_meta
-                WHERE biometric_source_priority(EXCLUDED.source)
-                      > biometric_source_priority(biometrics.source)
-        """),
-        {"rows": __import__("orjson").dumps(rows).decode()},
+    return await persist_biometric_rows(
+        rows, db, user_id, source_ecosystem="apple_health", data_source=data_source,
     )
-    await db.commit()
-    logger.info("HAE ingest: inserted up to %d rows for user %s", len(rows), user_id)
-
-    # Refresh the continuous aggregate immediately so Trends reflects this data
-    # without waiting for the hourly policy job. Must run in AUTOCOMMIT mode.
-    await _refresh_biometrics_daily(rows)
-
-    return len(rows)
-
-
-async def _refresh_biometrics_daily(rows: list[dict]) -> None:
-    """Refresh biometrics_daily for the date range covered by the ingested rows."""
-    if not rows:
-        return
-    from datetime import timedelta
-
-    ts_values = [r["ts"] for r in rows]
-    start = min(ts_values).replace(hour=0, minute=0, second=0, microsecond=0)
-    end = max(ts_values).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=2)
-
-    try:
-        from sqlalchemy import text as sa_text
-
-        from luma.db.session import engine
-        async with engine.connect() as conn:
-            await conn.execution_options(isolation_level="AUTOCOMMIT")
-            await conn.execute(
-                sa_text("CALL refresh_continuous_aggregate('biometrics_daily', :start, :end)"),
-                {"start": start, "end": end},
-            )
-        logger.debug("biometrics_daily refreshed for %s → %s", start.date(), end.date())
-    except Exception as exc:
-        # Non-fatal: the scheduled policy will catch up within an hour.
-        logger.warning("biometrics_daily refresh failed (will self-heal): %s", exc)

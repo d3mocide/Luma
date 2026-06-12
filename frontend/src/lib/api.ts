@@ -200,6 +200,7 @@ export interface User {
   biological_sex?: 'male' | 'female' | 'prefer_not_to_say' | null
   height_cm?: number | null
   activity_level?: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | null
+  data_source?: 'apple_health' | 'health_connect'
   dri?: Dri | null
 }
 
