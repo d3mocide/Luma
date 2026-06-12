@@ -458,3 +458,22 @@ class SupplementLog(Base):
 
     user = relationship("User")
     supplement = relationship("Supplement")
+
+
+class LlmEvent(Base):
+    __tablename__ = "llm_events"
+    __table_args__ = (
+        Index("ix_llm_events_user_ts", "user_id", "ts"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    trigger: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("''"))
+    model: Mapped[str] = mapped_column(Text, nullable=False)
+    provider: Mapped[str] = mapped_column(Text, nullable=False)
+    event: Mapped[str] = mapped_column(Text, nullable=False)
+    elapsed_ms: Mapped[float | None] = mapped_column(Double)
+    prompt_tokens: Mapped[int | None] = mapped_column(Integer)
+    completion_tokens: Mapped[int | None] = mapped_column(Integer)
+    total_tokens: Mapped[int | None] = mapped_column(Integer)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

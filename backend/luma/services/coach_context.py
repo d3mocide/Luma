@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from luma.services.units import UnitSystem, fmt_height, fmt_weight, fmt_weight_trend
+from luma.services.units import UnitSystem, fmt_weight, fmt_weight_trend
 
 logger = logging.getLogger(__name__)
 
