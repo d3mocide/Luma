@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from time import perf_counter
 from typing import Any
 
@@ -230,7 +230,7 @@ def _inject_current_datetime(kwargs: dict[str, Any]) -> dict[str, Any]:
     if not messages:
         return kwargs
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     date_line = f"Current date/time (UTC): {now.strftime('%A, %Y-%m-%d %H:%M')} UTC\n\n"
 
     kwargs = {**kwargs}
