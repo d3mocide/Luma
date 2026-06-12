@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 from time import perf_counter
 from typing import Any
 
@@ -223,6 +224,30 @@ async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str
         raise
 
 
+def _inject_current_datetime(kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Prepend current UTC datetime to the system message so every model call is temporally grounded."""
+    messages: list[dict[str, Any]] | None = kwargs.get("messages")
+    if not messages:
+        return kwargs
+
+    now = datetime.now(timezone.utc)
+    date_line = f"Current date/time (UTC): {now.strftime('%A, %Y-%m-%d %H:%M')} UTC\n\n"
+
+    kwargs = {**kwargs}
+    messages = list(messages)
+
+    for i, msg in enumerate(messages):
+        if isinstance(msg, dict) and msg.get("role") == "system":
+            messages[i] = {**msg, "content": date_line + (msg.get("content") or "")}
+            kwargs["messages"] = messages
+            return kwargs
+
+    # No system message present — insert one at the front.
+    messages.insert(0, {"role": "system", "content": date_line.rstrip()})
+    kwargs["messages"] = messages
+    return kwargs
+
+
 async def call_llm(
     primary_model: str,
     fallback_model: str,
@@ -244,6 +269,7 @@ async def call_llm(
             trigger="food_extract",
         )
     """
+    kwargs = _inject_current_datetime(kwargs)
     primary = build_litellm_target(primary_model)
 
     if fallback_model:
