@@ -6,12 +6,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from tests.hae_fixtures import build_capturing_db
 from tests.health_connect_fixtures import (
     EXPECTED_ADDITIVE_TS,
     EXPECTED_SCALAR_TS,
     SAMPLE_HC_PAYLOAD,
 )
-from tests.hae_fixtures import build_capturing_db
 
 _USER = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
