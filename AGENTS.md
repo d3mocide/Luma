@@ -96,6 +96,40 @@ These files must be **fully implemented** for Phase 0:
 - Database errors: catch `asyncpg.PostgresError`, log, raise `HTTPException(503)`
 - Auth errors: always return 401 (never leak whether email exists vs wrong password)
 
+### AsyncSession — no concurrent use in agents
+
+`AsyncSession` is **not safe to share across concurrent coroutines**.
+Never pass a single session to `asyncio.gather`:
+
+```python
+# BROKEN — raises InvalidRequestError and corrupts the session
+ctx, case_file, unit = await asyncio.gather(
+    get_coach_context(user_id, db),
+    get_case_file(user_id, db),
+    get_measurement_system(user_id, db),
+)
+```
+
+Use sequential awaits instead:
+
+```python
+ctx       = await get_coach_context(user_id, db)
+case_file = await get_case_file(user_id, db)
+unit      = await get_measurement_system(user_id, db)
+```
+
+If you need true parallelism, open a separate `AsyncSessionLocal()` per coroutine.
+Violating this corrupts the session for all subsequent DB operations — including tool
+calls later in the same agent loop — and surfaces as "Something went wrong" in the UI
+(regression fixed in PR #193).
+
+### Tool call bodies must never raise
+
+Tool execution in agent loops must always `return json.dumps({"error": ...})` on
+failure — never raise. If a tool raises, it escapes the agent loop and the user sees
+an unrecoverable error instead of a graceful tool-error message. Wrap every tool
+body in try/except.
+
 ### Security Checklist (before any PR)
 
 - [ ] No hardcoded secrets

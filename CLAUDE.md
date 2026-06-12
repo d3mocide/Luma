@@ -67,6 +67,7 @@ Follow §12 of the design doc exactly. Do not create files outside the tree defi
 - Never expose internal error details to API responses in production (use generic messages, log details server-side)
 - All Pydantic models must have explicit field types — no `Any` unless truly unavoidable
 - TypeScript: no `any` — use `unknown` and narrow, or define proper types
+- **`AsyncSession` is not concurrency-safe** — never pass a single `AsyncSession` to `asyncio.gather`. Each coroutine in a gather must use its own session, or the calls must be sequential. Violating this raises `InvalidRequestError: This session is provisioning a new connection; concurrent operations are not permitted` and corrupts the session for all subsequent callers (see PR #193).
 
 ## Migration Discipline
 
