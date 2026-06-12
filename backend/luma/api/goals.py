@@ -612,8 +612,8 @@ async def get_ai_usage(user: CurrentUser, db: DbDep) -> dict[str, Any]:
 
     return {
         "summary": {
-            "calls_7d": s.calls_7d or 0,
-            "calls_30d": s.calls_30d or 0,
+            "calls_7d": (s.calls_7d or 0) if s is not None else 0,
+            "calls_30d": (s.calls_30d or 0) if s is not None else 0,
         },
         "by_trigger": [
             {

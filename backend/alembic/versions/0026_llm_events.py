@@ -27,7 +27,7 @@ def upgrade() -> None:
             ts          TIMESTAMPTZ NOT NULL DEFAULT now()
         )
     """)
-    op.execute("CREATE INDEX ix_llm_events_user_ts ON llm_events (user_id, ts DESC)")
+    op.execute("CREATE INDEX ix_llm_events_user_ts ON llm_events (user_id, ts)")
 
 
 def downgrade() -> None:

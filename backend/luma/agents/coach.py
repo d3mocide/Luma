@@ -243,6 +243,7 @@ async def _execute_tool(name: str, args: dict, user_id: str, db, unit_system: st
         g = row.fetchone()
         if not g:
             return json.dumps({"error": "no goals set"})
+        weight_field: dict[str, float | None]
         if unit_system == "imperial" and g.target_weight_kg:
             from luma.services.units import kg_to_lbs
             weight_field = {"target_weight_lbs": kg_to_lbs(float(g.target_weight_kg))}
