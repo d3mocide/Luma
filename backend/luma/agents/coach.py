@@ -1,6 +1,7 @@
 """Coach agent — Claude with tool calls, streaming SSE, context injection, thread compression."""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -122,7 +123,7 @@ TOOLS: list[dict[str, Any]] = [
 ]
 
 
-async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
+async def _execute_tool(name: str, args: dict, user_id: str, db, unit_system: str = "metric") -> str:
     from datetime import datetime
 
     from sqlalchemy import text
@@ -142,7 +143,13 @@ async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
             """),
             {"uid": user_id, "metric": args["metric"], "start": parse_date(args["start_date"]), "end": parse_date(args["end_date"])},
         )
-        return json.dumps([{"date": r.day, "avg": r.avg_value, "last": r.last_value} for r in rows])
+        is_weight = args["metric"] == "weight_kg" and unit_system == "imperial"
+        if is_weight:
+            from luma.services.units import kg_to_lbs
+            data = [{"date": r.day, "avg": kg_to_lbs(r.avg_value), "last": kg_to_lbs(r.last_value), "unit": "lbs"} for r in rows]
+        else:
+            data = [{"date": r.day, "avg": r.avg_value, "last": r.last_value} for r in rows]
+        return json.dumps(data)
 
     if name == "query_nutrition_rollup":
         rows = await db.execute(
@@ -236,8 +243,13 @@ async def _execute_tool(name: str, args: dict, user_id: str, db) -> str:
         g = row.fetchone()
         if not g:
             return json.dumps({"error": "no goals set"})
+        if unit_system == "imperial" and g.target_weight_kg:
+            from luma.services.units import kg_to_lbs
+            weight_field = {"target_weight_lbs": kg_to_lbs(float(g.target_weight_kg))}
+        else:
+            weight_field = {"target_weight_kg": float(g.target_weight_kg) if g.target_weight_kg else None}
         return json.dumps({
-            "target_weight_kg": float(g.target_weight_kg) if g.target_weight_kg else None,
+            **weight_field,
             "target_ldl_mg_dl": g.target_ldl_mg_dl,
             "current_ldl_mg_dl": g.current_ldl_mg_dl,
             "daily_calorie_target": g.daily_calorie_target,
@@ -367,23 +379,28 @@ async def coach_stream(
 
     # Inject user context snapshot + rolling case file into system prompt
     system_content = _SYSTEM_BASE
+    unit_system = "metric"
     try:
         from luma.services.coach_context import (
             format_context_for_prompt,
             get_case_file,
             get_coach_context,
+            get_measurement_system,
         )
-        ctx = await get_coach_context(user_id, db)
-        case_file = await get_case_file(user_id, db)
-        
+        ctx, case_file, unit_system = await asyncio.gather(
+            get_coach_context(user_id, db),
+            get_case_file(user_id, db),
+            get_measurement_system(user_id, db),
+        )
+
         # Get the latest user query for dynamic context selection
         user_query = ""
         for m in reversed(messages):
             if m.get("role") == "user":
                 user_query = m.get("content", "")
                 break
-                
-        context_block = format_context_for_prompt(ctx, case_file, user_query)
+
+        context_block = format_context_for_prompt(ctx, case_file, user_query, unit_system)
         if context_block:
             system_content = _SYSTEM_BASE + "\n\n" + context_block
     except Exception:
@@ -427,7 +444,6 @@ async def coach_stream(
             })
             
             # Execute all tool calls in parallel using asyncio.gather
-            import asyncio
             async def _run_tool_db_safe(tc):
                 fn_name = tc.function.name
                 try:
@@ -435,7 +451,7 @@ async def coach_stream(
                 except json.JSONDecodeError:
                     fn_args = {}
                 try:
-                    res = await _execute_tool(fn_name, fn_args, user_id, db)
+                    res = await _execute_tool(fn_name, fn_args, user_id, db, unit_system)
                 except KeyError as e:
                     logger.warning("Tool %s missing required argument: %s", fn_name, e)
                     await db.rollback()
@@ -462,7 +478,6 @@ async def coach_stream(
 
         # No more tool calls: stream final text from memory in chunks to simulate streaming instantly
         final_text = msg.content or ""
-        import asyncio
         chunk_size = 4
         for i in range(0, len(final_text), chunk_size):
             chunk = final_text[i:i+chunk_size]
