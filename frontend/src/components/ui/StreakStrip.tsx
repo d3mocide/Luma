@@ -72,8 +72,7 @@ export default function StreakStrip({ days, adherence, onShowHistory }: StreakSt
       rollingDays.push({ offset, date: d, onTrack: false, isToday, isFuture })
     } else {
       const isStreak = offset <= days && days > 0
-      const seed = offset * 7 + 13
-      const onTrack = isStreak || (seed % 3 === 0)
+      const onTrack = isStreak
       rollingDays.push({ offset, date: d, onTrack, isToday, isFuture })
     }
   }

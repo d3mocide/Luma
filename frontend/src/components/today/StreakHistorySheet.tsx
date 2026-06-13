@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { X, Trophy, Flame } from 'lucide-react'
 import { fmt } from '../../lib/format'
+import { api } from '../../lib/api'
+import type { StreakHistoryDay } from '../../lib/api'
 
 interface DayAdherence {
   logged?: number | null
@@ -23,12 +26,12 @@ interface StreakHistorySheetProps {
 }
 
 interface HistoryDay {
-  offset: number
+  key: string
   date: Date
   onTrack: boolean
   isToday: boolean
-  isFuture: boolean
   targetsMetCount: number
+  loggedAnything: boolean
   cal: { logged: number; target: number; met: boolean }
   sat: { logged: number; target: number; met: boolean }
   fib: { logged: number; target: number; met: boolean }
@@ -37,6 +40,16 @@ interface HistoryDay {
 
 export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakHistorySheetProps) {
   const [visibleLimit, setVisibleLimit] = useState(10)
+  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  // YYYY-MM-DD in local timezone for "isToday" comparison
+  const todayStr = new Date().toLocaleDateString('en-CA')
+
+  const { data: historyData, isLoading } = useQuery<StreakHistoryDay[]>({
+    queryKey: ['streak-history', browserTz],
+    queryFn: () => api.get<StreakHistoryDay[]>(`/today/streak-history?tz=${encodeURIComponent(browserTz)}`),
+    enabled: isOpen,
+    staleTime: 5 * 60 * 1000,
+  })
 
   useEffect(() => {
     setVisibleLimit(10)
@@ -44,94 +57,84 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
 
   if (!isOpen) return null
 
-  // Generate deterministic past history (past 30 days)
+  const getFullDateLabel = (date: Date) =>
+    date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+  // Build display list (newest first) from real API data
   const history: HistoryDay[] = []
-  const now = new Date()
+  if (historyData) {
+    const sorted = [...historyData].reverse() // API returns oldest→newest; we want newest first
+    for (const apiDay of sorted) {
+      const isToday = apiDay.date === todayStr
+      // Use noon local time to avoid DST-boundary display issues
+      const d = new Date(`${apiDay.date}T12:00:00`)
 
-  const getFullDateLabel = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
+      let cal: HistoryDay['cal']
+      let sat: HistoryDay['sat']
+      let fib: HistoryDay['fib']
+      let sug: HistoryDay['sug']
+      let targetsMetCount: number
+      let onTrack: boolean
 
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(now.getDate() - i)
+      if (isToday && adherence) {
+        // Use live adherence data for today (stays in sync with the main Today screen)
+        const calLogged = adherence.calories?.logged ?? 0
+        const calTarget = adherence.calories?.target ?? apiDay.cal_target ?? 2000
+        const satLogged = adherence.sat_fat_g?.logged ?? 0
+        const satTarget = adherence.sat_fat_g?.target ?? apiDay.sat_target ?? 15
+        const fibLogged = adherence.soluble_fiber_g?.logged ?? 0
+        const fibTarget = adherence.soluble_fiber_g?.target ?? apiDay.fib_target ?? 20
+        const sugLogged = adherence.sugars_g?.logged ?? 0
+        const sugTarget = adherence.sugars_g?.target ?? apiDay.sug_target ?? 25
 
-    const isToday = i === 0
-    const isFuture = i < 0
+        const calMet = calLogged >= calTarget * 0.9 && calLogged <= calTarget * 1.1
+        const satMet = satLogged <= satTarget
+        const fibMet = fibLogged >= fibTarget
+        const sugMet = sugLogged <= sugTarget
 
-    if (isToday && adherence) {
-      const calLogged = adherence.calories?.logged ?? 0
-      const calTarget = adherence.calories?.target ?? 2000
-      const satLogged = adherence.sat_fat_g?.logged ?? 0
-      const satTarget = adherence.sat_fat_g?.target ?? 15
-      const fibLogged = adherence.soluble_fiber_g?.logged ?? 0
-      const fibTarget = adherence.soluble_fiber_g?.target ?? 20
-      const sugLogged = adherence.sugars_g?.logged ?? 0
-      const sugTarget = adherence.sugars_g?.target ?? 25
+        targetsMetCount = [calMet, satMet, fibMet, sugMet].filter(Boolean).length
+        onTrack = targetsMetCount >= 3
+        cal = { logged: calLogged, target: calTarget, met: calMet }
+        sat = { logged: satLogged, target: satTarget, met: satMet }
+        fib = { logged: fibLogged, target: fibTarget, met: fibMet }
+        sug = { logged: sugLogged, target: sugTarget, met: sugMet }
+      } else {
+        const calTarget = apiDay.cal_target ?? 2000
+        const satTarget = apiDay.sat_target ?? 15
+        const fibTarget = apiDay.fib_target ?? 20
+        const sugTarget = apiDay.sug_target ?? 25
+        const calLogged = apiDay.cal_logged ?? 0
+        const satLogged = apiDay.sat_logged ?? 0
+        const fibLogged = apiDay.fib_logged ?? 0
+        const sugLogged = apiDay.sug_logged ?? 0
 
-      const calMet = calLogged >= calTarget * 0.9 && calLogged <= calTarget * 1.1
-      const satMet = satLogged <= satTarget
-      const fibMet = fibLogged >= fibTarget
-      const sugMet = sugLogged <= sugTarget
-
-      const targetsMetCount = [calMet, satMet, fibMet, sugMet].filter(Boolean).length
-      const onTrack = targetsMetCount >= 3
+        targetsMetCount = apiDay.targets_met
+        onTrack = apiDay.on_track
+        cal = { logged: calLogged, target: calTarget, met: calLogged >= calTarget * 0.9 && calLogged <= calTarget * 1.1 }
+        sat = { logged: satLogged, target: satTarget, met: satLogged <= satTarget }
+        fib = { logged: fibLogged, target: fibTarget, met: fibLogged >= fibTarget }
+        sug = { logged: sugLogged, target: sugTarget, met: sugLogged <= sugTarget }
+      }
 
       history.push({
-        offset: i,
+        key: apiDay.date,
         date: d,
         onTrack,
         isToday,
-        isFuture,
         targetsMetCount,
-        cal: { logged: calLogged, target: calTarget, met: calMet },
-        sat: { logged: satLogged, target: satTarget, met: satMet },
-        fib: { logged: fibLogged, target: fibTarget, met: fibMet },
-        sug: { logged: sugLogged, target: sugTarget, met: sugMet },
-      })
-    } else {
-      const isStreak = i <= days && days > 0
-      const seed = i * 7 + 13
-      const onTrack = isStreak || (seed % 3 === 0)
-
-      const calTarget = 2100
-      const satTarget = 15
-      const fibTarget = 20
-      const sugTarget = 25
-
-      const calLogged = isStreak ? 1950 : onTrack ? 2050 : 2350
-      const satLogged = isStreak ? 11 : onTrack ? 12 : 19
-      const fibLogged = isStreak ? 23 : onTrack ? 21 : 12
-      const sugLogged = isStreak ? 14 : onTrack ? 16 : 31
-
-      const calMet = calLogged >= calTarget * 0.9 && calLogged <= calTarget * 1.1
-      const satMet = satLogged <= satTarget
-      const fibMet = fibLogged >= fibTarget
-      const sugMet = sugLogged <= sugTarget
-
-      const targetsMetCount = [calMet, satMet, fibMet, sugMet].filter(Boolean).length
-
-      history.push({
-        offset: i,
-        date: d,
-        onTrack,
-        isToday,
-        isFuture,
-        targetsMetCount,
-        cal: { logged: calLogged, target: calTarget, met: calMet },
-        sat: { logged: satLogged, target: satTarget, met: satMet },
-        fib: { logged: fibLogged, target: fibTarget, met: fibMet },
-        sug: { logged: sugLogged, target: sugTarget, met: sugMet },
+        loggedAnything: apiDay.logged_anything,
+        cal,
+        sat,
+        fib,
+        sug,
       })
     }
   }
 
-  const pastHistory = history.slice().reverse()
-
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         onClick={onClose}
         style={{
           position: 'fixed', inset: 0,
@@ -142,7 +145,7 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
         }}
       />
       {/* Sheet */}
-      <div 
+      <div
         style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
           maxHeight: '92dvh',
@@ -170,10 +173,10 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
             </span>
             <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-primary)', marginTop: 4 }}>Streak Details</div>
           </div>
-          <button 
+          <button
             type="button"
             onClick={onClose}
-            style={{ 
+            style={{
               background: 'var(--glass-edge)',
               border: 'none',
               borderRadius: 8,
@@ -189,12 +192,12 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
 
         {/* Scrollable Body */}
         <div style={{ overflowY: 'auto', padding: '16px 20px 32px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Badges / summary banner */}
-          <div 
-            style={{ 
-              background: 'rgba(251, 191, 36, 0.04)', 
-              border: '1px solid rgba(251, 191, 36, 0.1)', 
-              borderRadius: 16, 
+          {/* Summary banner */}
+          <div
+            style={{
+              background: 'rgba(251, 191, 36, 0.04)',
+              border: '1px solid rgba(251, 191, 36, 0.1)',
+              borderRadius: 16,
               padding: '14px 16px',
               display: 'flex',
               alignItems: 'center',
@@ -207,110 +210,126 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
                 {days >= 7 ? 'Perfect Week Achieved!' : `${days} Day Streak`}
               </div>
               <div style={{ fontSize: 12, color: 'var(--fg-secondary)', marginTop: 2 }}>
-                {days >= 7 
-                  ? 'Excellent consistency. You are keeping saturated fat low and fiber high.' 
+                {days >= 7
+                  ? 'Excellent consistency. You are keeping saturated fat low and fiber high.'
                   : 'Log at least 3 targets successfully every day to grow your streak flame!'}
               </div>
             </div>
           </div>
 
-          {/* Days list (past days up to today) */}
+          {/* Days list */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {pastHistory.slice(0, visibleLimit).map(day => (
-              <div 
-                key={day.offset}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 14px',
-                  borderRadius: 12,
-                  background: day.onTrack ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.01)',
-                  border: day.onTrack ? '1px solid rgba(251, 191, 36, 0.12)' : '1px solid var(--glass-edge)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: day.onTrack ? 'var(--sun-400)' : 'rgba(255,255,255,0.1)'
-                  }} />
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: day.onTrack ? 'var(--fg-primary)' : 'var(--fg-secondary)' }}>
-                      {day.isToday ? 'Today' : getFullDateLabel(day.date)}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--fg-tertiary)', marginTop: 1 }}>
-                      {day.targetsMetCount} / 4 targets met
+            {isLoading && history.length === 0 ? (
+              Array.from({ length: 7 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    height: 56,
+                    borderRadius: 12,
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid var(--glass-edge)',
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                  }}
+                />
+              ))
+            ) : (
+              history.slice(0, visibleLimit).map(day => (
+                <div
+                  key={day.key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 14px',
+                    borderRadius: 12,
+                    background: day.onTrack ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.01)',
+                    border: day.onTrack ? '1px solid rgba(251, 191, 36, 0.12)' : '1px solid var(--glass-edge)',
+                    opacity: day.loggedAnything ? 1 : 0.45,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: day.onTrack ? 'var(--sun-400)' : 'rgba(255,255,255,0.1)'
+                    }} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: day.onTrack ? 'var(--fg-primary)' : 'var(--fg-secondary)' }}>
+                        {day.isToday ? 'Today' : getFullDateLabel(day.date)}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--fg-tertiary)', marginTop: 1 }}>
+                        {day.loggedAnything ? `${day.targetsMetCount} / 4 targets met` : 'Nothing logged'}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Micro macronutrient target checkboxes status */}
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <span 
-                    title={`Calories: ${fmt(day.cal.logged, 0)}/${fmt(day.cal.target, 0)}`}
-                    style={{ 
-                      fontSize: 9, 
-                      fontWeight: 600,
-                      padding: '2px 6px', 
-                      borderRadius: 6,
-                      background: day.cal.met ? 'rgba(56,189,248,0.1)' : 'rgba(255,255,255,0.04)',
-                      color: day.cal.met ? 'var(--sky-300)' : 'var(--fg-faint)',
-                      border: day.cal.met ? '1px solid rgba(56,189,248,0.18)' : '1px solid rgba(255,255,255,0.05)',
-                    }}
-                  >
-                    CAL
-                  </span>
-                  <span 
-                    title={`Sat Fat: ${fmt(day.sat.logged, 1)}g/${fmt(day.sat.target, 1)}g`}
-                    style={{ 
-                      fontSize: 9, 
-                      fontWeight: 600,
-                      padding: '2px 6px', 
-                      borderRadius: 6,
-                      background: day.sat.met ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.04)',
-                      color: day.sat.met ? 'var(--sun-300)' : 'var(--fg-faint)',
-                      border: day.sat.met ? '1px solid rgba(251,191,36,0.18)' : '1px solid rgba(255,255,255,0.05)',
-                    }}
-                  >
-                    FAT
-                  </span>
-                  <span 
-                    title={`Fiber: ${fmt(day.fib.logged, 1)}g/${fmt(day.fib.target, 1)}g`}
-                    style={{ 
-                      fontSize: 9, 
-                      fontWeight: 600,
-                      padding: '2px 6px', 
-                      borderRadius: 6,
-                      background: day.fib.met ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.04)',
-                      color: day.fib.met ? 'var(--good)' : 'var(--fg-faint)',
-                      border: day.fib.met ? '1px solid rgba(52,211,153,0.18)' : '1px solid rgba(255,255,255,0.05)',
-                    }}
-                  >
-                    FIB
-                  </span>
-                  <span 
-                    title={`Sugar: ${fmt(day.sug.logged, 1)}g/${fmt(day.sug.target, 1)}g`}
-                    style={{ 
-                      fontSize: 9, 
-                      fontWeight: 600,
-                      padding: '2px 6px', 
-                      borderRadius: 6,
-                      background: day.sug.met ? 'rgba(244,114,182,0.1)' : 'rgba(255,255,255,0.04)',
-                      color: day.sug.met ? 'var(--aurora-pink)' : 'var(--fg-faint)',
-                      border: day.sug.met ? '1px solid rgba(244,114,182,0.18)' : '1px solid rgba(255,255,255,0.05)',
-                    }}
-                  >
-                    SUG
-                  </span>
+                  {/* Macro target badges */}
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <span
+                      title={`Calories: ${fmt(day.cal.logged, 0)}/${fmt(day.cal.target, 0)}`}
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 600,
+                        padding: '2px 6px',
+                        borderRadius: 6,
+                        background: day.cal.met ? 'rgba(56,189,248,0.1)' : 'rgba(255,255,255,0.04)',
+                        color: day.cal.met ? 'var(--sky-300)' : 'var(--fg-faint)',
+                        border: day.cal.met ? '1px solid rgba(56,189,248,0.18)' : '1px solid rgba(255,255,255,0.05)',
+                      }}
+                    >
+                      CAL
+                    </span>
+                    <span
+                      title={`Sat Fat: ${fmt(day.sat.logged, 1)}g/${fmt(day.sat.target, 1)}g`}
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 600,
+                        padding: '2px 6px',
+                        borderRadius: 6,
+                        background: day.sat.met ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.04)',
+                        color: day.sat.met ? 'var(--sun-300)' : 'var(--fg-faint)',
+                        border: day.sat.met ? '1px solid rgba(251,191,36,0.18)' : '1px solid rgba(255,255,255,0.05)',
+                      }}
+                    >
+                      FAT
+                    </span>
+                    <span
+                      title={`Fiber: ${fmt(day.fib.logged, 1)}g/${fmt(day.fib.target, 1)}g`}
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 600,
+                        padding: '2px 6px',
+                        borderRadius: 6,
+                        background: day.fib.met ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.04)',
+                        color: day.fib.met ? 'var(--good)' : 'var(--fg-faint)',
+                        border: day.fib.met ? '1px solid rgba(52,211,153,0.18)' : '1px solid rgba(255,255,255,0.05)',
+                      }}
+                    >
+                      FIB
+                    </span>
+                    <span
+                      title={`Sugar: ${fmt(day.sug.logged, 1)}g/${fmt(day.sug.target, 1)}g`}
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 600,
+                        padding: '2px 6px',
+                        borderRadius: 6,
+                        background: day.sug.met ? 'rgba(244,114,182,0.1)' : 'rgba(255,255,255,0.04)',
+                        color: day.sug.met ? 'var(--aurora-pink)' : 'var(--fg-faint)',
+                        border: day.sug.met ? '1px solid rgba(244,114,182,0.18)' : '1px solid rgba(255,255,255,0.05)',
+                      }}
+                    >
+                      SUG
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
-          {visibleLimit < pastHistory.length && (
+          {!isLoading && visibleLimit < history.length && (
             <button
               type="button"
-              onClick={() => setVisibleLimit(prev => Math.min(prev + 10, pastHistory.length))}
+              onClick={() => setVisibleLimit(prev => Math.min(prev + 10, history.length))}
               style={{
                 display: 'block',
                 width: '100%',
@@ -333,11 +352,11 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
           )}
 
           {/* Info Card: How Streaks Work */}
-          <div 
-            style={{ 
-              background: 'rgba(255, 255, 255, 0.02)', 
-              border: '1px solid var(--glass-edge)', 
-              borderRadius: 16, 
+          <div
+            style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid var(--glass-edge)',
+              borderRadius: 16,
               padding: '14px 16px',
               marginTop: 8,
             }}

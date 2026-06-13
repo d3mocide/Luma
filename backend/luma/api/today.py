@@ -251,6 +251,116 @@ async def get_today(
     }
 
 
+@router.get("/today/streak-history")
+async def get_streak_history(
+    user: CurrentUser,
+    db: DbDep,
+    tz: str = Query(default=None, alias="tz"),
+) -> list[dict[str, Any]]:
+    try:
+        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
+    except Exception:
+        resolved_tz = ZoneInfo(settings.server_timezone)
+
+    today_dt = datetime.now(resolved_tz).date()
+    start_dt = today_dt - timedelta(days=29)
+
+    from luma.db.models import Goal, Supplement
+
+    res_goal = await db.execute(select(Goal).where(Goal.user_id == user.id))
+    goal = res_goal.scalar_one_or_none()
+
+    target_cal = float(goal.daily_calorie_target) if goal and goal.daily_calorie_target else None
+    target_sat = float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else None
+    target_sol = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else None
+    target_sug = float(goal.daily_sugar_g_max) if goal and goal.daily_sugar_g_max else None
+
+    # Active supplement contributions added to every day's total (mirrors /today logic)
+    supp_rows = await db.execute(
+        select(Supplement).where(Supplement.user_id == user.id, Supplement.is_active.is_(True))
+    )
+    supp_cal = supp_sat = supp_sol = supp_sug = 0.0
+    for s in supp_rows.scalars().all():
+        for key, val in (s.nutrients_per_dose or {}).items():
+            v = float(val or 0.0)
+            if key == "calories":
+                supp_cal += v
+            elif key == "saturated_fat_g":
+                supp_sat += v
+            elif key == "soluble_fiber_g":
+                supp_sol += v
+            elif key == "sugars_g":
+                supp_sug += v
+
+    start_utc = datetime.combine(start_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
+    end_utc   = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
+    tz_key = resolved_tz.key if hasattr(resolved_tz, "key") else settings.server_timezone
+
+    meal_rows = await db.execute(
+        text("""
+            SELECT
+                DATE(ts AT TIME ZONE :tz) AS day,
+                COALESCE(SUM(CAST(NULLIF(nutrition->>'calories', '') AS numeric)), 0)        AS cal,
+                COALESCE(SUM(CAST(NULLIF(nutrition->>'saturated_fat_g', '') AS numeric)), 0)  AS sat,
+                COALESCE(SUM(CAST(NULLIF(nutrition->>'soluble_fiber_g', '') AS numeric)), 0)  AS sol,
+                COALESCE(SUM(CAST(NULLIF(nutrition->>'sugars_g', '') AS numeric)), 0)         AS sug
+            FROM meal_events
+            WHERE user_id = :user_id
+              AND ts >= :start_utc
+              AND ts < :end_utc
+              AND nutrition IS NOT NULL
+            GROUP BY day
+        """),
+        {"user_id": str(user.id), "tz": tz_key, "start_utc": start_utc, "end_utc": end_utc},
+    )
+
+    daily_map: dict = {}
+    for row in meal_rows:
+        daily_map[row.day] = {
+            "cal": float(row.cal) + supp_cal,
+            "sat": float(row.sat) + supp_sat,
+            "sol": float(row.sol) + supp_sol,
+            "sug": float(row.sug) + supp_sug,
+        }
+
+    result = []
+    for i in range(30):
+        d = start_dt + timedelta(days=i)
+        day_data = daily_map.get(d)
+
+        if day_data is None:
+            result.append({
+                "date": d.isoformat(),
+                "cal_logged": None, "cal_target": target_cal,
+                "sat_logged": None, "sat_target": target_sat,
+                "fib_logged": None, "fib_target": target_sol,
+                "sug_logged": None, "sug_target": target_sug,
+                "targets_met": 0,
+                "on_track": False,
+                "logged_anything": False,
+            })
+            continue
+
+        cal_met = target_cal is not None and day_data["cal"] >= target_cal * 0.9 and day_data["cal"] <= target_cal * 1.1
+        sat_met = target_sat is not None and day_data["sat"] <= target_sat
+        fib_met = target_sol is not None and day_data["sol"] >= target_sol
+        sug_met = target_sug is not None and day_data["sug"] <= target_sug
+        targets_met = sum([cal_met, sat_met, fib_met, sug_met])
+
+        result.append({
+            "date": d.isoformat(),
+            "cal_logged": day_data["cal"], "cal_target": target_cal,
+            "sat_logged": day_data["sat"], "sat_target": target_sat,
+            "fib_logged": day_data["sol"], "fib_target": target_sol,
+            "sug_logged": day_data["sug"], "sug_target": target_sug,
+            "targets_met": targets_met,
+            "on_track": targets_met >= 3,
+            "logged_anything": True,
+        })
+
+    return result
+
+
 async def _get_active_insight(db, user_id: str) -> dict | None:
     import json as _json
     import time as _time

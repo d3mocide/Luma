@@ -195,6 +195,21 @@ export interface TodayData {
   } | null
 }
 
+export interface StreakHistoryDay {
+  date: string
+  cal_logged: number | null
+  cal_target: number | null
+  sat_logged: number | null
+  sat_target: number | null
+  fib_logged: number | null
+  fib_target: number | null
+  sug_logged: number | null
+  sug_target: number | null
+  targets_met: number
+  on_track: boolean
+  logged_anything: boolean
+}
+
 export interface WaterToday {
   total_ml: number
   entries: number

@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 ph = PasswordHasher()
 
-VALID_ROLES = frozenset({'user', 'operator', 'admin'})
+VALID_ROLES = frozenset({'user', 'operator', 'admin', 'demo'})
 AdminUser = Annotated[User, Depends(require_role('admin'))]
 
 _ALPHABET = string.ascii_letters + string.digits + '!@#$%^&*'
