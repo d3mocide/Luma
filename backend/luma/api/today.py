@@ -283,10 +283,14 @@ async def get_streak_history(
     for s in supp_rows.scalars().all():
         for key, val in (s.nutrients_per_dose or {}).items():
             v = float(val or 0.0)
-            if key == "calories":          supp_cal += v
-            elif key == "saturated_fat_g": supp_sat += v
-            elif key == "soluble_fiber_g": supp_sol += v
-            elif key == "sugars_g":        supp_sug += v
+            if key == "calories":
+                supp_cal += v
+            elif key == "saturated_fat_g":
+                supp_sat += v
+            elif key == "soluble_fiber_g":
+                supp_sol += v
+            elif key == "sugars_g":
+                supp_sug += v
 
     start_utc = datetime.combine(start_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
     end_utc   = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)

@@ -120,6 +120,6 @@ describe('WaterCard', () => {
 
     render(<WaterCard />, { wrapper: wrap(client) })
 
-    expect(screen.getByText('Goal met')).toBeInTheDocument()
+    expect(screen.getByText('100%')).toBeInTheDocument()
   })
 })
