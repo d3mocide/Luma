@@ -25,6 +25,7 @@ from luma.api import (
     recipes,
     today,
     trends,
+    water,
 )
 from luma.config import settings
 from luma.middleware import CSRFMiddleware
@@ -150,6 +151,7 @@ app.include_router(journal.router, prefix=f"{API_PREFIX}/journal", tags=["journa
 app.include_router(notifications.router, prefix=f"{API_PREFIX}/notifications", tags=["notifications"])
 app.include_router(family.router, prefix=f"{API_PREFIX}/family", tags=["family"])
 app.include_router(health.router, prefix=API_PREFIX, tags=["health"])
+app.include_router(water.router, prefix=f"{API_PREFIX}/water", tags=["water"])
 
 
 @app.get("/health")

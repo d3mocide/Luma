@@ -56,6 +56,8 @@ class User(Base):
     # (steps/distance/energy) so iOS + Android don't double-count. Default keeps
     # existing HAE users on Apple Health.
     data_source: Mapped[str] = mapped_column(String(20), nullable=False, default="apple_health", server_default="'apple_health'")
+    water_goal_ml: Mapped[int] = mapped_column(Integer, nullable=False, default=2000, server_default='2000')
+    water_buddy: Mapped[str] = mapped_column(Text, nullable=False, default='frog', server_default="'frog'")
 
     goals = relationship("Goal", back_populates="user", uselist=False, cascade="all, delete-orphan")
     preferences = relationship("Preference", back_populates="user", cascade="all, delete-orphan")
@@ -479,3 +481,14 @@ class LlmEvent(Base):
     completion_tokens: Mapped[int | None] = mapped_column(Integer)
     total_tokens: Mapped[int | None] = mapped_column(Integer)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class WaterLog(Base):
+    __tablename__ = "water_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    amount_ml: Mapped[int] = mapped_column(Integer, nullable=False)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True, server_default=func.now())
+
+    user = relationship("User")
