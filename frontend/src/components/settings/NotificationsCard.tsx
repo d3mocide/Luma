@@ -25,33 +25,94 @@ function isTrustedPwaOrigin(): boolean {
     !['localhost', '127.0.0.1'].includes(window.location.hostname)
 }
 
-// Resolve an *active* service worker registration without relying on
+// Resolve an *active* service worker registration without relying solely on
 // navigator.serviceWorker.ready, which hangs indefinitely on iOS standalone
-// PWAs after a reinstall. Defensively (re)registers — register() is idempotent
-// for an unchanged script URL — then polls getRegistration() until a worker is
-// active. Throws with a diagnostic message on failure so callers can surface it.
-async function getReadyRegistration(timeoutMs = 25000): Promise<ServiceWorkerRegistration> {
+// PWAs after a reinstall. We wait on the registration object register() hands
+// back (getRegistration() can transiently return null on some browsers and
+// never surface the worker we just kicked off) and resolve the moment its
+// worker reaches 'activated' — driven by statechange events, with a poll
+// backstop for iOS where those events fire unreliably.
+//
+// The timeout is generous because the very first install precaches the app
+// shell (several MB); on a cold cache that can take much longer than a few
+// seconds, and a premature throw here is exactly what made "Subscribe" fail on
+// desktop even though the worker was still legitimately activating.
+async function getReadyRegistration(timeoutMs = 60000): Promise<ServiceWorkerRegistration> {
+  let reg: ServiceWorkerRegistration | undefined
   if (isTrustedPwaOrigin()) {
     // Do NOT catch — if register() throws (wrong MIME, security error, bad URL)
-    // we want to surface that error rather than poll for 25 s and time out.
-    await navigator.serviceWorker.register(SW_URL)
+    // we want to surface that error rather than wait the full timeout.
+    reg = await navigator.serviceWorker.register(SW_URL)
+  } else {
+    reg = (await navigator.serviceWorker.getRegistration()) ?? undefined
   }
 
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    const reg = await navigator.serviceWorker.getRegistration().catch(() => null)
-    if (reg?.active) return reg
+  if (reg?.active) return reg
 
-    // SW went redundant — install failed (e.g. precache fetch error). Fail fast
-    // instead of waiting the full timeout.
-    const worker = reg?.installing ?? reg?.waiting
-    if (worker?.state === 'redundant') {
-      throw new Error('SW install failed (redundant). Fully close the app, reopen it, and try again.')
+  return new Promise<ServiceWorkerRegistration>((resolve, reject) => {
+    let settled = false
+    let tracked: ServiceWorker | null = null
+
+    const finish = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      clearInterval(poll)
+      reg?.removeEventListener('updatefound', onUpdateFound)
+      tracked?.removeEventListener('statechange', onStateChange)
+      fn()
     }
 
-    await new Promise((r) => setTimeout(r, 500))
-  }
-  throw new Error('SW timed out activating. Fully close the app, reopen it, and try again.')
+    const checkActive = (): boolean => {
+      if (reg?.active) {
+        finish(() => resolve(reg as ServiceWorkerRegistration))
+        return true
+      }
+      return false
+    }
+
+    const onStateChange = () => {
+      if (tracked?.state === 'redundant') {
+        finish(() => reject(new Error('Background service failed to install. Reload the page and try again.')))
+        return
+      }
+      checkActive()
+    }
+
+    const track = (worker: ServiceWorker | null) => {
+      if (!worker || worker === tracked) return
+      tracked?.removeEventListener('statechange', onStateChange)
+      tracked = worker
+      tracked.addEventListener('statechange', onStateChange)
+      onStateChange()
+    }
+
+    const onUpdateFound = () => track(reg?.installing ?? reg?.waiting ?? null)
+
+    const timer = setTimeout(
+      () => finish(() => reject(new Error('Background service is still preparing — leave this page open a few seconds and tap Subscribe again.'))),
+      timeoutMs,
+    )
+
+    // iOS backstop: statechange/updatefound can fail to fire after a PWA
+    // reinstall, so also re-read the registration on an interval.
+    const poll = setInterval(async () => {
+      if (checkActive()) return
+      const latest = await navigator.serviceWorker.getRegistration().catch(() => null)
+      if (latest) { reg = latest; track(latest.installing ?? latest.waiting ?? null); checkActive() }
+    }, 750)
+
+    if (!reg) {
+      finish(() => reject(new Error('Background service unavailable. Reload the page and try again.')))
+      return
+    }
+    reg.addEventListener('updatefound', onUpdateFound)
+    track(reg.installing ?? reg.waiting ?? null)
+    checkActive()
+    // .ready resolves on activation; on iOS it can hang, so it only races the
+    // timeout/poll — it never gates resolution on its own.
+    navigator.serviceWorker.ready.then((r) => finish(() => resolve(r))).catch(() => {})
+  })
 }
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
