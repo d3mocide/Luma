@@ -29,7 +29,7 @@ Brand/UI reference: `refrence/BRAND-GUIDE.md` is the canonical source for visual
 - SQLAlchemy 2.0 async ORM; never use sync session in async routes
 - `argon2-cffi` for password hashing (Argon2id); never store plaintext or use bcrypt
 - PyJWT HS256 for access tokens (15 min) + refresh tokens (7 days)
-- Cookies: HTTP-only, Secure, SameSite=Strict
+- Cookies: HTTP-only, Secure, SameSite=Lax (NOT Strict — iOS standalone PWAs drop Strict cookies on the Home Screen cold-launch navigation, logging the user out on every relaunch; the double-submit CSRF token below is the primary CSRF defense)
 - CSRF: double-submit cookie (`X-CSRF-Token` header) on all state-mutating routes
 - Alembic for all schema changes — never `CREATE TABLE` outside a migration
 - arq for background tasks — never `asyncio.create_task` for anything that needs durability

@@ -3,7 +3,7 @@
 CSRFMiddleware implements the double-submit cookie pattern: a non-HttpOnly
 `csrf_token` cookie is issued on any response that lacks one, and every
 state-mutating request must echo that value back in the `X-CSRF-Token`
-header. Auth cookies are HTTP-only + SameSite=Strict, so this is a second,
+header. Auth cookies are HTTP-only + SameSite=Lax, so this is a second,
 independent layer — a cross-site page can neither read the cookie nor set
 the header.
 
@@ -51,7 +51,10 @@ class CSRFMiddleware:
         self.secure = secure
 
     def _set_cookie_value(self, token: str) -> bytes:
-        attrs = f"{CSRF_COOKIE}={token}; Path=/; Max-Age=604800; SameSite=Strict"
+        # SameSite=Lax (matches the auth cookies): Strict is dropped by iOS
+        # standalone PWAs on cold launch, which would leave this token absent
+        # and every mutating request 403ing after the app is reopened.
+        attrs = f"{CSRF_COOKIE}={token}; Path=/; Max-Age=604800; SameSite=Lax"
         if self.secure:
             attrs += "; Secure"
         return attrs.encode("latin-1")

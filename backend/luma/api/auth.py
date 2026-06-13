@@ -111,8 +111,12 @@ def _set_auth_cookies(response: Response, user: User) -> None:
     access = _make_access_token(user)
     refresh = _make_refresh_token(user)
     secure = settings.is_production
-    response.set_cookie("access_token", access, httponly=True, secure=secure, samesite="strict", max_age=settings.access_token_expire_minutes * 60)
-    response.set_cookie("refresh_token", refresh, httponly=True, secure=secure, samesite="strict", max_age=settings.refresh_token_expire_days * 86400)
+    # SameSite=Lax, not Strict: iOS standalone PWAs withhold Strict cookies on
+    # the cold-launch navigation, so the session reads as logged-out every time
+    # the app is reopened from the Home Screen. Lax still blocks the cross-site
+    # POST CSRF vector, and the double-submit CSRF token is the primary defense.
+    response.set_cookie("access_token", access, httponly=True, secure=secure, samesite="lax", max_age=settings.access_token_expire_minutes * 60)
+    response.set_cookie("refresh_token", refresh, httponly=True, secure=secure, samesite="lax", max_age=settings.refresh_token_expire_days * 86400)
 
 
 def _refresh_ttl_seconds(payload: dict) -> int:
@@ -168,8 +172,9 @@ async def logout(
             pass
 
     secure = settings.is_production
-    response.delete_cookie("access_token", httponly=True, secure=secure, samesite="strict")
-    response.delete_cookie("refresh_token", httponly=True, secure=secure, samesite="strict")
+    # Attributes must match the cookies set in _set_auth_cookies for deletion to take effect.
+    response.delete_cookie("access_token", httponly=True, secure=secure, samesite="lax")
+    response.delete_cookie("refresh_token", httponly=True, secure=secure, samesite="lax")
     return {"detail": "logged out"}
 
 
