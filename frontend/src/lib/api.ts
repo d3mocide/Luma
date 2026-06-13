@@ -32,6 +32,18 @@ export async function csrfHeaders(): Promise<Record<string, string>> {
   return token ? { 'X-CSRF-Token': token } : {}
 }
 
+// Force a fresh CSRF cookie even if one is already present. iOS standalone
+// PWAs intermittently fail to expose the non-HttpOnly cookie set via a fetch
+// Set-Cookie response to document.cookie, so a mutating request can fire with
+// a stale/missing X-CSRF-Token and the server 403s it. Re-issuing the cookie
+// via a fresh GET and re-reading it recovers the double-submit pair.
+async function refreshCsrfToken(): Promise<string | null> {
+  csrfBootstrap = fetch(`${BASE}/auth/setup-status`, { credentials: 'include' }).catch(() => undefined)
+  await csrfBootstrap
+  csrfBootstrap = null
+  return readCookie(CSRF_COOKIE)
+}
+
 // Endpoints where a 401 is the answer, not an expired access token — never
 // refresh-and-retry these (refresh itself would loop).
 const NO_REFRESH_PATHS = new Set(['/auth/login', '/auth/setup', '/auth/refresh', '/auth/logout'])
@@ -91,6 +103,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // expires fails until the user logs in again.
   if (res.status === 401 && !NO_REFRESH_PATHS.has(path.split('?')[0])) {
     if (await refreshSession()) res = await doFetch()
+  }
+  // A 403 on a mutating request means the double-submit CSRF token didn't
+  // round-trip (cookie absent/stale — see refreshCsrfToken). Re-issue it and
+  // retry once. Without this, saving notification prefs or persisting a push
+  // subscription hard-fails on iOS PWAs even though GETs keep working.
+  if (res.status === 403 && isMutating) {
+    if (await refreshCsrfToken()) res = await doFetch()
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }))

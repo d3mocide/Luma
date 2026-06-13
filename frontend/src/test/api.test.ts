@@ -73,6 +73,31 @@ describe('api session refresh on 401', () => {
     expect(refreshCount).toBe(1)
   })
 
+  it('re-issues the CSRF token and retries once after a 403 on a mutating request', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(403, { detail: 'CSRF token missing or invalid' }))
+      .mockResolvedValueOnce(jsonResponse(200, {}))
+      .mockResolvedValueOnce(jsonResponse(200, { nudge_enabled: true, nudge_hour: 19, nudge_tz: 'UTC' }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      api.put('/notifications/preferences', { nudge_enabled: true, nudge_hour: 19, nudge_tz: 'UTC' })
+    ).resolves.toEqual({ nudge_enabled: true, nudge_hour: 19, nudge_tz: 'UTC' })
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/v1/auth/setup-status')
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/v1/notifications/preferences')
+  })
+
+  it('does not retry a 403 on a non-mutating GET', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(403, { detail: 'Insufficient permissions' }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(api.get('/notifications/preferences')).rejects.toThrow('Insufficient permissions')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('does not refresh after a 401 from credential endpoints', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse(401, { detail: 'Invalid email or password' }))

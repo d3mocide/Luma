@@ -28,14 +28,14 @@ export const SECTION_DEFS: SectionDef[] = [
 ]
 
 export const DEFAULT_ORDER: SectionId[] = [
-  'weight',
   'nutrition',
+  'weight',
   'streak',
+  'insight',
   'water',
   'biometrics',
-  'insight',
-  'plan',
   'nutrition_calc',
+  'plan',
   'meals',
 ]
 
