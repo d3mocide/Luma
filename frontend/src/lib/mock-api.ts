@@ -42,6 +42,9 @@ let signedIn = true
 let measurementSystem: 'metric' | 'imperial' = 'metric'
 let aiPricingOverrides: Record<string, { input: number; output: number }> = {}
 
+interface MockPref { kind: string; value: string }
+const mockPreferences: MockPref[] = []
+
 const waterLogs: number[] = [250, 250, 250]
 let waterGoalMl = 2000
 let waterGlassMl = 250
@@ -625,6 +628,32 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
       waterGlassMl = body.glass_ml
     }
     return { buddy: waterBuddy, goal_ml: waterGoalMl, glass_ml: waterGlassMl }
+  }
+
+  if (method === 'GET' && pathname === '/preferences') {
+    requireAuth()
+    return [...mockPreferences]
+  }
+
+  if (method === 'POST' && pathname === '/preferences') {
+    requireAuth()
+    const body = parseBody(init)
+    if (typeof body?.kind !== 'string' || typeof body?.value !== 'string') {
+      throw new MockApiError(422, 'kind and value required')
+    }
+    const exists = mockPreferences.some(p => p.kind === body.kind && p.value === body.value)
+    if (!exists) mockPreferences.push({ kind: body.kind, value: body.value })
+    return { kind: body.kind, value: body.value }
+  }
+
+  if (method === 'DELETE' && /^\/preferences\/[^/]+\/.+$/.test(pathname)) {
+    requireAuth()
+    const parts = pathname.split('/')
+    const kind = parts[2]
+    const value = parts.slice(3).join('/')
+    const idx = mockPreferences.findIndex(p => p.kind === kind && p.value === value)
+    if (idx !== -1) mockPreferences.splice(idx, 1)
+    return { detail: 'deleted' }
   }
 
   throw new MockApiError(404, `Mock route not implemented: ${method} ${path}`)
