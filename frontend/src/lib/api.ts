@@ -32,6 +32,35 @@ export async function csrfHeaders(): Promise<Record<string, string>> {
   return token ? { 'X-CSRF-Token': token } : {}
 }
 
+// Endpoints where a 401 is the answer, not an expired access token — never
+// refresh-and-retry these (refresh itself would loop).
+const NO_REFRESH_PATHS = new Set(['/auth/login', '/auth/setup', '/auth/refresh', '/auth/logout'])
+
+// Refresh tokens are single-use (rotation): parallel 401s must share one
+// refresh call, or the loser replays a consumed token and the server revokes
+// the session as a suspected cookie theft.
+let refreshInFlight: Promise<boolean> | null = null
+
+// Exported for raw-fetch call sites (streaming, multipart) that need to
+// recover from an expired access token the same way the request helper does.
+export function refreshSession(): Promise<boolean> {
+  refreshInFlight ??= (async () => {
+    try {
+      const res = await fetch(`${BASE}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: await csrfHeaders(),
+      })
+      return res.ok
+    } catch {
+      return false
+    } finally {
+      refreshInFlight = null
+    }
+  })()
+  return refreshInFlight
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (isMockApiEnabled()) {
     try {
@@ -44,16 +73,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   const isFormData = init?.body instanceof FormData
   const isMutating = (init?.method ?? 'GET') !== 'GET'
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      // Don't set Content-Type for multipart — the browser sets it with the boundary.
-      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-      ...(isMutating ? await csrfHeaders() : {}),
-      ...(init?.headers ?? {}),
-    },
-  })
+  const doFetch = async () =>
+    fetch(`${BASE}${path}`, {
+      ...init,
+      credentials: 'include',
+      headers: {
+        // Don't set Content-Type for multipart — the browser sets it with the boundary.
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        ...(isMutating ? await csrfHeaders() : {}),
+        ...(init?.headers ?? {}),
+      },
+    })
+
+  let res = await doFetch()
+  // Access tokens live 15 minutes; the refresh cookie 7 days. On 401, rotate
+  // the session once and retry — without this, any request after the token
+  // expires fails until the user logs in again.
+  if (res.status === 401 && !NO_REFRESH_PATHS.has(path.split('?')[0])) {
+    if (await refreshSession()) res = await doFetch()
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(body.detail ?? `HTTP ${res.status}`)

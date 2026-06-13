@@ -5,7 +5,7 @@ import { Sparkles, Send, Plus, MessageSquare } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { LumaLogo } from '../components/ui/LumaLogo'
-import { api, csrfHeaders, Insight } from '../lib/api'
+import { api, csrfHeaders, refreshSession, Insight } from '../lib/api'
 
 const BASE = '/api/v1'
 
@@ -93,12 +93,15 @@ export default function CoachRoute() {
     setMessages((prev) => [...prev, { role: 'assistant', content: '', streaming: true, toolCalls: [] }])
 
     try {
-      const resp = await fetch(`${BASE}/coach/threads/${threadId}/messages`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...(await csrfHeaders()) },
-        body: JSON.stringify({ content: text }),
-      })
+      const send = async () =>
+        fetch(`${BASE}/coach/threads/${threadId}/messages`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', ...(await csrfHeaders()) },
+          body: JSON.stringify({ content: text }),
+        })
+      let resp = await send()
+      if (resp.status === 401 && (await refreshSession())) resp = await send()
 
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       if (!resp.body) throw new Error('No response body')
