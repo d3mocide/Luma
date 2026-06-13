@@ -187,9 +187,6 @@ function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: 
         <LumaWordmark size={32}/>
       </div>
 
-      <div style={{ padding: '0 8px', marginBottom: 14 }}>
-        <span className="eyebrow" style={{ fontSize: 9 }}>Menu</span>
-      </div>
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {DESKTOP_NAV_ITEMS.map((item) => (
@@ -238,7 +235,6 @@ function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: 
           </span>
           <span style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
             <span style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{user.display_name || 'Operator'}</span>
-            <span style={{ display: 'block', fontSize: 11, color: 'var(--fg-quiet)' }}>self-hosted</span>
           </span>
           <Settings size={15} strokeWidth={1.5} color="currentColor" style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
         </button>

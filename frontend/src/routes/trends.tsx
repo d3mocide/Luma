@@ -440,14 +440,22 @@ function MetricChart({
     return val.toFixed(1)
   }
 
-  // Alert pins: filter to date range
-  const seriesDates = new Set(series.map((s) => s.date.slice(0, 10)))
-  const alertPins = alerts.filter((a) => seriesDates.has(a.ts.slice(0, 10)))
+
 
   const severityColor = (sev: string) => {
     if (sev === 'positive') return 'var(--good)'
     if (sev === 'warning') return 'var(--bad)'
     return 'var(--fg-tertiary)'
+  }
+
+  const getAlertForDate = (dateStr: string) => {
+    const dayAlerts = alerts.filter((a) => a.ts.slice(0, 10) === dateStr)
+    if (dayAlerts.length === 0) return null
+    const warning = dayAlerts.find((a) => a.severity === 'warning')
+    if (warning) return warning
+    const positive = dayAlerts.find((a) => a.severity === 'positive')
+    if (positive) return positive
+    return dayAlerts[0]
   }
 
   return (
@@ -582,26 +590,31 @@ function MetricChart({
                   labelStyle={{ color: 'rgba(246,249,255,0.56)', fontSize: 11 }}
                   itemStyle={{ color, fontSize: 13 }}
                 />
-                {alertPins.map((pin) => (
-                  <ReferenceLine
-                    key={pin.id}
-                    x={pin.ts.slice(0, 10)}
-                    stroke={severityColor(pin.severity)}
-                    strokeDasharray="3 3"
-                    strokeWidth={1.5}
-                    label={{
-                      value: '●',
-                      fill: severityColor(pin.severity),
-                      fontSize: 10,
-                      position: 'insideTop',
-                    }}
-                  />
-                ))}
                 <Area
                   type="monotone" dataKey="last"
                   stroke={color} strokeWidth={2.5}
                   fill={`url(#fill-${metricId})`}
-                  dot={false} activeDot={{ r: 5, fill: color, strokeWidth: 0 }}
+                  dot={(props: { cx: number; cy: number; payload: { date: string } }) => {
+                    const { cx, cy, payload } = props
+                    if (!payload || !payload.date) return <g />
+                    const dateStr = payload.date.slice(0, 10)
+                    const alert = getAlertForDate(dateStr)
+                    if (!alert) return <g />
+                    
+                    return (
+                      <circle
+                        key={payload.date}
+                        cx={cx}
+                        cy={cy}
+                        r={5}
+                        fill={severityColor(alert.severity)}
+                        stroke="var(--bg-1)"
+                        strokeWidth={1.5}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    )
+                  }}
+                  activeDot={{ r: 6, fill: color, strokeWidth: 1.5, stroke: 'var(--bg-1)' }}
                   style={{ cursor: 'pointer' }}
                 />
               </AreaChart>
@@ -680,8 +693,36 @@ function DrillDownSheet({ date, onClose, alerts }: { date: string; onClose: () =
           <button className="btn btn-ghost" style={{ padding: 8 }} onClick={onClose}><X size={16}/></button>
         </div>
 
+        <div style={{ marginBottom: dayAlerts.length > 0 ? 24 : 0 }}>
+          <div className="eyebrow" style={{ marginBottom: 10 }}>Meals logged</div>
+          {isLoading ? (
+            <div style={{ height: 80, borderRadius: 12, background: 'var(--glass-1)', animation: 'pulse 1.5s infinite' }}/>
+          ) : !data?.meals.length ? (
+            <p style={{ color: 'var(--fg-tertiary)', fontSize: 14, margin: 0 }}>No meals logged on this day.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {data.meals.map((m) => (
+                <div key={m.id} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '12px 16px', borderRadius: 12, background: 'var(--glass-1)',
+                }}>
+                  <div>
+                    <div style={{ fontSize: 14, color: 'var(--fg-primary)' }}>{m.headline}</div>
+                    <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginTop: 2 }}>
+                      {m.slot} · {new Date(m.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                  <span className="num" style={{ fontSize: 14, color: 'var(--fg-secondary)' }}>
+                    {Math.round(m.calories)} kcal
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {dayAlerts.length > 0 && (
-          <div style={{ marginBottom: 24 }}>
+          <div>
             <div className="eyebrow" style={{ marginBottom: 10 }}>Alerts</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {dayAlerts.map((a) => (
@@ -698,32 +739,6 @@ function DrillDownSheet({ date, onClose, alerts }: { date: string; onClose: () =
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        <div className="eyebrow" style={{ marginBottom: 10 }}>Meals logged</div>
-        {isLoading ? (
-          <div style={{ height: 80, borderRadius: 12, background: 'var(--glass-1)', animation: 'pulse 1.5s infinite' }}/>
-        ) : !data?.meals.length ? (
-          <p style={{ color: 'var(--fg-tertiary)', fontSize: 14, margin: 0 }}>No meals logged on this day.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {data.meals.map((m) => (
-              <div key={m.id} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '12px 16px', borderRadius: 12, background: 'var(--glass-1)',
-              }}>
-                <div>
-                  <div style={{ fontSize: 14, color: 'var(--fg-primary)' }}>{m.headline}</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginTop: 2 }}>
-                    {m.slot} · {new Date(m.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-                <span className="num" style={{ fontSize: 14, color: 'var(--fg-secondary)' }}>
-                  {Math.round(m.calories)} kcal
-                </span>
-              </div>
-            ))}
           </div>
         )}
       </div>

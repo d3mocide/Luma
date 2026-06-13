@@ -3594,3 +3594,49 @@ input[type="search"]::-webkit-search-results-decoration {
   border-color: rgba(56,189,248,0.3);
   color: var(--sky-400);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * GENERIC LAYOUT UTILITIES
+ * ══════════════════════════════════════════════════════════════════════════ */
+.page-container {
+  padding: 32px 40px 80px;
+}
+
+@media (max-width: 1024px) {
+  .page-container {
+    padding: 26px 24px 80px;
+  }
+}
+
+@media (max-width: 900px) {
+  .page-container {
+    padding: 16px 16px 80px;
+  }
+}
+
+.responsive-grid-2col {
+  column-count: 2;
+  column-gap: 16px;
+  margin-top: 20px;
+  display: block;
+}
+
+.responsive-grid-2col > * {
+  break-inside: avoid;
+  margin-bottom: 16px;
+  display: inline-block;
+  width: 100%;
+  box-sizing: border-box;
+  vertical-align: top;
+}
+
+@media (max-width: 900px) {
+  .responsive-grid-2col {
+    column-count: 1;
+    margin-top: 16px;
+  }
+  .responsive-grid-2col > * {
+    margin-bottom: 14px;
+  }
+}
+

@@ -40,3 +40,19 @@ export function convertWeightToKg(valueLbOrKg: number | null | undefined, system
   if (valueLbOrKg == null) return null
   return system === 'imperial' ? valueLbOrKg / KG_TO_LB : valueLbOrKg
 }
+
+const ML_TO_FLOZ = 0.0338140227
+
+export function measurementVolumeUnit(system: MeasurementSystem): 'ml' | 'fl oz' {
+  return system === 'imperial' ? 'fl oz' : 'ml'
+}
+
+export function convertVolume(valueMl: number | null | undefined, system: MeasurementSystem): number | null {
+  if (valueMl == null) return null
+  return system === 'imperial' ? valueMl * ML_TO_FLOZ : valueMl
+}
+
+export function convertVolumeToMl(valueFlOzOrMl: number | null | undefined, system: MeasurementSystem): number | null {
+  if (valueFlOzOrMl == null) return null
+  return system === 'imperial' ? valueFlOzOrMl / ML_TO_FLOZ : valueFlOzOrMl
+}

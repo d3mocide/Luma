@@ -2,8 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, WaterSettings } from '../../lib/api'
 import { BUDDIES, BUDDY_IDS, BuddyId, isBuddyId } from '../../lib/water-buddies'
 import { BuddySprite } from '../today/WaterBuddies'
+import { useMeasurementSystem, convertVolume } from '../../lib/measurements'
 
-const GOAL_OPTIONS = [
+const GOAL_OPTIONS_METRIC = [
   { ml: 1500, label: '1.5 L' },
   { ml: 2000, label: '2 L' },
   { ml: 2500, label: '2.5 L' },
@@ -11,12 +12,28 @@ const GOAL_OPTIONS = [
   { ml: 3500, label: '3.5 L' },
 ]
 
-const GLASS_OPTIONS = [
+const GOAL_OPTIONS_IMPERIAL = [
+  { ml: 1479, label: '50 fl oz' },
+  { ml: 1893, label: '64 fl oz' },
+  { ml: 2366, label: '80 fl oz' },
+  { ml: 2957, label: '100 fl oz' },
+  { ml: 3549, label: '120 fl oz' },
+]
+
+const GLASS_OPTIONS_METRIC = [
   { ml: 200, label: '200 ml' },
-  { ml: 237, label: '237 ml · 8 oz' },
   { ml: 250, label: '250 ml' },
-  { ml: 355, label: '355 ml · 12 oz' },
+  { ml: 300, label: '300 ml' },
+  { ml: 400, label: '400 ml' },
   { ml: 500, label: '500 ml' },
+]
+
+const GLASS_OPTIONS_IMPERIAL = [
+  { ml: 237, label: '8 fl oz' },
+  { ml: 296, label: '10 fl oz' },
+  { ml: 355, label: '12 fl oz' },
+  { ml: 473, label: '16 fl oz' },
+  { ml: 591, label: '20 fl oz' },
 ]
 
 function selectStyle(): React.CSSProperties {
@@ -58,6 +75,8 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 export function HydrationCard() {
   const queryClient = useQueryClient()
+  const measurementSystem = useMeasurementSystem()
+  const isImperial = measurementSystem === 'imperial'
 
   const { data, isLoading } = useQuery<WaterSettings>({
     queryKey: ['water', 'settings'],
@@ -81,6 +100,9 @@ export function HydrationCard() {
   const goalGlasses = Math.max(1, Math.round(goalMl / glassMl))
   const busy = isLoading || mutation.isPending
 
+  const goalOptions = isImperial ? GOAL_OPTIONS_IMPERIAL : GOAL_OPTIONS_METRIC
+  const glassOptions = isImperial ? GLASS_OPTIONS_IMPERIAL : GLASS_OPTIONS_METRIC
+
   return (
     <div className="glass settings-card settings-card-spacious" style={{ padding: 24 }}>
       <div className="eyebrow" style={{ marginBottom: 12 }}>Hydration</div>
@@ -97,11 +119,15 @@ export function HydrationCard() {
             aria-label="Daily water goal"
             style={selectStyle()}
           >
-            {GOAL_OPTIONS.map((o) => (
+            {goalOptions.map((o) => (
               <option key={o.ml} value={o.ml}>{o.label}</option>
             ))}
-            {!GOAL_OPTIONS.some((o) => o.ml === goalMl) && (
-              <option value={goalMl}>{goalMl} ml</option>
+            {!goalOptions.some((o) => o.ml === goalMl) && (
+              <option value={goalMl}>
+                {isImperial 
+                  ? `${Math.round(convertVolume(goalMl, 'imperial') || 0)} fl oz` 
+                  : `${(goalMl / 1000).toFixed(1)} L`}
+              </option>
             )}
           </select>
         </Field>
@@ -114,11 +140,13 @@ export function HydrationCard() {
             aria-label="Glass size"
             style={selectStyle()}
           >
-            {GLASS_OPTIONS.map((o) => (
+            {glassOptions.map((o) => (
               <option key={o.ml} value={o.ml}>{o.label}</option>
             ))}
-            {!GLASS_OPTIONS.some((o) => o.ml === glassMl) && (
-              <option value={glassMl}>{glassMl} ml</option>
+            {!glassOptions.some((o) => o.ml === glassMl) && (
+              <option value={glassMl}>
+                {Math.round(convertVolume(glassMl, measurementSystem) || 0)} {isImperial ? 'fl oz' : 'ml'}
+              </option>
             )}
           </select>
         </Field>
@@ -149,7 +177,6 @@ export function HydrationCard() {
                 border: selected ? `1px solid ${b.color}` : '1px solid rgba(255,255,255,0.05)',
                 borderRadius: 'var(--radius-md)',
                 background: 'rgba(0,0,0,0.25)',
-                filter: `drop-shadow(0 0 6px ${b.glow})`,
               }}
             >
               <BuddySprite buddy={id} size={44} />

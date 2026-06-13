@@ -5,6 +5,7 @@ import { api, WaterToday } from '../../lib/api'
 import { BUDDIES, BUDDY_IDS, BuddyId, isBuddyId } from '../../lib/water-buddies'
 import { hydrationNudge } from '../../lib/water-pace'
 import { BuddySprite } from './WaterBuddies'
+import { useMeasurementSystem, measurementVolumeUnit, convertVolume } from '../../lib/measurements'
 
 export function WaterCard({ compact }: { compact?: boolean }) {
   const queryClient = useQueryClient()
@@ -18,9 +19,9 @@ export function WaterCard({ compact }: { compact?: boolean }) {
   })
 
   const logMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (amountMl?: number) =>
       api.post<WaterToday>(`/water/log?tz=${encodeURIComponent(browserTz)}`, {
-        amount_ml: data?.glass_ml ?? 250,
+        amount_ml: amountMl ?? data?.glass_ml ?? 250,
       }),
     onSuccess: (fresh) => {
       queryClient.setQueryData(['water', browserTz], fresh)
@@ -44,9 +45,17 @@ export function WaterCard({ compact }: { compact?: boolean }) {
     },
   })
 
+  const measurementSystem = useMeasurementSystem()
+  const volumeUnit = measurementVolumeUnit(measurementSystem)
+
   const goalMl = data?.goal_ml ?? 2000
   const totalMl = data?.total_ml ?? 0
   const glassMl = data?.glass_ml ?? 250
+  
+  const displayGoal = convertVolume(goalMl, measurementSystem)
+  const displayTotal = convertVolume(totalMl, measurementSystem)
+  const displayGlass = convertVolume(glassMl, measurementSystem)
+
   const pct = Math.min(totalMl / goalMl, 1)
   // Waterline is capped below the vessel top so the buddy never rides out of frame
   const fillPct = pct * 72
@@ -60,7 +69,7 @@ export function WaterCard({ compact }: { compact?: boolean }) {
   const nudge = data ? hydrationNudge({ totalMl, goalMl, glassMl, goalMet }) : null
 
   const handleLog = () => {
-    if (!logMutation.isPending) logMutation.mutate()
+    if (!logMutation.isPending) logMutation.mutate(undefined)
   }
 
   return (
@@ -74,13 +83,8 @@ export function WaterCard({ compact }: { compact?: boolean }) {
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
-        boxShadow: goalMet ? '0 0 32px -8px rgba(56,189,248,0.35)' : undefined,
-        transition: 'box-shadow 0.8s ease',
       }}
     >
-      {goalMet && (
-        <div style={{ position: 'absolute', top: -110, right: -100, width: 300, height: 250, background: 'radial-gradient(ellipse 58% 56% at 62% 38%, rgba(56,189,248,0.20), transparent 70%)', filter: 'blur(14px)', pointerEvents: 'none' }} />
-      )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="eyebrow">Hydration</div>
@@ -105,16 +109,20 @@ export function WaterCard({ compact }: { compact?: boolean }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span className="num" style={{ fontSize: compact ? 26 : 30, fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--fg-primary)' }}>
-          {data ? totalMl : '—'}
-        </span>
-        <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>/ {goalMl} ml</span>
-        {goalMet && <span style={{ fontSize: 11, color: 'var(--sky-400)', marginLeft: 'auto' }}>Goal met</span>}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span className="num" style={{ fontSize: compact ? 26 : 30, fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--fg-primary)' }}>
+            {data && displayTotal != null ? Math.round(displayTotal) : '—'}
+          </span>
+          <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>/ {displayGoal != null ? Math.round(displayGoal) : '—'} {volumeUnit}</span>
+        </div>
+        <div style={{ fontSize: compact ? 18 : 22, fontWeight: 600, color: 'var(--sky-400)', fontFamily: 'var(--font-mono)' }}>
+          {Math.round(pct * 100)}%
+        </div>
       </div>
 
       {showPicker ? (
-        <div style={{ flex: 1, minHeight: compact ? 150 : 180, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+        <div style={{ flex: 1, minHeight: compact ? 190 : 220, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
           {BUDDY_IDS.map((id) => {
             const b = BUDDIES[id]
             const selected = id === buddyId
@@ -137,7 +145,6 @@ export function WaterCard({ compact }: { compact?: boolean }) {
                   border: selected ? `1px solid ${b.color}` : '1px solid rgba(255,255,255,0.05)',
                   borderRadius: 'var(--radius-md)',
                   background: 'rgba(0,0,0,0.25)',
-                  filter: `drop-shadow(0 0 6px ${b.glow})`,
                 }}
               >
                 <BuddySprite buddy={id} size={42} />
@@ -147,68 +154,115 @@ export function WaterCard({ compact }: { compact?: boolean }) {
           })}
         </div>
       ) : (
-        <div
-          role="button"
-          tabIndex={0}
-          aria-label="Log a glass of water"
-          onClick={handleLog}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleLog() } }}
-          className="glass-inset"
-          style={{
-            position: 'relative',
-            flex: 1,
-            minHeight: compact ? 150 : 180,
-            borderRadius: 'var(--radius-md)',
-            overflow: 'hidden',
-            cursor: 'pointer',
-            userSelect: 'none',
-            WebkitTapHighlightColor: 'transparent',
-          }}
-        >
-          {/* Goal line */}
-          <div style={{ position: 'absolute', left: 10, right: 10, bottom: '72%', borderTop: '1px dashed rgba(255,255,255,0.14)', pointerEvents: 'none' }} />
-
-          {/* Water fill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 12 : 20, justifyContent: 'center', width: '100%' }}>
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Log a glass of water"
+            onClick={handleLog}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleLog() } }}
+            className="glass-inset"
             style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: `${fillPct}%`,
-              background: `linear-gradient(180deg, ${waterTop}, ${waterBottom})`,
-              transition: 'height 0.9s cubic-bezier(0.22, 0.8, 0.3, 1)',
+              position: 'relative',
+              flex: 1,
+              minHeight: compact ? 190 : 220,
+              borderRadius: 20,
+              overflow: 'hidden',
+              cursor: 'pointer',
+              userSelect: 'none',
+              WebkitTapHighlightColor: 'transparent',
             }}
           >
-            <svg
-              className="water-wave"
-              viewBox="0 0 120 10"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-              style={{ position: 'absolute', top: -7, left: 0, width: '200%', height: 8, display: 'block' }}
+            {/* Goal line */}
+            <div style={{ position: 'absolute', left: 10, right: 10, bottom: '72%', borderTop: '1px dashed rgba(255,255,255,0.14)', pointerEvents: 'none' }} />
+
+            {/* Water fill */}
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: `${fillPct}%`,
+                background: `linear-gradient(180deg, ${waterTop}, ${waterBottom})`,
+                transition: 'height 0.9s cubic-bezier(0.22, 0.8, 0.3, 1)',
+              }}
             >
-              <path d="M0 8 Q7.5 2 15 8 T30 8 T45 8 T60 8 T75 8 T90 8 T105 8 T120 8 V10 H0 Z" fill={waterTop} />
-            </svg>
-          </div>
+              <svg
+                className="water-wave"
+                viewBox="0 0 120 10"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+                style={{ position: 'absolute', top: -7, left: 0, width: '200%', height: 8, display: 'block' }}
+              >
+                <path d="M0 8 Q7.5 2 15 8 T30 8 T45 8 T60 8 T75 8 T90 8 T105 8 T120 8 V10 H0 Z" fill={waterTop} />
+              </svg>
+            </div>
 
-          {/* Buddy riding the water surface */}
-          <div
-            style={{
-              position: 'absolute',
-              left: '50%',
-              bottom: `calc(${fillPct}% - 4px)`,
-              transform: 'translateX(-50%)',
-              transition: 'bottom 0.9s cubic-bezier(0.22, 0.8, 0.3, 1)',
-              color: buddy.color,
-              filter: `drop-shadow(0 0 ${4 + Math.round(pct * 8)}px ${buddy.glow})`,
-              pointerEvents: 'none',
-            }}
-          >
-            <div className="water-buddy">
-              <div key={hopKey} className={hopKey > 0 ? 'water-buddy-hop' : undefined}>
-                <BuddySprite buddy={buddyId} size={compact ? 68 : 82} />
+            {/* Buddy riding the water surface */}
+            <div
+              style={{
+                position: 'absolute',
+                left: '50%',
+                bottom: `calc(${fillPct}% - 4px)`,
+                transform: 'translateX(-50%)',
+                transition: 'bottom 0.9s cubic-bezier(0.22, 0.8, 0.3, 1)',
+                color: buddy.color,
+                pointerEvents: 'none',
+              }}
+            >
+              <div className="water-buddy">
+                <div key={hopKey} className={hopKey > 0 ? 'water-buddy-hop' : undefined}>
+                  <BuddySprite buddy={buddyId} size={compact ? 76 : 82} />
+                </div>
               </div>
             </div>
+          </div>
+
+          {/* Quick presets */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center', height: compact ? 190 : 220, flex: 1, maxWidth: compact ? 100 : 120 }}>
+            <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'center', marginBottom: 2 }}>Quick Log</span>
+            {(measurementSystem === 'imperial' ? [8, 16, 24] : [250, 500, 750]).map((val) => {
+              const mlToLog = measurementSystem === 'imperial' ? Math.round(val / 0.0338140227) : val;
+              const displayLabel = measurementSystem === 'imperial' ? `+${val}oz` : `+${val}ml`;
+              return (
+                <button
+                  key={val}
+                  onClick={() => !logMutation.isPending && logMutation.mutate(mlToLog)}
+                  className="btn"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    height: compact ? 38 : 42,
+                    fontSize: compact ? 11 : 12,
+                    fontWeight: 600,
+                    borderRadius: 12,
+                    width: '100%',
+                    background: 'linear-gradient(135deg, rgba(56,189,248,0.08), rgba(56,189,248,0.02))',
+                    borderColor: 'rgba(56,189,248,0.18)',
+                    color: 'var(--sky-300)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(56,189,248,0.15), rgba(56,189,248,0.05))'
+                    e.currentTarget.style.borderColor = 'rgba(56,189,248,0.35)'
+                    e.currentTarget.style.color = 'var(--sky-200)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(56,189,248,0.08), rgba(56,189,248,0.02))'
+                    e.currentTarget.style.borderColor = 'rgba(56,189,248,0.18)'
+                    e.currentTarget.style.color = 'var(--sky-300)'
+                  }}
+                >
+                  <Droplet size={compact ? 10 : 12} strokeWidth={2.5} style={{ opacity: 0.8 }} />
+                  <span>{displayLabel}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -221,7 +275,7 @@ export function WaterCard({ compact }: { compact?: boolean }) {
           </div>
         ) : (
           <div style={{ fontSize: 11, color: 'var(--fg-quiet)', textAlign: 'center' }}>
-            Tap to add {glassMl} ml
+            Tap to add {displayGlass != null ? Math.round(displayGlass) : '—'} {volumeUnit}
           </div>
         )
       )}

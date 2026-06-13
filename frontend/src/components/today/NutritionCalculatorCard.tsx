@@ -78,7 +78,7 @@ function BudgetStat({
       </div>
       <div style={{ marginTop: compact ? 3 : 6, display: 'flex', alignItems: 'baseline', gap: compact ? 3 : 6, justifyContent: compact ? 'center' : 'flex-start' }}>
         <span className="num" style={{ fontSize: compact ? 16 : 20, color: over ? 'var(--bad)' : noTarget ? 'var(--fg-quiet)' : 'var(--fg-primary)' }}>
-          {noTarget ? '—' : remaining}
+          {noTarget ? '—' : (showProjected ? projected : remaining)}
         </span>
         {!noTarget && <span style={{ fontSize: compact ? 10 : 13, color: 'var(--fg-quiet)' }}>{unit}</span>}
       </div>
@@ -87,8 +87,8 @@ function BudgetStat({
           ? compact ? 'no target' : 'no target set'
           : showProjected
             ? compact
-              ? <>proj: <span className="num">{projected}</span></>
-              : <>after add: <span className="num">{projected}</span> {unit}</>
+              ? <>curr: <span className="num">{remaining}</span></>
+              : <>current: <span className="num">{remaining}</span> {unit}</>
             : 'remaining'}
       </div>
     </div>

@@ -202,7 +202,7 @@ export default function FavoritesRoute() {
   }
 
   return (
-    <div className="favorites-page" style={{ maxWidth: 720, margin: '0 auto', padding: '28px 20px 60px' }}>
+    <div className="page-container thin-scroll">
       {view === 'list' ? (
         <>
           {/* Page header */}
@@ -253,7 +253,7 @@ export default function FavoritesRoute() {
               </p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="responsive-grid-2col" style={{ marginTop: 0 }}>
               {favorites.map((fav) => (
                 <div
                   key={fav.id}
@@ -447,7 +447,7 @@ export default function FavoritesRoute() {
           )}
         </>
       ) : (
-        <>
+        <div style={{ maxWidth: 720, margin: '0 auto', paddingBottom: 60 }}>
           {/* Building view */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
             <button
@@ -538,7 +538,7 @@ export default function FavoritesRoute() {
               {isSaving ? 'Saving…' : 'Save favorite'}
             </button>
           </div>
-        </>
+        </div>
       )}
       {successModal && (
         <div

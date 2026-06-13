@@ -233,14 +233,6 @@ export default function TodayRoute() {
               <span className="serif-italic gradient-accent-text" style={{ background: 'var(--accent-gradient-hero)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>{greetingName}</span>.
             </h1>
           </div>
-          <button
-            className={`customize-btn${customizing ? ' customize-btn--active' : ''}`}
-            onClick={() => setCustomizing(c => !c)}
-            aria-label="Customize today screen"
-          >
-            <SlidersHorizontal size={14}/>
-            Customize
-          </button>
         </header>
 
         {/* Desktop sections rendered in user-defined group order */}
@@ -599,14 +591,16 @@ export default function TodayRoute() {
           )
 
           if (sectionId === 'meals') return (
-            <RecentMealsCard key="meals" meals={data.recent_meals ?? []} compact onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} onEdit={handleEditMeal}/>
+            <div key="meals" style={{ marginBottom: 14 }}>
+              <RecentMealsCard meals={data.recent_meals ?? []} compact onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} onEdit={handleEditMeal}/>
+            </div>
           )
 
           return null
         })}
 
         {/* Mobile Customize button */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24, marginBottom: 24 }}>
           <button
             className={`customize-btn${customizing ? ' customize-btn--active' : ''}`}
             onClick={() => setCustomizing(c => !c)}

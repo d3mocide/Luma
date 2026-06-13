@@ -3,7 +3,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -93,7 +94,19 @@ export function TodayCustomizePanel({
   onToggle,
 }: TodayCustomizePanelProps) {
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      // Since the drag handle has touch-action: none, we do not need a temporal delay.
+      // A small tolerance ensures tiny tremors don't trigger drag immediately.
+      activationConstraint: {
+        delay: 0,
+        tolerance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),

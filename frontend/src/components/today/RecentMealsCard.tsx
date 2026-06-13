@@ -65,9 +65,8 @@ export function RecentMealsCard({
                   style={{
                     padding: compact ? '10px 12px' : '12px 14px',
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: 12,
+                    flexDirection: 'column',
+                    gap: 10,
                     opacity: isDeleting ? 0.5 : 1,
                     transition: 'opacity 0.15s',
                     cursor: meal.nutrition ? 'pointer' : 'default',
@@ -75,68 +74,101 @@ export function RecentMealsCard({
                   onClick={() => { if (meal.nutrition && !isDeleting) setBreakdownMeal(meal) }}
                   role={meal.nutrition ? 'button' : undefined}
                 >
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: compact ? 13 : 14, color: 'var(--fg-primary)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {meal.headline}
+                  {/* Top row: Headline/Details (left) and Time/Actions (right) */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, width: '100%' }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: compact ? 13 : 14, color: 'var(--fg-primary)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {meal.headline}
+                      </div>
+                      <div style={{ marginTop: 3, fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
+                        {meal.slot} · {meal.source} · {meal.item_count} items
+                      </div>
                     </div>
-                    <div style={{ marginTop: 3, fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
-                      {meal.slot} · {meal.source} · {meal.item_count} items
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <div style={{ textAlign: 'right' }}>
+                        {!meal.nutrition && (
+                          <div className="num" style={{ fontSize: 13, color: 'var(--fg-secondary)' }}>
+                            {Math.round(meal.calories)} kcal
+                          </div>
+                        )}
+                        <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
+                          {formatMealTime(meal.ts)}
+                        </div>
+                      </div>
+                      {meal.nutrition && !onDelete && !onEdit && (
+                        <ChevronRight size={13} strokeWidth={1.8} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {onEdit && (
+                          <button
+                            type="button"
+                            className="btn"
+                            disabled={isDeleting}
+                            onClick={(e) => { e.stopPropagation(); onEdit(meal) }}
+                            title="Edit meal"
+                            style={{
+                              padding: '6px',
+                              borderRadius: 8,
+                              border: '1px solid var(--glass-edge)',
+                              background: 'transparent',
+                              color: 'var(--fg-quiet)',
+                              flexShrink: 0,
+                              lineHeight: 0,
+                            }}
+                          >
+                            <Pencil size={13} strokeWidth={1.8} />
+                          </button>
+                        )}
+                        {onDelete && (
+                          <button
+                            type="button"
+                            className="btn"
+                            disabled={isDeleting}
+                            onClick={(e) => { e.stopPropagation(); onDelete(meal.id) }}
+                            title="Delete meal"
+                            style={{
+                              padding: '6px',
+                              borderRadius: 8,
+                              border: '1px solid var(--glass-edge)',
+                              background: 'transparent',
+                              color: 'var(--fg-quiet)',
+                              flexShrink: 0,
+                              lineHeight: 0,
+                            }}
+                          >
+                            <Trash2 size={13} strokeWidth={1.8} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div className="num" style={{ fontSize: 13, color: 'var(--fg-secondary)' }}>
-                      {Math.round(meal.calories)} kcal
+
+                  {/* Bottom row: Macro chips spanning the width */}
+                  {meal.nutrition && (
+                    <div className="favorite-macro-grid" style={{ width: '100%', maxWidth: compact ? '100%' : '320px' }}>
+                      <div className="favorite-macro-col">
+                        <span className="favorite-macro-label">Cal</span>
+                        <span className="num favorite-macro-val" style={{ color: 'var(--sky-400)' }}>{Math.round(meal.nutrition.calories ?? 0)}</span>
+                      </div>
+                      <div className="favorite-macro-col">
+                        <span className="favorite-macro-label">Sat Fat</span>
+                        <span className="num favorite-macro-val" style={{ color: 'var(--bad)' }}>{(meal.nutrition.saturated_fat_g ?? 0).toFixed(1)}g</span>
+                      </div>
+                      <div className="favorite-macro-col">
+                        <span className="favorite-macro-label">Sol Fib</span>
+                        <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{(meal.nutrition.soluble_fiber_g ?? 0).toFixed(1)}g</span>
+                      </div>
+                      <div className="favorite-macro-col">
+                        <span className="favorite-macro-label">Sugar</span>
+                        <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{(meal.nutrition.sugars_g ?? 0).toFixed(1)}g</span>
+                      </div>
+                      <div className="favorite-macro-col">
+                        <span className="favorite-macro-label">Protein</span>
+                        <span className="num favorite-macro-val" style={{ color: '#a78bfa' }}>{(meal.nutrition.protein_g ?? 0).toFixed(1)}g</span>
+                      </div>
                     </div>
-                    <div style={{ marginTop: 2, fontSize: 11, color: 'var(--fg-quiet)' }}>
-                      {formatMealTime(meal.ts)}
-                    </div>
-                  </div>
-                  {meal.nutrition && !onDelete && !onEdit && (
-                    <ChevronRight size={13} strokeWidth={1.8} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
                   )}
-                  <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                    {onEdit && (
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={isDeleting}
-                        onClick={(e) => { e.stopPropagation(); onEdit(meal) }}
-                        title="Edit meal"
-                        style={{
-                          padding: '6px',
-                          borderRadius: 8,
-                          border: '1px solid var(--glass-edge)',
-                          background: 'transparent',
-                          color: 'var(--fg-quiet)',
-                          flexShrink: 0,
-                          lineHeight: 0,
-                          marginRight: onDelete ? 6 : 0,
-                        }}
-                      >
-                        <Pencil size={13} strokeWidth={1.8} />
-                      </button>
-                    )}
-                    {onDelete && (
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={isDeleting}
-                        onClick={(e) => { e.stopPropagation(); onDelete(meal.id) }}
-                        title="Delete meal"
-                        style={{
-                          padding: '6px',
-                          borderRadius: 8,
-                          border: '1px solid var(--glass-edge)',
-                          background: 'transparent',
-                          color: 'var(--fg-quiet)',
-                          flexShrink: 0,
-                          lineHeight: 0,
-                        }}
-                      >
-                        <Trash2 size={13} strokeWidth={1.8} />
-                      </button>
-                    )}
-                  </div>
                 </div>
               )
             })}

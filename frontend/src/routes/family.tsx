@@ -94,7 +94,7 @@ export default function FamilyRoute() {
   }
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', padding: '28px 20px 60px' }}>
+    <div className="page-container thin-scroll">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 500, color: 'var(--fg-primary)', letterSpacing: '-0.02em' }}>
@@ -143,7 +143,7 @@ export default function FamilyRoute() {
         ) : groups.length === 0 ? (
           <EmptyState onCreate={() => setView('create')} />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="responsive-grid-2col" style={{ marginTop: 0 }}>
             {groups.map((g) => (
               <button
                 key={g.id}
@@ -686,8 +686,12 @@ function SharedTabContent({ groups }: { groups: FamilyGroup[] }) {
         </div>
       )}
 
-      {groupId && <SharesFeed groupId={groupId} />}
-      {groupId && <StatusDashboard groupId={groupId} />}
+      {groupId && (
+        <div className="responsive-grid-2col" style={{ marginTop: 0, alignItems: 'flex-start' }}>
+          <SharesFeed groupId={groupId} />
+          <StatusDashboard groupId={groupId} />
+        </div>
+      )}
     </div>
   )
 }
@@ -722,7 +726,7 @@ function SharesFeed({ groupId }: { groupId: string }) {
   if (isLoading) return <div style={{ color: 'var(--fg-quiet)', fontSize: 13 }}>Loading shared items…</div>
 
   return (
-    <div style={{ marginBottom: 40 }}>
+    <div style={{ marginBottom: 24, flex: 1, minWidth: 0 }}>
       {/* Filter bar */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
         {(['all', 'recipe', 'favorite', 'plan'] as const).map((f) => (
