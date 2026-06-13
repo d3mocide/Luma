@@ -34,14 +34,23 @@ afterEach(() => {
 
 describe('WaterCard', () => {
   it('renders the daily total and goal', () => {
-    const client = makeClient()
-    client.setQueryData(['water', tz], base)
+    // Pin the clock outside the 8–22 hydration window so the pace nudge stays
+    // null and the "Tap to add" hint renders deterministically (otherwise this
+    // assertion fails whenever the suite runs during the day and behind pace).
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 0, 1, 6, 0, 0))
+    try {
+      const client = makeClient()
+      client.setQueryData(['water', tz], base)
 
-    render(<WaterCard />, { wrapper: wrap(client) })
+      render(<WaterCard />, { wrapper: wrap(client) })
 
-    expect(screen.getByText('750')).toBeInTheDocument()
-    expect(screen.getByText('/ 2000 ml')).toBeInTheDocument()
-    expect(screen.getByText('Tap to add 250 ml')).toBeInTheDocument()
+      expect(screen.getByText('750')).toBeInTheDocument()
+      expect(screen.getByText('/ 2000 ml')).toBeInTheDocument()
+      expect(screen.getByText('Tap to add 250 ml')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('logs a glass when the vessel is tapped', async () => {
