@@ -225,6 +225,7 @@ export interface StreakHistoryDay {
   sug_logged: number | null
   sug_target: number | null
   targets_met: number
+  targets_possible: number
   on_track: boolean
   logged_anything: boolean
 }

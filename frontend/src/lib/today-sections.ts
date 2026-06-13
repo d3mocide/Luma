@@ -18,7 +18,7 @@ export interface SectionDef {
 export const SECTION_DEFS: SectionDef[] = [
   { id: 'weight', label: 'Weight', description: '30-day chart + trend slopes' },
   { id: 'nutrition', label: 'Nutrition', description: 'Calories, protein & macro rings' },
-  { id: 'streak', label: 'Streak', description: 'Logging streak + adherence' },
+  { id: 'streak', label: 'Streak', description: 'Daily targets streak + adherence' },
   { id: 'water', label: 'Hydration', description: 'Water intake + spirit buddy' },
   { id: 'biometrics', label: 'Biometrics', description: 'HRV, sleep, steps and more' },
   { id: 'insight', label: 'Insight', description: 'Luma\'s active recommendation' },
