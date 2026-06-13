@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Flame } from 'lucide-react'
+import { scoreDay } from '../../lib/streak'
 
 interface DayAdherence {
   logged?: number | null
@@ -51,22 +52,23 @@ export default function StreakStrip({ days, adherence, onShowHistory }: StreakSt
     const isFuture = offset < 0
 
     if (isToday && adherence) {
-      const calLogged = adherence.calories?.logged ?? 0
-      const calTarget = adherence.calories?.target ?? 2000
-      const satLogged = adherence.sat_fat_g?.logged ?? 0
-      const satTarget = adherence.sat_fat_g?.target ?? 15
-      const fibLogged = adherence.soluble_fiber_g?.logged ?? 0
-      const fibTarget = adherence.soluble_fiber_g?.target ?? 20
-      const sugLogged = adherence.sugars_g?.logged ?? 0
-      const sugTarget = adherence.sugars_g?.target ?? 25
-
-      const calMet = calLogged >= calTarget * 0.9 && calLogged <= calTarget * 1.1
-      const satMet = satLogged <= satTarget
-      const fibMet = fibLogged >= fibTarget
-      const sugMet = sugLogged <= sugTarget
-
-      const onTrack = [calMet, satMet, fibMet, sugMet].filter(Boolean).length >= 3
-
+      // Score today live from real targets (no fabricated defaults — an unset
+      // target is excluded, not assumed). Past days rely on the streak length,
+      // which the backend already computed with this same rule.
+      const { onTrack } = scoreDay(
+        {
+          cal: adherence.calories?.logged,
+          sat: adherence.sat_fat_g?.logged,
+          fib: adherence.soluble_fiber_g?.logged,
+          sug: adherence.sugars_g?.logged,
+        },
+        {
+          cal: adherence.calories?.target,
+          sat: adherence.sat_fat_g?.target,
+          fib: adherence.soluble_fiber_g?.target,
+          sug: adherence.sugars_g?.target,
+        },
+      )
       rollingDays.push({ offset, date: d, onTrack, isToday, isFuture })
     } else if (isFuture) {
       rollingDays.push({ offset, date: d, onTrack: false, isToday, isFuture })

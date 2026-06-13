@@ -1,5 +1,5 @@
 import logging
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -8,6 +8,7 @@ from sqlalchemy import select, text
 
 from luma.config import settings
 from luma.deps import CurrentUser, DbDep
+from luma.services.streak import score_day
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -179,23 +180,54 @@ async def get_today(
     for row in cumulative_rows:
         latest[row.metric] = row.value
 
-    # Streak: consecutive days (server timezone) where at least one meal was logged
+    # Streak: consecutive days the user stayed "on track" (hit their daily
+    # targets). This headline number and /today/streak-history both grade each
+    # day through score_day() so they can never disagree — the old logic counted
+    # any day with a meal logged, which contradicted the per-day breakdown.
+    tz_key = resolved_tz.key if hasattr(resolved_tz, "key") else settings.server_timezone
+    streak_targets: dict[str, float | None] = {
+        "cal": float(target_cal) if target_cal else None,
+        "sat": target_sat,
+        "fib": target_sol,
+        "sug": target_sugar,
+    }
+    streak_start_utc = datetime.combine(
+        today_dt - timedelta(days=365), time.min, tzinfo=resolved_tz
+    ).astimezone(UTC)
     streak_rows = await db.execute(
         text("""
-            SELECT DISTINCT DATE(ts AT TIME ZONE :tz) AS day
+            SELECT
+                DATE(ts AT TIME ZONE :tz) AS day,
+                COALESCE(SUM(CAST(NULLIF(nutrition->>'calories', '') AS numeric)), 0)         AS cal,
+                COALESCE(SUM(CAST(NULLIF(nutrition->>'saturated_fat_g', '') AS numeric)), 0)  AS sat,
+                COALESCE(SUM(CAST(NULLIF(nutrition->>'soluble_fiber_g', '') AS numeric)), 0)  AS sol,
+                COALESCE(SUM(CAST(NULLIF(nutrition->>'sugars_g', '') AS numeric)), 0)         AS sug
             FROM meal_events
             WHERE user_id = :user_id
-              AND ts >= NOW() - INTERVAL '365 days'
-            ORDER BY day DESC
+              AND ts >= :start_utc
+              AND ts < :today_end
+              AND nutrition IS NOT NULL
+            GROUP BY day
         """),
-        {"user_id": str(user.id), "tz": settings.server_timezone},
+        {"user_id": str(user.id), "tz": tz_key, "start_utc": streak_start_utc, "today_end": today_end},
     )
-    days_set = {row.day for row in streak_rows}
-    # Start from today; fall back to yesterday before midnight resets the streak
-    _start = today_dt if today_dt in days_set else today_dt - timedelta(days=1)
+    on_track_days: set[date] = set()
+    for row in streak_rows:
+        totals = {
+            "cal": float(row.cal) + supplement_nutrients.get("calories", 0.0),
+            "sat": float(row.sat) + supplement_nutrients.get("saturated_fat_g", 0.0),
+            "fib": float(row.sol) + supplement_nutrients.get("soluble_fiber_g", 0.0),
+            "sug": float(row.sug) + supplement_nutrients.get("sugars_g", 0.0),
+        }
+        if score_day(totals, streak_targets)["on_track"]:
+            on_track_days.add(row.day)
+
+    # Start from today; if today is not on-track yet (day still in progress) fall
+    # back to yesterday so an unfinished day doesn't read as a broken streak.
+    _start = today_dt if today_dt in on_track_days else today_dt - timedelta(days=1)
     streak_days = 0
     _check = _start
-    while _check in days_set:
+    while _check in on_track_days:
         streak_days += 1
         _check -= timedelta(days=1)
 
@@ -323,7 +355,12 @@ async def get_streak_history(
             "sug": float(row.sug) + supp_sug,
         }
 
-    result = []
+    hist_targets: dict[str, float | None] = {
+        "cal": target_cal, "sat": target_sat, "fib": target_sol, "sug": target_sug,
+    }
+    configured = sum(1 for v in hist_targets.values() if v is not None)
+
+    result: list[dict[str, Any]] = []
     for i in range(30):
         d = start_dt + timedelta(days=i)
         day_data = daily_map.get(d)
@@ -336,16 +373,16 @@ async def get_streak_history(
                 "fib_logged": None, "fib_target": target_sol,
                 "sug_logged": None, "sug_target": target_sug,
                 "targets_met": 0,
+                "targets_possible": configured,
                 "on_track": False,
                 "logged_anything": False,
             })
             continue
 
-        cal_met = target_cal is not None and day_data["cal"] >= target_cal * 0.9 and day_data["cal"] <= target_cal * 1.1
-        sat_met = target_sat is not None and day_data["sat"] <= target_sat
-        fib_met = target_sol is not None and day_data["sol"] >= target_sol
-        sug_met = target_sug is not None and day_data["sug"] <= target_sug
-        targets_met = sum([cal_met, sat_met, fib_met, sug_met])
+        score = score_day(
+            {"cal": day_data["cal"], "sat": day_data["sat"], "fib": day_data["sol"], "sug": day_data["sug"]},
+            hist_targets,
+        )
 
         result.append({
             "date": d.isoformat(),
@@ -353,8 +390,9 @@ async def get_streak_history(
             "sat_logged": day_data["sat"], "sat_target": target_sat,
             "fib_logged": day_data["sol"], "fib_target": target_sol,
             "sug_logged": day_data["sug"], "sug_target": target_sug,
-            "targets_met": targets_met,
-            "on_track": targets_met >= 3,
+            "targets_met": score["targets_met"],
+            "targets_possible": score["targets_possible"],
+            "on_track": score["on_track"],
             "logged_anything": True,
         })
 
