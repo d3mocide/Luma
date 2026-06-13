@@ -157,6 +157,15 @@ export interface TodayData {
   } | null
 }
 
+export interface WaterToday {
+  total_ml: number
+  entries: number
+  goal_ml: number
+  glass_ml: number
+  goal_met: boolean
+  buddy: string
+}
+
 export interface TrendSeries {
   metric: string
   range: string

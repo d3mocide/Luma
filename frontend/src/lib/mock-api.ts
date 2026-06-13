@@ -42,6 +42,22 @@ let signedIn = true
 let measurementSystem: 'metric' | 'imperial' = 'metric'
 let aiPricingOverrides: Record<string, { input: number; output: number }> = {}
 
+const waterLogs: number[] = [250, 250, 250]
+let waterGoalMl = 2000
+let waterBuddy = 'frog'
+
+function waterSummary() {
+  const total = waterLogs.reduce((sum, ml) => sum + ml, 0)
+  return {
+    total_ml: total,
+    entries: waterLogs.length,
+    goal_ml: waterGoalMl,
+    glass_ml: 250,
+    goal_met: total >= waterGoalMl,
+    buddy: waterBuddy,
+  }
+}
+
 interface FavoriteItem {
   food_name: string
   brand: string | null
@@ -563,6 +579,42 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     if (index === -1) throw new MockApiError(404, 'Favorite not found')
     favorites.splice(index, 1)
     return { status: 'ok' }
+  }
+
+  if (method === 'GET' && pathname === '/water/today') {
+    requireAuth()
+    return waterSummary()
+  }
+
+  if (method === 'POST' && pathname === '/water/log') {
+    requireAuth()
+    const body = parseBody(init)
+    const amount = typeof body?.amount_ml === 'number' ? body.amount_ml : 250
+    if (amount <= 0 || amount > 2000) throw new MockApiError(422, 'amount_ml must be between 1 and 2000')
+    waterLogs.push(amount)
+    return waterSummary()
+  }
+
+  if (method === 'DELETE' && pathname === '/water/last') {
+    requireAuth()
+    waterLogs.pop()
+    return waterSummary()
+  }
+
+  if (method === 'PUT' && pathname === '/water/settings') {
+    requireAuth()
+    const body = parseBody(init)
+    if (typeof body?.buddy === 'string') {
+      if (!['frog', 'cat', 'dog', 'axolotl'].includes(body.buddy)) {
+        throw new MockApiError(422, 'Unknown buddy')
+      }
+      waterBuddy = body.buddy
+    }
+    if (typeof body?.goal_ml === 'number') {
+      if (body.goal_ml < 250 || body.goal_ml > 10000) throw new MockApiError(422, 'goal_ml out of range')
+      waterGoalMl = body.goal_ml
+    }
+    return { buddy: waterBuddy, goal_ml: waterGoalMl }
   }
 
   throw new MockApiError(404, `Mock route not implemented: ${method} ${path}`)

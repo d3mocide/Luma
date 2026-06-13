@@ -18,6 +18,7 @@ import { RecentMealsCard, RecentMeal } from '../components/today/RecentMealsCard
 import { NutrientBreakdownSheet } from '../components/today/NutrientBreakdownSheet'
 import { StreakHistorySheet } from '../components/today/StreakHistorySheet'
 import { NutritionCalculatorCard } from '../components/today/NutritionCalculatorCard'
+import { WaterCard } from '../components/today/WaterCard'
 import { useHiddenMetrics } from '../lib/hidden-metrics'
 import { useUIStore } from '../stores'
 
@@ -362,8 +363,8 @@ export default function TodayRoute() {
           )
         })()}
 
-        {/* Insight + Today's Plan side-by-side */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 20, alignItems: 'stretch' }}>
+        {/* Insight + Today's Plan + Hydration side-by-side */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr 0.75fr', gap: 20, alignItems: 'stretch' }}>
           {/* Insight */}
           {data.active_insight ? (
             <div className="glass" style={{ display: 'flex', flexDirection: 'column', padding: 24, position: 'relative', overflow: 'hidden', background: 'var(--insight-card-bg)' }}>
@@ -425,6 +426,9 @@ export default function TodayRoute() {
               </div>
             )}
           </div>
+
+          {/* Hydration */}
+          <WaterCard/>
         </div>
 
 
@@ -523,6 +527,9 @@ export default function TodayRoute() {
           <div style={{ position: 'absolute', top: -100, right: -90, width: 260, height: 220, background: 'radial-gradient(ellipse 58% 56% at 62% 38%, rgba(251,191,36,0.17), transparent 70%), radial-gradient(ellipse 52% 52% at 88% 82%, rgba(251,191,36,0.08), transparent 74%)', filter: 'blur(12px)', opacity: 0.88, pointerEvents: 'none' }}/>
           <StreakStrip days={data.streak_days ?? 0} adherence={adherence} onShowHistory={() => setShowStreakHistory(true)}/>
         </div>
+
+        {/* Hydration */}
+        <WaterCard compact/>
 
         {/* Weight */}
         <div className="glass" style={{ padding: 18, marginBottom: 14 }}>
