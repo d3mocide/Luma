@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sparkles, Flame, Heart, Activity, Moon, Timer, Wind, X, Leaf, Thermometer, SlidersHorizontal } from 'lucide-react'
 import { api, TodayData, TrendSeries, User } from '../lib/api'
-import { createMockTodayData, createMockWeightSeries, isTodaySparseData } from '../lib/mock-data'
+import { createMockTodayData, createMockWeightSeries } from '../lib/mock-data'
 import { fmtMinutes, fmt } from '../lib/format'
 import { convertWeight, convertWeightSlope, measurementSlopeUnit, measurementWeightUnit, useMeasurementSystem } from '../lib/measurements'
 import ActivityRings from '../components/ui/ActivityRings'
@@ -129,7 +129,7 @@ export default function TodayRoute() {
   if (isLoading && !forceMockData) return <TodayShell><LoadingSkeleton/></TodayShell>
   if ((error || !todayApiData) && !forceMockData) return <TodayShell><ErrorCard/></TodayShell>
 
-  const useMockData = forceMockData || isTodaySparseData(todayApiData as TodayData)
+  const useMockData = forceMockData || user?.role === 'demo'
   const data = useMockData ? createMockTodayData() : (todayApiData as TodayData)
 
   const adherence = data.adherence_today

@@ -72,20 +72,6 @@ export function createMockTodayData(): TodayData {
   }
 }
 
-export function isTodaySparseData(data: TodayData): boolean {
-  const noWeight = data.weight.latest_kg == null
-  const noBio = Object.values(data.biometrics_latest).every((v) => v == null)
-  const noPlan = data.plan_today.length === 0
-  const noAdherence = [
-    data.adherence_today.calories,
-    data.adherence_today.sat_fat_g,
-    data.adherence_today.soluble_fiber_g,
-    data.adherence_today.sugars_g,
-  ].every((m) => m == null || (m.logged == null && m.target == null))
-
-  return noWeight && noBio && noPlan && noAdherence
-}
-
 export function createMockWeightSeries(latest: number | null, points = 30): WeightPoint[] {
   if (latest == null) return []
 
