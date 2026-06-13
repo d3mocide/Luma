@@ -217,11 +217,16 @@ export function NotificationsCard() {
   // flips, React re-renders it back to the (unchanged) server value before the
   // PUT round-trips, and the toggle appears dead — especially on iOS.
   const prefsMutation = useMutation({
-    mutationFn: (update: NotifPrefs) => api.put<NotifPrefs>('/notifications/preferences', update),
+    // Partial update: send only the field that changed. Re-posting the whole
+    // object coupled the enable toggle to nudge_tz/nudge_hour validity, so a
+    // stored timezone the server couldn't resolve 422'd the request and the
+    // toggle could neither turn the nudge on nor off.
+    mutationFn: (update: Partial<NotifPrefs>) =>
+      api.put<NotifPrefs>('/notifications/preferences', update),
     onMutate: async (update) => {
       await queryClient.cancelQueries({ queryKey: ['notifications', 'preferences'] })
       const previous = queryClient.getQueryData<NotifPrefs>(['notifications', 'preferences'])
-      queryClient.setQueryData(['notifications', 'preferences'], update)
+      if (previous) queryClient.setQueryData(['notifications', 'preferences'], { ...previous, ...update })
       return { previous }
     },
     onError: (_err, _update, context) => {
@@ -274,7 +279,7 @@ export function NotificationsCard() {
           await sub.unsubscribe()
         }
         setSubscribed(false)
-        if (prefs) prefsMutation.mutate({ ...prefs, nudge_enabled: false })
+        prefsMutation.mutate({ nudge_enabled: false })
         return
       }
 
@@ -315,7 +320,7 @@ export function NotificationsCard() {
       })
       setSubscribed(true)
       setStatusMsg(null)
-      if (prefs) prefsMutation.mutate({ ...prefs, nudge_enabled: true })
+      prefsMutation.mutate({ nudge_enabled: true })
     } catch (err) {
       setStatusMsg(`Subscription failed: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
@@ -395,7 +400,7 @@ export function NotificationsCard() {
             <input
               type="checkbox"
               checked={prefs.nudge_enabled}
-              onChange={(e) => prefsMutation.mutate({ ...prefs, nudge_enabled: e.target.checked })}
+              onChange={(e) => prefsMutation.mutate({ nudge_enabled: e.target.checked })}
               style={{ width: 16, height: 16, accentColor: 'var(--sky-400)', flexShrink: 0 }}
             />
           </label>
@@ -406,7 +411,7 @@ export function NotificationsCard() {
                 <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Nudge time</span>
                 <select
                   value={prefs.nudge_hour}
-                  onChange={(e) => prefsMutation.mutate({ ...prefs, nudge_hour: Number(e.target.value) })}
+                  onChange={(e) => prefsMutation.mutate({ nudge_hour: Number(e.target.value) })}
                   className="field-input"
                   style={{ padding: '8px 10px', fontSize: 13, background: 'var(--glass-1)', border: '1px solid var(--glass-edge)', borderRadius: 8, color: 'var(--fg-primary)' }}
                 >
@@ -423,7 +428,7 @@ export function NotificationsCard() {
                     type="button"
                     onClick={() => {
                       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-                      if (tz && tz !== prefs.nudge_tz) prefsMutation.mutate({ ...prefs, nudge_tz: tz })
+                      if (tz && tz !== prefs.nudge_tz) prefsMutation.mutate({ nudge_tz: tz })
                       setLocalTz(null)
                     }}
                     style={{ background: 'none', border: 'none', padding: 0, fontSize: 10, letterSpacing: '0.06em', color: 'var(--sky-400)', cursor: 'pointer', textTransform: 'uppercase' }}
@@ -437,7 +442,7 @@ export function NotificationsCard() {
                   onChange={(e) => setLocalTz(e.target.value)}
                   onBlur={(e) => {
                     const tz = e.target.value.trim()
-                    if (tz && tz !== prefs.nudge_tz) prefsMutation.mutate({ ...prefs, nudge_tz: tz })
+                    if (tz && tz !== prefs.nudge_tz) prefsMutation.mutate({ nudge_tz: tz })
                     setLocalTz(null)
                   }}
                   onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}

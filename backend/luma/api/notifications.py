@@ -19,9 +19,13 @@ class PushSubscribeRequest(BaseModel):
 
 
 class NotificationPrefsUpdate(BaseModel):
-    nudge_enabled: bool
-    nudge_hour: int
-    nudge_tz: str
+    # All optional so a single field (e.g. the enable/disable toggle) can be
+    # updated on its own. Re-sending the whole object meant a previously stored
+    # timezone the server can't resolve would 422 the request and make it
+    # impossible to even turn the nudge off.
+    nudge_enabled: bool | None = None
+    nudge_hour: int | None = None
+    nudge_tz: str | None = None
 
 
 @router.get("/vapid-public-key")
@@ -73,12 +77,20 @@ async def get_preferences(current_user: CurrentUser) -> dict:
 async def update_preferences(
     payload: NotificationPrefsUpdate, db: DbDep, current_user: CurrentUser
 ) -> dict:
-    if not 0 <= payload.nudge_hour <= 23:
+    # Validate only the fields the caller is actually changing. A toggle that
+    # leaves nudge_hour/nudge_tz untouched must succeed even if the stored value
+    # is out of range or unresolvable — the worker already falls back to UTC.
+    if payload.nudge_hour is not None and not 0 <= payload.nudge_hour <= 23:
         raise HTTPException(status_code=422, detail="nudge_hour must be 0–23")
-    try:
-        ZoneInfo(payload.nudge_tz)
-    except (ZoneInfoNotFoundError, KeyError):
-        raise HTTPException(status_code=422, detail=f"Unknown timezone: {payload.nudge_tz!r}")
+    if payload.nudge_tz is not None:
+        try:
+            ZoneInfo(payload.nudge_tz)
+        except (ZoneInfoNotFoundError, KeyError):
+            raise HTTPException(status_code=422, detail=f"Unknown timezone: {payload.nudge_tz!r}")
+
+    enabled = current_user.nudge_enabled if payload.nudge_enabled is None else payload.nudge_enabled
+    hour = current_user.nudge_hour if payload.nudge_hour is None else payload.nudge_hour
+    tz = current_user.nudge_tz if payload.nudge_tz is None else payload.nudge_tz
 
     await db.execute(
         text("""
@@ -87,15 +99,15 @@ async def update_preferences(
             WHERE id = :uid
         """),
         {
-            "enabled": payload.nudge_enabled,
-            "hour": payload.nudge_hour,
-            "tz": payload.nudge_tz,
+            "enabled": enabled,
+            "hour": hour,
+            "tz": tz,
             "uid": str(current_user.id),
         },
     )
     await db.commit()
     return {
-        "nudge_enabled": payload.nudge_enabled,
-        "nudge_hour": payload.nudge_hour,
-        "nudge_tz": payload.nudge_tz,
+        "nudge_enabled": enabled,
+        "nudge_hour": hour,
+        "nudge_tz": tz,
     }
