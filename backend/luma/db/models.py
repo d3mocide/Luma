@@ -57,6 +57,7 @@ class User(Base):
     # existing HAE users on Apple Health.
     data_source: Mapped[str] = mapped_column(String(20), nullable=False, default="apple_health", server_default="'apple_health'")
     water_goal_ml: Mapped[int] = mapped_column(Integer, nullable=False, default=2000, server_default='2000')
+    water_glass_ml: Mapped[int] = mapped_column(Integer, nullable=False, default=250, server_default='250')
     water_buddy: Mapped[str] = mapped_column(Text, nullable=False, default='frog', server_default="'frog'")
 
     goals = relationship("Goal", back_populates="user", uselist=False, cascade="all, delete-orphan")

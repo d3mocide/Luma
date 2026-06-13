@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Minus, Repeat } from 'lucide-react'
+import { Droplet, Minus, Repeat } from 'lucide-react'
 import { api, WaterToday } from '../../lib/api'
 import { BUDDIES, BUDDY_IDS, BuddyId, isBuddyId } from '../../lib/water-buddies'
+import { hydrationNudge } from '../../lib/water-pace'
 import { BuddySprite } from './WaterBuddies'
 
 export function WaterCard({ compact }: { compact?: boolean }) {
@@ -55,6 +56,8 @@ export function WaterCard({ compact }: { compact?: boolean }) {
 
   const waterTop = goalMet ? 'rgba(56,189,248,0.52)' : 'rgba(56,189,248,0.40)'
   const waterBottom = goalMet ? 'rgba(14,165,233,0.26)' : 'rgba(14,165,233,0.16)'
+
+  const nudge = data ? hydrationNudge({ totalMl, goalMl, glassMl, goalMet }) : null
 
   const handleLog = () => {
     if (!logMutation.isPending) logMutation.mutate()
@@ -203,7 +206,7 @@ export function WaterCard({ compact }: { compact?: boolean }) {
           >
             <div className="water-buddy">
               <div key={hopKey} className={hopKey > 0 ? 'water-buddy-hop' : undefined}>
-                <BuddySprite buddy={buddyId} size={compact ? 46 : 54} />
+                <BuddySprite buddy={buddyId} size={compact ? 68 : 82} />
               </div>
             </div>
           </div>
@@ -211,9 +214,16 @@ export function WaterCard({ compact }: { compact?: boolean }) {
       )}
 
       {!showPicker && (
-        <div style={{ fontSize: 11, color: 'var(--fg-quiet)', textAlign: 'center' }}>
-          Tap to add {glassMl} ml
-        </div>
+        nudge ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--sky-400)' }}>
+            <Droplet size={12} strokeWidth={1.5} />
+            <span>{nudge}</span>
+          </div>
+        ) : (
+          <div style={{ fontSize: 11, color: 'var(--fg-quiet)', textAlign: 'center' }}>
+            Tap to add {glassMl} ml
+          </div>
+        )
       )}
     </div>
   )

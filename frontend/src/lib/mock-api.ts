@@ -44,6 +44,7 @@ let aiPricingOverrides: Record<string, { input: number; output: number }> = {}
 
 const waterLogs: number[] = [250, 250, 250]
 let waterGoalMl = 2000
+let waterGlassMl = 250
 let waterBuddy = 'frog'
 
 function waterSummary() {
@@ -52,7 +53,7 @@ function waterSummary() {
     total_ml: total,
     entries: waterLogs.length,
     goal_ml: waterGoalMl,
-    glass_ml: 250,
+    glass_ml: waterGlassMl,
     goal_met: total >= waterGoalMl,
     buddy: waterBuddy,
   }
@@ -589,10 +590,15 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
   if (method === 'POST' && pathname === '/water/log') {
     requireAuth()
     const body = parseBody(init)
-    const amount = typeof body?.amount_ml === 'number' ? body.amount_ml : 250
+    const amount = typeof body?.amount_ml === 'number' ? body.amount_ml : waterGlassMl
     if (amount <= 0 || amount > 2000) throw new MockApiError(422, 'amount_ml must be between 1 and 2000')
     waterLogs.push(amount)
     return waterSummary()
+  }
+
+  if (method === 'GET' && pathname === '/water/settings') {
+    requireAuth()
+    return { buddy: waterBuddy, goal_ml: waterGoalMl, glass_ml: waterGlassMl }
   }
 
   if (method === 'DELETE' && pathname === '/water/last') {
@@ -614,7 +620,11 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
       if (body.goal_ml < 250 || body.goal_ml > 10000) throw new MockApiError(422, 'goal_ml out of range')
       waterGoalMl = body.goal_ml
     }
-    return { buddy: waterBuddy, goal_ml: waterGoalMl }
+    if (typeof body?.glass_ml === 'number') {
+      if (body.glass_ml < 50 || body.glass_ml > 1000) throw new MockApiError(422, 'glass_ml out of range')
+      waterGlassMl = body.glass_ml
+    }
+    return { buddy: waterBuddy, goal_ml: waterGoalMl, glass_ml: waterGlassMl }
   }
 
   throw new MockApiError(404, `Mock route not implemented: ${method} ${path}`)

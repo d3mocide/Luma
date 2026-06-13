@@ -10,6 +10,7 @@ import {
 import { GoalsCard } from '../components/settings/GoalsCard'
 import { RecommendGoalsCard } from '../components/settings/RecommendGoalsCard'
 import { MeasurementsCard } from '../components/settings/MeasurementsCard'
+import { HydrationCard } from '../components/settings/HydrationCard'
 import { PasswordCard } from '../components/settings/PasswordCard'
 import { NotificationsCard } from '../components/settings/NotificationsCard'
 import { LlmMetricsCard } from '../components/settings/LlmMetricsCard'
@@ -310,6 +311,9 @@ function AccountTab({
 
         <div className="settings-order-measurements">
           <MeasurementsCard />
+        </div>
+        <div className="settings-order-hydration">
+          <HydrationCard />
         </div>
         <div className="settings-order-notifications">
           <NotificationsCard />

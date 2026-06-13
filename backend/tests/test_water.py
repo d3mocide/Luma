@@ -8,10 +8,11 @@ from luma.api.water import router
 from luma.deps import get_current_user, get_db
 
 
-def _make_fake_user(goal_ml: int = 2000, buddy: str = "frog"):
+def _make_fake_user(goal_ml: int = 2000, buddy: str = "frog", glass_ml: int = 250):
     user = MagicMock()
     user.id = uuid.uuid4()
     user.water_goal_ml = goal_ml
+    user.water_glass_ml = glass_ml
     user.water_buddy = buddy
     return user
 
@@ -155,3 +156,57 @@ def test_settings_rejects_unknown_buddy_and_bad_goal():
         assert client.put("/water/settings", json={"buddy": "dragon"}).status_code == 422
         assert client.put("/water/settings", json={"goal_ml": 100}).status_code == 422
         assert client.put("/water/settings", json={"goal_ml": 50000}).status_code == 422
+
+
+def test_get_settings_returns_current_values():
+    user = _make_fake_user(goal_ml=2500, buddy="dog", glass_ml=355)
+    db = AsyncMock()
+
+    app = _make_app(user, db)
+    with TestClient(app) as client:
+        body = client.get("/water/settings").json()
+        assert body == {"buddy": "dog", "goal_ml": 2500, "glass_ml": 355}
+
+
+def test_settings_updates_glass_size():
+    user = _make_fake_user()
+    db = AsyncMock()
+    db.execute = AsyncMock()
+    db.commit = AsyncMock()
+
+    app = _make_app(user, db)
+    with TestClient(app) as client:
+        resp = client.put("/water/settings", json={"glass_ml": 500, "goal_ml": 3000})
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["glass_ml"] == 500
+        assert body["goal_ml"] == 3000
+
+    update_params = db.execute.call_args_list[0][0][1]
+    assert update_params["glass"] == 500
+    assert update_params["goal"] == 3000
+
+
+def test_settings_rejects_bad_glass_size():
+    user = _make_fake_user()
+    db = AsyncMock()
+
+    app = _make_app(user, db)
+    with TestClient(app) as client:
+        assert client.put("/water/settings", json={"glass_ml": 10}).status_code == 422
+        assert client.put("/water/settings", json={"glass_ml": 5000}).status_code == 422
+
+
+def test_log_water_uses_user_glass_when_unspecified():
+    user = _make_fake_user(glass_ml=355)
+    db = AsyncMock()
+    db.execute = AsyncMock(side_effect=[MagicMock(), _summary_result(355, 1)])
+    db.commit = AsyncMock()
+
+    app = _make_app(user, db)
+    with TestClient(app) as client:
+        resp = client.post("/water/log", json={})
+        assert resp.status_code == 201
+
+    insert_params = db.execute.call_args_list[0][0][1]
+    assert insert_params["amount"] == 355

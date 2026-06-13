@@ -1538,10 +1538,11 @@ input[type="search"]::-webkit-search-results-decoration {
   .settings-order-suggested { order: 3; }
   .settings-order-goals { order: 4; }
   .settings-order-measurements { order: 5; }
-  .settings-order-notifications { order: 6; }
-  .settings-order-family { order: 7; }
-  .settings-order-password { order: 8; }
-  .settings-order-session { order: 9; }
+  .settings-order-hydration { order: 6; }
+  .settings-order-notifications { order: 7; }
+  .settings-order-family { order: 8; }
+  .settings-order-password { order: 9; }
+  .settings-order-session { order: 10; }
 
   .settings-metric-grid {
     grid-template-columns: 1fr 1fr;

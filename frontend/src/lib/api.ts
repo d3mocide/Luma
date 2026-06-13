@@ -166,6 +166,12 @@ export interface WaterToday {
   buddy: string
 }
 
+export interface WaterSettings {
+  buddy: string
+  goal_ml: number
+  glass_ml: number
+}
+
 export interface TrendSeries {
   metric: string
   range: string
