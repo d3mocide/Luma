@@ -42,6 +42,26 @@ let signedIn = true
 let measurementSystem: 'metric' | 'imperial' = 'metric'
 let aiPricingOverrides: Record<string, { input: number; output: number }> = {}
 
+interface MockPref { kind: string; value: string }
+const mockPreferences: MockPref[] = []
+
+const waterLogs: number[] = [250, 250, 250]
+let waterGoalMl = 2000
+let waterGlassMl = 250
+let waterBuddy = 'frog'
+
+function waterSummary() {
+  const total = waterLogs.reduce((sum, ml) => sum + ml, 0)
+  return {
+    total_ml: total,
+    entries: waterLogs.length,
+    goal_ml: waterGoalMl,
+    glass_ml: waterGlassMl,
+    goal_met: total >= waterGoalMl,
+    buddy: waterBuddy,
+  }
+}
+
 interface FavoriteItem {
   food_name: string
   brand: string | null
@@ -563,6 +583,77 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
     if (index === -1) throw new MockApiError(404, 'Favorite not found')
     favorites.splice(index, 1)
     return { status: 'ok' }
+  }
+
+  if (method === 'GET' && pathname === '/water/today') {
+    requireAuth()
+    return waterSummary()
+  }
+
+  if (method === 'POST' && pathname === '/water/log') {
+    requireAuth()
+    const body = parseBody(init)
+    const amount = typeof body?.amount_ml === 'number' ? body.amount_ml : waterGlassMl
+    if (amount <= 0 || amount > 2000) throw new MockApiError(422, 'amount_ml must be between 1 and 2000')
+    waterLogs.push(amount)
+    return waterSummary()
+  }
+
+  if (method === 'GET' && pathname === '/water/settings') {
+    requireAuth()
+    return { buddy: waterBuddy, goal_ml: waterGoalMl, glass_ml: waterGlassMl }
+  }
+
+  if (method === 'DELETE' && pathname === '/water/last') {
+    requireAuth()
+    waterLogs.pop()
+    return waterSummary()
+  }
+
+  if (method === 'PUT' && pathname === '/water/settings') {
+    requireAuth()
+    const body = parseBody(init)
+    if (typeof body?.buddy === 'string') {
+      if (!['frog', 'cat', 'dog', 'axolotl'].includes(body.buddy)) {
+        throw new MockApiError(422, 'Unknown buddy')
+      }
+      waterBuddy = body.buddy
+    }
+    if (typeof body?.goal_ml === 'number') {
+      if (body.goal_ml < 250 || body.goal_ml > 10000) throw new MockApiError(422, 'goal_ml out of range')
+      waterGoalMl = body.goal_ml
+    }
+    if (typeof body?.glass_ml === 'number') {
+      if (body.glass_ml < 50 || body.glass_ml > 1000) throw new MockApiError(422, 'glass_ml out of range')
+      waterGlassMl = body.glass_ml
+    }
+    return { buddy: waterBuddy, goal_ml: waterGoalMl, glass_ml: waterGlassMl }
+  }
+
+  if (method === 'GET' && pathname === '/preferences') {
+    requireAuth()
+    return [...mockPreferences]
+  }
+
+  if (method === 'POST' && pathname === '/preferences') {
+    requireAuth()
+    const body = parseBody(init)
+    if (typeof body?.kind !== 'string' || typeof body?.value !== 'string') {
+      throw new MockApiError(422, 'kind and value required')
+    }
+    const exists = mockPreferences.some(p => p.kind === body.kind && p.value === body.value)
+    if (!exists) mockPreferences.push({ kind: body.kind, value: body.value })
+    return { kind: body.kind, value: body.value }
+  }
+
+  if (method === 'DELETE' && /^\/preferences\/[^/]+\/.+$/.test(pathname)) {
+    requireAuth()
+    const parts = pathname.split('/')
+    const kind = parts[2]
+    const value = parts.slice(3).join('/')
+    const idx = mockPreferences.findIndex(p => p.kind === kind && p.value === value)
+    if (idx !== -1) mockPreferences.splice(idx, 1)
+    return { detail: 'deleted' }
   }
 
   throw new MockApiError(404, `Mock route not implemented: ${method} ${path}`)
