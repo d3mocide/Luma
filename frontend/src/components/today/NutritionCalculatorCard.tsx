@@ -60,6 +60,8 @@ function BudgetStat({
   noTarget,
   compact,
   style,
+  color,
+  isMinTarget,
 }: {
   label: string
   remaining: number
@@ -69,15 +71,19 @@ function BudgetStat({
   noTarget: boolean
   compact?: boolean
   style?: React.CSSProperties
+  color: string
+  isMinTarget?: boolean
 }) {
-  const over = showProjected && projected < 0
+  const over = !isMinTarget && showProjected && projected < 0
+  const valueColor = noTarget ? 'var(--fg-quiet)' : over ? 'var(--bad)' : color
+
   return (
     <div className="glass-inset" style={{ padding: compact ? '8px 6px' : '10px 12px', textAlign: compact ? 'center' : 'left', ...style }}>
       <div style={{ fontSize: compact ? 9.5 : 11.5, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {label}
       </div>
       <div style={{ marginTop: compact ? 3 : 6, display: 'flex', alignItems: 'baseline', gap: compact ? 3 : 6, justifyContent: compact ? 'center' : 'flex-start' }}>
-        <span className="num" style={{ fontSize: compact ? 16 : 20, color: over ? 'var(--bad)' : noTarget ? 'var(--fg-quiet)' : 'var(--fg-primary)' }}>
+        <span className="num" style={{ fontSize: compact ? 16 : 20, color: valueColor }}>
           {noTarget ? '—' : (showProjected ? projected : remaining)}
         </span>
         {!noTarget && <span style={{ fontSize: compact ? 10 : 13, color: 'var(--fg-quiet)' }}>{unit}</span>}
@@ -515,11 +521,12 @@ export function NutritionCalculatorCard({
           noTarget={calTarget === 0}
           compact={compact}
           style={compact ? { gridColumn: 'span 2' } : undefined}
+          color="var(--sky-400)"
         />
-        <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    showProjected={hasItemsOrFood} noTarget={satTarget === 0} compact={compact} />
-        <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   showProjected={hasItemsOrFood} noTarget={solTarget === 0} compact={compact} />
-        <BudgetStat label="Sugar"     remaining={sugarsRemain} projected={sugarsProjected} unit="g" showProjected={hasItemsOrFood} noTarget={sugarsTarget === 0} compact={compact} />
-        <BudgetStat label="Protein"   remaining={proteinRemain} projected={proteinProjected} unit="g" showProjected={hasItemsOrFood} noTarget={proteinTarget === 0} compact={compact} />
+        <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    showProjected={hasItemsOrFood} noTarget={satTarget === 0} compact={compact} color="var(--sun-400)" />
+        <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   showProjected={hasItemsOrFood} noTarget={solTarget === 0} compact={compact} color="var(--good)" isMinTarget />
+        <BudgetStat label="Sugar"     remaining={sugarsRemain} projected={sugarsProjected} unit="g" showProjected={hasItemsOrFood} noTarget={sugarsTarget === 0} compact={compact} color="var(--aurora-pink)" />
+        <BudgetStat label="Protein"   remaining={proteinRemain} projected={proteinProjected} unit="g" showProjected={hasItemsOrFood} noTarget={proteinTarget === 0} compact={compact} color="var(--aurora-violet)" isMinTarget />
       </div>
 
       <div className="glass-inset" style={{ padding: compact ? 8 : 12, display: 'grid', gap: 10, minWidth: 0, width: '100%' }}>
