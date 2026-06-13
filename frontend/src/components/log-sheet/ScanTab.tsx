@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useId } from 'react'
 import { Camera, ImagePlus, X, Plus, CheckCircle } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
-import { api, csrfHeaders } from '../../lib/api'
+import { api, csrfHeaders, refreshSession } from '../../lib/api'
 import { toNutrients, scaleNutrients } from '../../lib/nutrients'
 import {
   type PortionUnit,
@@ -255,12 +255,15 @@ export function ScanTab({ onAddItems }: Props) {
       const form = new FormData()
       form.append('file', compressedBlob, 'photo.jpg')
 
-      const resp = await fetch('/api/v1/log/meal/photo', {
-        method: 'POST',
-        credentials: 'include',
-        headers: await csrfHeaders(),
-        body: form,
-      })
+      const send = async () =>
+        fetch('/api/v1/log/meal/photo', {
+          method: 'POST',
+          credentials: 'include',
+          headers: await csrfHeaders(),
+          body: form,
+        })
+      let resp = await send()
+      if (resp.status === 401 && (await refreshSession())) resp = await send()
 
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()

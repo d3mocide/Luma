@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { Camera, ImagePlus, X, CheckCircle2 } from 'lucide-react'
-import { csrfHeaders } from '../../lib/api'
+import { csrfHeaders, refreshSession } from '../../lib/api'
 import { toNutrients } from '../../lib/nutrients'
 import type { DraftItem } from './types'
 
@@ -91,12 +91,15 @@ function compressImage(file: File, maxW = 1024, maxH = 1024, quality = 0.8): Pro
       const form = new FormData()
       form.append('file', compressedBlob, 'photo.jpg')
 
-      const resp = await fetch('/api/v1/log/meal/photo', {
-        method: 'POST',
-        credentials: 'include',
-        headers: await csrfHeaders(),
-        body: form,
-      })
+      const send = async () =>
+        fetch('/api/v1/log/meal/photo', {
+          method: 'POST',
+          credentials: 'include',
+          headers: await csrfHeaders(),
+          body: form,
+        })
+      let resp = await send()
+      if (resp.status === 401 && (await refreshSession())) resp = await send()
 
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
