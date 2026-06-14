@@ -1088,6 +1088,13 @@ function CalculatorTab() {
       return updated
     })
   }
+  function updateName(index: number, name: string) {
+    setItems((prev) => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], name }
+      return updated
+    })
+  }
 
   return (
     <div style={{ paddingTop: 0, paddingBottom: 60, display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -1098,6 +1105,7 @@ function CalculatorTab() {
         onAddItem={addItem}
         onRemoveItem={removeItem}
         onUpdateWeight={updateWeight}
+        onUpdateName={updateName}
         emptyStateMessage="Search above to add ingredients. No logging — just numbers."
       />
 

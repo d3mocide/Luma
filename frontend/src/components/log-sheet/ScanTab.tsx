@@ -13,6 +13,7 @@ import {
   densityForFood,
   defaultQtyForUnit,
 } from '../../lib/portions'
+import { DraftItemList } from './DraftItemList'
 import type { DraftItem } from './types'
 
 const BARCODE_FORMATS = [
@@ -46,9 +47,13 @@ type PhotoState = 'idle' | 'preview' | 'processing' | 'done' | 'error'
 
 type Props = {
   onAddItems: (items: DraftItem[]) => void
+  draftItems: DraftItem[]
+  onRemoveItem: (index: number) => void
+  onUpdateWeight: (index: number, newWeight: number) => void
+  onUpdateName: (index: number, name: string) => void
 }
 
-export function ScanTab({ onAddItems }: Props) {
+export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, onUpdateName }: Props) {
   const [scanMode, setScanMode] = useState<'barcode' | 'photo'>('barcode')
 
   // --- Barcode State ---
@@ -566,6 +571,18 @@ export function ScanTab({ onAddItems }: Props) {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Added items — editable so scanned/photo portions and names can be tuned in place */}
+      {draftItems.length > 0 && (
+        <div style={{ borderTop: '1px solid var(--glass-edge)', paddingTop: 14 }}>
+          <DraftItemList
+            draftItems={draftItems}
+            onRemoveItem={onRemoveItem}
+            onUpdateWeight={onUpdateWeight}
+            onUpdateName={onUpdateName}
+          />
         </div>
       )}
     </div>
