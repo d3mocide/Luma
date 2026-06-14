@@ -1,4 +1,5 @@
 import { type MouseEvent, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Share2, Check, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -17,6 +18,8 @@ export function ShareWithFamilyButton({ resourceType, resourceId, stopPropagatio
   const [open, setOpen] = useState(false)
   const [doneGroupId, setDoneGroupId] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null)
 
   const { data: groupsData } = useQuery<{ groups: FamilyGroup[] }>({
     queryKey: ['family', 'groups'],
@@ -53,37 +56,30 @@ export function ShareWithFamilyButton({ resourceType, resourceId, stopPropagatio
 
   const handleTriggerClick = (e: MouseEvent<HTMLButtonElement>) => {
     if (stopPropagation) e.stopPropagation()
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setMenuPos({ top: r.bottom + 6, right: window.innerWidth - r.right })
+    }
     setOpen((o) => !o)
   }
 
-  return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
-      <button
-        onClick={handleTriggerClick}
-        className="favorite-action-btn"
-        title="Share with family group"
-        aria-label="Share with family"
-      >
-        <Share2 size={12} strokeWidth={1.75} />
-        <span className="btn-label">Share</span>
-      </button>
-
-      {open && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 6px)',
-            right: 0,
-            zIndex: 50,
-            minWidth: 200,
-            background: 'var(--bg-2, #0d1829)',
-            border: '1px solid var(--glass-edge)',
-            borderRadius: 12,
-            padding: 6,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
+  const menu = open && menuPos && createPortal(
+    <div
+      ref={ref}
+      style={{
+        position: 'fixed',
+        top: menuPos.top,
+        right: menuPos.right,
+        zIndex: 9000,
+        minWidth: 200,
+        background: 'var(--bg-2, #0d1829)',
+        border: '1px solid var(--glass-edge)',
+        borderRadius: 12,
+        padding: 6,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
           {groups.length === 0 ? (
             <div style={{ padding: '10px 12px' }}>
               <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginBottom: 8 }}>
@@ -133,8 +129,23 @@ export function ShareWithFamilyButton({ resourceType, resourceId, stopPropagatio
               })}
             </>
           )}
-        </div>
-      )}
+    </div>,
+    document.body,
+  )
+
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        ref={btnRef}
+        onClick={handleTriggerClick}
+        className="favorite-action-btn"
+        title="Share with family group"
+        aria-label="Share with family"
+      >
+        <Share2 size={12} strokeWidth={1.75} />
+        <span className="btn-label">Share</span>
+      </button>
+      {menu}
     </div>
   )
 }
