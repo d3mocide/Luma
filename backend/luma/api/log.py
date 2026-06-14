@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from luma.agents import food_extractor
-from luma.db.models import Food, MealEvent
+from luma.db.models import Favorite, Food, MealEvent
 from luma.deps import CurrentUser, DbDep
 from luma.services import off_client, whisper_client
 from luma.services.nutrition import aggregate_items
@@ -417,17 +417,34 @@ async def get_frequent_meals(
         slot_buckets[event.slot][key].append(event)
 
     slot_order = ["breakfast", "lunch", "dinner", "snack"]
-    suggestions = []
+    reps = []
     for slot, buckets in slot_buckets.items():
         best_key = max(buckets, key=lambda k: len(buckets[k]))
         best_events = buckets[best_key]
-        most_recent = best_events[0]
+        reps.append((slot, best_events[0], len(best_events)))
+
+    # Resolve the saved favorite name for any representative that was logged from a
+    # favorite, so a re-log carries the user's name instead of a bare ingredient list.
+    fav_ids = {ev.favorite_id for _, ev, _ in reps if ev.favorite_id}
+    fav_names: dict[UUID, str] = {}
+    if fav_ids:
+        fres = await db.execute(select(Favorite.id, Favorite.name).where(Favorite.id.in_(fav_ids)))
+        fav_names = {fid: name for fid, name in fres.all()}
+
+    suggestions = []
+    for slot, ev, count in reps:
+        name = None
+        if ev.favorite_id and ev.favorite_id in fav_names:
+            name = fav_names[ev.favorite_id]
+        elif ev.raw_input and ev.raw_input.strip() and ev.raw_input.strip() != "Manual log":
+            name = ev.raw_input.strip()
         suggestions.append({
             "slot": slot,
-            "items": most_recent.items,
-            "nutrition": most_recent.nutrition,
-            "count": len(best_events),
-            "last_logged": most_recent.ts.isoformat(),
+            "name": name,
+            "items": ev.items,
+            "nutrition": ev.nutrition,
+            "count": count,
+            "last_logged": ev.ts.isoformat(),
         })
 
     suggestions.sort(key=lambda s: slot_order.index(s["slot"]) if s["slot"] in slot_order else 99)

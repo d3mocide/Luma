@@ -166,6 +166,7 @@ export function NutritionCalculatorCard({
       nutrition: item.nutrients,
     }))
     setMealItems((prev) => [...prev, ...newItems])
+    setMealName((prev) => (prev.trim() ? prev : fav.name))
     const selectEl = document.getElementById('budget-fav-select') as HTMLSelectElement | null
     if (selectEl) selectEl.value = ''
   }

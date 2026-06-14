@@ -245,7 +245,11 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
           {activeTab === 'quick' && (
             <QuickTab
               currentSlot={slot}
-              onAddItems={(items) => { addItems(items); setActiveTab('search') }}
+              onAddItems={(items, name) => {
+                addItems(items)
+                if (name) setMealName((prev) => (prev.trim() ? prev : name))
+                setActiveTab('search')
+              }}
               favorites={favorites}
               onLogFavoriteDirect={(items, name, favoriteId) => logFavoriteDirect.mutate({ items, name, favoriteId })}
               isLoggingFavorite={logFavoriteDirect.isPending}
@@ -265,6 +269,11 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               onRemoveItem={removeItem}
               onUpdateWeight={updateItemWeight}
               onUpdateName={updateItemName}
+              favorites={favorites}
+              onPickFavorite={(items, name) => {
+                addItems(items)
+                if (name) setMealName((prev) => (prev.trim() ? prev : name))
+              }}
             />
           )}
           {activeTab === 'scan' && (

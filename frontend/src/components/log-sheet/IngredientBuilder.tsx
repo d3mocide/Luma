@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef, useId } from 'react'
-import { Search, Plus, X, Camera } from 'lucide-react'
+import { Search, Plus, X, Camera, Star } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api } from '../../lib/api'
 import {
   type PortionUnit, type HouseholdMeasure, PORTION_UNITS, PORTION_UNIT_LABELS, PRESETS_BY_UNIT,
   unitToGrams, densityForFood, defaultQtyForUnit,
 } from '../../lib/portions'
-import { scaleNutrients } from '../../lib/nutrients'
+import { scaleNutrients, toNutrients } from '../../lib/nutrients'
 import { DraftItemList } from './DraftItemList'
-import type { DraftItem } from './types'
+import type { DraftItem, Favorite } from './types'
 
 const FOOD_FORMATS = [
   Html5QrcodeSupportedFormats.EAN_13,
@@ -85,9 +85,11 @@ type Props = {
   onUpdateWeight: (index: number, newWeight: number) => void
   onUpdateName: (index: number, name: string) => void
   emptyStateMessage?: string
+  favorites?: Favorite[]
+  onPickFavorite?: (items: DraftItem[], name: string) => void
 }
 
-export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdateWeight, onUpdateName, emptyStateMessage }: Props) {
+export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdateWeight, onUpdateName, emptyStateMessage, favorites, onPickFavorite }: Props) {
   const [query, setQuery]               = useState('')
   const [results, setResults]           = useState<FoodResult[]>([])
   const [isSearching, setIsSearching]   = useState(false)
@@ -221,6 +223,27 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
     setPending(null)
     setPendingQty('')
     setPendingUnit('g')
+  }
+
+  // Surface the user's saved favorites at the very top of search results so a
+  // whole meal can be dropped in with one tap (and its name carried along).
+  const favQuery = query.trim().toLowerCase()
+  const matchingFavorites = !pending && favQuery && favorites
+    ? favorites.filter((f) => f.name.toLowerCase().includes(favQuery)).slice(0, 4)
+    : []
+
+  function pickFavorite(fav: Favorite) {
+    const items: DraftItem[] = fav.items.map((i) => ({
+      name: i.food_name,
+      brand: i.brand ?? undefined,
+      quantity: i.quantity_g,
+      unit: 'g',
+      estimated_weight_g: i.quantity_g,
+      nutrients: toNutrients(i.nutrients),
+    }))
+    onPickFavorite?.(items, fav.name)
+    setQuery('')
+    setResults([])
   }
 
   const pendingMeasures = pending?.household_measures ?? []
@@ -399,6 +422,41 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
           {barcodeError && !isScanning && (
             <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--bad)' }}>{barcodeError}</p>
           )}
+        </div>
+      )}
+
+      {/* ── Matching favorites (surfaced above food results) ── */}
+      {matchingFavorites.length > 0 && (
+        <div className="glass-inset" style={{ borderRadius: 12, overflow: 'hidden' }}>
+          {matchingFavorites.map((fav) => {
+            const kcal = Math.round(fav.items.reduce((sum, i) => sum + (i.nutrients.calories ?? 0), 0))
+            return (
+              <button
+                key={fav.id}
+                onClick={() => pickFavorite(fav)}
+                style={{
+                  width: '100%', padding: '10px 12px', background: 'none', border: 'none',
+                  borderBottom: '1px solid var(--glass-edge)', textAlign: 'left', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                }}
+              >
+                <div style={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Star size={13} fill="var(--aurora-pink)" style={{ color: 'var(--aurora-pink)', flexShrink: 0 }} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {fav.name}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
+                      Favorite · {fav.items.length} {fav.items.length === 1 ? 'item' : 'items'}
+                    </div>
+                  </div>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--aurora-pink)', background: 'rgba(244,114,182,0.10)', padding: '2px 8px', borderRadius: 999, flexShrink: 0 }}>
+                  {kcal} kcal
+                </span>
+              </button>
+            )
+          })}
         </div>
       )}
 

@@ -6,6 +6,7 @@ import type { DraftItem, Favorite } from './types'
 
 type FrequentMeal = {
   slot: string
+  name?: string | null
   items: DraftItem[]
   nutrition: Record<string, number>
   count: number
@@ -16,7 +17,7 @@ const MAX_QUICK_PICKS = 5
 
 type Props = {
   currentSlot: string
-  onAddItems: (items: DraftItem[]) => void
+  onAddItems: (items: DraftItem[], name?: string) => void
   favorites?: Favorite[]
   onLogFavoriteDirect?: (items: DraftItem[], name: string, favoriteId: string) => void
   isLoggingFavorite?: boolean
@@ -64,6 +65,8 @@ export function QuickTab({ currentSlot, onAddItems, favorites, onLogFavoriteDire
             const cal = Math.round(meal.nutrition?.calories ?? 0)
             const protein = (meal.nutrition?.protein_g ?? 0).toFixed(0)
             const itemNames = meal.items.map((i) => i.name).join(', ')
+            const title = meal.name?.trim() || itemNames
+            const showItemSubtitle = !!meal.name?.trim() && itemNames !== meal.name.trim()
             const freq = meal.count === 1 ? '1× this week' : `${meal.count}× this week`
 
             return (
@@ -104,17 +107,34 @@ export function QuickTab({ currentSlot, onAddItems, favorites, onLogFavoriteDire
                     <div
                       style={{
                         fontSize: 13,
-                        color: 'var(--fg-secondary)',
+                        fontWeight: meal.name?.trim() ? 600 : 400,
+                        color: meal.name?.trim() ? 'var(--fg-primary)' : 'var(--fg-secondary)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
                         maxWidth: '28ch',
-                        marginBottom: 6,
+                        marginBottom: showItemSubtitle ? 2 : 6,
                       }}
-                      title={itemNames}
+                      title={title}
                     >
-                      {itemNames}
+                      {title}
                     </div>
+                    {showItemSubtitle && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--fg-quiet)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '32ch',
+                          marginBottom: 6,
+                        }}
+                        title={itemNames}
+                      >
+                        {itemNames}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: 10 }}>
                       <span className="num" style={{ fontSize: 11, color: 'var(--fg-tertiary)' }}>
                         {cal} kcal
@@ -125,7 +145,7 @@ export function QuickTab({ currentSlot, onAddItems, favorites, onLogFavoriteDire
                     </div>
                   </div>
                   <button
-                    onClick={() => onAddItems(meal.items)}
+                    onClick={() => onAddItems(meal.items, meal.name?.trim() || undefined)}
                     className="btn btn-primary"
                     style={{ padding: '8px 16px', fontSize: 12, flexShrink: 0 }}
                   >

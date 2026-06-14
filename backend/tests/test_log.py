@@ -40,7 +40,7 @@ def _make_fake_user():
     return user
 
 
-def _make_fake_event(user_id=None, event_id=None, slot="breakfast"):
+def _make_fake_event(user_id=None, event_id=None, slot="breakfast", favorite_id=None, raw_input=None):
     event = MagicMock()
     event.id = event_id or uuid4()
     event.user_id = user_id or uuid4()
@@ -50,7 +50,8 @@ def _make_fake_event(user_id=None, event_id=None, slot="breakfast"):
     event.items = SAMPLE_ITEMS
     event.nutrition = SAMPLE_NUTRITION
     event.plan_slot_id = None
-    event.raw_input = None
+    event.favorite_id = favorite_id
+    event.raw_input = raw_input
     event.confidence = None
     return event
 
@@ -167,6 +168,58 @@ def test_list_meals_empty_returns_empty_list():
 
     assert resp.status_code == 200
     assert resp.json() == {"meals": []}
+
+
+# ── GET /log/meals/frequent ────────────────────────────────────────────────────
+
+def test_frequent_meals_carries_saved_favorite_name():
+    """A meal logged from a favorite surfaces that favorite's current name."""
+    fave_user = _make_fake_user()
+    fav_id = uuid4()
+    event = _make_fake_event(user_id=fave_user.id, slot="dinner", favorite_id=fav_id)
+
+    async def db_override():
+        db = AsyncMock()
+        events_result = MagicMock()
+        events_result.scalars.return_value.all.return_value = [event]
+        fav_result = MagicMock()
+        fav_result.all.return_value = [(fav_id, "Power Bowl")]
+        db.execute = AsyncMock(side_effect=[events_result, fav_result])
+        yield db
+
+    app = _make_log_app(fave_user, db_override)
+
+    with TestClient(app) as client:
+        resp = client.get("/api/v1/log/meals/frequent")
+
+    assert resp.status_code == 200
+    suggestions = resp.json()["suggestions"]
+    assert len(suggestions) == 1
+    assert suggestions[0]["name"] == "Power Bowl"
+
+
+def test_frequent_meals_falls_back_to_raw_input_name():
+    """A user-named manual meal surfaces its raw_input; generic logs stay unnamed."""
+    fake_user = _make_fake_user()
+    named = _make_fake_event(user_id=fake_user.id, slot="lunch", raw_input="Sunday Brunch")
+    generic = _make_fake_event(user_id=fake_user.id, slot="dinner", raw_input="Manual log")
+
+    async def db_override():
+        db = AsyncMock()
+        events_result = MagicMock()
+        events_result.scalars.return_value.all.return_value = [named, generic]
+        db.execute = AsyncMock(return_value=events_result)
+        yield db
+
+    app = _make_log_app(fake_user, db_override)
+
+    with TestClient(app) as client:
+        resp = client.get("/api/v1/log/meals/frequent")
+
+    assert resp.status_code == 200
+    by_slot = {s["slot"]: s for s in resp.json()["suggestions"]}
+    assert by_slot["lunch"]["name"] == "Sunday Brunch"
+    assert by_slot["dinner"]["name"] is None
 
 
 # ── PATCH /log/meal/{id} ───────────────────────────────────────────────────────
