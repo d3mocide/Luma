@@ -20,6 +20,15 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
 
+  useEffect(() => {
+    function selectOnFocus(e: FocusEvent) {
+      const t = e.target
+      if (t instanceof HTMLInputElement && t.type === 'number') t.select()
+    }
+    document.addEventListener('focus', selectOnFocus, true)
+    return () => document.removeEventListener('focus', selectOnFocus, true)
+  }, [])
+
   return (
     <BrowserRouter>
       <OfflineBanner/>

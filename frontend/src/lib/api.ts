@@ -264,6 +264,7 @@ export interface Insight {
   ts: string
   rule_id: string
   severity: string
+  payload: Record<string, unknown> | null
   headline: string
   body: string
   thread_seed: string

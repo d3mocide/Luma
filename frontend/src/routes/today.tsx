@@ -153,6 +153,32 @@ export default function TodayRoute() {
     { from: '#86efac', to: '#34d399', glow: 'rgba(52,211,153,0.5)' }, // Green (Fiber)
     { from: '#f472b6', to: '#ec4899', glow: 'rgba(244,114,182,0.5)' }, // Pink (Sugar)
   ]
+
+  const calPct = adherence?.calories?.pct ?? 0
+  const proteinPct = adherence?.protein_g?.pct ?? 0
+  // Calories is a max target; protein is a min target
+  const calStatus: 'under' | 'good' | 'over' = calPct > 100 ? 'over' : calPct >= 90 ? 'good' : 'under'
+  const proteinStatus: 'under' | 'good' = proteinPct >= 90 ? 'good' : 'under'
+
+  const calBarColor = calStatus === 'over'
+    ? 'linear-gradient(90deg, var(--bad), #f87171)'
+    : calStatus === 'good'
+      ? 'linear-gradient(90deg, var(--good), #34d399)'
+      : 'linear-gradient(90deg, var(--sky-400), var(--sky-500))'
+  const calBarGlow = calStatus === 'over'
+    ? '0 0 8px rgba(239,68,68,0.45)'
+    : calStatus === 'good'
+      ? '0 0 8px rgba(52,211,153,0.45)'
+      : '0 0 8px rgba(56,189,248,0.4)'
+  const calNumColor = calStatus === 'over' ? 'var(--bad)' : calStatus === 'good' ? 'var(--good)' : 'var(--fg-primary)'
+
+  const proteinBarColor = proteinStatus === 'good'
+    ? 'linear-gradient(90deg, var(--good), #34d399)'
+    : 'linear-gradient(90deg, var(--aurora-violet), #a78bfa)'
+  const proteinBarGlow = proteinStatus === 'good'
+    ? '0 0 8px rgba(52,211,153,0.45)'
+    : '0 0 8px rgba(139,92,246,0.4)'
+  const proteinNumColor = proteinStatus === 'good' ? 'var(--good)' : 'var(--fg-primary)'
   const weightUnit = measurementWeightUnit(measurementSystem)
   const slopeUnit = measurementSlopeUnit(measurementSystem)
   const latestWeight = convertWeight(data.weight.latest_kg, measurementSystem)
@@ -282,22 +308,22 @@ export default function TodayRoute() {
                           <div style={{ paddingRight: adherence?.protein_g?.target != null ? 20 : 0 }}>
                             <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Calories</span>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 3 }}>
-                              <span className="num" style={{ fontSize: 30, fontWeight: 300, color: 'var(--fg-primary)', letterSpacing: '-0.03em', lineHeight: 1 }}>{fmt(adherence?.calories?.logged, 0)}</span>
+                              <span className="num" style={{ fontSize: 30, fontWeight: 300, color: calNumColor, letterSpacing: '-0.03em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence?.calories?.logged, 0)}</span>
                               <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence?.calories?.target, 0)} kcal</span>
                             </div>
                             <div style={{ marginTop: 8, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                              <div style={{ width: `${Math.min(adherence?.calories?.pct ?? 0, 100)}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, var(--sky-400), var(--sky-500))', boxShadow: '0 0 8px rgba(56,189,248,0.4)' }}/>
+                              <div style={{ width: `${Math.min(calPct, 100)}%`, height: '100%', borderRadius: 999, background: calBarColor, boxShadow: calBarGlow, transition: 'background 400ms, box-shadow 400ms' }}/>
                             </div>
                           </div>
                           {adherence?.protein_g?.target != null && (
                             <div style={{ paddingLeft: 20, borderLeft: '1px solid var(--glass-edge)' }}>
                               <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Protein</span>
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 3 }}>
-                                <span className="num" style={{ fontSize: 22, fontWeight: 300, color: 'var(--fg-primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>{fmt(adherence.protein_g.logged, 0)}</span>
+                                <span className="num" style={{ fontSize: 22, fontWeight: 300, color: proteinNumColor, letterSpacing: '-0.02em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence.protein_g.logged, 0)}</span>
                                 <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence.protein_g.target, 0)} g</span>
                               </div>
                               <div style={{ marginTop: 8, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                                <div style={{ width: `${Math.min(adherence.protein_g.pct ?? 0, 100)}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, var(--aurora-violet), #a78bfa)', boxShadow: '0 0 8px rgba(139,92,246,0.4)' }}/>
+                                <div style={{ width: `${Math.min(proteinPct, 100)}%`, height: '100%', borderRadius: 999, background: proteinBarColor, boxShadow: proteinBarGlow, transition: 'background 400ms, box-shadow 400ms' }}/>
                               </div>
                             </div>
                           )}
@@ -455,22 +481,22 @@ export default function TodayRoute() {
                 <div style={{ paddingRight: adherence?.protein_g?.target != null ? 16 : 0 }}>
                   <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Calories</span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 2 }}>
-                    <span className="num" style={{ fontSize: 26, fontWeight: 300, color: 'var(--fg-primary)', letterSpacing: '-0.03em', lineHeight: 1 }}>{fmt(adherence?.calories?.logged, 0)}</span>
+                    <span className="num" style={{ fontSize: 26, fontWeight: 300, color: calNumColor, letterSpacing: '-0.03em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence?.calories?.logged, 0)}</span>
                     <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence?.calories?.target, 0)} kcal</span>
                   </div>
                   <div style={{ marginTop: 7, height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                    <div style={{ width: `${Math.min(adherence?.calories?.pct ?? 0, 100)}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, var(--sky-400), var(--sky-500))', boxShadow: '0 0 6px rgba(56,189,248,0.4)' }}/>
+                    <div style={{ width: `${Math.min(calPct, 100)}%`, height: '100%', borderRadius: 999, background: calBarColor, boxShadow: calBarGlow, transition: 'background 400ms, box-shadow 400ms' }}/>
                   </div>
                 </div>
                 {adherence?.protein_g?.target != null && (
                   <div style={{ paddingLeft: 16, borderLeft: '1px solid var(--glass-edge)' }}>
                     <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Protein</span>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 2 }}>
-                      <span className="num" style={{ fontSize: 20, fontWeight: 300, color: 'var(--fg-primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>{fmt(adherence.protein_g.logged, 0)}</span>
+                      <span className="num" style={{ fontSize: 20, fontWeight: 300, color: proteinNumColor, letterSpacing: '-0.02em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence.protein_g.logged, 0)}</span>
                       <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence.protein_g.target, 0)} g</span>
                     </div>
                     <div style={{ marginTop: 7, height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.min(adherence.protein_g.pct ?? 0, 100)}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, var(--aurora-violet), #a78bfa)', boxShadow: '0 0 6px rgba(139,92,246,0.4)' }}/>
+                      <div style={{ width: `${Math.min(proteinPct, 100)}%`, height: '100%', borderRadius: 999, background: proteinBarColor, boxShadow: proteinBarGlow, transition: 'background 400ms, box-shadow 400ms' }}/>
                     </div>
                   </div>
                 )}

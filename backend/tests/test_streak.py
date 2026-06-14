@@ -42,10 +42,22 @@ def test_ceilings_and_floor():
     assert s["sat_met"] is True   # at the ceiling
     assert s["fib_met"] is True   # at the floor
     assert s["sug_met"] is True   # at the ceiling
-    over = score_day({"cal": 2000, "sat": 16, "fib": 19, "sug": 26}, TARGETS)
-    assert over["sat_met"] is False
-    assert over["fib_met"] is False
-    assert over["sug_met"] is False
+
+
+def test_ceiling_and_floor_grace_zone():
+    # Values inside the 10% grace still count as met.
+    grace = score_day({"cal": 2000, "sat": 16, "fib": 19, "sug": 26}, TARGETS)
+    assert grace["sat_met"] is True   # 16 <= 15 * 1.10 = 16.5
+    assert grace["fib_met"] is True   # 19 >= 20 * 0.90 = 18
+    assert grace["sug_met"] is True   # 26 <= 25 * 1.10 = 27.5
+
+
+def test_ceiling_and_floor_beyond_grace():
+    # Values outside the 10% grace are missed.
+    over = score_day({"cal": 2000, "sat": 17, "fib": 17, "sug": 28}, TARGETS)
+    assert over["sat_met"] is False   # 17 > 16.5
+    assert over["fib_met"] is False   # 17 < 18
+    assert over["sug_met"] is False   # 28 > 27.5
 
 
 def test_on_track_needs_three_of_four():

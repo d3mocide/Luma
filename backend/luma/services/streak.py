@@ -18,6 +18,8 @@ from __future__ import annotations
 
 CAL_UNDER_TOL = 0.85   # intake down to 15% under target is still on-plan
 CAL_OVER_TOL = 1.10    # only 10% over target is tolerated
+CEILING_GRACE = 1.10   # sat fat and sugar: up to 10% over cap still counts
+FLOOR_TOLERANCE = 0.90 # soluble fiber: down to 10% under floor still counts
 ON_TRACK_MIN = 3       # hit at least this many targets — or all of them, if fewer are set
 
 
@@ -40,15 +42,15 @@ def score_day(
 
     sat_t = targets.get("sat")
     if sat_t is not None:
-        checks["sat"] = totals.get("sat", 0.0) <= sat_t
+        checks["sat"] = totals.get("sat", 0.0) <= sat_t * CEILING_GRACE
 
     fib_t = targets.get("fib")
     if fib_t is not None:
-        checks["fib"] = totals.get("fib", 0.0) >= fib_t
+        checks["fib"] = totals.get("fib", 0.0) >= fib_t * FLOOR_TOLERANCE
 
     sug_t = targets.get("sug")
     if sug_t is not None:
-        checks["sug"] = totals.get("sug", 0.0) <= sug_t
+        checks["sug"] = totals.get("sug", 0.0) <= sug_t * CEILING_GRACE
 
     configured = len(checks)
     met = sum(checks.values())
