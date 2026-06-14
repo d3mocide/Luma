@@ -530,43 +530,42 @@ export function NutritionCalculatorCard({
       </div>
 
       <div className="glass-inset" style={{ padding: compact ? 8 : 12, display: 'grid', gap: 10, minWidth: 0, width: '100%' }}>
-
-        {/* Mode segmented control */}
-        <div style={{ display: 'flex', padding: 3, background: 'var(--glass-1)', borderRadius: 10, border: '1px solid var(--glass-edge)' }}>
-          <button
-            type="button"
-            onClick={() => setBudgetMode('search')}
-            style={{
-              flex: 1, padding: '7px 0', borderRadius: 8, fontSize: 12, fontWeight: 500,
-              border: 'none', cursor: 'pointer', transition: 'all 150ms',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-              background: budgetMode === 'search' ? 'var(--glass-3)' : 'transparent',
-              color: budgetMode === 'search' ? 'var(--sky-300)' : 'var(--fg-quiet)',
-            }}
-          >
-            <Search size={12} /> Search
-          </button>
-          <button
-            type="button"
-            onClick={() => setBudgetMode('favorite')}
-            style={{
-              flex: 1, padding: '7px 0', borderRadius: 8, fontSize: 12, fontWeight: 500,
-              border: 'none', cursor: 'pointer', transition: 'all 150ms',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-              background: budgetMode === 'favorite' ? 'var(--glass-3)' : 'transparent',
-              color: budgetMode === 'favorite' ? 'var(--sun-300)' : 'var(--fg-quiet)',
-            }}
-          >
-            <Star size={12} /> Favorites
-          </button>
-        </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr auto', gap: compact ? 8 : 12, alignItems: 'start', minWidth: 0, width: '100%' }}>
 
           {/* Food search */}
           <label style={{ display: 'grid', gap: 6, minWidth: 0, width: '100%' }}>
             <div style={{ position: 'relative' }}>
               <div style={{ display: 'flex', gap: compact ? 6 : 8, alignItems: 'stretch' }}>
+
+                {/* Mode segmented pill */}
+                <div style={{ display: 'flex', padding: 2, background: 'var(--glass-1)', borderRadius: 10, border: '1px solid var(--glass-edge)', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => setBudgetMode('search')}
+                    title="Search foods"
+                    style={{
+                      padding: compact ? '0 9px' : '0 11px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'all 150ms',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: budgetMode === 'search' ? 'var(--glass-3)' : 'transparent',
+                      color: budgetMode === 'search' ? 'var(--sky-300)' : 'var(--fg-quiet)',
+                    }}
+                  >
+                    <Search size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBudgetMode('favorite')}
+                    title="Pick a favorite"
+                    style={{
+                      padding: compact ? '0 9px' : '0 11px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'all 150ms',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: budgetMode === 'favorite' ? 'var(--glass-3)' : 'transparent',
+                      color: budgetMode === 'favorite' ? 'var(--sun-300)' : 'var(--fg-quiet)',
+                    }}
+                  >
+                    <Star size={13} />
+                  </button>
+                </div>
 
                 {budgetMode === 'search' ? (
                   <div style={{
