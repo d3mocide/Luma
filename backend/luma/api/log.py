@@ -173,6 +173,38 @@ async def log_meal_voice(
     }
 
 
+async def _maybe_persist_photo_food(item: dict[str, Any], user_id: UUID, db: Any) -> None:
+    """Upsert a photo-extracted food item into the user's personal food library.
+
+    Only runs for items with source='photo' and no food_id (fresh extraction).
+    Back-calculates nutrients_per_100g from the scaled portion nutrients.
+    """
+    name = (item.get("name") or "").strip()
+    if not name:
+        return
+    existing = await db.execute(
+        select(Food).where(Food.created_by == user_id, Food.name == name)
+    )
+    if existing.scalar_one_or_none():
+        return
+    weight_g = float(item.get("estimated_weight_g") or 100.0)
+    if weight_g <= 0:
+        weight_g = 100.0
+    raw: dict = item.get("nutrients") or {}
+    per_100 = {k: v * 100.0 / weight_g for k, v in raw.items() if isinstance(v, (int, float))}
+    db.add(Food(
+        id=uuid.uuid4(),
+        source="user",
+        name=name,
+        brand=item.get("brand"),
+        serving_size_g=weight_g,
+        nutrients_per_100g=per_100,
+        household_measures=[],
+        tags=[],
+        created_by=user_id,
+    ))
+
+
 @router.post("/meal")
 async def log_meal(
     req: MealEventCreate,
@@ -180,6 +212,11 @@ async def log_meal(
     current_user: CurrentUser,
 ) -> dict:
     ts = req.ts or datetime.now(UTC)
+    # Auto-persist fresh photo-extracted items to the user's food library so
+    # they appear in /foods/recent and can be re-added without re-scanning.
+    for item in req.items:
+        if item.get("source") == "photo" and not item.get("food_id"):
+            await _maybe_persist_photo_food(item, current_user.id, db)
     event = MealEvent(
         id=uuid.uuid4(),
         user_id=current_user.id,

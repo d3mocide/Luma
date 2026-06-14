@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import case, func, or_, select
+from sqlalchemy import text as sa_text
 
 from luma.db.models import Food
 from luma.deps import CurrentUser, DbDep
@@ -154,7 +155,7 @@ async def search_foods(
         else_=0.0
     )
     _ref_boost = case((Food.brand == "USDA Reference", 1.5), else_=0.0)
-    _user_boost = case((Food.source == "user", 0.5), else_=0.0)
+    _user_boost = case((Food.source == "user", 2.0), else_=0.0)
     _usda_boost = case((Food.source == "usda", 0.1), else_=0.0)
 
     stmt = _apply_filters(
@@ -242,6 +243,56 @@ async def lookup_barcode_food(
     await db.commit()
     await db.refresh(food)
     return food
+
+
+@router.get("/recent", response_model=list[FoodResponse])
+async def get_recent_foods(
+    db: DbDep,
+    current_user: CurrentUser,
+    limit: int = Query(default=12, le=30),
+) -> list[Food]:
+    """Return the user's most recently added or scanned foods.
+
+    Two sources are merged:
+    - User-created foods (photo-extracted and manual) ordered by created_at.
+    - Foods referenced via food_id in the user's meal event items JSONB
+      (barcode / search items that carried a food_id forward).
+    """
+    # 1. User-created foods (covers photo-extracted items after auto-persist)
+    user_res = await db.execute(
+        select(Food)
+        .where(Food.created_by == current_user.id, Food.source == "user")
+        .order_by(Food.created_at.desc())
+        .limit(limit)
+    )
+    user_foods: list[Food] = list(user_res.scalars().all())
+    user_food_ids = {f.id for f in user_foods}
+
+    # 2. Recently used barcode/search foods from meal event JSONB items.
+    #    Only foods that had food_id stamped on them (post this feature rollout).
+    remaining = limit - len(user_foods)
+    scan_foods: list[Food] = []
+    if remaining > 0:
+        raw = await db.execute(
+            sa_text("""
+                SELECT DISTINCT ON (f.id) f.id
+                FROM meal_events me
+                CROSS JOIN LATERAL jsonb_array_elements(me.items) AS elem(item)
+                JOIN foods f ON f.id = (elem.item->>'food_id')::uuid
+                WHERE me.user_id = :user_id
+                  AND elem.item->>'food_id' IS NOT NULL
+                  AND f.source IN ('off', 'usda')
+                ORDER BY f.id, me.ts DESC
+                LIMIT :lim
+            """),
+            {"user_id": current_user.id, "lim": remaining * 2},
+        )
+        scanned_ids = [row[0] for row in raw if row[0] not in user_food_ids][:remaining]
+        if scanned_ids:
+            scan_res = await db.execute(select(Food).where(Food.id.in_(scanned_ids)))
+            scan_foods = list(scan_res.scalars().all())
+
+    return user_foods + scan_foods
 
 
 @router.post("/{food_id}/enrich", response_model=FoodResponse)
