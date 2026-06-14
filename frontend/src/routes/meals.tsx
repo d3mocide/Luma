@@ -901,11 +901,11 @@ type NutrientRow = { label: string; key: keyof NutrientTotals; unit: string; col
 const NUTRIENT_ROWS: NutrientRow[] = [
   { label: 'Calories',      key: 'calories',        unit: 'kcal', color: 'var(--sky-400)' },
   { label: 'Protein',       key: 'protein_g',       unit: 'g',    color: 'rgba(56,189,248,0.8)' },
-  { label: 'Carbohydrates', key: 'carbohydrates_g', unit: 'g' },
-  { label: 'Total fat',     key: 'fat_g',           unit: 'g' },
-  { label: 'Saturated fat', key: 'saturated_fat_g', unit: 'g',    indent: true },
-  { label: 'Fiber',         key: 'fiber_g',         unit: 'g' },
-  { label: 'Sodium',        key: 'sodium_mg',        unit: 'mg' },
+  { label: 'Carbohydrates', key: 'carbohydrates_g', unit: 'g',    color: 'var(--fg-secondary)' },
+  { label: 'Total fat',     key: 'fat_g',           unit: 'g',    color: 'var(--fg-secondary)' },
+  { label: 'Saturated fat', key: 'saturated_fat_g', unit: 'g',    color: 'var(--sun-400)',  indent: true },
+  { label: 'Fiber',         key: 'fiber_g',         unit: 'g',    color: '#34d399' },
+  { label: 'Sodium',        key: 'sodium_mg',        unit: 'mg',   color: 'rgba(251,191,36,0.65)' },
 ]
 
 function UnifiedNutritionPanel({
