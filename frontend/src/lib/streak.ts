@@ -9,6 +9,8 @@
 
 export const CAL_UNDER_TOL = 0.85
 export const CAL_OVER_TOL = 1.1
+export const CEILING_GRACE = 1.10   // sat fat, sugar: up to 10% over cap still counts
+export const FLOOR_TOLERANCE = 0.90 // soluble fiber: down to 10% under floor still counts
 export const ON_TRACK_MIN = 3
 
 export type MetricState = 'met' | 'missed' | 'untracked'
@@ -21,16 +23,16 @@ export function calorieState(logged: Num, target: Num): MetricState {
   return l >= target * CAL_UNDER_TOL && l <= target * CAL_OVER_TOL ? 'met' : 'missed'
 }
 
-/** Ceiling metric (saturated fat, sugar): met when at or below target. */
+/** Ceiling metric (saturated fat, sugar): met within 10% grace over target. */
 export function ceilingState(logged: Num, target: Num): MetricState {
   if (target == null) return 'untracked'
-  return (logged ?? 0) <= target ? 'met' : 'missed'
+  return (logged ?? 0) <= target * CEILING_GRACE ? 'met' : 'missed'
 }
 
-/** Floor metric (soluble fiber): met when at or above target. */
+/** Floor metric (soluble fiber): met within 10% grace under target. */
 export function floorState(logged: Num, target: Num): MetricState {
   if (target == null) return 'untracked'
-  return (logged ?? 0) >= target ? 'met' : 'missed'
+  return (logged ?? 0) >= target * FLOOR_TOLERANCE ? 'met' : 'missed'
 }
 
 export interface DayInputs {
