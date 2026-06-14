@@ -186,9 +186,12 @@ export default function TodayRoute() {
   const targetWeight = convertWeight(data.weight.target_kg, measurementSystem)
   const trend7d = convertWeightSlope(data.weight.trend_7d, measurementSystem)
   const trend28d = convertWeightSlope(data.weight.trend_28d, measurementSystem)
-  const rawWeightSeries = useMockData || !weightTrendData?.series?.length
+  // Only synthesize a weight series for mock/demo accounts. Real users with an
+  // empty trend series get an empty-state message instead of a fabricated
+  // weight-loss line that never happened.
+  const rawWeightSeries = useMockData
     ? createMockWeightSeries(data.weight.latest_kg)
-    : weightTrendData.series
+    : (weightTrendData?.series ?? [])
 
   const weightSeries = rawWeightSeries
     .map((point) => ({
@@ -196,6 +199,7 @@ export default function TodayRoute() {
       last: convertWeight(point.last, measurementSystem) ?? point.last,
     }))
     .filter((point): point is { date: string; last: number } => point.last != null)
+  const hasWeightSeries = weightSeries.length > 0
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -293,7 +297,13 @@ export default function TodayRoute() {
                       </div>
                     </div>
                     <div style={{ marginTop: 18, marginLeft: -8, marginRight: -8 }}>
-                      <WeightChart data={weightSeries} width={620} height={200}/>
+                      {hasWeightSeries ? (
+                        <WeightChart data={weightSeries} width={620} height={200}/>
+                      ) : (
+                        <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--fg-quiet)' }}>
+                          Not enough weight data yet
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -540,7 +550,13 @@ export default function TodayRoute() {
                 </div>
               </div>
               <div style={{ marginTop: 16, marginLeft: -6, marginRight: -6 }}>
-                <WeightChart data={weightSeries} width={340} height={70} showAxis={false}/>
+                {hasWeightSeries ? (
+                  <WeightChart data={weightSeries} width={340} height={70} showAxis={false}/>
+                ) : (
+                  <div style={{ height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--fg-quiet)' }}>
+                    Not enough weight data yet
+                  </div>
+                )}
               </div>
             </div>
           )
