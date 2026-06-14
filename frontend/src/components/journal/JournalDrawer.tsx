@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { X, Check, BatteryLow, Battery, BatteryMedium, BatteryFull, Flame, Frown, Meh, Smile, Laugh, Angry, CircleDashed, Circle, CircleDot, Disc, CheckCircle2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -209,14 +209,34 @@ export function JournalDrawer({ prefill, onClose }: Props) {
       ]
     : (todayData?.recent_meals ?? [])
 
+  const { data: journalData } = useQuery<{ entries: Array<{ meal_event_id: string | null }> }>({
+    queryKey: ['journal'],
+    queryFn: () => api.get('/journal?limit=50'),
+    enabled: !prefill,
+    staleTime: 30_000,
+  })
+
+  const journaledIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const e of journalData?.entries ?? []) {
+      if (e.meal_event_id) ids.add(e.meal_event_id)
+    }
+    return ids
+  }, [journalData])
+
+  const availableMeals = useMemo(
+    () => recentMeals.filter(m => !journaledIds.has(m.id)),
+    [recentMeals, journaledIds],
+  )
+
   useEffect(() => {
-    if (!prefill && !mealEventId && todayData?.recent_meals && todayData.recent_meals.length > 0) {
-      const first = todayData.recent_meals[0]
+    if (!prefill && !mealEventId && availableMeals.length > 0) {
+      const first = availableMeals[0]
       setMealName(first.headline)
       setMealEventId(first.id)
       setLoggedAt(first.ts)
     }
-  }, [todayData, prefill, mealEventId])
+  }, [availableMeals, prefill, mealEventId])
 
   function selectMeal(meal: RecentMeal) {
     setMealName(meal.headline)
@@ -338,9 +358,17 @@ export function JournalDrawer({ prefill, onClose }: Props) {
           {/* Meal name */}
           <div>
             <div className="eyebrow" style={{ marginBottom: 8 }}>Meal</div>
-            {recentMeals.length > 0 ? (
+            {recentMeals.length === 0 ? (
+              <div style={{ fontSize: 13, color: 'var(--fg-tertiary)', fontStyle: 'italic', padding: '4px 0' }}>
+                No logged meals found today. Log a meal first to record how you felt after.
+              </div>
+            ) : availableMeals.length === 0 ? (
+              <div style={{ fontSize: 13, color: 'var(--fg-tertiary)', fontStyle: 'italic', padding: '4px 0' }}>
+                All meals today have already been journaled.
+              </div>
+            ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {recentMeals.map((meal) => {
+                {availableMeals.map((meal) => {
                   const selected = mealEventId === meal.id
                   return (
                     <button
@@ -361,10 +389,6 @@ export function JournalDrawer({ prefill, onClose }: Props) {
                     </button>
                   )
                 })}
-              </div>
-            ) : (
-              <div style={{ fontSize: 13, color: 'var(--fg-tertiary)', fontStyle: 'italic', padding: '4px 0' }}>
-                No logged meals found today. Log a meal first to record how you felt after.
               </div>
             )}
           </div>
