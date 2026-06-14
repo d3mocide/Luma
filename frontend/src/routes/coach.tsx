@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useSearchParams } from 'react-router-dom'
-import { Sparkles, Send, Plus, MessageSquare } from 'lucide-react'
+import { Sparkles, Send, Plus, MessageSquare, CalendarDays, Flame, Salad, Scale } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { LumaLogo } from '../components/ui/LumaLogo'
@@ -431,13 +431,182 @@ const SEVERITY_COLOR: Record<string, string> = {
   positive: 'var(--good)',
 }
 
+function AskLumaButton({ onAsk, seed }: { onAsk: (seed: string) => void; seed: string }) {
+  return (
+    <button
+      onClick={() => onAsk(seed)}
+      style={{
+        marginTop: 14, padding: '6px 12px', fontSize: 12,
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        background: 'rgba(167,139,250,0.10)', border: '1px solid rgba(167,139,250,0.25)',
+        borderRadius: 20, cursor: 'pointer', color: '#c4b5fd', fontFamily: 'inherit',
+        transition: 'background 0.15s, border-color 0.15s',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'rgba(167,139,250,0.18)'
+        e.currentTarget.style.borderColor = 'rgba(167,139,250,0.45)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'rgba(167,139,250,0.10)'
+        e.currentTarget.style.borderColor = 'rgba(167,139,250,0.25)'
+      }}
+    >
+      <Sparkles size={11}/> Ask Luma
+    </button>
+  )
+}
+
+interface RecapPayload {
+  days_logged: number
+  avg_cal: number | null
+  avg_fiber_g: number | null
+  avg_sat_fat_g: number | null
+  days_on_sat_target: number
+  days_on_fiber_target: number
+  weight_change_kg?: number
+  target_weight_kg?: number
+}
+
+function RecapStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '12px 8px' }}>
+      <div style={{ color: 'var(--fg-secondary)' }}>{icon}</div>
+      <span style={{ fontSize: 17, fontWeight: 500, color: 'var(--fg-primary)', letterSpacing: '-0.02em' }}>{value}</span>
+      <span style={{ fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'var(--font-mono)' }}>{label}</span>
+    </div>
+  )
+}
+
+function WeeklyRecapCard({ insight, onAsk, highlighted, onRef }: {
+  insight: Insight
+  onAsk: (seed: string) => void
+  highlighted: boolean
+  onRef: (el: HTMLDivElement | null) => void
+}) {
+  const p = (insight.payload ?? {}) as RecapPayload
+  const date = new Date(insight.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const wtChange = p.weight_change_kg !== undefined
+    ? `${p.weight_change_kg > 0 ? '+' : ''}${p.weight_change_kg.toFixed(1)} kg`
+    : null
+
+  return (
+    <div
+      ref={onRef}
+      className="glass"
+      style={{
+        borderRadius: 16,
+        border: highlighted ? '1px solid var(--good)' : '1px solid var(--glass-edge)',
+        overflow: 'hidden',
+        transition: 'border-color 0.4s',
+      }}
+    >
+      {/* Header band */}
+      <div style={{
+        padding: '12px 20px',
+        background: 'linear-gradient(90deg, rgba(74,222,128,0.08), rgba(56,189,248,0.06))',
+        borderBottom: '1px solid var(--glass-edge)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <CalendarDays size={13} style={{ color: 'var(--good)' }} />
+          <span style={{ fontSize: 11, color: 'var(--good)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>
+            Weekly Recap
+          </span>
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{date}</span>
+      </div>
+
+      {/* Stats row */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${wtChange ? 4 : 3}, 1fr)`,
+        borderBottom: '1px solid var(--glass-edge)',
+      }}>
+        <RecapStat icon={<CalendarDays size={14} />} label="Days logged" value={`${p.days_logged ?? 0}/7`} />
+        <RecapStat icon={<Flame size={14} />} label="Avg cal" value={p.avg_cal ? String(Math.round(p.avg_cal)) : '—'} />
+        <RecapStat icon={<Salad size={14} />} label="Fiber days" value={`${p.days_on_fiber_target ?? 0}/7`} />
+        {wtChange && <RecapStat icon={<Scale size={14} />} label="Weight" value={wtChange} />}
+      </div>
+
+      {/* Narrative */}
+      <div style={{ padding: '16px 20px' }}>
+        {insight.headline && (
+          <p style={{ margin: 0, fontSize: 15, lineHeight: 1.4, color: 'var(--fg-primary)', fontWeight: 400 }}>
+            {insight.headline}
+          </p>
+        )}
+        {insight.body && (
+          <p style={{ margin: '6px 0 0', fontSize: 13, lineHeight: 1.5, color: 'var(--fg-secondary)' }}>
+            {insight.body}
+          </p>
+        )}
+        {insight.thread_seed && <AskLumaButton onAsk={onAsk} seed={insight.thread_seed} />}
+      </div>
+    </div>
+  )
+}
+
+function InsightCard({ insight, onAsk, highlighted, onRef }: {
+  insight: Insight
+  onAsk: (seed: string) => void
+  highlighted: boolean
+  onRef: (el: HTMLDivElement | null) => void
+}) {
+  const color = SEVERITY_COLOR[insight.severity] ?? 'var(--fg-tertiary)'
+  const date = new Date(insight.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  return (
+    <div
+      ref={onRef}
+      className="glass"
+      style={{
+        padding: 20, borderRadius: 16,
+        border: highlighted ? `1px solid ${color}` : '1px solid var(--glass-edge)',
+        transition: 'border-color 0.4s',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ fontSize: 11, color, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>
+          {insight.severity}
+        </span>
+        <span style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{date}</span>
+      </div>
+      <p style={{ margin: 0, fontSize: 15, lineHeight: 1.4, color: 'var(--fg-primary)', fontWeight: 400 }}>
+        {insight.headline}
+      </p>
+      {insight.body && (
+        <p style={{ margin: '6px 0 0', fontSize: 13, lineHeight: 1.5, color: 'var(--fg-secondary)' }}>
+          {insight.body}
+        </p>
+      )}
+      {insight.thread_seed && <AskLumaButton onAsk={onAsk} seed={insight.thread_seed} />}
+    </div>
+  )
+}
+
 function InsightsTab({ onAsk }: { onAsk: (seed: string) => void }) {
+  const [searchParams] = useSearchParams()
+  const highlightId = searchParams.get('insight')
+
   const { data, isLoading } = useQuery<{ insights: Insight[] }>({
     queryKey: ['insights'],
     queryFn: () => api.get('/insights?limit=50'),
   })
 
   const insights = data?.insights ?? []
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
+  useEffect(() => {
+    if (!highlightId) return
+    const el = cardRefs.current.get(highlightId)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [highlightId, insights])
+
+  function setCardRef(id: string) {
+    return (el: HTMLDivElement | null) => {
+      if (el) cardRefs.current.set(id, el)
+      else cardRefs.current.delete(id)
+    }
+  }
 
   return (
     <div className="thin-scroll coach-tab-content" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '28px 40px', position: 'relative', zIndex: 1 }}>
@@ -457,51 +626,27 @@ function InsightsTab({ onAsk }: { onAsk: (seed: string) => void }) {
         {!isLoading && insights.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {insights.map((insight) => {
-              const color = SEVERITY_COLOR[insight.severity] ?? 'var(--fg-tertiary)'
-              const date = new Date(insight.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+              const highlighted = insight.id === highlightId
+              const onRef = setCardRef(insight.id)
+              if (insight.rule_id === 'weekly_recap') {
+                return (
+                  <WeeklyRecapCard
+                    key={insight.id}
+                    insight={insight}
+                    onAsk={onAsk}
+                    highlighted={highlighted}
+                    onRef={onRef}
+                  />
+                )
+              }
               return (
-                <div
+                <InsightCard
                   key={insight.id}
-                  className="glass"
-                  style={{ padding: 20, borderRadius: 16 }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 11, color, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>
-                      {insight.severity}
-                    </span>
-                    <span style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{date}</span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: 15, lineHeight: 1.4, color: 'var(--fg-primary)', fontWeight: 400 }}>
-                    {insight.headline}
-                  </p>
-                  {insight.body && (
-                    <p style={{ margin: '6px 0 0', fontSize: 13, lineHeight: 1.5, color: 'var(--fg-secondary)' }}>
-                      {insight.body}
-                    </p>
-                  )}
-                  {insight.thread_seed && (
-                    <button
-                      onClick={() => onAsk(insight.thread_seed)}
-                      style={{
-                        marginTop: 14, padding: '6px 12px', fontSize: 12,
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        background: 'rgba(167,139,250,0.10)', border: '1px solid rgba(167,139,250,0.25)',
-                        borderRadius: 20, cursor: 'pointer', color: '#c4b5fd', fontFamily: 'inherit',
-                        transition: 'background 0.15s, border-color 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(167,139,250,0.18)'
-                        e.currentTarget.style.borderColor = 'rgba(167,139,250,0.45)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(167,139,250,0.10)'
-                        e.currentTarget.style.borderColor = 'rgba(167,139,250,0.25)'
-                      }}
-                    >
-                      <Sparkles size={11}/> Ask Luma
-                    </button>
-                  )}
-                </div>
+                  insight={insight}
+                  onAsk={onAsk}
+                  highlighted={highlighted}
+                  onRef={onRef}
+                />
               )
             })}
           </div>
