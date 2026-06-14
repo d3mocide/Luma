@@ -157,6 +157,8 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
       unit: unitLabel,
       estimated_weight_g: grams,
       nutrients: scaleNutrients(pending.nutrients_per_100g, grams),
+      food_id: pending.id,
+      source: 'barcode',
     }])
 
     setPending(null)
@@ -279,6 +281,7 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
         unit: item.unit,
         estimated_weight_g: item.estimated_weight_g ?? 100.0,
         nutrients: toNutrients(item.nutrients),
+        source: 'photo' as const,
       }))
       onAddItems(mapped)
       setPhotoState('done')

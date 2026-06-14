@@ -29,4 +29,9 @@ export type DraftItem = {
   // weight is edited.
   base_weight_g?: number
   nutrients: Nutrients
+  // Tracks which food DB record this item came from (set for barcode, search,
+  // and re-adds from Recent; absent for fresh photo extractions).
+  food_id?: string
+  // Origin of the item so the backend can decide whether to auto-persist it.
+  source?: 'barcode' | 'photo' | 'search' | 'voice' | 'plan' | 'manual'
 }

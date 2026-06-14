@@ -123,8 +123,8 @@ Fix all errors before committing. Do not use `--no-verify` to bypass hooks. Do n
 `backend/luma/api/foods.py` — do not regress these:
 
 - **`get_search_terms(q)`** must tokenize multi-word queries into individual words in addition to the full phrase. "Steak top" → `["steak top", "steak", "top"]`. Without this, reference foods drop out of the WHERE filter because their names don't contain the exact phrase, and USDA API results fill the top instead.
-- **Score formula**: `similarity + match_boost + ref_boost + user_boost + usda_boost`. Reference foods (`brand == "USDA Reference"`) carry a +1.5 boost. Any word-boundary match adds +2.0. Together these always outweigh a USDA API hit (+0.1) even when similarities are equal.
-- **`_LOCAL_THRESHOLD = 5`**: the USDA live fallback only fires when fewer than 5 local results match. After caching, the same ranked query re-runs so reference foods still sort first.
+- **Score formula**: `similarity + match_boost + ref_boost + user_boost + usda_boost`. User foods (`source == "user"`) carry a **+2.0 boost** — the highest of any source — so foods the user added (manually or via photo) always surface above reference and USDA results at equal similarity. Reference foods (`brand == "USDA Reference"`) carry +1.5. Any word-boundary match adds +2.0. USDA API hits carry +0.1.
+- **`_LOCAL_THRESHOLD = 5`**: the USDA live fallback only fires when fewer than 5 local results match. After caching, the same ranked query re-runs so reference foods still sort above raw USDA API hits.
 - If ranking feels broken, check `get_search_terms` first — phrase-only terms are the most common regression.
 
 ## What Claude Code Should NOT Do

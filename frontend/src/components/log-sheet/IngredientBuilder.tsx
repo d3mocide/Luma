@@ -100,6 +100,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   const [pendingUnit, setPendingUnit]   = useState<string>('g')
   const [isScanning, setIsScanning]     = useState(false)
   const [barcodeError, setBarcodeError] = useState('')
+  const [recentFoods, setRecentFoods]   = useState<FoodResult[]>([])
   const qtyRef = useRef<HTMLInputElement>(null)
   // Cleared once the user adjusts qty/unit, so async enrichment doesn't clobber
   // a portion they've already chosen.
@@ -107,6 +108,15 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   const selectFoodRef = useRef<(food: FoodResult) => void>(() => {})
   const uid = useId()
   const scannerDomId = `ingredient-scanner-${uid.replace(/:/g, '')}`
+
+  useEffect(() => {
+    api.get<FoodResult[] | { results: FoodResult[] }>('/foods/recent')
+      .then((res) => {
+        const foods = Array.isArray(res) ? res : ((res as { results?: FoodResult[] }).results ?? [])
+        setRecentFoods(foods as FoodResult[])
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (pending) { setResults([]); return }
@@ -222,6 +232,8 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
       estimated_weight_g: grams,
       base_weight_g: grams,
       nutrients: scaleNutrients(pending.nutrients_per_100g, grams),
+      food_id: pending.id,
+      source: 'search',
     })
     setPending(null)
     setPendingQty('')
@@ -426,6 +438,46 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
           {barcodeError && !isScanning && (
             <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--bad)' }}>{barcodeError}</p>
           )}
+        </div>
+      )}
+
+      {/* ── Recent foods (shown when search is empty, no pending selection) ── */}
+      {!pending && !query.trim() && recentFoods.length > 0 && (
+        <div>
+          <div className="eyebrow" style={{ fontSize: 10, marginBottom: 8 }}>Recent</div>
+          <div className="glass-inset" style={{ borderRadius: 12, overflow: 'hidden' }}>
+            {recentFoods.map((food, idx) => {
+              const servingG = food.serving_size_g ?? 100
+              const kcal = Math.round((food.nutrients_per_100g.calories ?? 0) * servingG / 100)
+              const isLast = idx === recentFoods.length - 1
+              const sourceLabel = food.source === 'off' ? 'Barcode scan'
+                : food.source === 'usda' ? 'USDA'
+                : 'Your food'
+              return (
+                <button
+                  key={food.id}
+                  onClick={() => selectFood(food)}
+                  style={{
+                    width: '100%', padding: '10px 12px', background: 'none', border: 'none',
+                    borderBottom: isLast ? 'none' : '1px solid var(--glass-edge)',
+                    textAlign: 'left', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                    transition: 'background 150ms',
+                  }}
+                >
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {food.name}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
+                      {food.brand ? `${food.brand} · ` : ''}{sourceLabel} · <span className="num">{kcal}</span> kcal / serving
+                    </div>
+                  </div>
+                  <Plus size={14} style={{ color: 'var(--sky-400)', flexShrink: 0 }} />
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
 
