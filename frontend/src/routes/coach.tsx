@@ -483,7 +483,7 @@ function WeeklyRecapCard({ insight, onAsk, highlighted, onRef }: {
   highlighted: boolean
   onRef: (el: HTMLDivElement | null) => void
 }) {
-  const p = (insight.payload ?? {}) as RecapPayload
+  const p = (insight.payload ?? {}) as unknown as RecapPayload
   const date = new Date(insight.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
   const wtChange = p.weight_change_kg !== undefined
     ? `${p.weight_change_kg > 0 ? '+' : ''}${p.weight_change_kg.toFixed(1)} kg`
