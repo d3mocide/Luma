@@ -8,6 +8,9 @@ type Props = {
   onUpdateName: (index: number, name: string) => void
   // When provided, an empty list renders this prompt instead of nothing.
   emptyStateMessage?: string
+  // When set above 1, each item shows how much to weigh out per serving so a
+  // batch can be portioned into even components.
+  servings?: number
 }
 
 // Relative portion presets, anchored to each item's original estimate so the
@@ -19,7 +22,10 @@ const PORTION_MULTIPLIERS: { factor: number; label: string }[] = [
   { factor: 2, label: '2×' },
 ]
 
-export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpdateName, emptyStateMessage }: Props) {
+const OZ_IN_G = 28.3495
+
+export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpdateName, emptyStateMessage, servings }: Props) {
+  const showPerServing = (servings ?? 1) > 1
   if (draftItems.length === 0) {
     if (!emptyStateMessage) return null
     return (
@@ -37,6 +43,7 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
         {draftItems.map((item, idx) => {
           const base = item.base_weight_g ?? item.estimated_weight_g
           const current = Math.round(item.estimated_weight_g)
+          const perServingG = showPerServing ? item.estimated_weight_g / (servings as number) : 0
           return (
             <div key={idx} className="glass-inset" style={{ padding: '10px 12px', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -106,6 +113,21 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
                   })}
                 </div>
               </div>
+
+              {showPerServing && (
+                <div style={{
+                  display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8,
+                  paddingTop: 8, borderTop: '1px solid var(--glass-edge)',
+                }}>
+                  <span style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
+                    Weigh out per serving (÷{servings})
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--sky-400)', fontFamily: 'var(--font-mono)' }}>
+                    <span className="num">{Math.round(perServingG)}</span> g
+                    <span style={{ color: 'var(--fg-tertiary)', fontWeight: 400 }}> · {(perServingG / OZ_IN_G).toFixed(1)} oz</span>
+                  </span>
+                </div>
+              )}
             </div>
           )
         })}

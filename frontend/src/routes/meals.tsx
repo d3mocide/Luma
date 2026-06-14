@@ -1124,6 +1124,7 @@ function CalculatorTab() {
           setItems((prev) => [...prev, ...favItems])
           setMealName((p) => (p.trim() ? p : name))
         }}
+        servings={mode === 'portions' ? servings : undefined}
       />
 
       {/* Meal name + reset row */}
