@@ -23,5 +23,9 @@ export type DraftItem = {
   quantity: number
   unit: string
   estimated_weight_g: number
+  // Original estimate captured when the item entered the draft, used to anchor
+  // the relative portion multipliers (½×/1×/2×) so they don't drift as the
+  // weight is edited.
+  base_weight_g?: number
   nutrients: Nutrients
 }

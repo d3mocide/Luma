@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useId } from 'react'
-import { Search, Plus, X, Utensils, Camera } from 'lucide-react'
+import { Search, Plus, X, Camera } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api } from '../../lib/api'
 import {
@@ -7,6 +7,7 @@ import {
   unitToGrams, densityForFood, defaultQtyForUnit,
 } from '../../lib/portions'
 import { scaleNutrients } from '../../lib/nutrients'
+import { DraftItemList } from './DraftItemList'
 import type { DraftItem } from './types'
 
 const FOOD_FORMATS = [
@@ -82,10 +83,11 @@ type Props = {
   onAddItem: (item: DraftItem) => void
   onRemoveItem: (index: number) => void
   onUpdateWeight: (index: number, newWeight: number) => void
+  onUpdateName: (index: number, name: string) => void
   emptyStateMessage?: string
 }
 
-export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdateWeight, emptyStateMessage }: Props) {
+export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdateWeight, onUpdateName, emptyStateMessage }: Props) {
   const [query, setQuery]               = useState('')
   const [results, setResults]           = useState<FoodResult[]>([])
   const [isSearching, setIsSearching]   = useState(false)
@@ -429,77 +431,13 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
       )}
 
       {/* ── Meal items ── */}
-      {draftItems.length === 0 ? (
-        <div style={{ padding: '32px 16px', textAlign: 'center', border: '1px dashed var(--glass-edge)', borderRadius: 12 }}>
-          <Utensils size={22} strokeWidth={1.5} style={{ color: 'var(--fg-quiet)', margin: '0 auto 8px', display: 'block' }} />
-          <p style={{ margin: 0, fontSize: 12, color: 'var(--fg-quiet)' }}>
-            {emptyStateMessage ?? 'Search above to start building your meal.'}
-          </p>
-        </div>
-      ) : (
-        <div>
-          <div className="eyebrow" style={{ marginBottom: 8 }}>Meal items ({draftItems.length})</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {draftItems.map((item, idx) => (
-              <div key={idx} className="glass-inset" style={{ padding: '10px 12px', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.name}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
-                      {Math.round(item.nutrients.calories)} kcal · {item.nutrients.protein_g.toFixed(1)}g protein
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => onRemoveItem(idx)}
-                    style={{ color: 'var(--fg-quiet)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0 }}
-                    aria-label={`Remove ${item.name}`}
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-
-                {/* Weight chips */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <input
-                    type="number"
-                    value={Math.round(item.estimated_weight_g)}
-                    onChange={(e) => onUpdateWeight(idx, Math.max(1, parseInt(e.target.value) || 0))}
-                    className="field-input"
-                    style={{
-                      width: 56, textAlign: 'center', borderRadius: 7, padding: '4px 4px',
-                      fontSize: 13, fontWeight: 700, border: '1px solid var(--glass-edge)',
-                      fontFamily: 'var(--font-mono)', color: 'var(--sky-400)',
-                    }}
-                  />
-                  <span style={{ fontSize: 11, color: 'var(--fg-tertiary)', flexShrink: 0 }}>g</span>
-                  <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-                    {[25, 50, 75, 100, 150].map((p) => {
-                      const active = Math.round(item.estimated_weight_g) === p
-                      return (
-                        <button
-                          key={p}
-                          onClick={() => onUpdateWeight(idx, p)}
-                          style={{
-                            flex: 1, padding: '4px 2px', borderRadius: 6, fontSize: 9,
-                            fontFamily: 'var(--font-mono)', cursor: 'pointer', transition: 'all 150ms',
-                            background: active ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
-                            border: active ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--glass-edge)',
-                            color: active ? 'var(--sky-300)' : 'var(--fg-secondary)',
-                          }}
-                        >
-                          {p}g
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <DraftItemList
+        draftItems={draftItems}
+        onRemoveItem={onRemoveItem}
+        onUpdateWeight={onUpdateWeight}
+        onUpdateName={onUpdateName}
+        emptyStateMessage={emptyStateMessage ?? 'Search above to start building your meal.'}
+      />
     </div>
   )
 }

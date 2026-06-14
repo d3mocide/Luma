@@ -200,6 +200,13 @@ export default function FavoritesRoute() {
       return updated
     })
   }
+  const updateName = (index: number, name: string) => {
+    setItems((prev) => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], name }
+      return updated
+    })
+  }
 
   return (
     <div className="page-container thin-scroll">
@@ -477,6 +484,7 @@ export default function FavoritesRoute() {
               onAddItem={addItem}
               onRemoveItem={removeItem}
               onUpdateWeight={updateWeight}
+              onUpdateName={updateName}
               emptyStateMessage="Search above to add ingredients to this favorite."
             />
           </div>

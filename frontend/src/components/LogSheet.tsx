@@ -13,6 +13,13 @@ import { getCurrentSlot } from '../lib/format'
 
 type LogSheetMode = 'sheet' | 'page'
 
+// Stamp the original estimate so the relative portion multipliers stay anchored
+// even after the weight is edited, regardless of which flow produced the item.
+const withBase = (item: DraftItem): DraftItem => ({
+  ...item,
+  base_weight_g: item.base_weight_g ?? item.estimated_weight_g,
+})
+
 type LogSheetProps = {
   mode?: LogSheetMode
   onClose?: () => void
@@ -58,7 +65,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
 
   useEffect(() => {
     if (pendingLogItems?.length) {
-      setDraftItems(pendingLogItems)
+      setDraftItems(pendingLogItems.map(withBase))
       clearPendingLogItems()
     }
   }, [pendingLogItems, clearPendingLogItems])
@@ -66,16 +73,24 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   useEffect(() => {
     if (editingMealId && editingMealItems && editingMealSlot) {
       setSlot(editingMealSlot)
-      setDraftItems(editingMealItems)
+      setDraftItems(editingMealItems.map(withBase))
       setMealName(editingMealName || '')
       setActiveTab('search')
     }
   }, [editingMealId, editingMealItems, editingMealSlot, editingMealName])
 
-  const addItems = (items: DraftItem[]) => setDraftItems((prev) => [...prev, ...items])
-  const addItem = (item: DraftItem) => setDraftItems((prev) => [...prev, item])
+  const addItems = (items: DraftItem[]) => setDraftItems((prev) => [...prev, ...items.map(withBase)])
+  const addItem = (item: DraftItem) => setDraftItems((prev) => [...prev, withBase(item)])
 
   const removeItem = (index: number) => setDraftItems((prev) => prev.filter((_, i) => i !== index))
+
+  const updateItemName = (index: number, name: string) => {
+    setDraftItems((prev) => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], name }
+      return updated
+    })
+  }
 
   const updateItemWeight = (index: number, newWeight: number) => {
     setDraftItems((prev) => {
@@ -249,10 +264,17 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               onAddItem={addItem}
               onRemoveItem={removeItem}
               onUpdateWeight={updateItemWeight}
+              onUpdateName={updateItemName}
             />
           )}
           {activeTab === 'scan' && (
-            <ScanTab onAddItems={addItems} />
+            <ScanTab
+              onAddItems={addItems}
+              draftItems={draftItems}
+              onRemoveItem={removeItem}
+              onUpdateWeight={updateItemWeight}
+              onUpdateName={updateItemName}
+            />
           )}
         </div>
 
