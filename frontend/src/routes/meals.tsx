@@ -1055,6 +1055,11 @@ function CalculatorTab() {
 
   const total = useMemo(() => sumNutrients(items), [items])
   const perServing = useMemo(() => divideNutrients(total, servings), [total, servings])
+  const totalWeightG = useMemo(
+    () => items.reduce((sum, it) => sum + (it.estimated_weight_g || 0), 0),
+    [items],
+  )
+  const perServingWeightG = servings > 0 ? totalWeightG / servings : 0
   const hasItems = items.length > 0
 
   const { data: favoritesData } = useQuery<{ favorites: Favorite[] }>({
@@ -1228,6 +1233,19 @@ function CalculatorTab() {
                     </button>
                   </div>
                 </div>
+                {totalWeightG > 0 && (
+                  <div style={{
+                    marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--glass-edge)',
+                    display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12,
+                  }}>
+                    <span className="eyebrow" style={{ fontSize: 10 }}>
+                      {servings > 1 ? 'Weigh out per serving' : 'Total weight'}
+                    </span>
+                    <span className="num" style={{ fontSize: 14, fontWeight: 700, color: 'var(--sky-400)' }}>
+                      {formatWeight(perServingWeightG)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Nutrition results */}
