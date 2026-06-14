@@ -284,6 +284,15 @@ export function NutritionCalculatorCard({
 
   const hasItemsOrFood = selectedFood !== null || mealItems.length > 0
   const showResults = !selectedFood && debouncedQuery.length >= 2
+  const favMatches = showResults
+    ? favorites.filter((f) => f.name.toLowerCase().includes(debouncedQuery.trim().toLowerCase())).slice(0, 4)
+    : []
+
+  const pickFavoriteFromSearch = (favId: string) => {
+    handleSelectFavorite(favId)
+    setQuery('')
+    setDebouncedQuery('')
+  }
 
   type FitSignal = 'fits' | 'tight' | 'over'
   let fitSignal: FitSignal | null = null
@@ -725,7 +734,7 @@ export function NutritionCalculatorCard({
               )}
 
               {/* Results list */}
-              {budgetMode === 'search' && showResults && results.length > 0 && (
+              {budgetMode === 'search' && showResults && (favMatches.length > 0 || results.length > 0) && (
                 <div
                   className="glass-bright"
                   style={{
@@ -738,6 +747,38 @@ export function NutritionCalculatorCard({
                     overflow: 'hidden',
                   }}
                 >
+                  {favMatches.map((fav) => {
+                    const kcal = Math.round(fav.items.reduce((sum, i) => sum + (i.nutrients.calories ?? 0), 0))
+                    return (
+                      <button
+                        key={fav.id}
+                        type="button"
+                        onClick={() => pickFavoriteFromSearch(fav.id)}
+                        style={{
+                          width: '100%', textAlign: 'left', background: 'none', border: 'none',
+                          borderBottom: '1px solid var(--glass-edge)', padding: '9px 12px',
+                          cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--glass-1)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                      >
+                        <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Star size={13} fill="var(--aurora-pink)" style={{ color: 'var(--aurora-pink)', flexShrink: 0 }} />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 13, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {fav.name}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 1 }}>
+                              Favorite · {fav.items.length} {fav.items.length === 1 ? 'item' : 'items'}
+                            </div>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--aurora-pink)', flexShrink: 0, fontFamily: 'var(--font-mono)' }}>
+                          {kcal} kcal
+                        </span>
+                      </button>
+                    )
+                  })}
                   {results.slice(0, 6).map((food) => (
                     <button
                       key={food.id}
@@ -796,7 +837,7 @@ export function NutritionCalculatorCard({
                   ))}
                 </div>
               )}
-              {budgetMode === 'search' && showResults && results.length === 0 && !isFetching && (
+              {budgetMode === 'search' && showResults && results.length === 0 && favMatches.length === 0 && !isFetching && (
                 <div
                   className="glass-bright"
                   style={{

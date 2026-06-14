@@ -8,7 +8,7 @@ import { type FoodResult } from '../components/plan/types'
 import { FOOD_CATEGORIES, SAT_FAT_COLORS, categoryMatchesFlags, type FoodCategory } from '../lib/food-categories'
 import { JournalDrawer, type PendingMeal } from '../components/journal/JournalDrawer'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
-import type { DraftItem } from '../components/log-sheet/types'
+import type { DraftItem, Favorite } from '../components/log-sheet/types'
 import { scaleByRatio, sumNutrients as sumNutrientList } from '../lib/nutrients'
 import { unitToGrams } from '../lib/portions'
 import PlanRoute from './plan'
@@ -1057,6 +1057,13 @@ function CalculatorTab() {
   const perServing = useMemo(() => divideNutrients(total, servings), [total, servings])
   const hasItems = items.length > 0
 
+  const { data: favoritesData } = useQuery<{ favorites: Favorite[] }>({
+    queryKey: ['favorites', 'frequency'],
+    queryFn: () => api.get('/favorites?sort=frequency'),
+    staleTime: 30_000,
+  })
+  const favorites = favoritesData?.favorites ?? []
+
   const saveMutation = useMutation({
     mutationFn: () =>
       api.post('/favorites', {
@@ -1107,6 +1114,11 @@ function CalculatorTab() {
         onUpdateWeight={updateWeight}
         onUpdateName={updateName}
         emptyStateMessage="Search above to add ingredients. No logging — just numbers."
+        favorites={favorites}
+        onPickFavorite={(favItems, name) => {
+          setItems((prev) => [...prev, ...favItems])
+          setMealName((p) => (p.trim() ? p : name))
+        }}
       />
 
       {/* Meal name + reset row */}
