@@ -85,7 +85,10 @@ export function createMockWeightSeries(latest: number | null, points = 30): Weig
 
     const progress = i / Math.max(1, points - 1)
     const trend = base - progress * 1.4
-    const microNoise = Math.sin(i * 0.7) * 0.18 + Math.cos(i * 0.34) * 0.08
+    // Anchor the final point to `latest` so the chart's endpoint dot lands
+    // exactly on the headline weight value; noise on the last point would make
+    // the trend line disagree with the number shown above it.
+    const microNoise = i === points - 1 ? 0 : Math.sin(i * 0.7) * 0.18 + Math.cos(i * 0.34) * 0.08
 
     return {
       date: d.toISOString().slice(0, 10),
