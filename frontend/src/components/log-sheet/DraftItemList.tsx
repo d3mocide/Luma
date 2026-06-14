@@ -45,7 +45,7 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
           const current = Math.round(item.estimated_weight_g)
           const perServingG = showPerServing ? item.estimated_weight_g / (servings as number) : 0
           return (
-            <div key={idx} className="glass-inset" style={{ padding: '10px 12px', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div key={idx} className="builder-ingredient-card">
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <input
@@ -77,20 +77,22 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
               </div>
 
               {/* Portion: editable grams + relative multiplier chips */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="number"
-                  value={current}
-                  onChange={(e) => onUpdateWeight(idx, Math.max(1, parseInt(e.target.value) || 0))}
-                  className="field-input"
-                  style={{
-                    width: 56, textAlign: 'center', borderRadius: 7, padding: '4px 4px',
-                    fontSize: 13, fontWeight: 700, border: '1px solid var(--glass-edge)',
-                    fontFamily: 'var(--font-mono)', color: 'var(--sky-400)',
-                  }}
-                />
-                <span style={{ fontSize: 11, color: 'var(--fg-tertiary)', flexShrink: 0 }}>g</span>
-                <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <input
+                    type="number"
+                    value={current}
+                    onChange={(e) => onUpdateWeight(idx, Math.max(1, parseInt(e.target.value) || 0))}
+                    className="field-input"
+                    style={{
+                      width: 62, textAlign: 'center', borderRadius: 8, padding: '5px 4px',
+                      fontSize: 14, fontWeight: 700, border: '1px solid var(--glass-edge)',
+                      fontFamily: 'var(--font-mono)', color: 'var(--sky-400)',
+                    }}
+                  />
+                  <span style={{ fontSize: 12, color: 'var(--fg-tertiary)', fontWeight: 500 }}>g</span>
+                </div>
+                <div className="multiplier-btn-group" style={{ flex: 1 }}>
                   {PORTION_MULTIPLIERS.map(({ factor, label }) => {
                     const target = Math.max(1, Math.round(base * factor))
                     const active = current === target
@@ -99,13 +101,8 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
                         key={factor}
                         onClick={() => onUpdateWeight(idx, target)}
                         title={`${target}g`}
-                        style={{
-                          flex: 1, padding: '4px 2px', borderRadius: 6, fontSize: 10,
-                          fontFamily: 'var(--font-mono)', cursor: 'pointer', transition: 'all 150ms',
-                          background: active ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
-                          border: active ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--glass-edge)',
-                          color: active ? 'var(--sky-300)' : 'var(--fg-secondary)',
-                        }}
+                        className={`multiplier-btn ${active ? 'multiplier-btn--active' : ''}`}
+                        style={{ flex: 1 }}
                       >
                         {label}
                       </button>

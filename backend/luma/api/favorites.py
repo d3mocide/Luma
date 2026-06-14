@@ -24,11 +24,13 @@ class FavoriteItemIn(BaseModel):
 class FavoriteCreate(BaseModel):
     name: str
     items: list[FavoriteItemIn] = []
+    tags: list[str] = []
 
 
 class FavoriteUpdate(BaseModel):
     name: str | None = None
     items: list[FavoriteItemIn] | None = None
+    tags: list[str] | None = None
 
 
 def _item_row_to_dict(r: Any) -> dict[str, Any]:
@@ -48,6 +50,7 @@ async def _fetch_favorite(favorite_id: str, user_id: str, db: Any) -> dict[str, 
             SELECT
                 f.id        AS fav_id,
                 f.name      AS fav_name,
+                f.tags      AS fav_tags,
                 f.created_at,
                 f.updated_at,
                 fi.id       AS item_id,
@@ -72,6 +75,7 @@ async def _fetch_favorite(favorite_id: str, user_id: str, db: Any) -> dict[str, 
     return {
         "id": str(first.fav_id),
         "name": first.fav_name,
+        "tags": first.fav_tags if first.fav_tags is not None else [],
         "created_at": first.created_at.isoformat(),
         "updated_at": first.updated_at.isoformat(),
         "items": items,
@@ -109,12 +113,12 @@ async def list_favorites(
         text(f"""
             WITH fav_counts AS (
                 SELECT
-                    f.id, f.name, f.created_at, f.updated_at,
+                    f.id, f.name, f.tags, f.created_at, f.updated_at,
                     COUNT(me.id) AS log_count
                 FROM favorites f
                 LEFT JOIN meal_events me ON me.favorite_id = f.id
                 WHERE f.user_id = :uid
-                GROUP BY f.id, f.name, f.created_at, f.updated_at
+                GROUP BY f.id, f.name, f.tags, f.created_at, f.updated_at
             ),
             paged AS (
                 SELECT * FROM fav_counts
@@ -124,6 +128,7 @@ async def list_favorites(
             SELECT
                 p.id        AS fav_id,
                 p.name      AS fav_name,
+                p.tags      AS fav_tags,
                 p.created_at,
                 p.updated_at,
                 p.log_count,
@@ -150,6 +155,7 @@ async def list_favorites(
             favorites_map[fav_id] = {
                 "id": fav_id,
                 "name": r.fav_name,
+                "tags": r.fav_tags if r.fav_tags is not None else [],
                 "created_at": r.created_at.isoformat(),
                 "updated_at": r.updated_at.isoformat(),
                 "log_count": int(r.log_count or 0),
@@ -177,10 +183,10 @@ async def create_favorite(
     fav_id = str(uuid.uuid4())
     await db.execute(
         text("""
-            INSERT INTO favorites (id, user_id, name)
-            VALUES (:id, :uid, :name)
+            INSERT INTO favorites (id, user_id, name, tags)
+            VALUES (:id, :uid, :name, :tags)
         """),
-        {"id": fav_id, "uid": str(user.id), "name": body.name},
+        {"id": fav_id, "uid": str(user.id), "name": body.name, "tags": body.tags},
     )
     for idx, item in enumerate(body.items):
         item_id = str(uuid.uuid4())
@@ -218,10 +224,20 @@ async def update_favorite(
     if result.fetchone() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Favorite not found")
 
-    if body.name is not None:
+    if body.name is not None and body.tags is not None:
+        await db.execute(
+            text("UPDATE favorites SET name = :name, tags = :tags, updated_at = now() WHERE id = :fav_id"),
+            {"name": body.name, "tags": body.tags, "fav_id": favorite_id},
+        )
+    elif body.name is not None:
         await db.execute(
             text("UPDATE favorites SET name = :name, updated_at = now() WHERE id = :fav_id"),
             {"name": body.name, "fav_id": favorite_id},
+        )
+    elif body.tags is not None:
+        await db.execute(
+            text("UPDATE favorites SET tags = :tags, updated_at = now() WHERE id = :fav_id"),
+            {"tags": body.tags, "fav_id": favorite_id},
         )
     else:
         await db.execute(

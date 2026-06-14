@@ -712,9 +712,16 @@ function SharesFeed({ groupId }: { groupId: string }) {
   const copyMutation = useMutation({
     mutationFn: (shareId: string) =>
       api.post<{ id: string; resource_type: string }>(`/family/shares/${shareId}/copy`),
-    onSuccess: (_data, shareId) => {
+    onSuccess: (data, shareId) => {
       setCopiedId(shareId)
       setTimeout(() => setCopiedId(null), 2500)
+      if (data.resource_type === 'favorite') {
+        queryClient.invalidateQueries({ queryKey: ['favorites'] })
+      } else if (data.resource_type === 'recipe') {
+        queryClient.invalidateQueries({ queryKey: ['recipes'] })
+      } else if (data.resource_type === 'plan') {
+        queryClient.invalidateQueries({ queryKey: ['plan'] })
+      }
     },
   })
 

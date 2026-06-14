@@ -18,14 +18,15 @@ VALID_METRICS = {
     "weight_kg", "bmi", "body_fat_pct", "lean_body_mass_kg",
     # Cardiovascular
     "hrv_ms", "rhr_bpm", "heart_rate_avg_bpm", "walking_hr_bpm", "respiratory_rate_bpm",
+    "bp_systolic_mmhg", "bp_diastolic_mmhg", "spo2_pct",
     # Energy
     "active_kcal", "bmr_kcal", "physical_effort_kcal_hr_kg",
     # Activity
     "steps", "flights_climbed", "exercise_min", "stand_min", "stand_hours",
-    "distance_km", "daylight_min",
+    "distance_km", "daylight_min", "mindful_min",
     # Sleep
     "sleep_duration_min", "sleep_asleep_min", "sleep_score",
-    "wrist_temp_c", "breathing_disturbances",
+    "wrist_temp_c", "breathing_disturbances", "body_temp_c",
     # Gait
     "walking_speed_kmh", "step_length_cm", "walking_asymmetry_pct",
     "double_support_pct", "stair_speed_up_mps", "stair_speed_down_mps",

@@ -220,6 +220,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
       quantity: qty,
       unit: unitLabel,
       estimated_weight_g: grams,
+      base_weight_g: grams,
       nutrients: scaleNutrients(pending.nutrients_per_100g, grams),
     })
     setPending(null)
@@ -241,6 +242,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
       quantity: i.quantity_g,
       unit: 'g',
       estimated_weight_g: i.quantity_g,
+      base_weight_g: i.quantity_g,
       nutrients: toNutrients(i.nutrients),
     }))
     onPickFavorite?.(items, fav.name)

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, ChevronDown } from 'lucide-react'
+import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, ChevronDown, X } from 'lucide-react'
 import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { getCurrentSlot } from '../lib/format'
@@ -61,6 +61,9 @@ export default function FavoritesRoute() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [favName, setFavName] = useState('')
   const [items, setItems] = useState<DraftItem[]>([])
+  const [favTags, setFavTags] = useState<string[]>([])
+  const [newTagInput, setNewTagInput] = useState('')
+  const [selectedTag, setSelectedTag] = useState<string>('all')
   const [successModal, setSuccessModal] = useState<{ name: string; slot: string } | null>(null)
   const [expandedFavIds, setExpandedFavIds] = useState<Record<string, boolean>>({})
 
@@ -77,11 +80,22 @@ export default function FavoritesRoute() {
   })
   const favorites = favoritesData?.favorites ?? []
 
+  const defaultPresets = ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Side', 'Cholesterol-friendly']
+  const savedCustomTags = Array.from(
+    new Set(
+      favorites
+        .flatMap((f) => f.tags || [])
+        .filter((t) => t && !defaultPresets.includes(t))
+    )
+  ).sort()
+  const allPresets = [...defaultPresets, ...savedCustomTags]
+
   const createMutation = useMutation({
     mutationFn: () =>
       api.post('/favorites', {
         name: favName.trim() || 'My favorite',
         items: items.map(mapDraftItemToApi),
+        tags: favTags,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['favorites'] })
@@ -89,6 +103,7 @@ export default function FavoritesRoute() {
       setEditingId(null)
       setFavName('')
       setItems([])
+      setFavTags([])
     },
   })
 
@@ -97,6 +112,7 @@ export default function FavoritesRoute() {
       api.patch(`/favorites/${editingId}`, {
         name: favName.trim() || 'My favorite',
         items: items.map(mapDraftItemToApi),
+        tags: favTags,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['favorites'] })
@@ -104,6 +120,7 @@ export default function FavoritesRoute() {
       setEditingId(null)
       setFavName('')
       setItems([])
+      setFavTags([])
     },
   })
 
@@ -118,6 +135,8 @@ export default function FavoritesRoute() {
     setEditingId(null)
     setFavName('')
     setItems([])
+    setFavTags([])
+    setNewTagInput('')
     setView('building')
   }
 
@@ -134,6 +153,8 @@ export default function FavoritesRoute() {
     setEditingId(fav.id)
     setFavName(fav.name)
     setItems(fav.items.map(mapFavoriteItemToDraft))
+    setFavTags(fav.tags ?? [])
+    setNewTagInput('')
     setView('building')
   }
 
@@ -187,6 +208,13 @@ export default function FavoritesRoute() {
 
   const isSaving = createMutation.isPending || updateMutation.isPending
 
+  const allTags = Array.from(new Set(favorites.flatMap((fav) => fav.tags ?? []))).sort()
+
+  const filteredFavorites = favorites.filter((fav) => {
+    if (selectedTag === 'all') return true
+    return fav.tags?.includes(selectedTag) ?? false
+  })
+
   const addItem = (item: DraftItem) => setItems((prev) => [...prev, item])
   const removeItem = (index: number) => setItems((prev) => prev.filter((_, i) => i !== index))
   const updateWeight = (index: number, newWeight: number) => {
@@ -229,6 +257,31 @@ export default function FavoritesRoute() {
             </button>
           </div>
 
+          {/* Tag Filter Bar */}
+          {favorites.length > 0 && (
+            <div className="settings-tabs" role="tablist" style={{ marginBottom: 20 }}>
+              <button
+                role="tab"
+                aria-selected={selectedTag === 'all'}
+                className="settings-tab"
+                onClick={() => setSelectedTag('all')}
+              >
+                All
+              </button>
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  role="tab"
+                  aria-selected={selectedTag === tag}
+                  className="settings-tab"
+                  onClick={() => setSelectedTag(tag)}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
+
           {isLoading ? (
             <div style={{ padding: '48px 0', textAlign: 'center' }}>
               <div style={{
@@ -259,9 +312,32 @@ export default function FavoritesRoute() {
                 Save a meal combination to log it again in one tap.
               </p>
             </div>
+          ) : filteredFavorites.length === 0 ? (
+            <div style={{
+              padding: '64px 24px',
+              textAlign: 'center',
+              border: '1px dashed var(--glass-edge)',
+              borderRadius: 16,
+            }}>
+              <Heart
+                size={36}
+                strokeWidth={1.25}
+                style={{ color: 'var(--fg-quiet)', margin: '0 auto 14px', display: 'block' }}
+              />
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-quiet)' }}>
+                No favorites found with tag "{selectedTag}"
+              </p>
+              <button
+                onClick={() => setSelectedTag('all')}
+                className="btn btn-ghost"
+                style={{ marginTop: 12, fontSize: 13, textDecoration: 'underline' }}
+              >
+                Clear filter
+              </button>
+            </div>
           ) : (
             <div className="responsive-grid-2col" style={{ marginTop: 0 }}>
-              {favorites.map((fav) => (
+              {filteredFavorites.map((fav) => (
                 <div
                   key={fav.id}
                   className="glass"
@@ -286,6 +362,47 @@ export default function FavoritesRoute() {
                         ({fav.items.length} {fav.items.length === 1 ? 'item' : 'items'})
                       </span>
                     </span>
+                    
+                    {/* Tags list next to chevron */}
+                    {fav.tags && fav.tags.length > 0 && (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 'auto', marginRight: 12, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                        {fav.tags.slice(0, 2).map((tag) => (
+                          <span
+                            key={tag}
+                            style={{
+                              fontSize: 10,
+                              padding: '2px 8px',
+                              borderRadius: 6,
+                              background: 'var(--glass-2)',
+                              border: '1px solid var(--glass-edge)',
+                              color: 'var(--fg-secondary)',
+                              fontFamily: 'var(--font-sans)',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {fav.tags.length > 2 && (
+                          <span
+                            style={{
+                              fontSize: 9,
+                              fontWeight: 600,
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              background: 'var(--glass-3)',
+                              border: '1px solid var(--glass-edge)',
+                              color: 'var(--fg-quiet)',
+                              fontFamily: 'var(--font-mono)',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            +{fav.tags.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <ChevronDown
                       size={14}
                       style={{
@@ -533,6 +650,127 @@ export default function FavoritesRoute() {
                 color: 'var(--fg-primary)', fontFamily: 'var(--font-sans)',
               }}
             />
+          </div>
+
+          {/* Tags input */}
+          <div style={{ marginBottom: 22 }}>
+            <div className="eyebrow" style={{ marginBottom: 8, fontSize: 10 }}>Tags</div>
+            
+            {/* Current Tags */}
+            {favTags.length > 0 && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                {favTags.map((tag) => (
+                  <span
+                    key={tag}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 12,
+                      padding: '4px 10px',
+                      borderRadius: 8,
+                      background: 'var(--glass-2)',
+                      border: '1px solid var(--glass-edge)',
+                      color: 'var(--fg-primary)',
+                    }}
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => setFavTags((prev) => prev.filter((t) => t !== tag))}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--fg-quiet)',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      title={`Remove tag ${tag}`}
+                    >
+                      <X size={12} strokeWidth={2} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Tag input field */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <input
+                type="text"
+                value={newTagInput}
+                onChange={(e) => setNewTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    const tag = newTagInput.trim()
+                    if (tag && !favTags.includes(tag)) {
+                      setFavTags((prev) => [...prev, tag])
+                    }
+                    setNewTagInput('')
+                  }
+                }}
+                placeholder="Add custom tags..."
+                style={{
+                  flex: 1,
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  fontSize: 14,
+                  border: '1px solid var(--glass-edge)',
+                  color: 'var(--fg-primary)',
+                  background: 'rgba(0,0,0,0.25)',
+                  fontFamily: 'var(--font-sans)',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const tag = newTagInput.trim()
+                  if (tag && !favTags.includes(tag)) {
+                    setFavTags((prev) => [...prev, tag])
+                  }
+                  setNewTagInput('')
+                }}
+                className="btn"
+                style={{ borderRadius: 10, padding: '10px 16px' }}
+              >
+                Add
+              </button>
+            </div>
+
+            {/* Suggested preset tags */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {allPresets.map((preset) => {
+                const isActive = favTags.includes(preset)
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      if (isActive) {
+                        setFavTags((prev) => prev.filter((t) => t !== preset))
+                      } else {
+                        setFavTags((prev) => [...prev, preset])
+                      }
+                    }}
+                    style={{
+                      fontSize: 11,
+                      padding: '4px 10px',
+                      borderRadius: 'var(--radius-pill)',
+                      border: isActive ? '1px solid rgba(56, 189, 248, 0.6)' : '1px solid var(--glass-edge)',
+                      background: isActive ? 'linear-gradient(180deg, var(--sky-400), var(--sky-500))' : 'var(--glass-2)',
+                      color: isActive ? '#061229' : 'var(--fg-secondary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {isActive ? `✓ ${preset}` : preset}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Save button */}

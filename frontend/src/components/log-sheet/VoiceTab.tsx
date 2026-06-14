@@ -188,9 +188,7 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
           )}
           <button
             onClick={isRecording ? stopRecording : startRecording}
-            className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${
-              isRecording ? 'bg-red-500 text-white' : 'bg-brand-500 text-white hover:bg-brand-600'
-            }`}
+            className={isRecording ? 'voice-record-btn--active' : 'voice-record-btn'}
           >
             {isRecording
               ? <span className="text-sm font-semibold uppercase tracking-wide">Stop</span>

@@ -13,6 +13,7 @@ export type Favorite = {
   created_at: string
   log_count?: number
   items: FavoriteItem[]
+  tags?: string[]
 }
 
 import type { Nutrients } from '../../lib/nutrients'

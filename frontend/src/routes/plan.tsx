@@ -506,6 +506,10 @@ export default function PlanRoute() {
               />
             ))}
           </div>
+
+          <div style={{ marginTop: 32 }}>
+            <ShoppingListView planId={plan.id} shoppingList={shoppingData?.shopping_list ?? []} />
+          </div>
         </>
       )}
 

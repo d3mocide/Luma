@@ -179,11 +179,6 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
 
   if (!isVisible) return null
 
-  const slotColors: Record<string, string> = {
-    breakfast: 'var(--sun-400)', lunch: 'var(--sky-400)',
-    dinner: 'var(--aurora-violet)', snack: 'var(--good)',
-  }
-
   return (
     <div className="log-sheet-overlay" style={isPageMode ? {
       position: 'relative', inset: 'auto', background: 'transparent',
@@ -219,25 +214,23 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
           </button>
         </header>
 
-        {/* Slot selector */}
-        <div className="log-sheet-slotbar" style={{ padding: '14px 20px', borderBottom: '1px solid var(--glass-edge)', display: 'flex', gap: 8, overflowX: 'auto', position: 'relative', zIndex: 1 }}>
-          {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((s) => {
-            const c = slotColors[s]
-            return (
-              <button key={s} onClick={() => setSlot(s)} style={{ padding: '6px 14px', borderRadius: 999, border: `1px solid ${slot === s ? `${c}60` : 'var(--glass-edge)'}`, background: slot === s ? `${c}18` : 'var(--glass-1)', color: slot === s ? c : 'var(--fg-tertiary)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer', flexShrink: 0, fontFamily: 'var(--font-mono)', transition: 'all 150ms' }}>
-                {s}
-              </button>
-            )
-          })}
-        </div>
 
         {/* Tab nav */}
-        <div className="log-sheet-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--glass-edge)', position: 'relative', zIndex: 1 }}>
-          {(['quick', 'scan', 'voice', 'search'] as const).map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: '12px 4px', background: 'transparent', border: 'none', borderBottom: `2px solid ${activeTab === tab ? 'var(--sky-400)' : 'transparent'}`, color: activeTab === tab ? 'var(--sky-300)' : 'var(--fg-quiet)', fontSize: 11, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)', textTransform: 'capitalize', transition: 'all 150ms' }}>
-              {tab}
-            </button>
-          ))}
+        <div style={{ padding: '16px 20px 0', marginBottom: 16, position: 'relative', zIndex: 1 }}>
+          <div className="settings-tabs" role="tablist" style={{ marginBottom: 0 }}>
+            {(['quick', 'scan', 'voice', 'search'] as const).map((tab) => (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={activeTab === tab}
+                className="settings-tab"
+                onClick={() => setActiveTab(tab)}
+                style={{ flex: 1, textTransform: 'capitalize', padding: '8px 12px', fontSize: 12 }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tab content */}

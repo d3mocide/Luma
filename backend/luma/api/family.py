@@ -544,10 +544,10 @@ async def copy_shared_resource(
 
         await db.execute(
             text("""
-                INSERT INTO favorites (id, user_id, name, created_at, updated_at)
-                VALUES (:id, :uid, :name, :ts, :ts)
+                INSERT INTO favorites (id, user_id, name, tags, created_at, updated_at)
+                VALUES (:id, :uid, :name, :tags, :ts, :ts)
             """),
-            {"id": new_id, "uid": uid, "name": fav.name, "ts": now},
+            {"id": new_id, "uid": uid, "name": fav.name, "tags": fav.tags, "ts": now},
         )
         for item in (await db.execute(
             text("SELECT * FROM favorite_items WHERE favorite_id = :fid ORDER BY sort_order"),

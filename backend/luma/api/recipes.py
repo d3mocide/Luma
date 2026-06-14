@@ -17,7 +17,8 @@ NUTRITION_KEYS = list(ZERO_NUTRIENTS.keys())
 
 
 class IngredientIn(BaseModel):
-    food_id: str
+    food_id: str | None = None
+    food_name: str | None = None
     quantity: float
     unit: str
     notes: str | None = None
@@ -58,14 +59,66 @@ class RecipeUpdateRequest(BaseModel):
     ingredients: list[IngredientIn] | None = None
 
 
+def _unit_to_grams(quantity: float, unit: str, food_name: str, serving_size_g: float | None) -> float:
+    unit = unit.strip().lower()
+    if not unit:
+        return quantity
+        
+    # Handle pluralization
+    if unit.endswith('s') and unit not in ('lbs', 'class'):
+        unit = unit[:-1]
+    
+    # Weight units
+    if unit in ('g', 'gram'):
+        return quantity
+    if unit in ('kg', 'kilogram'):
+        return quantity * 1000.0
+    if unit in ('oz', 'ounce'):
+        return quantity * 28.35
+    if unit in ('lb', 'lbs', 'pound'):
+        return quantity * 453.59
+    
+    # Volume units (assuming water density of 1.0 for simplicity)
+    if unit in ('ml', 'milliliter'):
+        return quantity
+    if unit in ('tsp', 'teaspoon'):
+        return quantity * 4.93
+    if unit in ('tbsp', 'tablespoon'):
+        return quantity * 14.79
+    if unit in ('cup', 'c'):
+        return quantity * 240.0
+    
+    # Serving / item units
+    if unit in ('serving', 'piece', 'clove', 'unit', 'head', 'slice', 'can'):
+        if serving_size_g is not None and serving_size_g > 0:
+            return quantity * serving_size_g
+        fn = food_name.lower()
+        if 'clove' in unit or 'clove' in fn:
+            return quantity * 5.0
+        if 'slice' in unit or 'slice' in fn:
+            return quantity * 30.0
+        if 'head' in unit or 'head' in fn:
+            return quantity * 500.0
+        return quantity * 100.0
+    
+    if serving_size_g is not None and serving_size_g > 0:
+        return quantity * serving_size_g
+    return quantity
+
+
 def _compute_nutrition(ingredients: list[RecipeIngredient], servings: float) -> dict:
     totals = {k: 0.0 for k in NUTRITION_KEYS}
     for ing in ingredients:
         food = ing.food
         if not food:
             continue
-        # Convert quantity to grams (assume unit is g for now; unit field is informational)
-        factor = float(ing.quantity) / 100.0
+        qty_g = _unit_to_grams(
+            float(ing.quantity),
+            ing.unit,
+            food.name,
+            float(food.serving_size_g) if food.serving_size_g is not None else None
+        )
+        factor = qty_g / 100.0
         per100 = food.nutrients_per_100g or {}
         for k in NUTRITION_KEYS:
             totals[k] += float(per100.get(k) or 0.0) * factor
@@ -88,7 +141,7 @@ def _recipe_dict(r: Recipe) -> dict:
         "ingredients": [
             {
                 "food_id": str(i.food_id) if i.food_id else None,
-                "food_name": i.food.name if i.food else None,
+                "food_name": i.food.name if i.food else i.custom_name,
                 "quantity": float(i.quantity),
                 "unit": i.unit,
                 "notes": i.notes,
@@ -100,24 +153,32 @@ def _recipe_dict(r: Recipe) -> dict:
     }
 
 
+async def _get_recipe_loaded(db, recipe_id: uuid.UUID, user_id: uuid.UUID) -> Recipe | None:
+    from sqlalchemy.orm import selectinload
+    stmt = (
+        select(Recipe)
+        .where(Recipe.id == recipe_id, Recipe.user_id == user_id)
+        .options(
+            selectinload(Recipe.ingredients).selectinload(RecipeIngredient.food)
+        )
+    )
+    res = await db.execute(stmt)
+    return res.scalar_one_or_none()
+
+
 @router.get("")
 async def list_recipes(db: DbDep, current_user: CurrentUser) -> dict:
-    rows = (await db.execute(
+    from sqlalchemy.orm import selectinload
+    stmt = (
         select(Recipe)
         .where(Recipe.user_id == current_user.id)
+        .options(
+            selectinload(Recipe.ingredients).selectinload(RecipeIngredient.food)
+        )
         .order_by(Recipe.created_at.desc())
-    )).scalars().all()
-
-    # Eager-load ingredients
-    result = []
-    for r in rows:
-        await db.refresh(r, ["ingredients"])
-        for ing in r.ingredients:
-            if ing.food_id:
-                await db.refresh(ing, ["food"])
-        result.append(_recipe_dict(r))
-
-    return {"recipes": result}
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+    return {"recipes": [_recipe_dict(r) for r in rows]}
 
 
 @router.get("/{recipe_id}")
@@ -127,16 +188,9 @@ async def get_recipe(recipe_id: str, db: DbDep, current_user: CurrentUser) -> di
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid recipe ID")
 
-    r = (await db.execute(
-        select(Recipe).where(Recipe.id == rid, Recipe.user_id == current_user.id)
-    )).scalar_one_or_none()
+    r = await _get_recipe_loaded(db, rid, current_user.id)
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipe not found")
-
-    await db.refresh(r, ["ingredients"])
-    for ing in r.ingredients:
-        if ing.food_id:
-            await db.refresh(ing, ["food"])
 
     return _recipe_dict(r)
 
@@ -210,7 +264,7 @@ async def create_recipe(req: RecipeCreateRequest, db: DbDep, current_user: Curre
         instructions=req.instructions,
         prep_minutes=req.prep_minutes,
         cook_minutes=req.cook_minutes,
-        servings=req.servings,
+        servings=Decimal(str(req.servings)),
         tags=req.tags,
         source=req.source,
         nutrition_per_serving={},
@@ -219,18 +273,24 @@ async def create_recipe(req: RecipeCreateRequest, db: DbDep, current_user: Curre
     await db.flush()
 
     for i, ing_in in enumerate(req.ingredients):
-        try:
-            fid = uuid.UUID(ing_in.food_id)
-        except ValueError:
-            continue
-        food_res = await db.execute(select(Food).where(Food.id == fid))
-        food = food_res.scalar_one_or_none()
-        if not food:
-            continue
+        fid = None
+        if ing_in.food_id:
+            try:
+                fid = uuid.UUID(ing_in.food_id)
+            except ValueError:
+                pass
+        
+        if fid:
+            food_res = await db.execute(select(Food).where(Food.id == fid))
+            food = food_res.scalar_one_or_none()
+            if not food:
+                fid = None
+
         db.add(RecipeIngredient(
             recipe_id=r.id,
             food_id=fid,
-            quantity=ing_in.quantity,
+            custom_name=ing_in.food_name if not fid else None,
+            quantity=Decimal(str(ing_in.quantity)),
             unit=ing_in.unit,
             notes=ing_in.notes,
             sort_order=i,
@@ -244,8 +304,10 @@ async def create_recipe(req: RecipeCreateRequest, db: DbDep, current_user: Curre
 
     r.nutrition_per_serving = _compute_nutrition(r.ingredients, float(r.servings))
     await db.commit()
-    await db.refresh(r, ["ingredients"])
-    return _recipe_dict(r)
+    r_loaded = await _get_recipe_loaded(db, r.id, current_user.id)
+    if not r_loaded:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipe not found after creation")
+    return _recipe_dict(r_loaded)
 
 
 @router.put("/{recipe_id}")
@@ -279,17 +341,24 @@ async def update_recipe(recipe_id: str, req: RecipeUpdateRequest, db: DbDep, cur
     if req.ingredients is not None:
         await db.execute(delete(RecipeIngredient).where(RecipeIngredient.recipe_id == rid))
         for i, ing_in in enumerate(req.ingredients):
-            try:
-                fid = uuid.UUID(ing_in.food_id)
-            except ValueError:
-                continue
-            food_res = await db.execute(select(Food).where(Food.id == fid))
-            if not food_res.scalar_one_or_none():
-                continue
+            fid = None
+            if ing_in.food_id:
+                try:
+                    fid = uuid.UUID(ing_in.food_id)
+                except ValueError:
+                    pass
+            
+            if fid:
+                food_res = await db.execute(select(Food).where(Food.id == fid))
+                food = food_res.scalar_one_or_none()
+                if not food:
+                    fid = None
+
             db.add(RecipeIngredient(
                 recipe_id=r.id,
                 food_id=fid,
-                quantity=ing_in.quantity,
+                custom_name=ing_in.food_name if not fid else None,
+                quantity=Decimal(str(ing_in.quantity)),
                 unit=ing_in.unit,
                 notes=ing_in.notes,
                 sort_order=i,
@@ -302,8 +371,10 @@ async def update_recipe(recipe_id: str, req: RecipeUpdateRequest, db: DbDep, cur
             await db.refresh(ing, ["food"])
     r.nutrition_per_serving = _compute_nutrition(r.ingredients, float(r.servings))
     await db.commit()
-    await db.refresh(r, ["ingredients"])
-    return _recipe_dict(r)
+    r_loaded = await _get_recipe_loaded(db, r.id, current_user.id)
+    if not r_loaded:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipe not found after update")
+    return _recipe_dict(r_loaded)
 
 
 @router.delete("/{recipe_id}")

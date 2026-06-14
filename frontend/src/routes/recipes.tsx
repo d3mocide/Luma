@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, ChevronLeft, Search, X, Utensils, Globe, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Plus, Trash2, ChevronLeft, Search, X, Utensils, Globe, AlertTriangle, CheckCircle2, Clock, List } from 'lucide-react'
 import { api } from '../lib/api'
 import type { RecipeImportDraft, RecipeImportDraftIngredient } from '../lib/api'
 import type { Recipe, RecipeIngredient, FoodResult } from '../components/plan/types'
@@ -21,6 +21,7 @@ function RecipeForm({ onCancel, onSaved }: { onCancel: () => void; onSaved: () =
   const [cookMinutes, setCookMinutes] = useState('')
   const [servings, setServings] = useState('1')
   const [ingredients, setIngredients] = useState<RecipeIngredientDraft[]>([])
+  const [instructionsText, setInstructionsText] = useState('')
   const [foodQuery, setFoodQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [selectedFood, setSelectedFood] = useState<FoodResult | null>(null)
@@ -40,6 +41,7 @@ function RecipeForm({ onCancel, onSaved }: { onCancel: () => void; onSaved: () =
       prep_minutes: prepMinutes ? parseInt(prepMinutes) : undefined,
       cook_minutes: cookMinutes ? parseInt(cookMinutes) : undefined,
       servings: parseFloat(servings) || 1,
+      instructions: instructionsText.trim() ? instructionsText.split('\n').map(s => s.trim()).filter(Boolean) : undefined,
       ingredients: ingredients.map((ing, i) => ({
         food_id: ing.food.id,
         quantity: ing.quantity,
@@ -90,6 +92,17 @@ function RecipeForm({ onCancel, onSaved }: { onCancel: () => void; onSaved: () =
             <input type="number" value={servings} onChange={(e) => setServings(e.target.value)} placeholder="Servings" min={0.5} step={0.5} style={fieldStyle}/>
           </div>
         </div>
+      </div>
+
+      <div className="glass" style={{ padding: 24, marginBottom: 16 }}>
+        <div className="eyebrow" style={{ marginBottom: 16 }}>Instructions</div>
+        <textarea
+          value={instructionsText}
+          onChange={(e) => setInstructionsText(e.target.value)}
+          placeholder="Enter cooking instructions, one step per line..."
+          rows={4}
+          style={{ ...fieldStyle, resize: 'vertical' }}
+        />
       </div>
 
       <div className="glass" style={{ padding: 24, marginBottom: 16 }}>
@@ -182,18 +195,17 @@ function RecipeDetail({ recipe, onBack, onDelete }: { recipe: Recipe; onBack: ()
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', padding: 4 }}>
+      <div className="recipe-detail-header">
+        <div className="recipe-title-wrapper">
+          <button onClick={onBack} className="btn-back">
             <ChevronLeft size={20}/>
           </button>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 400, color: 'var(--fg-primary)' }}>{recipe.name}</h2>
+          <h2 className="recipe-title">{recipe.name}</h2>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="recipe-actions">
           <ShareWithFamilyButton resourceType="recipe" resourceId={recipe.id} />
           <button
-            className="btn"
-            style={{ color: 'var(--bad)', borderColor: 'rgba(251,113,133,0.3)', padding: '8px 12px' }}
+            className="btn btn-delete-recipe"
             onClick={() => { if (confirm('Delete this recipe?')) deleteMutation.mutate() }}
           >
             <Trash2 size={13}/>
@@ -209,44 +221,65 @@ function RecipeDetail({ recipe, onBack, onDelete }: { recipe: Recipe; onBack: ()
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         {recipe.prep_minutes != null && (
-          <div className="glass" style={{ flex: 1, padding: '12px 16px', textAlign: 'center' }}>
-            <div className="num" style={{ fontSize: 18, color: 'var(--fg-primary)' }}>{recipe.prep_minutes}</div>
-            <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>prep min</div>
+          <div className="glass" style={{ flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <Clock size={16} style={{ color: 'var(--sky-400)' }} />
+            <div className="num" style={{ fontSize: 18, color: 'var(--fg-primary)' }}>{recipe.prep_minutes}m</div>
+            <div style={{ fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prep Time</div>
           </div>
         )}
         {recipe.cook_minutes != null && (
-          <div className="glass" style={{ flex: 1, padding: '12px 16px', textAlign: 'center' }}>
-            <div className="num" style={{ fontSize: 18, color: 'var(--fg-primary)' }}>{recipe.cook_minutes}</div>
-            <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>cook min</div>
+          <div className="glass" style={{ flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <Clock size={16} style={{ color: 'var(--sun-400)' }} />
+            <div className="num" style={{ fontSize: 18, color: 'var(--fg-primary)' }}>{recipe.cook_minutes}m</div>
+            <div style={{ fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cook Time</div>
           </div>
         )}
-        <div className="glass" style={{ flex: 1, padding: '12px 16px', textAlign: 'center' }}>
+        <div className="glass" style={{ flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <Utensils size={16} style={{ color: 'var(--good)' }} />
           <div className="num" style={{ fontSize: 18, color: 'var(--fg-primary)' }}>{recipe.servings}</div>
-          <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>servings</div>
+          <div style={{ fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Servings</div>
         </div>
       </div>
 
       <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
         <div className="eyebrow" style={{ marginBottom: 12 }}>Nutrition per serving</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
           {KEY_NUTRIENTS.map(({ key, label, unit, color }) => (
-            <div key={key} style={{ textAlign: 'center', padding: '10px 8px', background: 'var(--glass-1)', borderRadius: 10 }}>
-              <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginBottom: 3 }}>{label}</div>
-              <div className="num" style={{ fontSize: 15, fontWeight: 600, color }}>{fmtNutr(recipe.nutrition_per_serving?.[key], unit)}</div>
+            <div key={key} style={{ textAlign: 'center', padding: '12px 8px', background: 'var(--glass-1)', border: '1px solid var(--glass-edge)', borderRadius: 12 }}>
+              <div style={{ fontSize: 10, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{label}</div>
+              <div className="num" style={{ fontSize: 16, fontWeight: 600, color }}>{fmtNutr(recipe.nutrition_per_serving?.[key], unit)}</div>
             </div>
           ))}
         </div>
       </div>
 
       {recipe.ingredients.length > 0 && (
-        <div className="glass" style={{ padding: 20 }}>
-          <div className="eyebrow" style={{ marginBottom: 12 }}>Ingredients</div>
-          {recipe.ingredients.map((ing: RecipeIngredient, i: number) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < recipe.ingredients.length - 1 ? '1px solid var(--glass-edge)' : 'none' }}>
-              <span style={{ fontSize: 13, color: 'var(--fg-primary)' }}>{ing.food_name ?? 'Unknown food'}</span>
-              <span className="num" style={{ fontSize: 13, color: 'var(--fg-secondary)', fontFamily: 'var(--font-mono)' }}>{ing.quantity}{ing.unit}</span>
+          <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
+            <div className="eyebrow" style={{ marginBottom: 12 }}>Ingredients</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {recipe.ingredients.map((ing: RecipeIngredient, i: number) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: i % 2 === 0 ? 'var(--glass-1)' : 'transparent', borderRadius: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{ing.food_name ?? 'Unknown food'}</span>
+                  <span className="num" style={{ fontSize: 11, color: 'var(--sky-300)', background: 'rgba(56, 189, 248, 0.09)', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(56, 189, 248, 0.22)', fontFamily: 'var(--font-mono)', fontWeight: 500 }}>{ing.quantity} {ing.unit}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+        )}
+
+      {recipe.instructions && recipe.instructions.length > 0 && (
+        <div className="glass" style={{ padding: 20 }}>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Instructions</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {recipe.instructions.map((step, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <span className="num" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: '50%', background: 'rgba(56, 189, 248, 0.09)', border: '1px solid rgba(56, 189, 248, 0.22)', color: 'var(--sky-300)', fontSize: 11, fontWeight: 600, flexShrink: 0, marginTop: 2 }}>
+                  {idx + 1}
+                </span>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-secondary)', lineHeight: 1.6 }}>{step}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -266,6 +299,7 @@ function ImportRecipeView({ onCancel, onSaved }: { onCancel: () => void; onSaved
   const [servings, setServings] = useState('1')
   const [matchedIngredients, setMatchedIngredients] = useState<RecipeImportDraftIngredient[]>([])
   const [unmatchedIngredients, setUnmatchedIngredients] = useState<RecipeImportDraftIngredient[]>([])
+  const [instructionsText, setInstructionsText] = useState('')
   const [foodQuery, setFoodQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [resolvingIdx, setResolvingIdx] = useState<number | null>(null)
@@ -287,17 +321,19 @@ function ImportRecipeView({ onCancel, onSaved }: { onCancel: () => void; onSaved
   const saveMutation = useMutation({
     mutationFn: () => {
       if (!draft) throw new Error('No draft')
+      const allIngredients = [...matchedIngredients, ...unmatchedIngredients]
       return api.post('/recipes', {
         name,
         description: draft.description || undefined,
-        instructions: draft.instructions.length ? draft.instructions : undefined,
+        instructions: instructionsText.trim() ? instructionsText.split('\n').map(s => s.trim()).filter(Boolean) : undefined,
         prep_minutes: draft.prep_minutes ?? undefined,
         cook_minutes: draft.cook_minutes ?? undefined,
         servings: parseFloat(servings) || 1,
         tags: draft.tags.length ? draft.tags : undefined,
         source: draft.source_url,
-        ingredients: matchedIngredients.map((ing, i) => ({
-          food_id: ing.food_id!,
+        ingredients: allIngredients.map((ing, i) => ({
+          food_id: ing.food_id,
+          food_name: ing.food_name || ing.name,
           quantity: ing.quantity,
           unit: ing.unit,
           notes: ing.notes || undefined,
@@ -322,6 +358,7 @@ function ImportRecipeView({ onCancel, onSaved }: { onCancel: () => void; onSaved
       setServings(result.servings.toString())
       setMatchedIngredients(result.ingredients.filter((i) => i.food_id !== null))
       setUnmatchedIngredients(result.ingredients.filter((i) => i.food_id === null))
+      setInstructionsText(result.instructions.join('\n'))
       setStage('review')
     } catch (err: unknown) {
       setImportError(err instanceof Error ? err.message : 'Import failed')
@@ -403,7 +440,7 @@ function ImportRecipeView({ onCancel, onSaved }: { onCancel: () => void; onSaved
       {unmatched > 0 && (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 16px', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 12, marginBottom: 16, fontSize: 13, color: 'var(--fg-secondary)' }}>
           <AlertTriangle size={15} style={{ color: '#fbbf24', flexShrink: 0, marginTop: 1 }}/>
-          <span>{unmatched} ingredient{unmatched > 1 ? 's' : ''} couldn't be matched to the food database. Search below to link them, or save and they'll be skipped.</span>
+          <span>{unmatched} ingredient{unmatched > 1 ? 's' : ''} couldn't be matched to the food database. Search below to link them, or save them as empty values.</span>
         </div>
       )}
 
@@ -428,6 +465,18 @@ function ImportRecipeView({ onCancel, onSaved }: { onCancel: () => void; onSaved
               style={{ width: 48, padding: '2px 6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-edge)', borderRadius: 6, color: 'var(--fg-primary)', fontFamily: 'var(--font-mono)', fontSize: 12, outline: 'none' }}/>
           </span>
         </div>
+      </div>
+
+      {/* Instructions */}
+      <div className="glass" style={{ padding: 20, marginBottom: 16 }}>
+        <div className="eyebrow" style={{ marginBottom: 12 }}>Instructions</div>
+        <textarea
+          value={instructionsText}
+          onChange={(e) => setInstructionsText(e.target.value)}
+          placeholder="Enter cooking instructions, one step per line..."
+          rows={4}
+          style={{ ...fieldStyle, resize: 'vertical' }}
+        />
       </div>
 
       {/* Matched ingredients */}
@@ -496,15 +545,14 @@ function ImportRecipeView({ onCancel, onSaved }: { onCancel: () => void; onSaved
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 12 }}>
-        <button className="btn" style={{ flex: 1 }} onClick={onCancel}>Discard</button>
+      <div className="recipe-importer-actions">
+        <button className="btn btn-discard" onClick={onCancel}>Discard</button>
         <button
-          className="btn btn-primary"
-          style={{ flex: 2 }}
+          className="btn btn-primary btn-save"
           disabled={!name.trim() || saveMutation.isPending}
           onClick={() => saveMutation.mutate()}
         >
-          {saveMutation.isPending ? 'Saving…' : `Save Recipe${unmatched > 0 ? ` (skip ${unmatched} unmatched)` : ''}`}
+          {saveMutation.isPending ? 'Saving…' : 'Save Recipe'}
         </button>
       </div>
     </div>
@@ -556,10 +604,10 @@ export default function RecipesRoute() {
           </h1>
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <button className="btn" style={{ gap: 6, flexShrink: 0 }} onClick={() => setView('import')}>
+          <button className="btn btn-sm" style={{ gap: 6, flexShrink: 0 }} onClick={() => setView('import')}>
             <Globe size={14}/> Import
           </button>
-          <button className="btn btn-primary" style={{ gap: 8, flexShrink: 0 }} onClick={() => setView('create')}>
+          <button className="btn btn-primary btn-sm" style={{ gap: 8, flexShrink: 0 }} onClick={() => setView('create')}>
             <Plus size={15}/>
             <span className="btn-label-desktop">New Recipe</span>
             <span className="btn-label-mobile">Recipe</span>
@@ -586,32 +634,42 @@ export default function RecipesRoute() {
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="recipes-grid">
         {recipes.map((r) => (
           <button
             key={r.id}
             onClick={() => { setSelected(r); setView('detail') }}
-            className="glass"
-            style={{ padding: '16px 20px', textAlign: 'left', cursor: 'pointer', border: '1px solid var(--glass-edge)', borderRadius: 16, width: '100%', transition: 'border-color 150ms' }}
+            className="recipe-card"
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--fg-primary)', marginBottom: 2 }}>{r.name}</div>
-                {r.description && <div style={{ fontSize: 12, color: 'var(--fg-tertiary)', lineHeight: 1.4 }}>{r.description}</div>}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 12 }}>
-                {r.prep_minutes != null && (
-                  <span style={{ fontSize: 11, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>{r.prep_minutes + (r.cook_minutes ?? 0)} min</span>
-                )}
-                <span style={{ fontSize: 11, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>{r.ingredients.length} ingredients</span>
+            <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, width: '100%' }}>
+              <div className="recipe-card-header">
+                <span className="recipe-card-title">{r.name}</span>
                 <ShareWithFamilyButton resourceType="recipe" resourceId={r.id} stopPropagation />
               </div>
+
+              <div className="recipe-meta-row">
+                {r.prep_minutes != null && (
+                  <span className="recipe-meta-tag">
+                    <Clock size={11} />
+                    <span>{r.prep_minutes + (r.cook_minutes ?? 0)} min</span>
+                  </span>
+                )}
+                <span className="recipe-meta-tag">
+                  <List size={11} />
+                  <span>{r.ingredients.length} ingredients</span>
+                </span>
+              </div>
+
+              {r.description && <p className="recipe-card-description">{r.description}</p>}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+
+            <div className="recipe-card-nutrients">
               {KEY_NUTRIENTS.map(({ key, label, unit, color }) => (
-                <div key={key} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: 'var(--fg-quiet)' }}>{label}</div>
-                  <div className="num" style={{ fontSize: 13, fontWeight: 600, color }}>{fmtNutr(r.nutrition_per_serving?.[key], unit)}</div>
+                <div key={key} className="recipe-nutrient-col">
+                  <div className="recipe-nutrient-label">{label}</div>
+                  <div className="recipe-nutrient-value" style={{ color }}>
+                    {fmtNutr(r.nutrition_per_serving?.[key], unit)}
+                  </div>
                 </div>
               ))}
             </div>

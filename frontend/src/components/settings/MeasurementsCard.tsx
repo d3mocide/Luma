@@ -1,11 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import { useUIStore } from '../../stores'
 import type { MeasurementSystem, MeasurementSettings } from './types'
 
 export function MeasurementsCard() {
   const queryClient = useQueryClient()
-  const theme = useUIStore((state) => state.theme)
 
   const { data: measurementSettings, isLoading: measurementLoading } = useQuery<MeasurementSettings>({
     queryKey: ['settings', 'measurements'],
@@ -34,7 +32,7 @@ export function MeasurementsCard() {
         Choose your preferred unit system for your account.
       </p>
 
-      <div className={`theme-toggle ${theme === 'light' ? 'light-mode' : ''}`} style={{ width: '100%' }}>
+      <div className="segmented-picker" style={{ width: '100%' }}>
         <button
           type="button"
           data-active={measurementSystem === 'metric' ? 'true' : 'false'}
