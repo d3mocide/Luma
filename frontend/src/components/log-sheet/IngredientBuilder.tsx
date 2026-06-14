@@ -87,9 +87,11 @@ type Props = {
   emptyStateMessage?: string
   favorites?: Favorite[]
   onPickFavorite?: (items: DraftItem[], name: string) => void
+  // Forwarded to the item list so each ingredient shows its per-serving weight.
+  servings?: number
 }
 
-export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdateWeight, onUpdateName, emptyStateMessage, favorites, onPickFavorite }: Props) {
+export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdateWeight, onUpdateName, emptyStateMessage, favorites, onPickFavorite, servings }: Props) {
   const [query, setQuery]               = useState('')
   const [results, setResults]           = useState<FoodResult[]>([])
   const [isSearching, setIsSearching]   = useState(false)
@@ -495,6 +497,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
         onUpdateWeight={onUpdateWeight}
         onUpdateName={onUpdateName}
         emptyStateMessage={emptyStateMessage ?? 'Search above to start building your meal.'}
+        servings={servings}
       />
     </div>
   )
