@@ -1,5 +1,5 @@
 import { IngredientBuilder } from './IngredientBuilder'
-import type { DraftItem } from './types'
+import type { DraftItem, Favorite } from './types'
 
 type Props = {
   draftItems: DraftItem[]
@@ -7,6 +7,8 @@ type Props = {
   onRemoveItem: (index: number) => void
   onUpdateWeight: (index: number, newWeight: number) => void
   onUpdateName: (index: number, name: string) => void
+  favorites?: Favorite[]
+  onPickFavorite?: (items: DraftItem[], name: string) => void
 }
 
 export function SearchTab({
@@ -15,6 +17,8 @@ export function SearchTab({
   onRemoveItem,
   onUpdateWeight,
   onUpdateName,
+  favorites,
+  onPickFavorite,
 }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -24,6 +28,8 @@ export function SearchTab({
         onRemoveItem={onRemoveItem}
         onUpdateWeight={onUpdateWeight}
         onUpdateName={onUpdateName}
+        favorites={favorites}
+        onPickFavorite={onPickFavorite}
       />
     </div>
   )

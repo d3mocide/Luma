@@ -43,19 +43,14 @@ export default function StreakStrip({ days, adherence, onShowHistory }: StreakSt
   const ofMax = 9
   const centerIndex = 4
 
-  for (let idx = 0; idx < ofMax; idx++) {
-    const offset = centerIndex - idx
-    const d = new Date()
-    d.setDate(now.getDate() - offset)
-
-    const isToday = offset === 0
-    const isFuture = offset < 0
-
-    if (isToday && adherence) {
-      // Score today live from real targets (no fabricated defaults — an unset
-      // target is excluded, not assumed). Past days rely on the streak length,
-      // which the backend already computed with this same rule.
-      const { onTrack } = scoreDay(
+  // Score today live from real targets (no fabricated defaults — an unset target
+  // is excluded, not assumed). The backend streak count ends at today when today
+  // is on track, otherwise at yesterday, so today's own contribution must be
+  // removed before deciding how many PAST squares to light. Lighting offsets
+  // 1..days unconditionally double-counts today and lights one extra past day
+  // that was never on track.
+  const todayOnTrack = adherence
+    ? scoreDay(
         {
           cal: adherence.calories?.logged,
           sat: adherence.sat_fat_g?.logged,
@@ -68,13 +63,27 @@ export default function StreakStrip({ days, adherence, onShowHistory }: StreakSt
           fib: adherence.soluble_fiber_g?.target,
           sug: adherence.sugars_g?.target,
         },
-      )
+      ).onTrack
+    : false
+  const pastOnTrackDays = adherence
+    ? Math.max(0, days - (todayOnTrack ? 1 : 0))
+    : days
+
+  for (let idx = 0; idx < ofMax; idx++) {
+    const offset = centerIndex - idx
+    const d = new Date()
+    d.setDate(now.getDate() - offset)
+
+    const isToday = offset === 0
+    const isFuture = offset < 0
+
+    if (isToday) {
+      const onTrack = adherence ? todayOnTrack : days > 0
       rollingDays.push({ offset, date: d, onTrack, isToday, isFuture })
     } else if (isFuture) {
       rollingDays.push({ offset, date: d, onTrack: false, isToday, isFuture })
     } else {
-      const isStreak = offset <= days && days > 0
-      const onTrack = isStreak
+      const onTrack = offset <= pastOnTrackDays
       rollingDays.push({ offset, date: d, onTrack, isToday, isFuture })
     }
   }

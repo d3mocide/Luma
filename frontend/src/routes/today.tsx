@@ -12,6 +12,7 @@ import SlopeChip from '../components/ui/SlopeChip'
 import StreakStrip from '../components/ui/StreakStrip'
 import { TodayShell, LoadingSkeleton, ErrorCard } from '../components/today/TodayShell'
 import { RingLegend } from '../components/today/RingLegend'
+import { MacroBar } from '../components/today/MacroBar'
 import { BioTile } from '../components/today/BioTile'
 import { PlanRow } from '../components/today/PlanRow'
 import { RecentMealsCard, RecentMeal } from '../components/today/RecentMealsCard'
@@ -311,9 +312,7 @@ export default function TodayRoute() {
                               <span className="num" style={{ fontSize: 30, fontWeight: 300, color: calNumColor, letterSpacing: '-0.03em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence?.calories?.logged, 0)}</span>
                               <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence?.calories?.target, 0)} kcal</span>
                             </div>
-                            <div style={{ marginTop: 8, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                              <div style={{ width: `${Math.min(calPct, 100)}%`, height: '100%', borderRadius: 999, background: calBarColor, boxShadow: calBarGlow, transition: 'background 400ms, box-shadow 400ms' }}/>
-                            </div>
+                            <MacroBar pct={calPct} color={calBarColor} glow={calBarGlow} />
                           </div>
                           {adherence?.protein_g?.target != null && (
                             <div style={{ paddingLeft: 20, borderLeft: '1px solid var(--glass-edge)' }}>
@@ -322,9 +321,7 @@ export default function TodayRoute() {
                                 <span className="num" style={{ fontSize: 22, fontWeight: 300, color: proteinNumColor, letterSpacing: '-0.02em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence.protein_g.logged, 0)}</span>
                                 <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence.protein_g.target, 0)} g</span>
                               </div>
-                              <div style={{ marginTop: 8, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                                <div style={{ width: `${Math.min(proteinPct, 100)}%`, height: '100%', borderRadius: 999, background: proteinBarColor, boxShadow: proteinBarGlow, transition: 'background 400ms, box-shadow 400ms' }}/>
-                              </div>
+                              <MacroBar pct={proteinPct} color={proteinBarColor} glow={proteinBarGlow} />
                             </div>
                           )}
                         </div>
@@ -484,9 +481,7 @@ export default function TodayRoute() {
                     <span className="num" style={{ fontSize: 26, fontWeight: 300, color: calNumColor, letterSpacing: '-0.03em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence?.calories?.logged, 0)}</span>
                     <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence?.calories?.target, 0)} kcal</span>
                   </div>
-                  <div style={{ marginTop: 7, height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                    <div style={{ width: `${Math.min(calPct, 100)}%`, height: '100%', borderRadius: 999, background: calBarColor, boxShadow: calBarGlow, transition: 'background 400ms, box-shadow 400ms' }}/>
-                  </div>
+                  <MacroBar pct={calPct} color={calBarColor} glow={calBarGlow} height={3} marginTop={7} />
                 </div>
                 {adherence?.protein_g?.target != null && (
                   <div style={{ paddingLeft: 16, borderLeft: '1px solid var(--glass-edge)' }}>
@@ -495,9 +490,7 @@ export default function TodayRoute() {
                       <span className="num" style={{ fontSize: 20, fontWeight: 300, color: proteinNumColor, letterSpacing: '-0.02em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence.protein_g.logged, 0)}</span>
                       <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence.protein_g.target, 0)} g</span>
                     </div>
-                    <div style={{ marginTop: 7, height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.min(proteinPct, 100)}%`, height: '100%', borderRadius: 999, background: proteinBarColor, boxShadow: proteinBarGlow, transition: 'background 400ms, box-shadow 400ms' }}/>
-                    </div>
+                    <MacroBar pct={proteinPct} color={proteinBarColor} glow={proteinBarGlow} height={3} marginTop={7} />
                   </div>
                 )}
               </div>
