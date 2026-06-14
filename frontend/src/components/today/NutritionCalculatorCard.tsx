@@ -530,43 +530,43 @@ export function NutritionCalculatorCard({
       </div>
 
       <div className="glass-inset" style={{ padding: compact ? 8 : 12, display: 'grid', gap: 10, minWidth: 0, width: '100%' }}>
+
+        {/* Mode segmented control */}
+        <div style={{ display: 'flex', padding: 3, background: 'var(--glass-1)', borderRadius: 10, border: '1px solid var(--glass-edge)' }}>
+          <button
+            type="button"
+            onClick={() => setBudgetMode('search')}
+            style={{
+              flex: 1, padding: '7px 0', borderRadius: 8, fontSize: 12, fontWeight: 500,
+              border: 'none', cursor: 'pointer', transition: 'all 150ms',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              background: budgetMode === 'search' ? 'var(--glass-3)' : 'transparent',
+              color: budgetMode === 'search' ? 'var(--sky-300)' : 'var(--fg-quiet)',
+            }}
+          >
+            <Search size={12} /> Search
+          </button>
+          <button
+            type="button"
+            onClick={() => setBudgetMode('favorite')}
+            style={{
+              flex: 1, padding: '7px 0', borderRadius: 8, fontSize: 12, fontWeight: 500,
+              border: 'none', cursor: 'pointer', transition: 'all 150ms',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              background: budgetMode === 'favorite' ? 'var(--glass-3)' : 'transparent',
+              color: budgetMode === 'favorite' ? 'var(--sun-300)' : 'var(--fg-quiet)',
+            }}
+          >
+            <Star size={12} /> Favorites
+          </button>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr auto', gap: compact ? 8 : 12, alignItems: 'start', minWidth: 0, width: '100%' }}>
 
           {/* Food search */}
           <label style={{ display: 'grid', gap: 6, minWidth: 0, width: '100%' }}>
-            <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
-              {budgetMode === 'search' ? 'Food search' : 'Favorite'}
-            </span>
             <div style={{ position: 'relative' }}>
               <div style={{ display: 'flex', gap: compact ? 6 : 8, alignItems: 'stretch' }}>
-                <button
-                  type="button"
-                  onClick={() => setBudgetMode((prev) => (prev === 'search' ? 'favorite' : 'search'))}
-                  title={budgetMode === 'search' ? 'Switch to Favorites' : 'Switch to Search'}
-                  style={{
-                    padding: compact ? '0 10px' : '0 12px',
-                    borderRadius: 10,
-                    flexShrink: 0,
-                    background: 'var(--glass-1)',
-                    border: `1px solid ${budgetMode === 'favorite' ? 'rgba(251,191,36,0.3)' : 'var(--glass-edge)'}`,
-                    color: budgetMode === 'favorite' ? 'var(--sun-400)' : 'var(--fg-secondary)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 150ms',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = budgetMode === 'favorite' ? 'var(--sun-400)' : 'var(--sky-400)'
-                    e.currentTarget.style.color = budgetMode === 'favorite' ? 'var(--sun-300)' : 'var(--sky-300)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = budgetMode === 'favorite' ? 'rgba(251,191,36,0.3)' : 'var(--glass-edge)'
-                    e.currentTarget.style.color = budgetMode === 'favorite' ? 'var(--fg-secondary)' : 'var(--fg-secondary)'
-                  }}
-                >
-                  {budgetMode === 'search' ? <Search size={14} /> : <Star size={14} />}
-                </button>
 
                 {budgetMode === 'search' ? (
                   <div style={{

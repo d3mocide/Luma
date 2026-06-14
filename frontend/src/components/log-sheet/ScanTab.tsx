@@ -57,7 +57,7 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
   const [scanMode, setScanMode] = useState<'barcode' | 'photo'>('barcode')
 
   // --- Barcode State ---
-  const [isScanning, setIsScanning]     = useState(true)
+  const [isScanning, setIsScanning]     = useState(false)
   const [barcodeLoading, setBarcodeLoading] = useState(false)
   const [barcodeError, setBarcodeError] = useState('')
   const [pending, setPending]           = useState<FoodResult | null>(null)
@@ -77,17 +77,10 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
 
   // Clean up barcode state when switching tabs inside Scan
   useEffect(() => {
-    if (scanMode === 'photo') {
-      setIsScanning(false)
-      setPending(null)
-      setBarcodeError('')
-      setBarcodeLoading(false)
-    } else {
-      setIsScanning(true)
-      setPending(null)
-      setBarcodeError('')
-      setBarcodeLoading(false)
-    }
+    setIsScanning(false)
+    setPending(null)
+    setBarcodeError('')
+    setBarcodeLoading(false)
   }, [scanMode])
 
   // --- Barcode HTML5Qrcode logic ---
@@ -169,7 +162,7 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
     setPending(null)
     setPendingQty('')
     setPendingUnit('g')
-    setIsScanning(true)
+    // Don't auto-restart: let user tap "Start scanning" to avoid re-prompting camera permissions
   }
 
   function changeBarcodeUnit(unit: string) {
@@ -344,7 +337,7 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
                   <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{pending.brand || 'Open Food Facts'}</div>
                 </div>
                 <button
-                  onClick={() => { setPending(null); setPendingQty(''); setPendingUnit('g'); setIsScanning(true) }}
+                  onClick={() => { setPending(null); setPendingQty(''); setPendingUnit('g') }}
                   style={{ color: 'var(--fg-quiet)', background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}
                   aria-label="Cancel"
                 >
@@ -433,33 +426,38 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
             </div>
           ) : (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span className="eyebrow">Point at barcode</span>
-                {!isScanning && (
-                  <button
-                    type="button"
-                    onClick={() => { setBarcodeError(''); setIsScanning(true) }}
-                    style={{ fontSize: 12, color: 'var(--sky-400)', background: 'none', border: 'none', cursor: 'pointer' }}
-                  >
-                    Rescan
-                  </button>
-                )}
-              </div>
-              {isScanning && (
+              {isScanning ? (
                 <>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span className="eyebrow">Point at barcode</span>
+                  </div>
                   <div id={scannerDomId} style={{ borderRadius: 12, overflow: 'hidden', minHeight: 220, background: '#000' }} />
                   <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--fg-quiet)', textAlign: 'center' }}>
                     Hold steady over the barcode
                   </p>
                 </>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => { setBarcodeError(''); setIsScanning(true) }}
+                    style={{ padding: '14px 20px', fontSize: 14, gap: 10, justifyContent: 'center' }}
+                  >
+                    <Camera size={17} /> Start scanning
+                  </button>
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--fg-quiet)', textAlign: 'center', lineHeight: 1.5 }}>
+                    Point your camera at a barcode to look up nutrition info.
+                  </p>
+                  {barcodeError && (
+                    <p style={{ margin: 0, fontSize: 11, color: 'var(--bad)', textAlign: 'center' }}>{barcodeError}</p>
+                  )}
+                </div>
               )}
               {barcodeLoading && (
                 <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--fg-tertiary)', fontSize: 13 }}>
                   Looking up product…
                 </div>
-              )}
-              {barcodeError && (
-                <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--bad)', textAlign: 'center' }}>{barcodeError}</p>
               )}
             </div>
           )}
