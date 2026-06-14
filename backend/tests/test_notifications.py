@@ -8,12 +8,17 @@ from luma.api.notifications import router
 from luma.deps import get_current_user, get_db
 
 
-def _make_fake_user(*, nudge_enabled=True, nudge_hour=19, nudge_tz="America/New_York"):
+def _make_fake_user(
+    *, nudge_enabled=True, nudge_hour=19, nudge_tz="America/New_York",
+    recap_enabled=True, health_alerts_enabled=True,
+):
     user = MagicMock()
     user.id = uuid.uuid4()
     user.nudge_enabled = nudge_enabled
     user.nudge_hour = nudge_hour
     user.nudge_tz = nudge_tz
+    user.recap_enabled = recap_enabled
+    user.health_alerts_enabled = health_alerts_enabled
     return user
 
 
@@ -35,7 +40,10 @@ def test_toggle_enabled_merges_stored_fields():
     with TestClient(app) as client:
         resp = client.put("/notifications/preferences", json={"nudge_enabled": False})
         assert resp.status_code == 200
-        assert resp.json() == {"nudge_enabled": False, "nudge_hour": 8, "nudge_tz": "Europe/Paris"}
+        assert resp.json() == {
+            "nudge_enabled": False, "nudge_hour": 8, "nudge_tz": "Europe/Paris",
+            "recap_enabled": True, "health_alerts_enabled": True,
+        }
 
     params = db.execute.call_args[0][1]
     assert params["enabled"] is False
@@ -89,4 +97,42 @@ def test_hour_only_update_merges_enabled_and_tz():
     with TestClient(app) as client:
         resp = client.put("/notifications/preferences", json={"nudge_hour": 7})
         assert resp.status_code == 200
-        assert resp.json() == {"nudge_enabled": True, "nudge_hour": 7, "nudge_tz": "UTC"}
+        assert resp.json() == {
+            "nudge_enabled": True, "nudge_hour": 7, "nudge_tz": "UTC",
+            "recap_enabled": True, "health_alerts_enabled": True,
+        }
+
+
+def test_toggle_recap_merges_stored_fields():
+    # Toggling recap off must not disturb the nudge fields or health alerts.
+    user = _make_fake_user(nudge_enabled=True, nudge_hour=8, nudge_tz="Europe/Paris")
+    db = AsyncMock()
+    db.commit = AsyncMock()
+
+    app = _make_app(user, db)
+    with TestClient(app) as client:
+        resp = client.put("/notifications/preferences", json={"recap_enabled": False})
+        assert resp.status_code == 200
+        assert resp.json() == {
+            "nudge_enabled": True, "nudge_hour": 8, "nudge_tz": "Europe/Paris",
+            "recap_enabled": False, "health_alerts_enabled": True,
+        }
+
+    params = db.execute.call_args[0][1]
+    assert params["recap"] is False
+    assert params["health_alerts"] is True
+
+
+def test_toggle_health_alerts_off():
+    user = _make_fake_user()
+    db = AsyncMock()
+    db.commit = AsyncMock()
+
+    app = _make_app(user, db)
+    with TestClient(app) as client:
+        resp = client.put("/notifications/preferences", json={"health_alerts_enabled": False})
+        assert resp.status_code == 200
+        assert resp.json()["health_alerts_enabled"] is False
+
+    params = db.execute.call_args[0][1]
+    assert params["health_alerts"] is False

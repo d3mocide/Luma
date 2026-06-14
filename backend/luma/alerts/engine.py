@@ -48,6 +48,15 @@ async def _process_user(user_id: str, bypass_dedup: bool = False) -> None:
         recent_rule_ts: dict[str, datetime] = {r.rule_id: r.ts for r in fired_recently}
         now = datetime.now(UTC)
 
+        # Persist alerts regardless of preference (they still surface in-app);
+        # only the push is gated by the user's health-alert opt-out.
+        pref_row = await db.execute(
+            text("SELECT health_alerts_enabled FROM users WHERE id = :uid"),
+            {"uid": user_id},
+        )
+        pref = pref_row.first()
+        health_alerts_enabled = bool(pref.health_alerts_enabled) if pref else True
+
         for rule_fn in ALL_RULES:
             try:
                 result = await rule_fn(user_id, db)
@@ -92,7 +101,7 @@ async def _process_user(user_id: str, bypass_dedup: bool = False) -> None:
                 extra={"rule_id": result.rule_id, "severity": result.severity, "user_id": user_id},
             )
 
-            if result.severity == "warning":
+            if result.severity == "warning" and health_alerts_enabled:
                 try:
                     from luma.services.push_dispatcher import send_push_to_user
                     title = result.payload.get("title", "Luma health alert")

@@ -48,6 +48,10 @@ class User(Base):
     nudge_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default='false')
     nudge_hour: Mapped[int] = mapped_column(Integer, nullable=False, default=19, server_default='19')
     nudge_tz: Mapped[str] = mapped_column(Text, nullable=False, default='UTC', server_default="'UTC'")
+    # Per-type push opt-outs. Default True so existing users keep the weekly
+    # recap and high-priority health alerts they already receive.
+    recap_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default='true')
+    health_alerts_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default='true')
     birth_year: Mapped[int | None] = mapped_column(Integer)
     biological_sex: Mapped[str | None] = mapped_column(Text)
     height_cm: Mapped[Decimal | None] = mapped_column(Numeric(5, 1))
