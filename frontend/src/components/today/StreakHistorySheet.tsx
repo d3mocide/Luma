@@ -355,19 +355,19 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11, color: 'var(--fg-tertiary)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: 6 }}>
                 <span><strong>Calories:</strong> Within range</span>
-                <span style={{ color: 'var(--sky-300)' }}>15% under to 10% over</span>
+                <span style={{ color: 'var(--sky-300)' }}>85–110% of target</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: 6 }}>
                 <span><strong>Saturated Fat:</strong> LDL cap</span>
-                <span style={{ color: 'var(--sun-300)' }}>At or under target</span>
+                <span style={{ color: 'var(--sun-300)' }}>≤ 110% of target</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: 6 }}>
                 <span><strong>Soluble Fiber:</strong> LDL clearance floor</span>
-                <span style={{ color: 'var(--good)' }}>At or over target</span>
+                <span style={{ color: 'var(--good)' }}>≥ 90% of target</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 2 }}>
                 <span><strong>Sugar:</strong> Metabolic limit</span>
-                <span style={{ color: 'var(--aurora-pink)' }}>At or under target</span>
+                <span style={{ color: 'var(--aurora-pink)' }}>≤ 110% of target</span>
               </div>
             </div>
           </div>
