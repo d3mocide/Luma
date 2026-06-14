@@ -5,9 +5,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import case, func, or_, select, text as sa_text
+from sqlalchemy import case, func, or_, select
+from sqlalchemy import text as sa_text
 
-from luma.db.models import Food, MealEvent
+from luma.db.models import Food
 from luma.deps import CurrentUser, DbDep
 from luma.services import off_client, usda_client
 from luma.services.food_flags import compute_threshold_flags, merge_flags
