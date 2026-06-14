@@ -22,17 +22,22 @@ logger = logging.getLogger(__name__)
 
 async def run_alert_engine() -> None:
     async with AsyncSessionLocal() as db:
-        user_rows = await db.execute(text("SELECT id FROM users"))
-        user_ids = [str(r.id) for r in user_rows]
+        user_rows = await db.execute(text("SELECT id, health_alerts_enabled FROM users"))
+        users = [(str(r.id), bool(r.health_alerts_enabled)) for r in user_rows]
 
-    for user_id in user_ids:
+    for user_id, health_alerts_enabled in users:
         try:
-            await _process_user(user_id)
+            await _process_user(user_id, health_alerts_enabled=health_alerts_enabled)
         except Exception:
             logger.exception("Alert engine failed for user %s", user_id)
 
 
-async def _process_user(user_id: str, bypass_dedup: bool = False) -> None:
+# health_alerts_enabled gates only the push (the alert is still persisted so it
+# surfaces in-app). Defaults True so callers that process a user in isolation —
+# including tests and manual triggers — keep the original push behavior.
+async def _process_user(
+    user_id: str, bypass_dedup: bool = False, health_alerts_enabled: bool = True
+) -> None:
     async with AsyncSessionLocal() as db:
         # Fetch the most recent firing time per rule within the past 24h (the max dedup window).
         # The engine then checks each result against its own dedup_hours before inserting.
@@ -92,7 +97,7 @@ async def _process_user(user_id: str, bypass_dedup: bool = False) -> None:
                 extra={"rule_id": result.rule_id, "severity": result.severity, "user_id": user_id},
             )
 
-            if result.severity == "warning":
+            if result.severity == "warning" and health_alerts_enabled:
                 try:
                     from luma.services.push_dispatcher import send_push_to_user
                     title = result.payload.get("title", "Luma health alert")

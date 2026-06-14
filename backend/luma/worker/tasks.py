@@ -176,7 +176,7 @@ async def send_weekly_recap(ctx: dict) -> None:
 
     async with AsyncSessionLocal() as db:
         rows = await db.execute(
-            text("SELECT id, nudge_hour, nudge_tz FROM users")
+            text("SELECT id, nudge_hour, nudge_tz FROM users WHERE recap_enabled = TRUE")
         )
         all_users = rows.fetchall()
 

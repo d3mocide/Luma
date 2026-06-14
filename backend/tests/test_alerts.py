@@ -78,8 +78,10 @@ async def test_run_alert_engine_runs_for_users():
     
     user1 = MagicMock()
     user1.id = uuid4()
+    user1.health_alerts_enabled = True
     user2 = MagicMock()
     user2.id = uuid4()
+    user2.health_alerts_enabled = False
 
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [user1, user2]
@@ -98,8 +100,8 @@ async def test_run_alert_engine_runs_for_users():
         await run_alert_engine()
         
         assert mock_process.call_count == 2
-        mock_process.assert_any_call(str(user1.id))
-        mock_process.assert_any_call(str(user2.id))
+        mock_process.assert_any_call(str(user1.id), health_alerts_enabled=True)
+        mock_process.assert_any_call(str(user2.id), health_alerts_enabled=False)
 
 
 @pytest.mark.asyncio

@@ -26,6 +26,8 @@ class NotificationPrefsUpdate(BaseModel):
     nudge_enabled: bool | None = None
     nudge_hour: int | None = None
     nudge_tz: str | None = None
+    recap_enabled: bool | None = None
+    health_alerts_enabled: bool | None = None
 
 
 @router.get("/vapid-public-key")
@@ -70,6 +72,8 @@ async def get_preferences(current_user: CurrentUser) -> dict:
         "nudge_enabled": current_user.nudge_enabled,
         "nudge_hour": current_user.nudge_hour,
         "nudge_tz": current_user.nudge_tz,
+        "recap_enabled": current_user.recap_enabled,
+        "health_alerts_enabled": current_user.health_alerts_enabled,
     }
 
 
@@ -91,17 +95,26 @@ async def update_preferences(
     enabled = current_user.nudge_enabled if payload.nudge_enabled is None else payload.nudge_enabled
     hour = current_user.nudge_hour if payload.nudge_hour is None else payload.nudge_hour
     tz = current_user.nudge_tz if payload.nudge_tz is None else payload.nudge_tz
+    recap = current_user.recap_enabled if payload.recap_enabled is None else payload.recap_enabled
+    health_alerts = (
+        current_user.health_alerts_enabled
+        if payload.health_alerts_enabled is None
+        else payload.health_alerts_enabled
+    )
 
     await db.execute(
         text("""
             UPDATE users
-            SET nudge_enabled = :enabled, nudge_hour = :hour, nudge_tz = :tz
+            SET nudge_enabled = :enabled, nudge_hour = :hour, nudge_tz = :tz,
+                recap_enabled = :recap, health_alerts_enabled = :health_alerts
             WHERE id = :uid
         """),
         {
             "enabled": enabled,
             "hour": hour,
             "tz": tz,
+            "recap": recap,
+            "health_alerts": health_alerts,
             "uid": str(current_user.id),
         },
     )
@@ -110,4 +123,6 @@ async def update_preferences(
         "nudge_enabled": enabled,
         "nudge_hour": hour,
         "nudge_tz": tz,
+        "recap_enabled": recap,
+        "health_alerts_enabled": health_alerts,
     }

@@ -6,6 +6,8 @@ type NotifPrefs = {
   nudge_enabled: boolean
   nudge_hour: number
   nudge_tz: string
+  recap_enabled: boolean
+  health_alerts_enabled: boolean
 }
 
 type SwState = 'checking' | 'installing' | 'ready' | 'failed'
@@ -453,6 +455,32 @@ export function NotificationsCard() {
               </label>
             </div>
           )}
+
+          <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--fg-secondary)', marginBottom: 2 }}>Weekly recap</div>
+              <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>A Sunday-evening summary of your week.</div>
+            </div>
+            <input
+              type="checkbox"
+              checked={prefs.recap_enabled}
+              onChange={(e) => prefsMutation.mutate({ recap_enabled: e.target.checked })}
+              style={{ width: 16, height: 16, accentColor: 'var(--sky-400)', flexShrink: 0 }}
+            />
+          </label>
+
+          <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--fg-secondary)', marginBottom: 2 }}>High-priority health alerts</div>
+              <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>Push when a warning-level health insight fires. They still appear in-app.</div>
+            </div>
+            <input
+              type="checkbox"
+              checked={prefs.health_alerts_enabled}
+              onChange={(e) => prefsMutation.mutate({ health_alerts_enabled: e.target.checked })}
+              style={{ width: 16, height: 16, accentColor: 'var(--sky-400)', flexShrink: 0 }}
+            />
+          </label>
         </div>
       )}
 
