@@ -22,17 +22,22 @@ logger = logging.getLogger(__name__)
 
 async def run_alert_engine() -> None:
     async with AsyncSessionLocal() as db:
-        user_rows = await db.execute(text("SELECT id FROM users"))
-        user_ids = [str(r.id) for r in user_rows]
+        user_rows = await db.execute(text("SELECT id, health_alerts_enabled FROM users"))
+        users = [(str(r.id), bool(r.health_alerts_enabled)) for r in user_rows]
 
-    for user_id in user_ids:
+    for user_id, health_alerts_enabled in users:
         try:
-            await _process_user(user_id)
+            await _process_user(user_id, health_alerts_enabled=health_alerts_enabled)
         except Exception:
             logger.exception("Alert engine failed for user %s", user_id)
 
 
-async def _process_user(user_id: str, bypass_dedup: bool = False) -> None:
+# health_alerts_enabled gates only the push (the alert is still persisted so it
+# surfaces in-app). Defaults True so callers that process a user in isolation —
+# including tests and manual triggers — keep the original push behavior.
+async def _process_user(
+    user_id: str, bypass_dedup: bool = False, health_alerts_enabled: bool = True
+) -> None:
     async with AsyncSessionLocal() as db:
         # Fetch the most recent firing time per rule within the past 24h (the max dedup window).
         # The engine then checks each result against its own dedup_hours before inserting.
@@ -47,15 +52,6 @@ async def _process_user(user_id: str, bypass_dedup: bool = False) -> None:
         )
         recent_rule_ts: dict[str, datetime] = {r.rule_id: r.ts for r in fired_recently}
         now = datetime.now(UTC)
-
-        # Persist alerts regardless of preference (they still surface in-app);
-        # only the push is gated by the user's health-alert opt-out.
-        pref_row = await db.execute(
-            text("SELECT health_alerts_enabled FROM users WHERE id = :uid"),
-            {"uid": user_id},
-        )
-        pref = pref_row.first()
-        health_alerts_enabled = bool(pref.health_alerts_enabled) if pref else True
 
         for rule_fn in ALL_RULES:
             try:
