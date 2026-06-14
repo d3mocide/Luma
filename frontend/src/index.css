@@ -109,6 +109,10 @@ layer(base);
     --glass-edge: rgba(255, 255, 255, 0.12);
     --glass-edge-strong: rgba(255, 255, 255, 0.18);
 
+    /* Motion — chart/ring entry (BRAND-GUIDE §12) */
+    --ease-ring: cubic-bezier(0.2, 0.7, 0.2, 1);
+    --duration-slow: 1600ms;
+
     /* Brand — sky blue */
     --sky-100: #e0f2fe;
     --sky-200: #bae6fd;
@@ -3420,6 +3424,13 @@ input[type="search"]::-webkit-search-results-decoration {
   .water-buddy-hop,
   .water-buddy-eyes {
     animation: none;
+  }
+
+  /* Rings/gauges drive their own reduced-motion branch in JS; this is a
+     belt-and-suspenders guard for any residual CSS transitions. */
+  .ring-svg *,
+  .macro-bar-fill {
+    transition: none !important;
   }
 }
 

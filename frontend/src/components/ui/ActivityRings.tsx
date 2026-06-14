@@ -1,4 +1,5 @@
-import { useId } from 'react'
+import { useId, useEffect, useState } from 'react'
+import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion'
 
 interface RingColor {
   from: string
@@ -22,6 +23,10 @@ const DEFAULT_COLORS = [
   { from: '#f472b6', to: '#ec4899', glow: 'rgba(244,114,182,0.5)' },
 ]
 
+const RING_EASE = 'var(--ease-ring)'
+const RING_DURATION = '1.6s'
+const STAGGER = 0.1 // s between rings, outer → inner
+
 export default function ActivityRings({
   size = 200,
   values = [0.96, 0.83, 1.10, 0.5],
@@ -34,6 +39,20 @@ export default function ActivityRings({
   const id = rawId.replace(/:/g, '')
   const center = size / 2
   const radii = values.map((_, i) => center - thickness / 2 - i * (thickness + gap))
+
+  const prefersReduced = usePrefersReducedMotion()
+  const still = prefersReduced || !animate
+
+  // Fills start empty, then animate to target on the next frame. Because the
+  // <circle> elements persist across renders with a stroke-dashoffset transition,
+  // later data changes (e.g. after logging a meal) animate to the new value too —
+  // not just the mount draw.
+  const [shown, setShown] = useState(still)
+  useEffect(() => {
+    if (still) return
+    const r = requestAnimationFrame(() => setShown(true))
+    return () => cancelAnimationFrame(r)
+  }, [still])
 
   return (
     <svg
@@ -49,23 +68,29 @@ export default function ActivityRings({
             <stop offset="100%" stopColor={c.to} />
           </linearGradient>
         ))}
-        <filter id={`ring-glow-${id}`}>
-          <feGaussianBlur stdDeviation="3" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
       </defs>
       {values.map((v, i) => {
         const r = radii[i]
         const c = 2 * Math.PI * r
+        const color = colors[i % colors.length]
         const pct = Math.min(v, 1.0)
         const overage = Math.min(Math.max(0, v - 1.0), 1.0)
         const overageColor = overage > 0.3 ? '#ef4444' : '#f59e0b'
+        const delay = still ? 0 : i * STAGGER
+        const capR = thickness * 0.36
+        const capAngle = shown ? 360 * pct : 0
+
+        const fillOffset = shown ? c * (1 - pct) : c
+        const overageOffset = shown ? c * (1 - overage) : c
+
         return (
           <g key={i}>
+            {/* Track */}
             <circle
               cx={center} cy={center} r={r}
-              fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={thickness}
+              fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={thickness}
             />
+            {/* Fill */}
             <circle
               cx={center} cy={center} r={r}
               fill="none"
@@ -73,10 +98,13 @@ export default function ActivityRings({
               strokeWidth={thickness}
               strokeLinecap="round"
               strokeDasharray={c}
-              strokeDashoffset={c * (1 - pct)}
-              filter={`url(#ring-glow-${id})`}
-              style={animate ? { animation: `ringDraw-${id}-${i} 1.6s cubic-bezier(.2,.7,.2,1) both` } : {}}
+              strokeDashoffset={fillOffset}
+              style={{
+                filter: `drop-shadow(0 0 3px ${color.glow}) drop-shadow(0 0 7px ${color.glow})`,
+                transition: still ? undefined : `stroke-dashoffset ${RING_DURATION} ${RING_EASE} ${delay}s`,
+              }}
             />
+            {/* Overage */}
             {overage > 0 && (
               <circle
                 cx={center} cy={center} r={r}
@@ -85,19 +113,33 @@ export default function ActivityRings({
                 strokeWidth={thickness}
                 strokeLinecap="round"
                 strokeDasharray={c}
-                strokeDashoffset={c * (1 - overage)}
-                style={animate ? { animation: `ringOverage-${id}-${i} 0.5s cubic-bezier(.2,.7,.2,1) 1.6s both` } : {}}
+                strokeDashoffset={overageOffset}
+                style={{
+                  transition: still ? undefined : `stroke-dashoffset 0.5s ${RING_EASE} ${delay + 1.2}s`,
+                }}
               />
+            )}
+            {/* Progress-cap light — a lit bead riding the leading edge of the arc */}
+            {pct > 0.004 && (
+              <g
+                style={{
+                  transformBox: 'view-box',
+                  transformOrigin: `${center}px ${center}px`,
+                  transform: `rotate(${capAngle}deg)`,
+                  transition: still ? undefined : `transform ${RING_DURATION} ${RING_EASE} ${delay}s`,
+                }}
+              >
+                <circle
+                  cx={center + r} cy={center} r={capR}
+                  fill={color.to}
+                  style={{ filter: `drop-shadow(0 0 5px ${color.glow})` }}
+                />
+                <circle cx={center + r} cy={center} r={capR * 0.42} fill="#fff" opacity={0.85} />
+              </g>
             )}
           </g>
         )
       })}
-      <style>{
-        values.map((_, i) => `
-          @keyframes ringDraw-${id}-${i} { from { stroke-dashoffset: ${2 * Math.PI * radii[i]} } }
-          @keyframes ringOverage-${id}-${i} { from { stroke-dashoffset: ${2 * Math.PI * radii[i]} } }
-        `).join('\n')
-      }</style>
     </svg>
   )
 }
