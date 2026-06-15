@@ -12,8 +12,8 @@ def _on_track(totals):
     return score_day(totals, TARGETS)["on_track"]
 
 
-def test_calories_under_target_within_15pct_counts():
-    # 1750 is 12.5% under a 2000 target — still on-plan, must count.
+def test_calories_under_target_within_25pct_counts():
+    # 1750 is 12.5% under a 2000 target — well within the 25% floor (1500), must count.
     s = score_day({"cal": 1750, "sat": 0, "fib": 99, "sug": 0}, TARGETS)
     assert s["cal_met"] is True
 
@@ -24,13 +24,13 @@ def test_calories_at_target_counts():
 
 
 def test_calories_far_under_target_does_not_count():
-    # 919 kcal against 2000 is far below the 15% floor (1700) — flagged as too low.
+    # 919 kcal against 2000 is far below the 25% floor (1500) — flagged as too low.
     s = score_day({"cal": 919, "sat": 0, "fib": 99, "sug": 0}, TARGETS)
     assert s["cal_met"] is False
 
 
 def test_calorie_band_is_asymmetric():
-    # 15% under is forgiven; the symmetric 15% over is NOT (cap is +10%).
+    # 25% under is forgiven; the symmetric 25% over is NOT (cap is +10%).
     assert score_day({"cal": 1700, "sat": 0, "fib": 99, "sug": 0}, TARGETS)["cal_met"] is True
     assert score_day({"cal": 2300, "sat": 0, "fib": 99, "sug": 0}, TARGETS)["cal_met"] is False
     # Just inside the +10% cap still counts.

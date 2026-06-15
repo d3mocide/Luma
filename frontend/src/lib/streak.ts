@@ -3,11 +3,11 @@
 // through here so they can never disagree with each other or with the server.
 //
 // Calories use an asymmetric band: a day still counts when intake is UNDER target
-// (the point of a deficit) down to 15% below, but only 10% above. Saturated fat and
+// (the point of a deficit) down to 25% below, but only 10% above. Saturated fat and
 // sugar are ceilings (≤ target); soluble fiber is a floor (≥ target). A target the
 // user hasn't set is 'untracked' — excluded from the tally, never counted as a miss.
 
-export const CAL_UNDER_TOL = 0.85
+export const CAL_UNDER_TOL = 0.75
 export const CAL_OVER_TOL = 1.1
 export const CEILING_GRACE = 1.10   // sat fat, sugar: up to 10% over cap still counts
 export const FLOOR_TOLERANCE = 0.90 // soluble fiber: down to 10% under floor still counts

@@ -7,8 +7,11 @@ counted days that hit the targets). Both now call :func:`score_day`. The fronten
 mirrors this exact logic in ``src/lib/streak.ts`` — keep the two in sync.
 
 Calorie scoring is intentionally asymmetric. A day still counts when intake runs
-UNDER target (the whole point of a deficit) down to 15% below, but only 10% above,
+UNDER target (the whole point of a deficit) down to 25% below, but only 10% above,
 because overshooting calories is what breaks a cut — landing under it does not.
+The wider under-tolerance (25%) avoids penalising intentional fasting days or
+aggressive-deficit eating; the separate ``check_calorie_deficit`` alert handles
+the safety concern when under-eating becomes a sustained pattern.
 Saturated fat and sugar are ceilings (at or below target); soluble fiber is a floor
 (at or above target). A target the user has not set is excluded from the tally
 entirely rather than scored as a miss, so an unconfigured metric can never sink a
@@ -16,7 +19,7 @@ streak.
 """
 from __future__ import annotations
 
-CAL_UNDER_TOL = 0.85   # intake down to 15% under target is still on-plan
+CAL_UNDER_TOL = 0.75   # intake down to 25% under target is still on-plan
 CAL_OVER_TOL = 1.10    # only 10% over target is tolerated
 CEILING_GRACE = 1.10   # sat fat and sugar: up to 10% over cap still counts
 FLOOR_TOLERANCE = 0.90 # soluble fiber: down to 10% under floor still counts
