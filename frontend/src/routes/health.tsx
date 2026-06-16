@@ -713,9 +713,9 @@ function SupplementsTab() {
 
   if (isLoading) return <div style={{ padding: 24, color: 'var(--fg-quiet)', fontSize: 13 }}>Loading…</div>
 
-  const activeSupps = supps.filter((s) => s.is_active)
+  const takenToday = supps.filter((s) => s.is_active && s.taken_today)
   const aggregateNutrients: Record<string, number> = {}
-  for (const s of activeSupps) {
+  for (const s of takenToday) {
     for (const [key, val] of Object.entries(s.nutrients_per_dose || {})) {
       if (val > 0) {
         aggregateNutrients[key] = (aggregateNutrients[key] ?? 0) + val
@@ -729,7 +729,7 @@ function SupplementsTab() {
       {/* Left column: List & Action */}
       <div className="settings-stack">
         {supps.length === 0 ? (
-          <EmptyState icon={Leaf} message="No supplements added yet. Supplement nutrients are automatically added to your daily totals." />
+          <EmptyState icon={Leaf} message="No supplements added yet. Mark a supplement as taken to add its nutrients to your daily totals." />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {supps.map((s) => {
@@ -827,10 +827,10 @@ function SupplementsTab() {
       {/* Right column: Dynamic Aggregation */}
       <div className="settings-stack">
         <div className="glass settings-card" style={{ padding: 24 }}>
-          <div className="eyebrow" style={{ marginBottom: 12 }}>Supplement Nutrients</div>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Taken Today</div>
           {aggregateEntries.length === 0 ? (
             <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-quiet)', lineHeight: 1.5 }}>
-              No active supplements. Active supplements' nutrients are aggregated here.
+              Nothing taken yet today. Mark a supplement as taken and its nutrients are aggregated here.
             </p>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 12px' }}>
@@ -853,7 +853,7 @@ function SupplementsTab() {
             </div>
           )}
           <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--glass-edge)', fontSize: 12, color: 'var(--fg-quiet)', lineHeight: 1.4 }}>
-            Active supplements' nutrients are automatically integrated into your daily totals in the Today dashboard.
+            Only supplements you mark as taken today are integrated into your daily totals in the Today dashboard.
           </div>
         </div>
       </div>
