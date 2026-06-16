@@ -4,6 +4,7 @@ import json
 import logging
 from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
@@ -12,9 +13,6 @@ from luma.config import settings
 
 logger = logging.getLogger(__name__)
 
-HAE_METRICS_HASH_KEY = "luma:hae_metrics:totals"
-HAE_METRICS_EVENTS_KEY = "luma:hae_metrics:recent_events"
-HAE_METRICS_META_KEY = "luma:hae_metrics:meta"
 HAE_METRICS_EVENT_LIMIT = 20
 
 
@@ -27,9 +25,18 @@ class HAEMetricsTracker:
             self._redis = Redis.from_url(settings.redis_url, decode_responses=True)
         return self._redis
 
+    def _keys(self, user_id: UUID | str) -> tuple[str, str, str]:
+        uid = str(user_id)
+        return (
+            f"luma:hae_metrics:{uid}:totals",
+            f"luma:hae_metrics:{uid}:events",
+            f"luma:hae_metrics:{uid}:meta",
+        )
+
     async def record_ingest(
         self,
         *,
+        user_id: UUID | str,
         rows_inserted: int,
         error: str | None = None,
     ) -> None:
@@ -38,29 +45,31 @@ class HAEMetricsTracker:
         if error is not None:
             event["error"] = error
 
+        hash_key, events_key, meta_key = self._keys(user_id)
         try:
             redis = self._client()
             pipe = redis.pipeline()
-            pipe.hincrby(HAE_METRICS_HASH_KEY, "attempts", 1)
+            pipe.hincrby(hash_key, "attempts", 1)
             if error is None:
-                pipe.hincrby(HAE_METRICS_HASH_KEY, "successes", 1)
-                pipe.hincrby(HAE_METRICS_HASH_KEY, "rows_inserted", rows_inserted)
-                pipe.hset(HAE_METRICS_META_KEY, mapping={"last_success_at": timestamp})
+                pipe.hincrby(hash_key, "successes", 1)
+                pipe.hincrby(hash_key, "rows_inserted", rows_inserted)
+                pipe.hset(meta_key, mapping={"last_success_at": timestamp})
             else:
-                pipe.hincrby(HAE_METRICS_HASH_KEY, "errors", 1)
-                pipe.hset(HAE_METRICS_META_KEY, mapping={"last_error_at": timestamp})
-            pipe.lpush(HAE_METRICS_EVENTS_KEY, json.dumps(event, separators=(",", ":")))
-            pipe.ltrim(HAE_METRICS_EVENTS_KEY, 0, HAE_METRICS_EVENT_LIMIT - 1)
+                pipe.hincrby(hash_key, "errors", 1)
+                pipe.hset(meta_key, mapping={"last_error_at": timestamp})
+            pipe.lpush(events_key, json.dumps(event, separators=(",", ":")))
+            pipe.ltrim(events_key, 0, HAE_METRICS_EVENT_LIMIT - 1)
             await pipe.execute()
         except RedisError:
             logger.exception("Failed to record HAE metrics in Redis")
 
-    async def snapshot(self) -> dict[str, Any]:
+    async def snapshot(self, user_id: UUID | str) -> dict[str, Any]:
+        hash_key, events_key, meta_key = self._keys(user_id)
         try:
             redis = self._client()
-            totals = await redis.hgetall(HAE_METRICS_HASH_KEY)  # type: ignore[misc]
-            meta = await redis.hgetall(HAE_METRICS_META_KEY)  # type: ignore[misc]
-            raw_events = await redis.lrange(HAE_METRICS_EVENTS_KEY, 0, HAE_METRICS_EVENT_LIMIT - 1)  # type: ignore[misc]
+            totals = await redis.hgetall(hash_key)  # type: ignore[misc]
+            meta = await redis.hgetall(meta_key)  # type: ignore[misc]
+            raw_events = await redis.lrange(events_key, 0, HAE_METRICS_EVENT_LIMIT - 1)  # type: ignore[misc]
         except RedisError:
             logger.exception("Failed to load HAE metrics from Redis")
             return self._empty_snapshot()
