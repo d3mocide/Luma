@@ -918,8 +918,13 @@ layer(base);
    on this <svg> promotes it to a compositing layer; Blink (Chrome PWA) then
    rasterizes the children's filter:drop-shadow() glow into that layer's 8-bit
    texture before rotating it, which bands the glow. WebKit doesn't, so iOS Safari
-   looked fine while the installed Chrome PWA artifacted. */
-.ring-svg { transform: none; }
+   looked fine while the installed Chrome PWA artifacted.
+
+   overflow:visible because the outer ring's stroke reaches the viewBox edge, so
+   its drop-shadow glow spills ~7px past the viewport. Blink clips the outermost
+   <svg> to its viewport (a hard rectangular glow edge); WebKit paints the
+   overflow. Letting it spill matches iOS — the wrappers have room for it. */
+.ring-svg { transform: none; overflow: visible; }
 
 /* ══════════════════════════════════════════════════════════════════════════
  * FORM FIELDS
