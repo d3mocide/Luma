@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, X, Search, Camera, Trash2, Heart, Check, Edit2, Star } from 'lucide-react'
+import { Plus, X, Search, Camera, Trash2, Heart, Check, Edit2, Star, AlertTriangle, Ban } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api, TodayData } from '../../lib/api'
 import { getCurrentSlot } from '../../lib/format'
@@ -53,50 +53,78 @@ export type FoodAddPayload = {
 
 function BudgetStat({
   label,
-  remaining,
-  projected,
   unit,
+  target,
+  logged,
+  add,
   showProjected,
-  noTarget,
   compact,
   style,
   color,
   isMinTarget,
 }: {
   label: string
-  remaining: number
-  projected: number
   unit: string
+  target: number
+  logged: number
+  add: number
   showProjected: boolean
-  noTarget: boolean
   compact?: boolean
   style?: React.CSSProperties
   color: string
   isMinTarget?: boolean
 }) {
-  const over = !isMinTarget && showProjected && projected < 0
-  const valueColor = noTarget ? 'var(--fg-quiet)' : over ? 'var(--bad)' : color
+  const noTarget = target <= 0
+  const remaining = round1(target - logged)
+  const projected = round1(target - logged - add)
+  // The value the user reads: their projected headroom once the in-progress
+  // food lands, falling back to the at-rest remaining when nothing is staged.
+  const shown = showProjected ? projected : remaining
+
+  const usedNow = noTarget ? 0 : Math.min(Math.max(logged / target, 0), 1)
+  const usedNext = noTarget ? 0 : Math.min(Math.max((logged + add) / target, 0), 1)
+  const pendingFrom = Math.min(usedNow, usedNext)
+  const pendingTo = Math.max(usedNow, usedNext)
+
+  // Floors (protein, fiber) and ceilings (calories, sat fat, sugar) are opposite
+  // intents — a floor you fill up, a ceiling you spend down — so they read
+  // differently even at rest. A negative ceiling is "over"; a non-positive floor
+  // is "goal met".
+  const over = !isMinTarget && shown < 0
+  const met = isMinTarget && shown <= 0
+  const display = noTarget ? 0 : isMinTarget ? Math.max(0, shown) : Math.abs(shown)
+  const state = noTarget
+    ? (compact ? 'no target' : 'no target set')
+    : isMinTarget
+      ? (met ? 'goal met' : 'to go')
+      : (over ? 'over' : 'left')
+  const valueColor = noTarget ? 'var(--fg-quiet)' : over ? 'var(--bad)' : met ? 'var(--good)' : color
+  const fillColor = over ? 'var(--bad)' : met ? 'var(--good)' : color
+  // The staged-food segment turns rose when it tips a ceiling past its limit.
+  const pendingColor = !isMinTarget && logged + add > target ? 'var(--bad)' : color
 
   return (
-    <div className="glass-inset" style={{ padding: compact ? '11px 12px' : '10px 12px', textAlign: compact ? 'center' : 'left', ...style }}>
+    <div className="glass-inset" style={{ padding: compact ? '10px 11px' : '11px 12px', textAlign: 'left', display: 'grid', gap: compact ? 7 : 8, minWidth: 0, ...style }}>
       <div style={{ fontSize: compact ? 10 : 11.5, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {label}
       </div>
-      <div style={{ marginTop: compact ? 5 : 6, display: 'flex', alignItems: 'baseline', gap: compact ? 4 : 6, justifyContent: compact ? 'center' : 'flex-start' }}>
-        <span className="num" style={{ fontSize: compact ? 26 : 20, fontWeight: 500, lineHeight: 1, letterSpacing: '-0.02em', color: valueColor }}>
-          {noTarget ? '—' : (showProjected ? projected : remaining)}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0 }}>
+        <span className="num" style={{ fontSize: compact ? 23 : 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-0.02em', color: valueColor }}>
+          {noTarget ? '—' : display}
         </span>
-        {!noTarget && <span style={{ fontSize: compact ? 12 : 13, color: 'var(--fg-quiet)' }}>{unit}</span>}
+        {!noTarget && <span style={{ fontSize: compact ? 11 : 12, color: 'var(--fg-quiet)' }}>{unit}</span>}
+        <span style={{ marginLeft: 'auto', fontSize: compact ? 9.5 : 11, color: noTarget ? 'var(--fg-quiet)' : over ? 'var(--bad)' : met ? 'var(--good)' : 'var(--fg-quiet)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {state}
+        </span>
       </div>
-      <div style={{ marginTop: compact ? 4 : 2, fontSize: compact ? 10 : 11.5, color: over ? 'var(--bad)' : 'var(--fg-quiet)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {noTarget
-          ? compact ? 'no target' : 'no target set'
-          : showProjected
-            ? compact
-              ? <>curr: <span className="num">{remaining}</span></>
-              : <>current: <span className="num">{remaining}</span> {unit}</>
-            : 'remaining'}
-      </div>
+      {!noTarget && (
+        <div style={{ position: 'relative', height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${usedNow * 100}%`, background: fillColor, opacity: 0.5 }} />
+          {showProjected && pendingTo > pendingFrom && (
+            <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${pendingFrom * 100}%`, width: `${(pendingTo - pendingFrom) * 100}%`, background: pendingColor, opacity: 0.92 }} />
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -144,6 +172,7 @@ export function NutritionCalculatorCard({
   const [mealName, setMealName] = useState('')
   const [selectedSlot, setSelectedSlot] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(() => getCurrentSlot())
   const [successMessage, setSuccessMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
 
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -259,28 +288,21 @@ export function NutritionCalculatorCard({
 
   const calTarget  = adherence.calories.target ?? 0
   const calLogged  = adherence.calories.logged ?? 0
-  const calRemain  = round1(calTarget - calLogged)
-  const calProjected = round1(calRemain - addCalories)
+  const calProjected = round1(calTarget - calLogged - addCalories)
 
   const satTarget  = adherence.sat_fat_g.target ?? 0
   const satLogged  = adherence.sat_fat_g.logged ?? 0
-  const satRemain  = round1(satTarget - satLogged)
-  const satProjected = round1(satRemain - addSatFat)
+  const satProjected = round1(satTarget - satLogged - addSatFat)
 
   const solTarget  = adherence.soluble_fiber_g.target ?? 0
   const solLogged  = adherence.soluble_fiber_g.logged ?? 0
-  const solRemain  = round1(solTarget - solLogged)
-  const solProjected = round1(solRemain - addSolFiber)
 
   const sugarsTarget  = adherence.sugars_g?.target ?? 0
   const sugarsLogged  = adherence.sugars_g?.logged ?? 0
-  const sugarsRemain  = round1(sugarsTarget - sugarsLogged)
-  const sugarsProjected = round1(sugarsRemain - addSugars)
+  const sugarsProjected = round1(sugarsTarget - sugarsLogged - addSugars)
 
   const proteinTarget  = adherence.protein_g?.target ?? 0
   const proteinLogged  = adherence.protein_g?.logged ?? 0
-  const proteinRemain  = round1(proteinTarget - proteinLogged)
-  const proteinProjected = round1(proteinRemain - addProtein)
 
   const hasItemsOrFood = selectedFood !== null || mealItems.length > 0
   const showResults = !selectedFood && debouncedQuery.length >= 2
@@ -306,8 +328,11 @@ export function NutritionCalculatorCard({
     }
   }
 
-  const fitColor = fitSignal === 'fits' ? 'var(--aurora-mint)' : fitSignal === 'tight' ? 'var(--sun-400)' : 'var(--bad)'
-  const fitLabel = fitSignal === 'fits' ? '✓ Fits your budget' : fitSignal === 'tight' ? '⚠ Tight — close to limit' : '✗ Exceeds budget'
+  const fitColor = fitSignal === 'fits' ? 'var(--good)' : fitSignal === 'tight' ? 'var(--sun-400)' : 'var(--bad)'
+  const fitBg = fitSignal === 'fits' ? 'rgba(52,211,153,0.10)' : fitSignal === 'tight' ? 'rgba(251,191,36,0.10)' : 'rgba(251,113,133,0.10)'
+  const fitBorder = fitSignal === 'fits' ? 'rgba(52,211,153,0.28)' : fitSignal === 'tight' ? 'rgba(251,191,36,0.30)' : 'rgba(251,113,133,0.30)'
+  const fitLabel = fitSignal === 'fits' ? 'Fits your budget' : fitSignal === 'tight' ? 'Tight — close to your limit' : 'Exceeds your budget'
+  const FitIcon = fitSignal === 'fits' ? Check : fitSignal === 'tight' ? AlertTriangle : Ban
 
   const handleSelect = (food: FoodResult) => {
     setSelectedFood(food)
@@ -435,11 +460,13 @@ export function NutritionCalculatorCard({
       await queryClient.invalidateQueries({ queryKey: ['meals'] })
       setMealItems([])
       setMealName('')
+      setErrorMessage('')
       setSuccessMessage('Meal logged successfully')
       setTimeout(() => setSuccessMessage(''), 3000)
     },
     onError: (err: Error) => {
-      alert(err.message || 'Failed to log meal.')
+      setErrorMessage(err.message || 'Failed to log meal.')
+      setTimeout(() => setErrorMessage(''), 4000)
     },
   })
 
@@ -456,11 +483,13 @@ export function NutritionCalculatorCard({
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['favorites'] })
+      setErrorMessage('')
       setSuccessMessage('Saved to favorites')
       setTimeout(() => setSuccessMessage(''), 3000)
     },
     onError: (err: Error) => {
-      alert(err.message || 'Failed to save favorite.')
+      setErrorMessage(err.message || 'Failed to save favorite.')
+      setTimeout(() => setErrorMessage(''), 4000)
     },
   })
 
@@ -519,25 +548,29 @@ export function NutritionCalculatorCard({
       <div style={{ display: 'grid', gap: compact ? 8 : 10, marginBottom: 12 }}>
         {/* Primary row — calories + protein, mirroring the activity rings */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: compact ? 8 : 10 }}>
-          <BudgetStat
-            label="Calories"
-            remaining={calRemain}
-            projected={calProjected}
-            unit="kcal"
-            showProjected={hasItemsOrFood}
-            noTarget={calTarget === 0}
-            compact={compact}
-            color="var(--sky-400)"
-          />
-          <BudgetStat label="Protein"   remaining={proteinRemain} projected={proteinProjected} unit="g" showProjected={hasItemsOrFood} noTarget={proteinTarget === 0} compact={compact} color="var(--aurora-violet)" isMinTarget />
+          <BudgetStat label="Calories" unit="kcal" target={calTarget} logged={calLogged} add={addCalories} showProjected={hasItemsOrFood} compact={compact} color="var(--sky-400)" />
+          <BudgetStat label="Protein"  unit="g"    target={proteinTarget} logged={proteinLogged} add={addProtein} showProjected={hasItemsOrFood} compact={compact} color="var(--aurora-violet)" isMinTarget />
         </div>
         {/* Secondary row — sat fat, soluble fiber, sugar */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: compact ? 8 : 10 }}>
-          <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    showProjected={hasItemsOrFood} noTarget={satTarget === 0} compact={compact} color="var(--sun-400)" />
-          <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   showProjected={hasItemsOrFood} noTarget={solTarget === 0} compact={compact} color="var(--good)" isMinTarget />
-          <BudgetStat label="Sugar"     remaining={sugarsRemain} projected={sugarsProjected} unit="g" showProjected={hasItemsOrFood} noTarget={sugarsTarget === 0} compact={compact} color="var(--aurora-pink)" />
+          <BudgetStat label="Sat fat"   unit="g" target={satTarget} logged={satLogged} add={addSatFat} showProjected={hasItemsOrFood} compact={compact} color="var(--sun-400)" />
+          <BudgetStat label="Sol fiber" unit="g" target={solTarget} logged={solLogged} add={addSolFiber} showProjected={hasItemsOrFood} compact={compact} color="var(--good)" isMinTarget />
+          <BudgetStat label="Sugar"     unit="g" target={sugarsTarget} logged={sugarsLogged} add={addSugars} showProjected={hasItemsOrFood} compact={compact} color="var(--aurora-pink)" />
         </div>
       </div>
+
+      {/* Fit verdict — the decision the user opened the calculator to make */}
+      {fitSignal && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '9px 12px', borderRadius: 10, marginBottom: 12,
+          background: fitBg, border: `1px solid ${fitBorder}`, color: fitColor,
+          fontSize: 13, fontWeight: 500,
+        }}>
+          <FitIcon size={15} strokeWidth={2} style={{ flexShrink: 0 }} />
+          <span>{fitLabel}</span>
+        </div>
+      )}
 
       <div className="glass-inset" style={{ padding: compact ? 8 : 12, display: 'grid', gap: 10, minWidth: 0, width: '100%' }}>
         <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr auto', gap: compact ? 8 : 12, alignItems: 'start', minWidth: 0, width: '100%' }}>
@@ -553,8 +586,9 @@ export function NutritionCalculatorCard({
                     type="button"
                     onClick={() => setBudgetMode('search')}
                     title="Search foods"
+                    aria-label="Search foods"
                     style={{
-                      padding: compact ? '0 9px' : '0 11px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'all 150ms',
+                      padding: compact ? '0 11px' : '0 12px', minWidth: 38, borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'all 150ms',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: budgetMode === 'search' ? 'var(--glass-3)' : 'transparent',
                       color: budgetMode === 'search' ? 'var(--sky-300)' : 'var(--fg-quiet)',
@@ -566,8 +600,9 @@ export function NutritionCalculatorCard({
                     type="button"
                     onClick={() => setBudgetMode('favorite')}
                     title="Pick a favorite"
+                    aria-label="Pick a favorite"
                     style={{
-                      padding: compact ? '0 9px' : '0 11px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'all 150ms',
+                      padding: compact ? '0 11px' : '0 12px', minWidth: 38, borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'all 150ms',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: budgetMode === 'favorite' ? 'var(--glass-3)' : 'transparent',
                       color: budgetMode === 'favorite' ? 'var(--sun-300)' : 'var(--fg-quiet)',
@@ -597,7 +632,7 @@ export function NutritionCalculatorCard({
                       }}
                     />
                     {selectedFood && (
-                      <button type="button" onClick={handleClear} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', alignItems: 'center' }}>
+                      <button type="button" onClick={handleClear} aria-label="Clear selected food" style={{ background: 'none', border: 'none', padding: 4, margin: -4, cursor: 'pointer', color: 'var(--fg-quiet)', display: 'flex', alignItems: 'center' }}>
                         <X size={13} />
                       </button>
                     )}
@@ -868,12 +903,14 @@ export function NutritionCalculatorCard({
             <div style={{ display: 'flex', alignItems: 'stretch', gap: compact ? 6 : 8 }}>
               <input
                 type="number"
+                inputMode="decimal"
+                aria-label="Serving quantity"
                 min={0}
                 step="any"
                 value={servingQty}
                 onChange={(e) => { autoUnitRef.current = false; setServingQty(e.target.value) }}
                 style={{
-                  width: compact ? 68 : 80, textAlign: 'center', borderRadius: 10, padding: compact ? '8px 4px' : '10px 6px',
+                  width: compact ? 68 : 80, textAlign: 'center', borderRadius: 10, padding: compact ? '10px 4px' : '10px 6px',
                   border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
                   color: 'var(--fg-primary)', fontSize: 13, outline: 'none',
                   fontFamily: 'var(--font-mono)', fontWeight: 700,
@@ -882,6 +919,7 @@ export function NutritionCalculatorCard({
               <select
                 value={servingUnit}
                 onChange={(e) => changeUnit(e.target.value)}
+                aria-label="Serving unit"
                 style={{
                   borderRadius: 10, padding: compact ? '8px 6px' : '10px 8px', fontSize: 12, flex: '1 1 0px', minWidth: 0, width: '100%',
                   maxWidth: compact ? 'none' : 200,
@@ -979,6 +1017,25 @@ export function NutritionCalculatorCard({
           </div>
         )}
 
+        {/* Error message banner */}
+        {errorMessage && (
+          <div style={{
+            marginTop: 6,
+            padding: '8px 12px',
+            borderRadius: 8,
+            background: 'rgba(251,113,133,0.12)',
+            border: '1px solid rgba(251,113,133,0.3)',
+            color: 'var(--bad)',
+            fontSize: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}>
+            <AlertTriangle size={14} />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
         {/* Meal items list and actions */}
         {mealItems.length > 0 && (
           <div style={{ marginTop: 6, borderTop: '1px solid var(--glass-edge)', paddingTop: 12, display: 'grid', gap: 12, minWidth: 0, width: '100%' }}>
@@ -1014,6 +1071,8 @@ export function NutritionCalculatorCard({
                         <>
                           <input
                             type="number"
+                            inputMode="decimal"
+                            aria-label="Edit quantity in grams"
                             min={1}
                             value={editingItemGrams}
                             onChange={(e) => setEditingItemGrams(e.target.value)}
@@ -1044,7 +1103,7 @@ export function NutritionCalculatorCard({
                               background: 'none',
                               border: 'none',
                               cursor: 'pointer',
-                              padding: 2,
+                              padding: 5,
                               color: 'var(--good)',
                               display: 'flex',
                               alignItems: 'center',
@@ -1060,7 +1119,7 @@ export function NutritionCalculatorCard({
                               background: 'none',
                               border: 'none',
                               cursor: 'pointer',
-                              padding: 2,
+                              padding: 5,
                               color: 'var(--fg-quiet)',
                               display: 'flex',
                               alignItems: 'center',
@@ -1082,7 +1141,7 @@ export function NutritionCalculatorCard({
                               background: 'none',
                               border: 'none',
                               cursor: 'pointer',
-                              padding: 2,
+                              padding: 5,
                               color: 'var(--fg-quiet)',
                               display: 'flex',
                               alignItems: 'center',
@@ -1101,7 +1160,7 @@ export function NutritionCalculatorCard({
                               background: 'none',
                               border: 'none',
                               cursor: 'pointer',
-                              padding: 2,
+                              padding: 5,
                               color: 'var(--fg-quiet)',
                               display: 'flex',
                               alignItems: 'center',
@@ -1226,15 +1285,28 @@ export function NutritionCalculatorCard({
         {(hasItemsOrFood || !compact) && (
           <div style={{ marginTop: 12, borderTop: '1px solid var(--glass-edge)', paddingTop: 10 }}>
             {hasItemsOrFood ? (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                <div style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>
-                  Adds <span className="num">{addCalories}</span> kcal · <span className="num">{addSatFat}</span>g sat fat · <span className="num">{addSolFiber}</span>g soluble fiber · <span className="num">{addSugars}</span>g sugar · <span className="num">{addProtein}</span>g protein
-                </div>
-                {fitSignal && (
-                  <div style={{ fontSize: 12, fontWeight: 500, color: fitColor }}>
-                    {fitLabel}
-                  </div>
-                )}
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'var(--font-mono)', marginRight: 2 }}>
+                  Adds
+                </span>
+                {([
+                  [addCalories, 'kcal'],
+                  [addProtein, 'g protein'],
+                  [addSatFat, 'g sat fat'],
+                  [addSolFiber, 'g fiber'],
+                  [addSugars, 'g sugar'],
+                ] as const).map(([val, suffix]) => (
+                  <span
+                    key={suffix}
+                    style={{
+                      fontSize: 11, padding: '2px 8px', borderRadius: 6,
+                      background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+                      color: 'var(--fg-secondary)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <span className="num">{val}</span>{suffix}
+                  </span>
+                ))}
               </div>
             ) : (
               <div style={{ fontSize: 12, color: 'var(--fg-quiet)' }}>
