@@ -913,7 +913,13 @@ layer(base);
 /* ══════════════════════════════════════════════════════════════════════════
  * RING SVG
  * ══════════════════════════════════════════════════════════════════════════ */
-.ring-svg { transform: rotate(-90deg); }
+/* The -90deg start rotation is baked into the SVG geometry (transform attributes
+   on the ring circles / progress caps), NOT a CSS transform here. A CSS transform
+   on this <svg> promotes it to a compositing layer; Blink (Chrome PWA) then
+   rasterizes the children's filter:drop-shadow() glow into that layer's 8-bit
+   texture before rotating it, which bands the glow. WebKit doesn't, so iOS Safari
+   looked fine while the installed Chrome PWA artifacted. */
+.ring-svg { transform: none; }
 
 /* ══════════════════════════════════════════════════════════════════════════
  * FORM FIELDS
