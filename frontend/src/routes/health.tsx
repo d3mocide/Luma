@@ -5,7 +5,7 @@ import {
 } from 'recharts'
 import {
   Pill, Leaf, ShieldAlert, Plus, Trash2, Pencil, X, AlertTriangle, Info,
-  FlaskConical, Settings, TrendingDown, Dumbbell, CheckCircle2, Circle,
+  FlaskConical, Settings, TrendingDown, Dumbbell, CheckCircle2, Circle, ChevronDown,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { NavLink } from 'react-router-dom'
@@ -89,15 +89,23 @@ interface ProteinSimResult {
 // Supplement nutrient fields (subset meaningful for supplements)
 // ---------------------------------------------------------------------------
 
-const SUPPLEMENT_NUTRIENT_FIELDS: { key: string; label: string; unit: string }[] = [
+// Core macro-level fields shown by default. Sugar & sodium matter for gummy /
+// chewable supplements, so they live alongside the other macros here.
+const SUPPLEMENT_CORE_FIELDS: { key: string; label: string; unit: string }[] = [
   { key: 'calories',              label: 'Calories',         unit: 'kcal' },
   { key: 'protein_g',             label: 'Protein',          unit: 'g'    },
   { key: 'fat_g',                 label: 'Total Fat',        unit: 'g'    },
   { key: 'saturated_fat_g',       label: 'Saturated Fat',    unit: 'g'    },
   { key: 'polyunsaturated_fat_g', label: 'Poly Fat (Ω-3/6)', unit: 'g'    },
   { key: 'carbohydrates_g',       label: 'Carbohydrates',    unit: 'g'    },
+  { key: 'sugars_g',              label: 'Sugar',            unit: 'g'    },
   { key: 'fiber_g',               label: 'Fiber',            unit: 'g'    },
   { key: 'soluble_fiber_g',       label: 'Soluble Fiber',    unit: 'g'    },
+  { key: 'sodium_mg',             label: 'Sodium',           unit: 'mg'   },
+]
+
+// Vitamins & minerals — tucked behind a toggle to keep the panel calm.
+const SUPPLEMENT_MICRO_FIELDS: { key: string; label: string; unit: string }[] = [
   { key: 'vitamin_a_mcg',         label: 'Vitamin A',        unit: 'mcg'  },
   { key: 'vitamin_c_mg',          label: 'Vitamin C',        unit: 'mg'   },
   { key: 'vitamin_d_mcg',         label: 'Vitamin D',        unit: 'mcg'  },
@@ -111,6 +119,8 @@ const SUPPLEMENT_NUTRIENT_FIELDS: { key: string; label: string; unit: string }[]
   { key: 'zinc_mg',               label: 'Zinc',             unit: 'mg'   },
   { key: 'selenium_mcg',          label: 'Selenium',         unit: 'mcg'  },
 ]
+
+const SUPPLEMENT_NUTRIENT_FIELDS = [...SUPPLEMENT_CORE_FIELDS, ...SUPPLEMENT_MICRO_FIELDS]
 
 // ---------------------------------------------------------------------------
 // Common supplement presets
@@ -127,6 +137,7 @@ const SUPPLEMENT_PRESETS: { label: string; nutrients: Record<string, number> }[]
   { label: 'B12 1000 mcg', nutrients: { vitamin_b12_mcg: 1000 } },
   { label: 'Iron 18 mg', nutrients: { iron_mg: 18 } },
   { label: 'Calcium 500 mg', nutrients: { calcium_mg: 500, vitamin_d_mcg: 6.25 } },
+  { label: 'Multivitamin gummy (2)', nutrients: { calories: 15, carbohydrates_g: 4, sugars_g: 3, sodium_mg: 15, vitamin_c_mg: 30, vitamin_d_mcg: 10 } },
 ]
 
 // ---------------------------------------------------------------------------
@@ -282,6 +293,11 @@ function SupplementModal({
     is_active: initial?.is_active ?? true,
     nutrients: { ...(initial?.nutrients_per_dose ?? {}) } as Record<string, number>,
   })
+  // Reveal vitamins & minerals automatically when editing a supplement that
+  // already has any micronutrient values set.
+  const [showMicros, setShowMicros] = useState(() =>
+    SUPPLEMENT_MICRO_FIELDS.some((f) => (initial?.nutrients_per_dose?.[f.key] ?? 0) > 0)
+  )
 
   const set = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }))
   const setNutrient = (key: string, raw: string) => {
@@ -307,7 +323,7 @@ function SupplementModal({
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
       }}
     >
-      <div className="glass" style={{ maxWidth: 480, width: '100%', padding: 28, borderRadius: 20, maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+      <div className="glass supp-modal" onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
           <span style={{ fontSize: 16, fontWeight: 500, color: 'var(--fg-primary)' }}>
             {initial?.id ? 'Edit supplement' : 'Add supplement'}
@@ -342,8 +358,10 @@ function SupplementModal({
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <ModalField label="Name *" value={form.name} onChange={(v) => set('name', v)} placeholder="e.g. Fish Oil" />
-          <ModalField label="Dose" value={form.dose} onChange={(v) => set('dose', v)} placeholder="e.g. 1000 mg" />
-          <ModalField label="Frequency" value={form.frequency} onChange={(v) => set('frequency', v)} placeholder="e.g. daily with breakfast" />
+          <div className="supp-field-row">
+            <ModalField label="Dose" value={form.dose} onChange={(v) => set('dose', v)} placeholder="e.g. 1000 mg" />
+            <ModalField label="Frequency" value={form.frequency} onChange={(v) => set('frequency', v)} placeholder="e.g. daily with breakfast" />
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <input type="checkbox" id="supp-active" checked={form.is_active} onChange={(e) => set('is_active', e.target.checked)} style={{ cursor: 'pointer' }} />
             <label htmlFor="supp-active" style={{ fontSize: 13, color: 'var(--fg-secondary)', cursor: 'pointer' }}>Currently taking (active)</label>
@@ -352,12 +370,15 @@ function SupplementModal({
 
         <div style={{ height: 1, background: 'var(--glass-edge)', margin: '20px 0' }} />
 
-        <div className="eyebrow" style={{ marginBottom: 12, fontSize: 9 }}>Nutrients per dose</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px' }}>
-          {SUPPLEMENT_NUTRIENT_FIELDS.map(({ key, label, unit }) => (
-            <div key={key}>
+        <div className="eyebrow" style={{ marginBottom: 4, fontSize: 9 }}>Nutrients per dose</div>
+        <p style={{ margin: '0 0 12px', fontSize: 11, color: 'var(--fg-quiet)', lineHeight: 1.4 }}>
+          Leave fields at 0 to skip them.
+        </p>
+        <div className="supp-nutrient-grid">
+          {SUPPLEMENT_CORE_FIELDS.map(({ key, label, unit }) => (
+            <div key={key} className="supp-nutrient-cell">
               <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginBottom: 4 }}>{label}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                 <input
                   type="number"
                   min="0"
@@ -366,7 +387,7 @@ function SupplementModal({
                   onChange={(e) => setNutrient(key, e.target.value)}
                   placeholder="0"
                   style={{
-                    flex: 1, padding: '6px 8px', borderRadius: 8,
+                    flex: 1, width: '100%', padding: '6px 8px', borderRadius: 8,
                     background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
                     color: 'var(--fg-primary)', fontSize: 13, minWidth: 0,
                   }}
@@ -376,6 +397,48 @@ function SupplementModal({
             </div>
           ))}
         </div>
+
+        {/* Vitamins & minerals — collapsible to keep the panel calm */}
+        <button
+          type="button"
+          onClick={() => setShowMicros((v) => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, marginTop: 16,
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            color: 'var(--fg-secondary)', fontSize: 12, fontFamily: 'var(--font-sans)',
+          }}
+        >
+          <ChevronDown
+            size={14}
+            style={{ transform: showMicros ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }}
+          />
+          {showMicros ? 'Hide vitamins & minerals' : 'Add vitamins & minerals'}
+        </button>
+        {showMicros && (
+          <div className="supp-nutrient-grid" style={{ marginTop: 12 }}>
+            {SUPPLEMENT_MICRO_FIELDS.map(({ key, label, unit }) => (
+              <div key={key} className="supp-nutrient-cell">
+                <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginBottom: 4 }}>{label}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={form.nutrients[key] || ''}
+                    onChange={(e) => setNutrient(key, e.target.value)}
+                    placeholder="0"
+                    style={{
+                      flex: 1, width: '100%', padding: '6px 8px', borderRadius: 8,
+                      background: 'var(--glass-1)', border: '1px solid var(--glass-edge)',
+                      color: 'var(--fg-primary)', fontSize: 13, minWidth: 0,
+                    }}
+                  />
+                  <span style={{ fontSize: 11, color: 'var(--fg-quiet)', flexShrink: 0 }}>{unit}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           <button type="button" className="btn" style={{ flex: 1 }} onClick={onClose}>Cancel</button>

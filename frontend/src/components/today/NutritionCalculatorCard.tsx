@@ -78,17 +78,17 @@ function BudgetStat({
   const valueColor = noTarget ? 'var(--fg-quiet)' : over ? 'var(--bad)' : color
 
   return (
-    <div className="glass-inset" style={{ padding: compact ? '8px 6px' : '10px 12px', textAlign: compact ? 'center' : 'left', ...style }}>
-      <div style={{ fontSize: compact ? 9.5 : 11.5, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+    <div className="glass-inset" style={{ padding: compact ? '11px 12px' : '10px 12px', textAlign: compact ? 'center' : 'left', ...style }}>
+      <div style={{ fontSize: compact ? 10 : 11.5, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {label}
       </div>
-      <div style={{ marginTop: compact ? 3 : 6, display: 'flex', alignItems: 'baseline', gap: compact ? 3 : 6, justifyContent: compact ? 'center' : 'flex-start' }}>
-        <span className="num" style={{ fontSize: compact ? 16 : 20, color: valueColor }}>
+      <div style={{ marginTop: compact ? 5 : 6, display: 'flex', alignItems: 'baseline', gap: compact ? 4 : 6, justifyContent: compact ? 'center' : 'flex-start' }}>
+        <span className="num" style={{ fontSize: compact ? 26 : 20, fontWeight: 500, lineHeight: 1, letterSpacing: '-0.02em', color: valueColor }}>
           {noTarget ? '—' : (showProjected ? projected : remaining)}
         </span>
-        {!noTarget && <span style={{ fontSize: compact ? 10 : 13, color: 'var(--fg-quiet)' }}>{unit}</span>}
+        {!noTarget && <span style={{ fontSize: compact ? 12 : 13, color: 'var(--fg-quiet)' }}>{unit}</span>}
       </div>
-      <div style={{ marginTop: 2, fontSize: compact ? 9.5 : 11.5, color: over ? 'var(--bad)' : 'var(--fg-quiet)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div style={{ marginTop: compact ? 4 : 2, fontSize: compact ? 10 : 11.5, color: over ? 'var(--bad)' : 'var(--fg-quiet)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {noTarget
           ? compact ? 'no target' : 'no target set'
           : showProjected
@@ -518,8 +518,8 @@ export function NutritionCalculatorCard({
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: compact ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
-        gap: compact ? 6 : 10,
+        gridTemplateColumns: compact ? 'repeat(2, minmax(0, 1fr))' : 'repeat(5, 1fr)',
+        gap: compact ? 8 : 10,
         marginBottom: 12
       }}>
         <BudgetStat

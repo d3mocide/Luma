@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, ChevronDown, X } from 'lucide-react'
+import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, ChevronDown, X, Search } from 'lucide-react'
 import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { getCurrentSlot } from '../lib/format'
@@ -64,6 +64,7 @@ export default function FavoritesRoute() {
   const [favTags, setFavTags] = useState<string[]>([])
   const [newTagInput, setNewTagInput] = useState('')
   const [selectedTag, setSelectedTag] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [successModal, setSuccessModal] = useState<{ name: string; slot: string } | null>(null)
   const [expandedFavIds, setExpandedFavIds] = useState<Record<string, boolean>>({})
 
@@ -210,9 +211,13 @@ export default function FavoritesRoute() {
 
   const allTags = Array.from(new Set(favorites.flatMap((fav) => fav.tags ?? []))).sort()
 
+  const query = searchQuery.trim().toLowerCase()
   const filteredFavorites = favorites.filter((fav) => {
-    if (selectedTag === 'all') return true
-    return fav.tags?.includes(selectedTag) ?? false
+    const tagMatch = selectedTag === 'all' || (fav.tags?.includes(selectedTag) ?? false)
+    if (!tagMatch) return false
+    if (!query) return true
+    if (fav.name.toLowerCase().includes(query)) return true
+    return fav.items.some((item) => item.food_name.toLowerCase().includes(query))
   })
 
   const addItem = (item: DraftItem) => setItems((prev) => [...prev, item])
@@ -282,6 +287,54 @@ export default function FavoritesRoute() {
             </div>
           )}
 
+          {/* Search bar */}
+          {favorites.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 14px',
+                marginBottom: 20,
+                borderRadius: 12,
+                background: 'var(--glass-1)',
+                border: '1px solid var(--glass-edge)',
+              }}
+            >
+              <Search size={16} strokeWidth={1.75} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search favorites…"
+                aria-label="Search favorites"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  color: 'var(--fg-primary)',
+                  fontSize: 14,
+                  fontFamily: 'var(--font-sans)',
+                }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--fg-quiet)', padding: 0, display: 'flex', alignItems: 'center',
+                  }}
+                >
+                  <X size={15} strokeWidth={2} />
+                </button>
+              )}
+            </div>
+          )}
+
           {isLoading ? (
             <div style={{ padding: '48px 0', textAlign: 'center' }}>
               <div style={{
@@ -325,10 +378,12 @@ export default function FavoritesRoute() {
                 style={{ color: 'var(--fg-quiet)', margin: '0 auto 14px', display: 'block' }}
               />
               <p style={{ margin: 0, fontSize: 14, color: 'var(--fg-quiet)' }}>
-                No favorites found with tag "{selectedTag}"
+                {query
+                  ? `No favorites match "${searchQuery.trim()}"`
+                  : `No favorites found with tag "${selectedTag}"`}
               </p>
               <button
-                onClick={() => setSelectedTag('all')}
+                onClick={() => { setSelectedTag('all'); setSearchQuery('') }}
                 className="btn btn-ghost"
                 style={{ marginTop: 12, fontSize: 13, textDecoration: 'underline' }}
               >
