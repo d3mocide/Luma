@@ -20,10 +20,10 @@ async def get_today(
     db: DbDep,
     tz: str = Query(default=None, alias="tz"),
 ) -> dict[str, Any]:
-    try:
-        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
-    except Exception:
-        resolved_tz = ZoneInfo(settings.server_timezone)
+    # SERVER_TIMEZONE is the single source of truth for calendar-day boundaries
+    # (streaks, "today" totals). The client tz hint is intentionally ignored so
+    # the day never drifts with the device clock — see SERVER_TIMEZONE in .env.
+    resolved_tz = ZoneInfo(settings.server_timezone)
     today_dt = datetime.now(resolved_tz).date()
 
     # 1. Fetch user's goals
@@ -204,6 +204,37 @@ async def get_today(
     streak_start_utc = datetime.combine(
         today_dt - timedelta(days=365), time.min, tzinfo=resolved_tz
     ).astimezone(UTC)
+
+    # Credit supplements to the day they were actually logged, bucketed in the
+    # configured timezone — mirrors /today/streak-history. Adding today's
+    # supplements to every historical day (the old bug) flipped earlier days
+    # off-track, so the headline streak read 0 while the breakdown showed
+    # on-track days.
+    streak_supp_rows = await db.execute(
+        select(SupplementLog.ts, Supplement.nutrients_per_dose)
+        .join(Supplement, SupplementLog.supplement_id == Supplement.id)
+        .where(
+            Supplement.user_id == user.id,
+            Supplement.is_active.is_(True),
+            SupplementLog.ts >= streak_start_utc,
+            SupplementLog.ts < today_end,
+        )
+    )
+    streak_supp_by_day: dict[date, dict[str, float]] = {}
+    for log_ts, nutrients in streak_supp_rows:
+        day = log_ts.astimezone(resolved_tz).date()
+        bucket = streak_supp_by_day.setdefault(day, {"cal": 0.0, "sat": 0.0, "fib": 0.0, "sug": 0.0})
+        for key, val in (nutrients or {}).items():
+            v = float(val or 0.0)
+            if key == "calories":
+                bucket["cal"] += v
+            elif key == "saturated_fat_g":
+                bucket["sat"] += v
+            elif key == "soluble_fiber_g":
+                bucket["fib"] += v
+            elif key == "sugars_g":
+                bucket["sug"] += v
+
     streak_rows = await db.execute(
         text("""
             SELECT
@@ -223,14 +254,26 @@ async def get_today(
     )
     on_track_days: set[date] = set()
     for row in streak_rows:
+        supp = streak_supp_by_day.get(row.day, {"cal": 0.0, "sat": 0.0, "fib": 0.0, "sug": 0.0})
         totals = {
-            "cal": float(row.cal) + supplement_nutrients.get("calories", 0.0),
-            "sat": float(row.sat) + supplement_nutrients.get("saturated_fat_g", 0.0),
-            "fib": float(row.sol) + supplement_nutrients.get("soluble_fiber_g", 0.0),
-            "sug": float(row.sug) + supplement_nutrients.get("sugars_g", 0.0),
+            "cal": float(row.cal) + supp["cal"],
+            "sat": float(row.sat) + supp["sat"],
+            "fib": float(row.sol) + supp["fib"],
+            "sug": float(row.sug) + supp["sug"],
         }
         if score_day(totals, streak_targets)["on_track"]:
             on_track_days.add(row.day)
+
+    # Days where the user logged only supplements (no meals) still count toward
+    # the streak, consistent with the per-day breakdown.
+    for day, supp in streak_supp_by_day.items():
+        if day in on_track_days:
+            continue
+        if score_day(
+            {"cal": supp["cal"], "sat": supp["sat"], "fib": supp["fib"], "sug": supp["sug"]},
+            streak_targets,
+        )["on_track"]:
+            on_track_days.add(day)
 
     # Start from today; if today is not on-track yet (day still in progress) fall
     # back to yesterday so an unfinished day doesn't read as a broken streak.
@@ -299,10 +342,9 @@ async def get_streak_history(
     db: DbDep,
     tz: str = Query(default=None, alias="tz"),
 ) -> list[dict[str, Any]]:
-    try:
-        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
-    except Exception:
-        resolved_tz = ZoneInfo(settings.server_timezone)
+    # SERVER_TIMEZONE is authoritative; the client tz hint is ignored so the
+    # per-day breakdown lines up with the headline streak in /today.
+    resolved_tz = ZoneInfo(settings.server_timezone)
 
     today_dt = datetime.now(resolved_tz).date()
     start_dt = today_dt - timedelta(days=29)
