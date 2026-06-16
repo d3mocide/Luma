@@ -516,27 +516,27 @@ export function NutritionCalculatorCard({
         <div className="eyebrow">Budget check</div>
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: compact ? 'repeat(2, minmax(0, 1fr))' : 'repeat(5, 1fr)',
-        gap: compact ? 8 : 10,
-        marginBottom: 12
-      }}>
-        <BudgetStat
-          label="Calories"
-          remaining={calRemain}
-          projected={calProjected}
-          unit="kcal"
-          showProjected={hasItemsOrFood}
-          noTarget={calTarget === 0}
-          compact={compact}
-          style={compact ? { gridColumn: 'span 2' } : undefined}
-          color="var(--sky-400)"
-        />
-        <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    showProjected={hasItemsOrFood} noTarget={satTarget === 0} compact={compact} color="var(--sun-400)" />
-        <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   showProjected={hasItemsOrFood} noTarget={solTarget === 0} compact={compact} color="var(--good)" isMinTarget />
-        <BudgetStat label="Sugar"     remaining={sugarsRemain} projected={sugarsProjected} unit="g" showProjected={hasItemsOrFood} noTarget={sugarsTarget === 0} compact={compact} color="var(--aurora-pink)" />
-        <BudgetStat label="Protein"   remaining={proteinRemain} projected={proteinProjected} unit="g" showProjected={hasItemsOrFood} noTarget={proteinTarget === 0} compact={compact} color="var(--aurora-violet)" isMinTarget />
+      <div style={{ display: 'grid', gap: compact ? 8 : 10, marginBottom: 12 }}>
+        {/* Primary row — calories + protein, mirroring the activity rings */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: compact ? 8 : 10 }}>
+          <BudgetStat
+            label="Calories"
+            remaining={calRemain}
+            projected={calProjected}
+            unit="kcal"
+            showProjected={hasItemsOrFood}
+            noTarget={calTarget === 0}
+            compact={compact}
+            color="var(--sky-400)"
+          />
+          <BudgetStat label="Protein"   remaining={proteinRemain} projected={proteinProjected} unit="g" showProjected={hasItemsOrFood} noTarget={proteinTarget === 0} compact={compact} color="var(--aurora-violet)" isMinTarget />
+        </div>
+        {/* Secondary row — sat fat, soluble fiber, sugar */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: compact ? 8 : 10 }}>
+          <BudgetStat label="Sat fat"  remaining={satRemain} projected={satProjected} unit="g"    showProjected={hasItemsOrFood} noTarget={satTarget === 0} compact={compact} color="var(--sun-400)" />
+          <BudgetStat label="Sol fiber" remaining={solRemain} projected={solProjected} unit="g"   showProjected={hasItemsOrFood} noTarget={solTarget === 0} compact={compact} color="var(--good)" isMinTarget />
+          <BudgetStat label="Sugar"     remaining={sugarsRemain} projected={sugarsProjected} unit="g" showProjected={hasItemsOrFood} noTarget={sugarsTarget === 0} compact={compact} color="var(--aurora-pink)" />
+        </div>
       </div>
 
       <div className="glass-inset" style={{ padding: compact ? 8 : 12, display: 'grid', gap: 10, minWidth: 0, width: '100%' }}>
