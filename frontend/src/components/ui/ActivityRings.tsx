@@ -68,51 +68,6 @@ export default function ActivityRings({
             <stop offset="100%" stopColor={c.to} />
           </linearGradient>
         ))}
-        {/* Native SVG glow filters. We deliberately avoid CSS filter:drop-shadow()
-            here: Blink (Chrome PWA) rasterizes it in linearRGB and with a tight,
-            transform-clipped filter region, which produces colour banding and hard
-            rectangular edges around the glow — visible in standalone PWAs but not in
-            iOS Safari. A native <filter> with sRGB interpolation and an oversized
-            region renders identically across WebKit and Blink. */}
-        {colors.map((c, i) => (
-          <filter
-            key={`glow-${i}`}
-            id={`glow-${id}-${i}`}
-            x="-75%" y="-75%" width="250%" height="250%"
-            filterUnits="objectBoundingBox"
-            colorInterpolationFilters="sRGB"
-          >
-            <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="b1" />
-            <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="b2" />
-            <feMerge result="blurs">
-              <feMergeNode in="b2" />
-              <feMergeNode in="b1" />
-            </feMerge>
-            <feFlood floodColor={c.glow} result="tint" />
-            <feComposite in="tint" in2="blurs" operator="in" result="glow" />
-            <feMerge>
-              <feMergeNode in="glow" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        ))}
-        {colors.map((c, i) => (
-          <filter
-            key={`cap-${i}`}
-            id={`cap-glow-${id}-${i}`}
-            x="-150%" y="-150%" width="400%" height="400%"
-            filterUnits="objectBoundingBox"
-            colorInterpolationFilters="sRGB"
-          >
-            <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="b" />
-            <feFlood floodColor={c.glow} result="tint" />
-            <feComposite in="tint" in2="b" operator="in" result="glow" />
-            <feMerge>
-              <feMergeNode in="glow" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        ))}
       </defs>
       {values.map((v, i) => {
         const r = radii[i]
@@ -144,8 +99,8 @@ export default function ActivityRings({
               strokeLinecap="round"
               strokeDasharray={c}
               strokeDashoffset={fillOffset}
-              filter={`url(#glow-${id}-${i})`}
               style={{
+                filter: `drop-shadow(0 0 3px ${color.glow}) drop-shadow(0 0 7px ${color.glow})`,
                 transition: still ? undefined : `stroke-dashoffset ${RING_DURATION} ${RING_EASE} ${delay}s`,
               }}
             />
@@ -177,7 +132,7 @@ export default function ActivityRings({
                 <circle
                   cx={center + r} cy={center} r={capR}
                   fill={color.to}
-                  filter={`url(#cap-glow-${id}-${i})`}
+                  style={{ filter: `drop-shadow(0 0 5px ${color.glow})` }}
                 />
                 <circle cx={center + r} cy={center} r={capR * 0.42} fill="#fff" opacity={0.85} />
               </g>
