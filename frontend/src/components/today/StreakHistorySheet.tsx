@@ -25,6 +25,9 @@ interface StreakHistorySheetProps {
   onClose: () => void
   days: number
   adherence?: AdherenceToday | null
+  // Server's current date (YYYY-MM-DD, in SERVER_TIMEZONE) from /today, so the
+  // "Today" row lines up with the server clock rather than the device clock.
+  todayStr?: string
 }
 
 interface MacroCell {
@@ -61,15 +64,14 @@ function badgeTitle(label: string, cell: MacroCell, unit: string, digits: number
   return `${label}: ${fmt(cell.logged, digits)}${unit} / ${fmt(cell.target, digits)}${unit}`
 }
 
-export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakHistorySheetProps) {
+export function StreakHistorySheet({ isOpen, onClose, days, adherence, todayStr }: StreakHistorySheetProps) {
   const [visibleLimit, setVisibleLimit] = useState(10)
-  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-  // YYYY-MM-DD in local timezone for "isToday" comparison
-  const todayStr = new Date().toLocaleDateString('en-CA')
+  // Prefer the server's date; fall back to the device date only if it's missing.
+  const resolvedTodayStr = todayStr ?? new Date().toLocaleDateString('en-CA')
 
   const { data: historyData, isLoading } = useQuery<StreakHistoryDay[]>({
-    queryKey: ['streak-history', browserTz],
-    queryFn: () => api.get<StreakHistoryDay[]>(`/today/streak-history?tz=${encodeURIComponent(browserTz)}`),
+    queryKey: ['streak-history'],
+    queryFn: () => api.get<StreakHistoryDay[]>('/today/streak-history'),
     enabled: isOpen,
     staleTime: 5 * 60 * 1000,
   })
@@ -88,7 +90,7 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
   if (historyData) {
     const sorted = [...historyData].reverse() // API returns oldest→newest; we want newest first
     for (const apiDay of sorted) {
-      const isToday = apiDay.date === todayStr
+      const isToday = apiDay.date === resolvedTodayStr
       // Use noon local time to avoid DST-boundary display issues
       const d = new Date(`${apiDay.date}T12:00:00`)
 

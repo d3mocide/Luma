@@ -90,7 +90,7 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
                    COUNT(*) AS day_count
             FROM (
                 SELECT metric,
-                       date_trunc('day', ts AT TIME ZONE 'UTC') AS day,
+                       date_trunc('day', ts AT TIME ZONE :tz) AS day,
                        SUM(value) AS daily_total
                 FROM biometrics
                 WHERE user_id = :uid
@@ -100,7 +100,7 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
             ) s
             GROUP BY metric
         """),
-        {"uid": str(user.id), "start": start_ts, "end": end_ts},
+        {"uid": str(user.id), "tz": settings.server_timezone, "start": start_ts, "end": end_ts},
     )
     energy_avgs: dict[str, float] = {}
     energy_days: dict[str, int] = {}
@@ -110,12 +110,12 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
 
     data_days_result = await db.execute(
         text("""
-            SELECT COUNT(DISTINCT date_trunc('day', ts AT TIME ZONE 'UTC'))
+            SELECT COUNT(DISTINCT date_trunc('day', ts AT TIME ZONE :tz))
             FROM biometrics
             WHERE user_id = :uid AND metric = 'bmr_kcal'
               AND ts >= :start AND ts < :end
         """),
-        {"uid": str(user.id), "start": start_ts, "end": end_ts},
+        {"uid": str(user.id), "tz": settings.server_timezone, "start": start_ts, "end": end_ts},
     )
     data_days = int(data_days_result.scalar() or 0)
 

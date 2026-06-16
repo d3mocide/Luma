@@ -186,10 +186,9 @@ async def list_medications(
     db: DbDep,
     tz: str = Query(default=None, alias="tz"),
 ) -> list[dict[str, Any]]:
-    try:
-        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
-    except Exception:
-        resolved_tz = ZoneInfo(settings.server_timezone)
+    # SERVER_TIMEZONE is authoritative; the client tz hint is ignored so "taken
+    # today" rolls over on the server clock, not the device clock.
+    resolved_tz = ZoneInfo(settings.server_timezone)
 
     today_dt = datetime.now(resolved_tz).date()
     today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
@@ -286,10 +285,9 @@ async def list_supplements(
     db: DbDep,
     tz: str = Query(default=None, alias="tz"),
 ) -> list[dict[str, Any]]:
-    try:
-        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
-    except Exception:
-        resolved_tz = ZoneInfo(settings.server_timezone)
+    # SERVER_TIMEZONE is authoritative; the client tz hint is ignored so "taken
+    # today" rolls over on the server clock, not the device clock.
+    resolved_tz = ZoneInfo(settings.server_timezone)
 
     today_dt = datetime.now(resolved_tz).date()
     today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
@@ -384,10 +382,9 @@ async def get_interactions(
     db: DbDep,
     tz: str = Query(default=None, alias="tz"),
 ) -> dict[str, Any]:
-    try:
-        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
-    except Exception:
-        resolved_tz = ZoneInfo(settings.server_timezone)
+    # SERVER_TIMEZONE is authoritative; the client tz hint is ignored so "taken
+    # today" rolls over on the server clock, not the device clock.
+    resolved_tz = ZoneInfo(settings.server_timezone)
 
     today_dt = datetime.now(resolved_tz).date()
     today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
@@ -626,10 +623,9 @@ async def log_medication_taken(
     if not med:
         raise HTTPException(status_code=404, detail="Medication not found")
 
-    try:
-        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
-    except Exception:
-        resolved_tz = ZoneInfo(settings.server_timezone)
+    # SERVER_TIMEZONE is authoritative; the client tz hint is ignored so "taken
+    # today" rolls over on the server clock, not the device clock.
+    resolved_tz = ZoneInfo(settings.server_timezone)
 
     today_dt = datetime.now(resolved_tz).date()
     today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
@@ -665,10 +661,9 @@ async def unlog_medication_taken(
     tz: str = Query(default=None, alias="tz"),
 ) -> None:
     med_uuid = uuid.UUID(med_id)
-    try:
-        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
-    except Exception:
-        resolved_tz = ZoneInfo(settings.server_timezone)
+    # SERVER_TIMEZONE is authoritative; the client tz hint is ignored so "taken
+    # today" rolls over on the server clock, not the device clock.
+    resolved_tz = ZoneInfo(settings.server_timezone)
 
     today_dt = datetime.now(resolved_tz).date()
     today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
@@ -707,10 +702,9 @@ async def log_supplement_taken(
     if not supp:
         raise HTTPException(status_code=404, detail="Supplement not found")
 
-    try:
-        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
-    except Exception:
-        resolved_tz = ZoneInfo(settings.server_timezone)
+    # SERVER_TIMEZONE is authoritative; the client tz hint is ignored so "taken
+    # today" rolls over on the server clock, not the device clock.
+    resolved_tz = ZoneInfo(settings.server_timezone)
 
     today_dt = datetime.now(resolved_tz).date()
     today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
@@ -746,10 +740,9 @@ async def unlog_supplement_taken(
     tz: str = Query(default=None, alias="tz"),
 ) -> None:
     supp_uuid = uuid.UUID(supp_id)
-    try:
-        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
-    except Exception:
-        resolved_tz = ZoneInfo(settings.server_timezone)
+    # SERVER_TIMEZONE is authoritative; the client tz hint is ignored so "taken
+    # today" rolls over on the server clock, not the device clock.
+    resolved_tz = ZoneInfo(settings.server_timezone)
 
     today_dt = datetime.now(resolved_tz).date()
     today_start = datetime.combine(today_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
