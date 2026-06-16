@@ -27,7 +27,7 @@ async def get_today(
     today_dt = datetime.now(resolved_tz).date()
 
     # 1. Fetch user's goals
-    from luma.db.models import Goal, MealEvent, MealPlan, MealPlanSlot, Supplement
+    from luma.db.models import Goal, MealEvent, MealPlan, MealPlanSlot, Supplement, SupplementLog
     stmt_goal = select(Goal).where(Goal.user_id == user.id)
     res_goal = await db.execute(stmt_goal)
     goal = res_goal.scalar_one_or_none()
@@ -69,9 +69,19 @@ async def get_today(
         logged_sugar += float(nutr.get("sugars_g") or 0.0)
         logged_protein += float(nutr.get("protein_g") or 0.0)
 
-    # Add active supplement nutrient contributions to daily totals
+    # Add supplement nutrient contributions to daily totals — only for active
+    # supplements the user actually logged as taken today. Without this gate,
+    # supplements would inflate totals every day regardless of intake.
     supp_rows = await db.execute(
-        select(Supplement).where(Supplement.user_id == user.id, Supplement.is_active.is_(True))
+        select(Supplement)
+        .join(SupplementLog, SupplementLog.supplement_id == Supplement.id)
+        .where(
+            Supplement.user_id == user.id,
+            Supplement.is_active.is_(True),
+            SupplementLog.ts >= today_start,
+            SupplementLog.ts < today_end,
+        )
+        .distinct()
     )
     active_supps = supp_rows.scalars().all()
     supplement_nutrients: dict[str, float] = {}
@@ -297,7 +307,7 @@ async def get_streak_history(
     today_dt = datetime.now(resolved_tz).date()
     start_dt = today_dt - timedelta(days=29)
 
-    from luma.db.models import Goal, Supplement
+    from luma.db.models import Goal, Supplement, SupplementLog
 
     res_goal = await db.execute(select(Goal).where(Goal.user_id == user.id))
     goal = res_goal.scalar_one_or_none()
@@ -307,26 +317,36 @@ async def get_streak_history(
     target_sol = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else None
     target_sug = float(goal.daily_sugar_g_max) if goal and goal.daily_sugar_g_max else None
 
-    # Active supplement contributions added to every day's total (mirrors /today logic)
-    supp_rows = await db.execute(
-        select(Supplement).where(Supplement.user_id == user.id, Supplement.is_active.is_(True))
-    )
-    supp_cal = supp_sat = supp_sol = supp_sug = 0.0
-    for s in supp_rows.scalars().all():
-        for key, val in (s.nutrients_per_dose or {}).items():
-            v = float(val or 0.0)
-            if key == "calories":
-                supp_cal += v
-            elif key == "saturated_fat_g":
-                supp_sat += v
-            elif key == "soluble_fiber_g":
-                supp_sol += v
-            elif key == "sugars_g":
-                supp_sug += v
-
     start_utc = datetime.combine(start_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
     end_utc   = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
     tz_key = resolved_tz.key if hasattr(resolved_tz, "key") else settings.server_timezone
+
+    # Supplement contributions are credited only to the days the user actually
+    # logged taking them — not blanket-applied to every day in the window.
+    supp_log_rows = await db.execute(
+        select(SupplementLog.ts, Supplement.nutrients_per_dose)
+        .join(Supplement, SupplementLog.supplement_id == Supplement.id)
+        .where(
+            Supplement.user_id == user.id,
+            Supplement.is_active.is_(True),
+            SupplementLog.ts >= start_utc,
+            SupplementLog.ts < end_utc,
+        )
+    )
+    supp_by_day: dict[date, dict[str, float]] = {}
+    for log_ts, nutrients in supp_log_rows:
+        day = log_ts.astimezone(resolved_tz).date()
+        bucket = supp_by_day.setdefault(day, {"cal": 0.0, "sat": 0.0, "sol": 0.0, "sug": 0.0})
+        for key, val in (nutrients or {}).items():
+            v = float(val or 0.0)
+            if key == "calories":
+                bucket["cal"] += v
+            elif key == "saturated_fat_g":
+                bucket["sat"] += v
+            elif key == "soluble_fiber_g":
+                bucket["sol"] += v
+            elif key == "sugars_g":
+                bucket["sug"] += v
 
     meal_rows = await db.execute(
         text("""
@@ -348,12 +368,23 @@ async def get_streak_history(
 
     daily_map: dict = {}
     for row in meal_rows:
+        supp = supp_by_day.get(row.day, {"cal": 0.0, "sat": 0.0, "sol": 0.0, "sug": 0.0})
         daily_map[row.day] = {
-            "cal": float(row.cal) + supp_cal,
-            "sat": float(row.sat) + supp_sat,
-            "sol": float(row.sol) + supp_sol,
-            "sug": float(row.sug) + supp_sug,
+            "cal": float(row.cal) + supp["cal"],
+            "sat": float(row.sat) + supp["sat"],
+            "sol": float(row.sol) + supp["sol"],
+            "sug": float(row.sug) + supp["sug"],
         }
+
+    # Days where the user logged only supplements (no meals) still count.
+    for day, supp in supp_by_day.items():
+        if day not in daily_map:
+            daily_map[day] = {
+                "cal": supp["cal"],
+                "sat": supp["sat"],
+                "sol": supp["sol"],
+                "sug": supp["sug"],
+            }
 
     hist_targets: dict[str, float | None] = {
         "cal": target_cal, "sat": target_sat, "fib": target_sol, "sug": target_sug,
