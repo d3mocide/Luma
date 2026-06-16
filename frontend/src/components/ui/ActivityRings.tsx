@@ -90,9 +90,12 @@ export default function ActivityRings({
               cx={center} cy={center} r={r}
               fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={thickness}
             />
-            {/* Fill */}
+            {/* Fill — rotate(-90) baked in here (not via a CSS transform on the
+                <svg>) so the arc starts at 12 o'clock without promoting a
+                compositing layer that would band the drop-shadow glow in Blink. */}
             <circle
               cx={center} cy={center} r={r}
+              transform={`rotate(-90 ${center} ${center})`}
               fill="none"
               stroke={`url(#ring-${id}-${i})`}
               strokeWidth={thickness}
@@ -108,6 +111,7 @@ export default function ActivityRings({
             {overage > 0 && (
               <circle
                 cx={center} cy={center} r={r}
+                transform={`rotate(-90 ${center} ${center})`}
                 fill="none"
                 stroke={overageColor}
                 strokeWidth={thickness}
@@ -125,7 +129,10 @@ export default function ActivityRings({
                 style={{
                   transformBox: 'view-box',
                   transformOrigin: `${center}px ${center}px`,
-                  transform: `rotate(${capAngle}deg)`,
+                  // -90 folds in the start-at-top offset the <svg> CSS rotate used
+                  // to provide; the cap sits at 3 o'clock in geometry, so capAngle 0
+                  // lands it at 12 o'clock.
+                  transform: `rotate(${capAngle - 90}deg)`,
                   transition: still ? undefined : `transform ${RING_DURATION} ${RING_EASE} ${delay}s`,
                 }}
               >
