@@ -52,7 +52,7 @@ function BlankDayCard({
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {(['breakfast', 'lunch', 'snack', 'dinner'] as const).map((slotType) => {
+        {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((slotType) => {
           const meta = SLOT_META[slotType]
           return (
             <button
