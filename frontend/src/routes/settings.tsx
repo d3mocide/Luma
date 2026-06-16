@@ -383,21 +383,10 @@ function DataSourcesTab({ user, isOperator }: { user: User | undefined; isOperat
         <MetricVisibilityCard />
       </div>
 
-      {/* Right: diagnostic tools (operator only) */}
+      {/* Right: data coverage (all users) + payload analyzer (operator only) */}
       <div className="settings-stack settings-secondary">
-        {isOperator ? (
-          <>
-            <HaeDiagnosticCard />
-            <HaeAnalyzeCard />
-          </>
-        ) : (
-          <div className="glass settings-card" style={{ padding: 24 }}>
-            <div className="eyebrow" style={{ marginBottom: 8 }}>Diagnostics</div>
-            <p style={{ color: 'var(--fg-quiet)', fontSize: 14, margin: 0 }}>
-              Operator role required to view data coverage and the payload analyzer.
-            </p>
-          </div>
-        )}
+        <HaeDiagnosticCard />
+        {isOperator && <HaeAnalyzeCard />}
       </div>
     </div>
   )

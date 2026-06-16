@@ -443,7 +443,7 @@ async def put_ai_pricing_overrides(
 
 @router.get("/settings/hae-metrics")
 async def get_hae_metrics(user: CurrentUser) -> dict[str, Any]:
-    return await hae_metrics_tracker.snapshot()
+    return await hae_metrics_tracker.snapshot(user_id=user.id)
 
 
 @router.get("/settings/llm-metrics")

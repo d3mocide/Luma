@@ -77,10 +77,10 @@ async def ingest_hae_authenticated(
     try:
         rows_inserted = await normalize_hae_payload(payload, db, user.id, data_source=user.data_source)
     except Exception as exc:
-        await hae_metrics_tracker.record_ingest(rows_inserted=0, error=str(exc))
+        await hae_metrics_tracker.record_ingest(user_id=user.id, rows_inserted=0, error=str(exc))
         raise
 
-    await hae_metrics_tracker.record_ingest(rows_inserted=rows_inserted)
+    await hae_metrics_tracker.record_ingest(user_id=user.id, rows_inserted=rows_inserted)
     return {"status": "ok", "rows_inserted": rows_inserted}
 
 
@@ -118,10 +118,10 @@ async def ingest_health_connect(
     try:
         rows_inserted = await normalize_health_connect_payload(payload, db, user.id, data_source=user.data_source)
     except Exception as exc:
-        await hae_metrics_tracker.record_ingest(rows_inserted=0, error=str(exc))
+        await hae_metrics_tracker.record_ingest(user_id=user.id, rows_inserted=0, error=str(exc))
         raise
 
-    await hae_metrics_tracker.record_ingest(rows_inserted=rows_inserted)
+    await hae_metrics_tracker.record_ingest(user_id=user.id, rows_inserted=rows_inserted)
     return {"status": "ok", "rows_inserted": rows_inserted}
 
 
@@ -154,8 +154,8 @@ async def ingest_hae(
     try:
         rows_inserted = await normalize_hae_payload(payload, db, user.id, data_source=user.data_source)
     except Exception as exc:
-        await hae_metrics_tracker.record_ingest(rows_inserted=0, error=str(exc))
+        await hae_metrics_tracker.record_ingest(user_id=user.id, rows_inserted=0, error=str(exc))
         raise
 
-    await hae_metrics_tracker.record_ingest(rows_inserted=rows_inserted)
+    await hae_metrics_tracker.record_ingest(user_id=user.id, rows_inserted=rows_inserted)
     return {"status": "ok", "rows_inserted": rows_inserted}
