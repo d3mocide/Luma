@@ -457,7 +457,7 @@ async def ldl_simulate(body: LdlSimulateIn, user: CurrentUser, db: DbDep) -> dic
         total_cal = sum(float((e.nutrition or {}).get("calories") or 0.0) for e in recent_events)
         total_sat = sum(float((e.nutrition or {}).get("saturated_fat_g") or 0.0) for e in recent_events)
         total_fiber = sum(float((e.nutrition or {}).get("soluble_fiber_g") or 0.0) for e in recent_events)
-        days = max(1, len({e.ts.date() for e in recent_events}))
+        days = max(1, len({e.ts.astimezone(ZoneInfo(settings.server_timezone)).date() for e in recent_events}))
         avg_cal = total_cal / days
         avg_sat_g = total_sat / days
         avg_fiber_g = total_fiber / days
@@ -578,7 +578,7 @@ async def protein_simulate(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     avg_protein_g: float | None = None
     if recent_events:
         total_protein = sum(float((e.nutrition or {}).get("protein_g") or 0.0) for e in recent_events)
-        days = max(1, len({e.ts.date() for e in recent_events}))
+        days = max(1, len({e.ts.astimezone(ZoneInfo(settings.server_timezone)).date() for e in recent_events}))
         avg_protein_g = round(total_protein / days, 1)
 
     g_per_kg: float | None = None

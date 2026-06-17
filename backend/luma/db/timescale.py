@@ -39,33 +39,3 @@ def create_hypertables() -> None:
             if_not_exists => TRUE
         )
     """)
-
-
-def create_continuous_aggregates() -> None:
-    op.execute("""
-        CREATE MATERIALIZED VIEW IF NOT EXISTS biometrics_daily
-        WITH (timescaledb.continuous) AS
-        SELECT
-            user_id,
-            metric,
-            time_bucket('1 day', ts) AS day,
-            avg(value)        AS avg_value,
-            min(value)        AS min_value,
-            max(value)        AS max_value,
-            sum(value)        AS sum_value,
-            last(value, ts)   AS last_value,
-            count(*)          AS sample_count
-        FROM biometrics
-        GROUP BY user_id, metric, day
-        WITH NO DATA
-    """)
-
-    op.execute("""
-        SELECT add_continuous_aggregate_policy(
-            'biometrics_daily',
-            start_offset      => INTERVAL '14 days',
-            end_offset        => INTERVAL '1 hour',
-            schedule_interval => INTERVAL '1 hour',
-            if_not_exists     => TRUE
-        )
-    """)
