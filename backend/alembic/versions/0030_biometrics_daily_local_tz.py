@@ -12,10 +12,14 @@ right-most ("today") point on each chart actually represented a UTC day that
 straddled the user's yesterday/today boundary.
 
 This recreates the aggregate with the timezone-aware ``time_bucket`` overload
-so each bucket aligns to local midnight in ``SERVER_TIMEZONE``. The timezone
-is read from config at migration time and embedded as a literal because a
-continuous aggregate definition cannot reference runtime parameters; if
-``SERVER_TIMEZONE`` ever changes, a follow-up migration must recreate the view.
+so each bucket aligns to local midnight in ``SERVER_TIMEZONE``. The timezone is
+read from the ``SERVER_TIMEZONE`` env var (the same value pydantic config reads)
+rather than importing ``luma.config``, because Alembic imports every migration
+to build its revision map and instantiating ``Settings()`` would require app
+secrets (e.g. ``jwt_secret``) that aren't present in the migrations CI job. A
+continuous aggregate definition can't reference runtime parameters, so the zone
+is embedded as a literal; if ``SERVER_TIMEZONE`` ever changes, a follow-up
+migration must recreate the view.
 
 A continuous aggregate's columns/definition can't be altered in place, so the
 view is dropped and recreated, then fully refreshed so no materialized history
@@ -25,16 +29,24 @@ Revision ID: 0030
 Revises: e1855610d4e4
 Create Date: 2026-06-17
 """
+import os
 from collections.abc import Sequence
+from zoneinfo import ZoneInfo
 
 from alembic import op
-
-from luma.config import settings
 
 revision: str = "0030"
 down_revision: str | None = "e1855610d4e4"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+
+def _server_timezone() -> str:
+    # Mirror config.py's default; validate so a typo fails the migration loudly
+    # rather than producing a silently broken aggregate.
+    tz = os.environ.get("SERVER_TIMEZONE", "UTC")
+    ZoneInfo(tz)
+    return tz
 
 
 def _view_sql(bucket: str) -> str:
@@ -80,9 +92,7 @@ def _recreate(view_sql: str) -> None:
 
 
 def upgrade() -> None:
-    # settings.server_timezone is validated as a real IANA zone in config.py,
-    # so it is safe to embed as a SQL literal here.
-    tz = settings.server_timezone.replace("'", "''")
+    tz = _server_timezone().replace("'", "''")
     _recreate(_view_sql(f"time_bucket('1 day', ts, '{tz}')"))
 
 
