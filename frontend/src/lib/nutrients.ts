@@ -7,7 +7,7 @@ export const NUTRIENT_KEYS = [
   // Core macros
   'calories', 'protein_g', 'fat_g', 'saturated_fat_g', 'monounsaturated_fat_g',
   'polyunsaturated_fat_g', 'trans_fat_g', 'cholesterol_mg', 'carbohydrates_g',
-  'sugars_g', 'fiber_g', 'soluble_fiber_g', 'sodium_mg', 'potassium_mg',
+  'sugars_g', 'added_sugars_g', 'fiber_g', 'soluble_fiber_g', 'sodium_mg', 'potassium_mg',
   // Minerals
   'calcium_mg', 'iron_mg', 'magnesium_mg', 'phosphorus_mg', 'zinc_mg', 'selenium_mcg',
   // Vitamins

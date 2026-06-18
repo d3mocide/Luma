@@ -59,6 +59,10 @@ async def lookup_barcode(barcode: str) -> dict[str, Any] | None:
                 "saturated_fat_g":       float(nutr.get("saturated-fat_100g") or 0.0),
                 "carbohydrates_g":       float(nutr.get("carbohydrates_100g") or 0.0),
                 "sugars_g":              float(nutr.get("sugars_100g") or 0.0),
+                # OFF covers branded/packaged products, so a missing added-sugars
+                # value means "unknown" (not zero) — keep it None rather than
+                # coercing, unlike USDA whole foods where absent legitimately = 0.
+                "added_sugars_g":        _off_val(nutr, "added-sugars_100g"),
                 "fiber_g":               float(nutr.get("fiber_100g") or 0.0),
                 "sodium_mg":             sodium_mg,
                 "potassium_mg":          potassium_mg,

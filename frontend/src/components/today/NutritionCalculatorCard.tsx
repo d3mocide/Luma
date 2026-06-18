@@ -271,13 +271,13 @@ export function NutritionCalculatorCard({
   const currentCalories  = selectedFood ? round1((n.calories         ?? 0) * factor) : 0
   const currentSatFat    = selectedFood ? round1((n.saturated_fat_g   ?? 0) * factor) : 0
   const currentSolFiber  = selectedFood ? round1((n.soluble_fiber_g   ?? 0) * factor) : 0
-  const currentSugars    = selectedFood ? round1((n.sugars_g          ?? 0) * factor) : 0
+  const currentSugars    = selectedFood ? round1((n.added_sugars_g     ?? 0) * factor) : 0
   const currentProtein   = selectedFood ? round1((n.protein_g         ?? 0) * factor) : 0
 
   const mealCalories = mealItems.reduce((sum, item) => sum + (item.nutrition.calories ?? 0), 0)
   const mealSatFat = mealItems.reduce((sum, item) => sum + (item.nutrition.saturated_fat_g ?? 0), 0)
   const mealSolFiber = mealItems.reduce((sum, item) => sum + (item.nutrition.soluble_fiber_g ?? 0), 0)
-  const mealSugars = mealItems.reduce((sum, item) => sum + (item.nutrition.sugars_g ?? 0), 0)
+  const mealSugars = mealItems.reduce((sum, item) => sum + (item.nutrition.added_sugars_g ?? 0), 0)
   const mealProtein = mealItems.reduce((sum, item) => sum + (item.nutrition.protein_g ?? 0), 0)
 
   const addCalories = round1(mealCalories + currentCalories)
@@ -297,8 +297,8 @@ export function NutritionCalculatorCard({
   const solTarget  = adherence.soluble_fiber_g.target ?? 0
   const solLogged  = adherence.soluble_fiber_g.logged ?? 0
 
-  const sugarsTarget  = adherence.sugars_g?.target ?? 0
-  const sugarsLogged  = adherence.sugars_g?.logged ?? 0
+  const sugarsTarget  = adherence.added_sugars_g?.target ?? 0
+  const sugarsLogged  = adherence.added_sugars_g?.logged ?? 0
   const sugarsProjected = round1(sugarsTarget - sugarsLogged - addSugars)
 
   const proteinTarget  = adherence.protein_g?.target ?? 0
@@ -551,11 +551,11 @@ export function NutritionCalculatorCard({
           <BudgetStat label="Calories" unit="kcal" target={calTarget} logged={calLogged} add={addCalories} showProjected={hasItemsOrFood} compact={compact} color="var(--sky-400)" />
           <BudgetStat label="Protein"  unit="g"    target={proteinTarget} logged={proteinLogged} add={addProtein} showProjected={hasItemsOrFood} compact={compact} color="var(--aurora-violet)" isMinTarget />
         </div>
-        {/* Secondary row — sat fat, soluble fiber, sugar */}
+        {/* Secondary row — sat fat, soluble fiber, added sugar */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: compact ? 8 : 10 }}>
           <BudgetStat label="Sat fat"   unit="g" target={satTarget} logged={satLogged} add={addSatFat} showProjected={hasItemsOrFood} compact={compact} color="var(--sun-400)" />
           <BudgetStat label="Sol fiber" unit="g" target={solTarget} logged={solLogged} add={addSolFiber} showProjected={hasItemsOrFood} compact={compact} color="var(--good)" isMinTarget />
-          <BudgetStat label="Sugar"     unit="g" target={sugarsTarget} logged={sugarsLogged} add={addSugars} showProjected={hasItemsOrFood} compact={compact} color="var(--aurora-pink)" />
+          <BudgetStat label="Added sugar" unit="g" target={sugarsTarget} logged={sugarsLogged} add={addSugars} showProjected={hasItemsOrFood} compact={compact} color="var(--aurora-pink)" />
         </div>
       </div>
 
@@ -1294,7 +1294,7 @@ export function NutritionCalculatorCard({
                   [addProtein, 'g protein'],
                   [addSatFat, 'g sat fat'],
                   [addSolFiber, 'g fiber'],
-                  [addSugars, 'g sugar'],
+                  [addSugars, 'g added sugar'],
                 ] as const).map(([val, suffix]) => (
                   <span
                     key={suffix}

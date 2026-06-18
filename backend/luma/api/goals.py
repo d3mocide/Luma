@@ -219,7 +219,7 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
     else:
         protein_g = round(current_weight_kg * 0.8)
 
-    # Sugar limit: AHA <=36g for men, <=25g for women. Stricter <5% of energy under active LDL target.
+    # Added-sugar limit: AHA <=36g for men, <=25g for women. Stricter <5% of energy under active LDL target.
     sugar_base = 36.0 if sex == "male" else 25.0
     sugar_max = round((cal_target * 0.05 / 4) * 2) / 2 if target_ldl else sugar_base
     sugar_max = min(sugar_base, sugar_max)
@@ -268,7 +268,7 @@ async def recommend_goals(user: CurrentUser, db: DbDep) -> dict[str, Any]:
 
         rec_str = (
             f"{int(cal_target)} kcal/day, {sat_fat_max}g sat fat max, "
-            f"{sol_fiber}g soluble fiber, {sugar_max}g sugar limit"
+            f"{sol_fiber}g soluble fiber, {sugar_max}g added-sugar limit"
             + (f", {protein_g}g protein floor" if protein_g else "")
         )
 

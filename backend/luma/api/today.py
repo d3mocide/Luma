@@ -66,7 +66,9 @@ async def get_today(
         logged_cal += float(nutr.get("calories") or 0.0)
         logged_sat += float(nutr.get("saturated_fat_g") or 0.0)
         logged_sol += float(nutr.get("soluble_fiber_g") or 0.0)
-        logged_sugar += float(nutr.get("sugars_g") or 0.0)
+        # The sugar goal/ring tracks ADDED sugar (AHA/WHO caps target added, not
+        # intrinsic, sugar) so a fruit-heavy day doesn't read as over-budget.
+        logged_sugar += float(nutr.get("added_sugars_g") or 0.0)
         logged_protein += float(nutr.get("protein_g") or 0.0)
 
     # Add supplement nutrient contributions to daily totals — only for active
@@ -92,7 +94,7 @@ async def get_today(
     logged_cal += supplement_nutrients.get("calories", 0.0)
     logged_sat += supplement_nutrients.get("saturated_fat_g", 0.0)
     logged_sol += supplement_nutrients.get("soluble_fiber_g", 0.0)
-    logged_sugar += supplement_nutrients.get("sugars_g", 0.0)
+    logged_sugar += supplement_nutrients.get("added_sugars_g", 0.0)
     logged_protein += supplement_nutrients.get("protein_g", 0.0)
         
     cal_pct = round((logged_cal / target_cal) * 100, 1) if target_cal else None
@@ -232,7 +234,7 @@ async def get_today(
                 bucket["sat"] += v
             elif key == "soluble_fiber_g":
                 bucket["fib"] += v
-            elif key == "sugars_g":
+            elif key == "added_sugars_g":
                 bucket["sug"] += v
 
     streak_rows = await db.execute(
@@ -242,7 +244,7 @@ async def get_today(
                 COALESCE(SUM(CAST(NULLIF(nutrition->>'calories', '') AS numeric)), 0)         AS cal,
                 COALESCE(SUM(CAST(NULLIF(nutrition->>'saturated_fat_g', '') AS numeric)), 0)  AS sat,
                 COALESCE(SUM(CAST(NULLIF(nutrition->>'soluble_fiber_g', '') AS numeric)), 0)  AS sol,
-                COALESCE(SUM(CAST(NULLIF(nutrition->>'sugars_g', '') AS numeric)), 0)         AS sug
+                COALESCE(SUM(CAST(NULLIF(nutrition->>'added_sugars_g', '') AS numeric)), 0)   AS sug
             FROM meal_events
             WHERE user_id = :user_id
               AND ts >= :start_utc
@@ -300,7 +302,7 @@ async def get_today(
             "calories":         {"logged": logged_cal,     "target": target_cal,     "pct": cal_pct},
             "sat_fat_g":        {"logged": logged_sat,     "target": target_sat,     "pct": sat_pct},
             "soluble_fiber_g":  {"logged": logged_sol,     "target": target_sol,     "pct": sol_pct},
-            "sugars_g":         {"logged": logged_sugar,   "target": target_sugar,   "pct": sugar_pct},
+            "added_sugars_g":   {"logged": logged_sugar,   "target": target_sugar,   "pct": sugar_pct},
             "protein_g":        {"logged": logged_protein, "target": target_protein, "pct": protein_pct},
         },
         "biometrics_latest": {
@@ -387,7 +389,7 @@ async def get_streak_history(
                 bucket["sat"] += v
             elif key == "soluble_fiber_g":
                 bucket["sol"] += v
-            elif key == "sugars_g":
+            elif key == "added_sugars_g":
                 bucket["sug"] += v
 
     meal_rows = await db.execute(
@@ -397,7 +399,7 @@ async def get_streak_history(
                 COALESCE(SUM(CAST(NULLIF(nutrition->>'calories', '') AS numeric)), 0)        AS cal,
                 COALESCE(SUM(CAST(NULLIF(nutrition->>'saturated_fat_g', '') AS numeric)), 0)  AS sat,
                 COALESCE(SUM(CAST(NULLIF(nutrition->>'soluble_fiber_g', '') AS numeric)), 0)  AS sol,
-                COALESCE(SUM(CAST(NULLIF(nutrition->>'sugars_g', '') AS numeric)), 0)         AS sug
+                COALESCE(SUM(CAST(NULLIF(nutrition->>'added_sugars_g', '') AS numeric)), 0)   AS sug
             FROM meal_events
             WHERE user_id = :user_id
               AND ts >= :start_utc

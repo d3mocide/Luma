@@ -17,7 +17,7 @@ interface AdherenceToday {
   calories?: DayAdherence | null
   sat_fat_g?: DayAdherence | null
   soluble_fiber_g?: DayAdherence | null
-  sugars_g?: DayAdherence | null
+  added_sugars_g?: DayAdherence | null
 }
 
 interface StreakHistorySheetProps {
@@ -102,7 +102,7 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence, todayStr 
             cal: adherence.calories?.logged,
             sat: adherence.sat_fat_g?.logged,
             fib: adherence.soluble_fiber_g?.logged,
-            sug: adherence.sugars_g?.logged,
+            sug: adherence.added_sugars_g?.logged,
           }
         : { cal: apiDay.cal_logged, sat: apiDay.sat_logged, fib: apiDay.fib_logged, sug: apiDay.sug_logged }
 
@@ -111,7 +111,7 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence, todayStr 
             cal: adherence.calories?.target ?? apiDay.cal_target,
             sat: adherence.sat_fat_g?.target ?? apiDay.sat_target,
             fib: adherence.soluble_fiber_g?.target ?? apiDay.fib_target,
-            sug: adherence.sugars_g?.target ?? apiDay.sug_target,
+            sug: adherence.added_sugars_g?.target ?? apiDay.sug_target,
           }
         : { cal: apiDay.cal_target, sat: apiDay.sat_target, fib: apiDay.fib_target, sug: apiDay.sug_target }
 
@@ -289,7 +289,7 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence, todayStr 
                       FAT
                     </span>
                     <span
-                      title={badgeTitle('Fiber', day.fib, 'g', 1)}
+                      title={badgeTitle('Sol. Fiber', day.fib, 'g', 1)}
                       style={{
                         fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 6,
                         ...badgeStyle(day.fib.state, { bg: 'rgba(52,211,153,0.1)', fg: 'var(--good)', border: 'rgba(52,211,153,0.18)' }),
@@ -298,7 +298,7 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence, todayStr 
                       FIB
                     </span>
                     <span
-                      title={badgeTitle('Sugar', day.sug, 'g', 1)}
+                      title={badgeTitle('Added Sugar', day.sug, 'g', 1)}
                       style={{
                         fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 6,
                         ...badgeStyle(day.sug.state, { bg: 'rgba(244,114,182,0.1)', fg: 'var(--aurora-pink)', border: 'rgba(244,114,182,0.18)' }),

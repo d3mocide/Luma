@@ -13,6 +13,7 @@ ZERO_NUTRIENTS: dict[str, float] = {
     "cholesterol_mg": 0.0,
     "carbohydrates_g": 0.0,
     "sugars_g": 0.0,
+    "added_sugars_g": 0.0,
     "fiber_g": 0.0,
     "soluble_fiber_g": 0.0,
     "sodium_mg": 0.0,
