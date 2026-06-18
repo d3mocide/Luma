@@ -24,6 +24,7 @@ const MACRO_ROWS: NutrientRow[] = [
   { key: 'fiber_g',               label: 'Total Fiber',           unit: 'g',  indent: true },
   { key: 'soluble_fiber_g',       label: 'Soluble Fiber',         unit: 'g',  indent: true },
   { key: 'sugars_g',              label: 'Sugars',                unit: 'g',  indent: true },
+  { key: 'added_sugars_g',        label: 'Added Sugars',          unit: 'g',  indent: true },
   { key: 'sodium_mg',             label: 'Sodium',                unit: 'mg' },
   { key: 'potassium_mg',          label: 'Potassium',             unit: 'mg' },
 ]

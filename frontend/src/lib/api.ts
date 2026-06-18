@@ -167,7 +167,7 @@ export interface TodayData {
     calories: { logged: number | null; target: number | null; pct: number | null }
     sat_fat_g: { logged: number | null; target: number | null; pct: number | null }
     soluble_fiber_g: { logged: number | null; target: number | null; pct: number | null }
-    sugars_g: { logged: number | null; target: number | null; pct: number | null }
+    added_sugars_g: { logged: number | null; target: number | null; pct: number | null }
     protein_g: { logged: number | null; target: number | null; pct: number | null }
   }
   biometrics_latest: {

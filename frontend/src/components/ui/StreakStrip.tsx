@@ -12,7 +12,7 @@ interface AdherenceToday {
   calories?: DayAdherence | null
   sat_fat_g?: DayAdherence | null
   soluble_fiber_g?: DayAdherence | null
-  sugars_g?: DayAdherence | null
+  added_sugars_g?: DayAdherence | null
 }
 
 interface StreakStripProps {
@@ -55,13 +55,13 @@ export default function StreakStrip({ days, adherence, onShowHistory }: StreakSt
           cal: adherence.calories?.logged,
           sat: adherence.sat_fat_g?.logged,
           fib: adherence.soluble_fiber_g?.logged,
-          sug: adherence.sugars_g?.logged,
+          sug: adherence.added_sugars_g?.logged,
         },
         {
           cal: adherence.calories?.target,
           sat: adherence.sat_fat_g?.target,
           fib: adherence.soluble_fiber_g?.target,
-          sug: adherence.sugars_g?.target,
+          sug: adherence.added_sugars_g?.target,
         },
       ).onTrack
     : false

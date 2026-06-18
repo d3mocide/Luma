@@ -96,7 +96,7 @@ export function GoalsCard({ goalForm, onFieldChange, goalSaveError, goalSaveSucc
         <SummaryPill label="Target LDL" value={formatGoalNumber(goalSettings?.target_ldl_mg_dl, 0, 'mg/dL')} />
         <SummaryPill label="Calories" value={formatGoalNumber(goalSettings?.daily_calorie_target, 0, 'kcal')} />
         <SummaryPill label="Sat fat max" value={formatGoalNumber(goalSettings?.daily_sat_fat_g_max, 1, 'g')} />
-        <SummaryPill label="Sugar max" value={formatGoalNumber(goalSettings?.daily_sugar_g_max, 1, 'g')} />
+        <SummaryPill label="Added sugar max" value={formatGoalNumber(goalSettings?.daily_sugar_g_max, 1, 'g')} />
       </div>
 
       <div className="settings-goals-grid">
@@ -109,7 +109,7 @@ export function GoalsCard({ goalForm, onFieldChange, goalSaveError, goalSaveSucc
             { field: 'daily_sat_fat_g_max', label: 'Sat fat max', unit: 'g', mode: 'decimal', placeholder: '12' },
             { field: 'daily_soluble_fiber_g', label: 'Soluble fiber', unit: 'g', mode: 'decimal', placeholder: '18' },
             { field: 'current_ldl_mg_dl', label: 'Current LDL', unit: 'mg/dL', mode: 'numeric', placeholder: '132' },
-            { field: 'daily_sugar_g_max', label: 'Sugar limit', unit: 'g', mode: 'decimal', placeholder: '36' },
+            { field: 'daily_sugar_g_max', label: 'Added sugar limit', unit: 'g', mode: 'decimal', placeholder: '36' },
           ] as { field: keyof GoalFormState; label: string; unit: string; mode: 'decimal' | 'numeric'; placeholder: string }[]
         ).map(({ field, label, unit, mode, placeholder }) => (
           <Field key={field} label={label} unit={unit}>
