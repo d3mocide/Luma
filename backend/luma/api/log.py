@@ -347,7 +347,11 @@ async def log_meal_photo(
                         '[{"name":"...","quantity":1.0,"unit":"serving","estimated_weight_g":200.0,'
                         '"nutrients":{"calories":300,"saturated_fat_g":2.0,"soluble_fiber_g":1.0,'
                         '"protein_g":10.0,"carbohydrates_g":40.0,"fat_g":8.0,"fiber_g":3.0,"sodium_mg":400}}]. '
-                        "Fill in all nutrient values — do not leave them as 0. No markdown, no preamble."
+                        "Fill in all nutrient values — do not leave them as 0. "
+                        "saturated_fat_g is a subset of fat_g and must be ≤ fat_g; estimate it from the "
+                        "food's real fatty-acid profile (plant milks, nuts, seeds, and olive/avocado oils "
+                        "are mostly unsaturated, so their saturated_fat_g is small). Do not copy total fat "
+                        "into saturated fat. No markdown, no preamble."
                     ),
                 },
             ],
@@ -406,7 +410,9 @@ async def log_meal_photo(
         _logger.exception("Vision food extraction failed")
         extracted_items = []
 
+    from luma.agents.food_extractor import sanitize_extracted_items
     from luma.services.nutrition import aggregate_items
+    extracted_items = sanitize_extracted_items(extracted_items)
     return {
         "raw_input": f"[photo: {file.filename}]",
         "items": extracted_items,
