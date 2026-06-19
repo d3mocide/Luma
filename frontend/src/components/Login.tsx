@@ -264,19 +264,6 @@ export default function Login() {
             </button>
           </form>
 
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0 18px',
-          }}>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }}/>
-            <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>or</span>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }}/>
-          </div>
-
-          <button className="btn" style={{ width: '100%', padding: '12px', justifyContent: 'center' }}>
-            <Sparkles size={16} color="var(--sky-300)"/>
-            Continue with passkey
-          </button>
-
           <p style={{
             textAlign: 'center', fontSize: 11.5,
             color: 'var(--fg-quiet)', marginTop: 22,
