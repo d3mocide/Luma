@@ -5,6 +5,7 @@ import AppShell from './components/AppShell'
 import TodayRoute from './routes/today'
 import MealsRoute from './routes/meals'
 import TrendsRoute from './routes/trends'
+import NutritionRoute from './routes/nutrition'
 import CoachRoute from './routes/coach'
 import SettingsRoute from './routes/settings'
 import LogRoute from './routes/log'
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/today" element={<TodayRoute />} />
           <Route path="/meals" element={<MealsRoute />} />
           <Route path="/trends" element={<TrendsRoute />} />
+          <Route path="/nutrition" element={<NutritionRoute />} />
           <Route path="/coach" element={<CoachRoute />} />
           <Route path="/coach/:threadId" element={<CoachRoute />} />
           <Route path="/settings" element={<SettingsRoute />} />

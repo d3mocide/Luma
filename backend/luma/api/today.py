@@ -3,7 +3,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import select, text
 
 from luma.config import settings
@@ -473,6 +473,161 @@ async def get_streak_history(
         })
 
     return result
+
+
+def _serialize_meal_event(event) -> dict[str, Any]:
+    """Shape a MealEvent for the client meal list — mirrors the inline builder in
+    get_today's recent_meals so the Nutrition Day page renders day history with
+    the same headline/macro fields the Today screen uses."""
+    items = event.items if isinstance(event.items, list) else []
+    first_item = items[0].get("name") if items and isinstance(items[0], dict) else None
+    nutrition = event.nutrition if isinstance(event.nutrition, dict) else {}
+    raw = event.raw_input or ""
+    if event.source in ("favorite", "favorites") and raw:
+        headline = raw
+    elif event.source == "plan" and raw.startswith("Planned: "):
+        headline = raw[len("Planned: "):]
+    else:
+        headline = first_item or "Logged meal"
+    return {
+        "id": str(event.id),
+        "ts": event.ts.isoformat(),
+        "slot": event.slot,
+        "source": event.source,
+        "item_count": len(items),
+        "calories": float(nutrition.get("calories") or 0.0),
+        "headline": headline,
+        "nutrition": nutrition,
+        "items": items,
+        "raw_input": event.raw_input,
+    }
+
+
+@router.get("/today/nutrition-history")
+async def get_nutrition_history(
+    user: CurrentUser,
+    db: DbDep,
+    days: int = Query(default=90, ge=1, le=365),
+) -> dict[str, Any]:
+    """Per-day summed nutrition over a trailing window, for the Nutrition Day page.
+
+    Unlike /today/streak-history (four ring metrics only), this sums EVERY
+    nutrient key — macros and micros — so the page can render the protein ring,
+    the full nutrient breakdown, and per-nutrient trends for any past day.
+    """
+    resolved_tz = ZoneInfo(settings.server_timezone)
+    today_dt = datetime.now(resolved_tz).date()
+    start_dt = today_dt - timedelta(days=days - 1)
+
+    from luma.db.models import Goal, MealEvent, Supplement, SupplementLog
+
+    res_goal = await db.execute(select(Goal).where(Goal.user_id == user.id))
+    goal = res_goal.scalar_one_or_none()
+
+    targets = {
+        "calories":        float(goal.daily_calorie_target) if goal and goal.daily_calorie_target else None,
+        "saturated_fat_g": float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else None,
+        "soluble_fiber_g": float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else None,
+        "sodium_mg":       float(goal.daily_sodium_mg_max) if goal and goal.daily_sodium_mg_max else None,
+        "protein_g":       float(goal.daily_protein_g_min) if goal and goal.daily_protein_g_min else None,
+    }
+
+    start_utc = datetime.combine(start_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
+    end_utc = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
+
+    # Sum every nutrient key per calendar day in Python rather than SQL: nutrition
+    # is a free-form JSON map and we want all of it (micros included), not just the
+    # four streak columns the SQL aggregate in streak-history extracts.
+    event_rows = await db.execute(
+        select(MealEvent.ts, MealEvent.nutrition).where(
+            MealEvent.user_id == user.id,
+            MealEvent.ts >= start_utc,
+            MealEvent.ts < end_utc,
+            MealEvent.nutrition.isnot(None),
+        )
+    )
+    daily: dict[date, dict[str, float]] = {}
+    for ts, nutrition in event_rows:
+        if not isinstance(nutrition, dict):
+            continue
+        day = ts.astimezone(resolved_tz).date()
+        bucket = daily.setdefault(day, {})
+        for key, val in nutrition.items():
+            try:
+                bucket[key] = bucket.get(key, 0.0) + float(val or 0.0)
+            except (TypeError, ValueError):
+                continue
+
+    # Logged supplements are credited to the day they were taken — same gate as
+    # the Today totals so the two views agree.
+    supp_rows = await db.execute(
+        select(SupplementLog.ts, Supplement.nutrients_per_dose)
+        .join(Supplement, SupplementLog.supplement_id == Supplement.id)
+        .where(
+            Supplement.user_id == user.id,
+            Supplement.is_active.is_(True),
+            SupplementLog.ts >= start_utc,
+            SupplementLog.ts < end_utc,
+        )
+    )
+    for ts, nutrients in supp_rows:
+        day = ts.astimezone(resolved_tz).date()
+        bucket = daily.setdefault(day, {})
+        for key, val in (nutrients or {}).items():
+            try:
+                bucket[key] = bucket.get(key, 0.0) + float(val or 0.0)
+            except (TypeError, ValueError):
+                continue
+
+    out_days: list[dict[str, Any]] = []
+    for i in range(days):
+        d = start_dt + timedelta(days=i)
+        day_bucket = daily.get(d)
+        out_days.append({
+            "date": d.isoformat(),
+            "nutrition": day_bucket or {},
+            "logged_anything": day_bucket is not None,
+        })
+
+    return {"targets": targets, "days": out_days}
+
+
+@router.get("/today/day/{day}")
+async def get_day_detail(
+    day: str,
+    user: CurrentUser,
+    db: DbDep,
+) -> dict[str, Any]:
+    """All meals logged on a given calendar day (server timezone), newest first.
+
+    Powers the Summary tab's meal list on the Nutrition Day page. Unlike
+    /today's recent_meals (capped at six), this returns the full day so history
+    days show every meal."""
+    resolved_tz = ZoneInfo(settings.server_timezone)
+    try:
+        target_day = date.fromisoformat(day)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid date") from exc
+
+    from luma.db.models import MealEvent
+
+    day_start = datetime.combine(target_day, time.min, tzinfo=resolved_tz).astimezone(UTC)
+    day_end = datetime.combine(target_day + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
+
+    rows = await db.execute(
+        select(MealEvent)
+        .where(
+            MealEvent.user_id == user.id,
+            MealEvent.ts >= day_start,
+            MealEvent.ts < day_end,
+        )
+        .order_by(MealEvent.ts.desc())
+    )
+    events = rows.scalars().all()
+    return {
+        "date": target_day.isoformat(),
+        "meals": [_serialize_meal_event(e) for e in events],
+    }
 
 
 async def _get_active_insight(db, user_id: str) -> dict | None:

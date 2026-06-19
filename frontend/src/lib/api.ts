@@ -230,6 +230,25 @@ export interface StreakHistoryDay {
   logged_anything: boolean
 }
 
+export interface NutritionTargets {
+  calories: number | null
+  saturated_fat_g: number | null
+  soluble_fiber_g: number | null
+  sodium_mg: number | null
+  protein_g: number | null
+}
+
+export interface NutritionHistoryDay {
+  date: string
+  nutrition: Record<string, number>
+  logged_anything: boolean
+}
+
+export interface NutritionHistory {
+  targets: NutritionTargets
+  days: NutritionHistoryDay[]
+}
+
 export interface WaterToday {
   total_ml: number
   entries: number
