@@ -576,46 +576,72 @@ export default function FavoritesRoute() {
                           {/* Metrics Breakdown */}
                           <div style={{
                             display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            fontFamily: 'var(--font-mono)',
-                            fontSize: 11,
-                            color: 'var(--fg-secondary)',
                             flexWrap: 'wrap',
+                            gap: '4px 6px',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 10,
+                            marginTop: 4,
                           }}>
-                            <span style={{ color: 'var(--sky-300)' }}>{item.quantity_g}g</span>
-                            <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
-                            {item.nutrients.calories != null && (
-                              <>
-                                <span style={{ color: 'var(--fg-quiet)' }}>
-                                  {Math.round(item.nutrients.calories)} kcal
-                                </span>
-                              </>
-                            )}
-                            {item.nutrients.saturated_fat_g != null && item.nutrients.saturated_fat_g > 0 && (
-                              <>
-                                <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
-                                <span style={{ color: 'var(--bad)' }}>
-                                  {Math.round(item.nutrients.saturated_fat_g * 10) / 10}g sat
-                                </span>
-                              </>
-                            )}
-                            {item.nutrients.soluble_fiber_g != null && item.nutrients.soluble_fiber_g > 0 && (
-                              <>
-                                <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
-                                <span style={{ color: 'var(--good)' }}>
-                                  {Math.round(item.nutrients.soluble_fiber_g * 10) / 10}g fiber
-                                </span>
-                              </>
-                            )}
-                            {item.nutrients.added_sugars_g != null && item.nutrients.added_sugars_g > 0 && (
-                              <>
-                                <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
-                                <span style={{ color: 'var(--aurora-pink)' }}>
-                                  {Math.round(item.nutrients.added_sugars_g * 10) / 10}g added sugar
-                                </span>
-                              </>
-                            )}
+                            {/* Weight */}
+                            <span style={{
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: 'var(--glass-2)',
+                              color: 'var(--fg-secondary)',
+                              border: '1px solid var(--glass-edge)',
+                            }}>
+                              {item.quantity_g}g
+                            </span>
+                            {/* Calories */}
+                            <span style={{
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: 'rgba(56, 189, 248, 0.08)',
+                              color: 'var(--sky-300)',
+                              border: '1px solid rgba(56, 189, 248, 0.15)',
+                            }}>
+                              {Math.round(item.nutrients?.calories ?? 0)} kcal
+                            </span>
+                            {/* Sat Fat */}
+                            <span style={{
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: 'rgba(239, 68, 68, 0.08)',
+                              color: 'var(--bad)',
+                              border: '1px solid rgba(239, 68, 68, 0.15)',
+                            }}>
+                              {((item.nutrients?.saturated_fat_g) ?? 0).toFixed(1)}g sat
+                            </span>
+                            {/* Soluble Fiber */}
+                            <span style={{
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: 'rgba(52, 211, 153, 0.08)',
+                              color: 'var(--good)',
+                              border: '1px solid rgba(52, 211, 153, 0.15)',
+                            }}>
+                              {((item.nutrients?.soluble_fiber_g) ?? 0).toFixed(1)}g fiber
+                            </span>
+                            {/* Sodium */}
+                            <span style={{
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: 'rgba(251, 146, 60, 0.08)',
+                              color: '#fb923c',
+                              border: '1px solid rgba(251, 146, 60, 0.15)',
+                            }}>
+                              {Math.round(item.nutrients?.sodium_mg ?? 0)}mg sod
+                            </span>
+                            {/* Protein */}
+                            <span style={{
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: 'rgba(167, 139, 250, 0.08)',
+                              color: '#a78bfa',
+                              border: '1px solid rgba(167, 139, 250, 0.15)',
+                            }}>
+                              {((item.nutrients?.protein_g) ?? 0).toFixed(1)}g prot
+                            </span>
                           </div>
                         </div>
                       ))}
