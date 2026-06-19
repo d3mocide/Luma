@@ -40,6 +40,12 @@ ZERO_NUTRIENTS: dict[str, float] = {
 }
 
 
+def scale_nutrients(per_100g: dict, grams: float) -> dict[str, float]:
+    """Scale a per-100g nutrient profile to a portion weight in grams."""
+    factor = grams / 100.0
+    return {k: float(v) * factor for k, v in per_100g.items() if isinstance(v, (int, float))}
+
+
 def aggregate_items(items: list[dict]) -> dict[str, float]:
     """Sum nutrients across a list of food items returned by the food extractor."""
     totals = dict(ZERO_NUTRIENTS)

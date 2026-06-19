@@ -104,6 +104,15 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
     })
   }
 
+  // Swap an estimated item for a database food picked from search.
+  const replaceItem = (index: number, item: DraftItem) => {
+    setDraftItems((prev) => {
+      const updated = [...prev]
+      updated[index] = withBase(item)
+      return updated
+    })
+  }
+
   const totals = sumNutrients(draftItems)
 
   // Gate against re-adding: treat the meal as favorited if it was just saved
@@ -267,6 +276,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
                 addItems(items)
                 if (name) setMealName((prev) => (prev.trim() ? prev : name))
               }}
+              onReplaceItem={replaceItem}
             />
           )}
           {activeTab === 'scan' && (

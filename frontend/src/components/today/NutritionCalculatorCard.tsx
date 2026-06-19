@@ -578,10 +578,10 @@ export function NutritionCalculatorCard({
           {/* Food search */}
           <label style={{ display: 'grid', gap: 6, minWidth: 0, width: '100%' }}>
             <div style={{ position: 'relative' }}>
-              <div style={{ display: 'flex', gap: compact ? 6 : 8, alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', gap: compact ? 6 : 8, alignItems: 'stretch', flexWrap: compact ? 'wrap' : 'nowrap' }}>
 
                 {/* Mode segmented pill */}
-                <div style={{ display: 'flex', padding: 2, background: 'var(--glass-1)', borderRadius: 10, border: '1px solid var(--glass-edge)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', padding: 2, background: 'var(--glass-1)', borderRadius: 10, border: '1px solid var(--glass-edge)', flexShrink: 0, order: compact ? 1 : undefined }}>
                   <button
                     type="button"
                     onClick={() => setBudgetMode('search')}
@@ -618,6 +618,7 @@ export function NutritionCalculatorCard({
                     padding: compact ? '8px 10px' : '10px 12px', borderRadius: 10,
                     border: `1px solid ${selectedFood ? 'var(--sky-400)' : 'var(--glass-edge)'}`,
                     background: 'var(--glass-1)',
+                    order: compact ? 3 : undefined, flexBasis: compact ? '100%' : undefined,
                   }}>
                     <input
                       value={query}
@@ -641,7 +642,7 @@ export function NutritionCalculatorCard({
                     )}
                   </div>
                 ) : (
-                  <div ref={favDropdownRef} style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+                  <div ref={favDropdownRef} style={{ position: 'relative', flex: 1, minWidth: 0, order: compact ? 3 : undefined, flexBasis: compact ? '100%' : undefined }}>
                     <button
                       type="button"
                       onClick={() => setIsFavOpen(!isFavOpen)}
@@ -737,7 +738,7 @@ export function NutritionCalculatorCard({
                   type="button"
                   onClick={() => { setBarcodeError(''); setIsScanning((v) => !v) }}
                   style={{
-                    padding: compact ? '0 10px' : '0 14px', borderRadius: 10, flexShrink: 0,
+                    padding: compact ? '0 12px' : '0 14px', borderRadius: 10, flexShrink: 0,
                     background: isScanning ? 'rgba(56,189,248,0.15)' : 'var(--glass-1)',
                     border: isScanning ? '1px solid rgba(56,189,248,0.4)' : '1px solid var(--glass-edge)',
                     color: isScanning ? 'var(--sky-300)' : 'var(--fg-secondary)',
@@ -745,6 +746,7 @@ export function NutritionCalculatorCard({
                     display: 'flex', alignItems: 'center', gap: compact ? 0 : 6,
                     justifyContent: 'center',
                     fontSize: 13, transition: 'all 150ms',
+                    order: compact ? 2 : undefined, minHeight: compact ? 38 : undefined,
                   }}
                   title={isScanning ? 'Stop Scanning' : 'Scan Barcode'}
                 >
@@ -922,7 +924,7 @@ export function NutritionCalculatorCard({
                 aria-label="Serving unit"
                 style={{
                   borderRadius: 10, padding: compact ? '8px 6px' : '10px 8px', fontSize: 12, flex: '1 1 0px', minWidth: 0, width: '100%',
-                  maxWidth: compact ? 'none' : 200,
+                  maxWidth: compact ? 120 : 200,
                   border: '1px solid var(--glass-edge)', background: 'var(--glass-1)',
                   color: 'var(--fg-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
                   outline: 'none',
@@ -951,9 +953,10 @@ export function NutritionCalculatorCard({
                 style={{
                   padding: compact ? '0 10px' : '0 12px',
                   fontSize: 12,
-                  flexShrink: 0,
+                  flex: compact ? '1 1 auto' : '0 0 auto',
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: 4,
                   borderRadius: 10,
                 }}
