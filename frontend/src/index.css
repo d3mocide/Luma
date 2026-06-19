@@ -3333,6 +3333,9 @@ input[type="search"]::-webkit-search-results-decoration {
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* Bottom-align so the value keeps a shared baseline across columns even when
+     a longer label (e.g. "Added Sugar") wraps to two lines on narrow phones. */
+  justify-content: flex-end;
   gap: 2px;
   padding: 4px 6px;
   background: rgba(0, 0, 0, 0.12);

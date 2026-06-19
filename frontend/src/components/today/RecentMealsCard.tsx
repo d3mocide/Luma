@@ -160,8 +160,8 @@ export function RecentMealsCard({
                         <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{(meal.nutrition.soluble_fiber_g ?? 0).toFixed(1)}g</span>
                       </div>
                       <div className="favorite-macro-col">
-                        <span className="favorite-macro-label">Sugar</span>
-                        <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{(meal.nutrition.sugars_g ?? 0).toFixed(1)}g</span>
+                        <span className="favorite-macro-label">Added Sugar</span>
+                        <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{(meal.nutrition.added_sugars_g ?? 0).toFixed(1)}g</span>
                       </div>
                       <div className="favorite-macro-col">
                         <span className="favorite-macro-label">Protein</span>

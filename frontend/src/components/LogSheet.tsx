@@ -302,7 +302,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
                   { l: 'Calories', v: Math.round(totals.calories), c: 'var(--fg-primary)' },
                   { l: 'Sat Fat', v: `${totals.saturated_fat_g.toFixed(1)}g`, c: 'var(--bad)' },
                   { l: 'Sol Fiber', v: `${totals.soluble_fiber_g.toFixed(1)}g`, c: 'var(--good)' },
-                  { l: 'Sugar', v: `${totals.sugars_g.toFixed(1)}g`, c: 'var(--aurora-pink)' },
+                  { l: 'Added Sugar', v: `${totals.added_sugars_g.toFixed(1)}g`, c: 'var(--aurora-pink)' },
                   { l: 'Protein', v: `${totals.protein_g.toFixed(1)}g`, c: 'var(--aurora-violet)' },
                 ].map((n) => (
                   <div key={n.l} className="glass-inset" style={{ padding: '8px 10px', textAlign: 'center' }}>
