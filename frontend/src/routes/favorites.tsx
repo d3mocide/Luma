@@ -232,7 +232,7 @@ export default function FavoritesRoute() {
   })
 
   const width = useWindowWidth()
-  const numCols = width >= 900 ? 2 : 1
+  const numCols = width >= 1100 ? 2 : 1
   const cols = Array.from({ length: numCols }, (_, colIdx) =>
     filteredFavorites.filter((_, idx) => idx % numCols === colIdx)
   )
