@@ -53,6 +53,16 @@ function totalSodium(items: FavoriteItem[]): number {
   return Math.round(items.reduce((sum, i) => sum + (i.nutrients.sodium_mg ?? 0), 0))
 }
 
+function useWindowWidth() {
+  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  return width
+}
+
 export default function FavoritesRoute() {
   const queryClient = useQueryClient()
   const location = useLocation()
@@ -220,6 +230,12 @@ export default function FavoritesRoute() {
     if (fav.name.toLowerCase().includes(query)) return true
     return fav.items.some((item) => item.food_name.toLowerCase().includes(query))
   })
+
+  const width = useWindowWidth()
+  const numCols = width >= 1200 ? 3 : width >= 900 ? 2 : 1
+  const cols = Array.from({ length: numCols }, (_, colIdx) =>
+    filteredFavorites.filter((_, idx) => idx % numCols === colIdx)
+  )
 
   const addItem = (item: DraftItem) => setItems((prev) => [...prev, item])
   const removeItem = (index: number) => setItems((prev) => prev.filter((_, i) => i !== index))
@@ -392,210 +408,220 @@ export default function FavoritesRoute() {
               </button>
             </div>
           ) : (
-            <div className="responsive-grid-2col" style={{ marginTop: 0 }}>
-              {filteredFavorites.map((fav) => (
-                <div
-                  key={fav.id}
-                  className="glass"
-                  style={{ padding: '16px 18px', borderRadius: 14 }}
-                >
-                  {/* Click-to-expand Title header */}
-                  <div
-                    onClick={() => toggleExpand(fav.id)}
-                    style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}
-                    onMouseEnter={(e) => {
-                      const titleEl = e.currentTarget.querySelector('.fav-title-text') as HTMLElement
-                      if (titleEl) titleEl.style.color = 'var(--sky-300)'
-                    }}
-                    onMouseLeave={(e) => {
-                      const titleEl = e.currentTarget.querySelector('.fav-title-text') as HTMLElement
-                      if (titleEl) titleEl.style.color = 'var(--fg-primary)'
-                    }}
-                  >
-                    <span className="fav-title-text" style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-primary)', transition: 'color 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {fav.name}
-                      <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--fg-quiet)', marginLeft: 8 }}>
-                        ({fav.items.length} {fav.items.length === 1 ? 'item' : 'items'})
-                      </span>
-                    </span>
-                    
-                    {/* Tags list next to chevron */}
-                    {fav.tags && fav.tags.length > 0 && (
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 'auto', marginRight: 12, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
-                        {fav.tags.slice(0, 2).map((tag) => (
-                          <span
-                            key={tag}
-                            style={{
-                              fontSize: 10,
-                              padding: '2px 8px',
-                              borderRadius: 6,
-                              background: 'var(--glass-2)',
-                              border: '1px solid var(--glass-edge)',
-                              color: 'var(--fg-secondary)',
-                              fontFamily: 'var(--font-sans)',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                        {fav.tags.length > 2 && (
-                          <span
-                            style={{
-                              fontSize: 9,
-                              fontWeight: 600,
-                              padding: '2px 6px',
-                              borderRadius: 4,
-                              background: 'var(--glass-3)',
-                              border: '1px solid var(--glass-edge)',
-                              color: 'var(--fg-quiet)',
-                              fontFamily: 'var(--font-mono)',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            +{fav.tags.length - 2}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <ChevronDown
-                      size={14}
-                      style={{
-                        transform: expandedFavIds[fav.id] ? 'rotate(180deg)' : 'none',
-                        transition: 'transform 0.2s ease',
-                        color: 'var(--fg-quiet)',
-                        flexShrink: 0,
-                      }}
-                    />
-                  </div>
-
-                  <div className="favorite-card-row">
-                    {/* Click-to-expand Info header */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${numCols}, 1fr)`,
+              gap: 16,
+              marginTop: 20,
+              alignItems: 'start'
+            }}>
+              {cols.map((colItems, colIdx) => (
+                <div key={colIdx} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {colItems.map((fav) => (
                     <div
-                      className="favorite-card-info"
-                      onClick={() => toggleExpand(fav.id)}
-                      style={{ cursor: 'pointer', flex: 1, minWidth: 0 }}
-                      onMouseEnter={(e) => {
-                        const card = e.currentTarget.closest('.glass') as HTMLElement
-                        const titleEl = card?.querySelector('.fav-title-text') as HTMLElement
-                        if (titleEl) titleEl.style.color = 'var(--sky-300)'
-                      }}
-                      onMouseLeave={(e) => {
-                        const card = e.currentTarget.closest('.glass') as HTMLElement
-                        const titleEl = card?.querySelector('.fav-title-text') as HTMLElement
-                        if (titleEl) titleEl.style.color = 'var(--fg-primary)'
-                      }}
+                      key={fav.id}
+                      className="glass"
+                      style={{ padding: '16px 18px', borderRadius: 14 }}
                     >
-                      <div className="favorite-macro-grid">
-                        <div className="favorite-macro-col">
-                          <span className="favorite-macro-label">Cal</span>
-                          <span className="num favorite-macro-val" style={{ color: 'var(--sky-400)' }}>{totalKcal(fav.items)}</span>
-                        </div>
-                        <div className="favorite-macro-col">
-                          <span className="favorite-macro-label">Sat Fat</span>
-                          <span className="num favorite-macro-val" style={{ color: 'var(--bad)' }}>{totalSatFat(fav.items)}g</span>
-                        </div>
-                        <div className="favorite-macro-col">
-                          <span className="favorite-macro-label">Sol Fib</span>
-                          <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{totalSolFiber(fav.items)}g</span>
-                        </div>
-                        <div className="favorite-macro-col">
-                          <span className="favorite-macro-label">Sodium</span>
-                          <span className="num favorite-macro-val" style={{ color: '#fb923c' }}>{totalSodium(fav.items)}mg</span>
-                        </div>
-                        <div className="favorite-macro-col">
-                          <span className="favorite-macro-label">Protein</span>
-                          <span className="num favorite-macro-val" style={{ color: '#a78bfa' }}>{totalProtein(fav.items)}g</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="favorite-card-actions">
-                      <button
-                        onClick={() => logFavoriteDirect.mutate(fav)}
-                        disabled={logFavoriteDirect.isPending}
-                        className="favorite-action-btn favorite-action-btn--primary"
-                        style={{ opacity: logFavoriteDirect.isPending ? 0.7 : 1 }}
+                      {/* Click-to-expand Title header */}
+                      <div
+                        onClick={() => toggleExpand(fav.id)}
+                        style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}
+                        onMouseEnter={(e) => {
+                          const titleEl = e.currentTarget.querySelector('.fav-title-text') as HTMLElement
+                          if (titleEl) titleEl.style.color = 'var(--sky-300)'
+                        }}
+                        onMouseLeave={(e) => {
+                          const titleEl = e.currentTarget.querySelector('.fav-title-text') as HTMLElement
+                          if (titleEl) titleEl.style.color = 'var(--fg-primary)'
+                        }}
                       >
-                        <Heart size={12} strokeWidth={2} />
-                        <span>{logFavoriteDirect.isPending && logFavoriteDirect.variables?.id === fav.id ? 'Logging…' : 'Log this'}</span>
-                      </button>
-                      <ShareWithFamilyButton resourceType="favorite" resourceId={fav.id} />
-                      <button
-                        onClick={() => startEdit(fav)}
-                        className="favorite-action-btn"
-                      >
-                        <Pencil size={12} strokeWidth={1.75} />
-                        <span className="btn-label">Edit</span>
-                      </button>
-                      <button
-                        onClick={() => deleteMutation.mutate(fav.id)}
-                        disabled={deleteMutation.isPending}
-                        className="favorite-action-btn favorite-action-btn--danger"
-                        style={{ opacity: deleteMutation.isPending ? 0.5 : 1 }}
-                        aria-label={`Delete ${fav.name}`}
-                      >
-                        <Trash2 size={12} strokeWidth={1.75} />
-                        <span className="btn-label">Delete</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Expanded ingredients drawer list */}
-                  {expandedFavIds[fav.id] && (
-                    <div style={{
-                      marginTop: 12,
-                      borderTop: '1px solid var(--glass-edge)',
-                      paddingTop: 12,
-                    }}>
-                      <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }} className="thin-scroll">
-                        <div className="meal-items-table">
-                          <div className="meal-items-header">
-                            <div className="meal-items-header-cell">Item</div>
-                            <div className="meal-items-header-cell">Weight</div>
-                            <div className="meal-items-header-cell">Cal</div>
-                            <div className="meal-items-header-cell">Sat Fat</div>
-                            <div className="meal-items-header-cell">Sol Fib</div>
-                            <div className="meal-items-header-cell">Sodium</div>
-                            <div className="meal-items-header-cell">Protein</div>
+                        <span className="fav-title-text" style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-primary)', transition: 'color 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {fav.name}
+                          <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--fg-quiet)', marginLeft: 8 }}>
+                            ({fav.items.length} {fav.items.length === 1 ? 'item' : 'items'})
+                          </span>
+                        </span>
+                        
+                        {/* Tags list next to chevron */}
+                        {fav.tags && fav.tags.length > 0 && (
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 'auto', marginRight: 12, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                            {fav.tags.slice(0, 2).map((tag) => (
+                              <span
+                                key={tag}
+                                style={{
+                                  fontSize: 10,
+                                  padding: '2px 8px',
+                                  borderRadius: 6,
+                                  background: 'var(--glass-2)',
+                                  border: '1px solid var(--glass-edge)',
+                                  color: 'var(--fg-secondary)',
+                                  fontFamily: 'var(--font-sans)',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            {fav.tags.length > 2 && (
+                              <span
+                                style={{
+                                  fontSize: 9,
+                                  fontWeight: 600,
+                                  padding: '2px 6px',
+                                  borderRadius: 4,
+                                  background: 'var(--glass-3)',
+                                  border: '1px solid var(--glass-edge)',
+                                  color: 'var(--fg-quiet)',
+                                  fontFamily: 'var(--font-mono)',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                +{fav.tags.length - 2}
+                              </span>
+                            )}
                           </div>
-                          {fav.items.map((item, idx) => (
-                            <div key={idx} className="meal-items-row">
-                              <div className="meal-item-name-cell">
-                                <span className="meal-item-name">{item.food_name}</span>
-                                {item.brand && <span className="meal-item-brand">{item.brand}</span>}
-                              </div>
-                              <div className="meal-items-cell-num weight-cell">
-                                {Math.round(item.quantity_g)}
-                                <span className="sm-hidden">g</span>
-                              </div>
-                              <div className="meal-items-cell-num cal-cell">
-                                {Math.round(item.nutrients?.calories ?? 0)}
-                                <span className="sm-hidden"> kcal</span>
-                              </div>
-                              <div className="meal-items-cell-num sat-cell">
-                                {((item.nutrients?.saturated_fat_g) ?? 0).toFixed(1)}g
-                                <span className="sm-hidden"> sat</span>
-                              </div>
-                              <div className="meal-items-cell-num fib-cell">
-                                {((item.nutrients?.soluble_fiber_g) ?? 0).toFixed(1)}g
-                                <span className="sm-hidden"> fiber</span>
-                              </div>
-                              <div className="meal-items-cell-num sod-cell">
-                                {Math.round(item.nutrients?.sodium_mg ?? 0)}mg
-                                <span className="sm-hidden"> sod</span>
-                              </div>
-                              <div className="meal-items-cell-num prot-cell">
-                                {((item.nutrients?.protein_g) ?? 0).toFixed(1)}g
-                                <span className="sm-hidden"> prot</span>
-                              </div>
+                        )}
+
+                        <ChevronDown
+                          size={14}
+                          style={{
+                            transform: expandedFavIds[fav.id] ? 'rotate(180deg)' : 'none',
+                            transition: 'transform 0.2s ease',
+                            color: 'var(--fg-quiet)',
+                            flexShrink: 0,
+                          }}
+                        />
+                      </div>
+
+                      <div className="favorite-card-row">
+                        {/* Click-to-expand Info header */}
+                        <div
+                          className="favorite-card-info"
+                          onClick={() => toggleExpand(fav.id)}
+                          style={{ cursor: 'pointer', flex: 1, minWidth: 0 }}
+                          onMouseEnter={(e) => {
+                            const card = e.currentTarget.closest('.glass') as HTMLElement
+                            const titleEl = card?.querySelector('.fav-title-text') as HTMLElement
+                            if (titleEl) titleEl.style.color = 'var(--sky-300)'
+                          }}
+                          onMouseLeave={(e) => {
+                            const card = e.currentTarget.closest('.glass') as HTMLElement
+                            const titleEl = card?.querySelector('.fav-title-text') as HTMLElement
+                            if (titleEl) titleEl.style.color = 'var(--fg-primary)'
+                          }}
+                        >
+                          <div className="favorite-macro-grid">
+                            <div className="favorite-macro-col">
+                              <span className="favorite-macro-label">Cal</span>
+                              <span className="num favorite-macro-val" style={{ color: 'var(--sky-400)' }}>{totalKcal(fav.items)}</span>
                             </div>
-                          ))}
+                            <div className="favorite-macro-col">
+                              <span className="favorite-macro-label">Sat Fat</span>
+                              <span className="num favorite-macro-val" style={{ color: 'var(--bad)' }}>{totalSatFat(fav.items)}g</span>
+                            </div>
+                            <div className="favorite-macro-col">
+                              <span className="favorite-macro-label">Sol Fib</span>
+                              <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{totalSolFiber(fav.items)}g</span>
+                            </div>
+                            <div className="favorite-macro-col">
+                              <span className="favorite-macro-label">Sodium</span>
+                              <span className="num favorite-macro-val" style={{ color: '#fb923c' }}>{totalSodium(fav.items)}mg</span>
+                            </div>
+                            <div className="favorite-macro-col">
+                              <span className="favorite-macro-label">Protein</span>
+                              <span className="num favorite-macro-val" style={{ color: '#a78bfa' }}>{totalProtein(fav.items)}g</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="favorite-card-actions">
+                          <button
+                            onClick={() => logFavoriteDirect.mutate(fav)}
+                            disabled={logFavoriteDirect.isPending}
+                            className="favorite-action-btn favorite-action-btn--primary"
+                            style={{ opacity: logFavoriteDirect.isPending ? 0.7 : 1 }}
+                          >
+                            <Heart size={12} strokeWidth={2} />
+                            <span>{logFavoriteDirect.isPending && logFavoriteDirect.variables?.id === fav.id ? 'Logging…' : 'Log this'}</span>
+                          </button>
+                          <ShareWithFamilyButton resourceType="favorite" resourceId={fav.id} />
+                          <button
+                            onClick={() => startEdit(fav)}
+                            className="favorite-action-btn"
+                          >
+                            <Pencil size={12} strokeWidth={1.75} />
+                            <span className="btn-label">Edit</span>
+                          </button>
+                          <button
+                            onClick={() => deleteMutation.mutate(fav.id)}
+                            disabled={deleteMutation.isPending}
+                            className="favorite-action-btn favorite-action-btn--danger"
+                            style={{ opacity: deleteMutation.isPending ? 0.5 : 1 }}
+                            aria-label={`Delete ${fav.name}`}
+                          >
+                            <Trash2 size={12} strokeWidth={1.75} />
+                            <span className="btn-label">Delete</span>
+                          </button>
                         </div>
                       </div>
+
+                      {/* Expanded ingredients drawer list */}
+                      {expandedFavIds[fav.id] && (
+                        <div style={{
+                          marginTop: 12,
+                          borderTop: '1px solid var(--glass-edge)',
+                          paddingTop: 12,
+                        }}>
+                          <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }} className="thin-scroll">
+                            <div className="meal-items-table">
+                              <div className="meal-items-header">
+                                <div className="meal-items-header-cell">Item</div>
+                                <div className="meal-items-header-cell">Weight</div>
+                                <div className="meal-items-header-cell">Cal</div>
+                                <div className="meal-items-header-cell">Sat Fat</div>
+                                <div className="meal-items-header-cell">Sol Fib</div>
+                                <div className="meal-items-header-cell">Sodium</div>
+                                <div className="meal-items-header-cell">Protein</div>
+                              </div>
+                              {fav.items.map((item, idx) => (
+                                <div key={idx} className="meal-items-row">
+                                  <div className="meal-item-name-cell">
+                                    <span className="meal-item-name">{item.food_name}</span>
+                                    {item.brand && <span className="meal-item-brand">{item.brand}</span>}
+                                  </div>
+                                  <div className="meal-items-cell-num weight-cell">
+                                    {Math.round(item.quantity_g)}
+                                    <span className="sm-hidden">g</span>
+                                  </div>
+                                  <div className="meal-items-cell-num cal-cell">
+                                    {Math.round(item.nutrients?.calories ?? 0)}
+                                    <span className="sm-hidden"> kcal</span>
+                                  </div>
+                                  <div className="meal-items-cell-num sat-cell">
+                                    {((item.nutrients?.saturated_fat_g) ?? 0).toFixed(1)}g
+                                    <span className="sm-hidden"> sat</span>
+                                  </div>
+                                  <div className="meal-items-cell-num fib-cell">
+                                    {((item.nutrients?.soluble_fiber_g) ?? 0).toFixed(1)}g
+                                    <span className="sm-hidden"> fiber</span>
+                                  </div>
+                                  <div className="meal-items-cell-num sod-cell">
+                                    {Math.round(item.nutrients?.sodium_mg ?? 0)}mg
+                                    <span className="sm-hidden"> sod</span>
+                                  </div>
+                                  <div className="meal-items-cell-num prot-cell">
+                                    {((item.nutrients?.protein_g) ?? 0).toFixed(1)}g
+                                    <span className="sm-hidden"> prot</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
               ))}
             </div>
