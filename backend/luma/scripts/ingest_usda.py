@@ -9,7 +9,7 @@ import logging
 import uuid
 from pathlib import Path
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 
 from luma.db.models import Food
 from luma.db.session import AsyncSessionLocal
