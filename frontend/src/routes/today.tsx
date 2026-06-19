@@ -146,12 +146,12 @@ export default function TodayRoute() {
     (adherence?.sat_fat_g?.pct ?? 0) / 100,
     // Fiber: cap at 1.0 — exceeding the fiber target is good, not an overage to flag
     Math.min((adherence?.soluble_fiber_g?.pct ?? 0) / 100, 1.0),
-    (adherence?.added_sugars_g?.pct ?? 0) / 100,
+    (adherence?.sodium_mg?.pct ?? 0) / 100,
   ]
   const ringColors = [
     { from: '#fde68a', to: '#fbbf24', glow: 'rgba(251,191,36,0.5)' }, // Yellow (Sat fat)
     { from: '#86efac', to: '#34d399', glow: 'rgba(52,211,153,0.5)' }, // Green (Sol. Fiber)
-    { from: '#f472b6', to: '#ec4899', glow: 'rgba(244,114,182,0.5)' }, // Pink (Added Sugar)
+    { from: '#5eead4', to: '#2dd4bf', glow: 'rgba(94,234,212,0.5)' }, // Teal (Sodium)
   ]
 
   const calPct = adherence?.calories?.pct ?? 0
@@ -344,7 +344,7 @@ export default function TodayRoute() {
                           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                             <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
                             <RingLegend color="var(--good)" label="Sol. Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
-                            <RingLegend color="var(--aurora-pink)" label="Added Sugar" value={`${fmt(adherence?.added_sugars_g?.logged, 1, 'g')} / ${fmt(adherence?.added_sugars_g?.target, 1, 'g')}`} pct={adherence?.added_sugars_g?.pct ?? 0} invert/>
+                            <RingLegend color="var(--aurora-mint)" label="Sodium" value={`${fmt(adherence?.sodium_mg?.logged, 0, 'mg')} / ${fmt(adherence?.sodium_mg?.target, 0, 'mg')}`} pct={adherence?.sodium_mg?.pct ?? 0} invert/>
                           </div>
                         </div>
                       </div>
@@ -513,7 +513,7 @@ export default function TodayRoute() {
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
                   <RingLegend color="var(--good)" label="Sol. Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
-                  <RingLegend color="var(--aurora-pink)" label="Added Sugar" value={`${fmt(adherence?.added_sugars_g?.logged, 1, 'g')} / ${fmt(adherence?.added_sugars_g?.target, 1, 'g')}`} pct={adherence?.added_sugars_g?.pct ?? 0} invert/>
+                  <RingLegend color="var(--aurora-mint)" label="Sodium" value={`${fmt(adherence?.sodium_mg?.logged, 0, 'mg')} / ${fmt(adherence?.sodium_mg?.target, 0, 'mg')}`} pct={adherence?.sodium_mg?.pct ?? 0} invert/>
                 </div>
               </div>
             </div>

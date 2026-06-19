@@ -17,7 +17,7 @@ interface AdherenceToday {
   calories?: DayAdherence | null
   sat_fat_g?: DayAdherence | null
   soluble_fiber_g?: DayAdherence | null
-  added_sugars_g?: DayAdherence | null
+  sodium_mg?: DayAdherence | null
 }
 
 interface StreakHistorySheetProps {
@@ -47,7 +47,7 @@ interface HistoryDay {
   cal: MacroCell
   sat: MacroCell
   fib: MacroCell
-  sug: MacroCell
+  sod: MacroCell
 }
 
 // Badge palette per metric when its target is met; missed/untracked fall back to
@@ -102,18 +102,18 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence, todayStr 
             cal: adherence.calories?.logged,
             sat: adherence.sat_fat_g?.logged,
             fib: adherence.soluble_fiber_g?.logged,
-            sug: adherence.added_sugars_g?.logged,
+            sod: adherence.sodium_mg?.logged,
           }
-        : { cal: apiDay.cal_logged, sat: apiDay.sat_logged, fib: apiDay.fib_logged, sug: apiDay.sug_logged }
+        : { cal: apiDay.cal_logged, sat: apiDay.sat_logged, fib: apiDay.fib_logged, sod: apiDay.sod_logged }
 
       const targets = isToday && adherence
         ? {
             cal: adherence.calories?.target ?? apiDay.cal_target,
             sat: adherence.sat_fat_g?.target ?? apiDay.sat_target,
             fib: adherence.soluble_fiber_g?.target ?? apiDay.fib_target,
-            sug: adherence.added_sugars_g?.target ?? apiDay.sug_target,
+            sod: adherence.sodium_mg?.target ?? apiDay.sod_target,
           }
-        : { cal: apiDay.cal_target, sat: apiDay.sat_target, fib: apiDay.fib_target, sug: apiDay.sug_target }
+        : { cal: apiDay.cal_target, sat: apiDay.sat_target, fib: apiDay.fib_target, sod: apiDay.sod_target }
 
       const score = scoreDay(logged, targets)
 
@@ -128,7 +128,7 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence, todayStr 
         cal: { logged: logged.cal ?? 0, target: targets.cal ?? null, state: score.cal },
         sat: { logged: logged.sat ?? 0, target: targets.sat ?? null, state: score.sat },
         fib: { logged: logged.fib ?? 0, target: targets.fib ?? null, state: score.fib },
-        sug: { logged: logged.sug ?? 0, target: targets.sug ?? null, state: score.sug },
+        sod: { logged: logged.sod ?? 0, target: targets.sod ?? null, state: score.sod },
       })
     }
   }
@@ -298,13 +298,13 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence, todayStr 
                       FIB
                     </span>
                     <span
-                      title={badgeTitle('Added Sugar', day.sug, 'g', 1)}
+                      title={badgeTitle('Sodium', day.sod, 'mg', 0)}
                       style={{
                         fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 6,
-                        ...badgeStyle(day.sug.state, { bg: 'rgba(244,114,182,0.1)', fg: 'var(--aurora-pink)', border: 'rgba(244,114,182,0.18)' }),
+                        ...badgeStyle(day.sod.state, { bg: 'rgba(94,234,212,0.1)', fg: 'var(--aurora-mint)', border: 'rgba(94,234,212,0.18)' }),
                       }}
                     >
-                      SUG
+                      SOD
                     </span>
                   </div>
                 </div>
@@ -368,8 +368,8 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence, todayStr 
                 <span style={{ color: 'var(--good)' }}>≥ 90% of target</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 2 }}>
-                <span><strong>Sugar:</strong> Metabolic limit</span>
-                <span style={{ color: 'var(--aurora-pink)' }}>≤ 110% of target</span>
+                <span><strong>Sodium:</strong> Blood-pressure cap</span>
+                <span style={{ color: 'var(--aurora-mint)' }}>≤ 110% of target</span>
               </div>
             </div>
           </div>
