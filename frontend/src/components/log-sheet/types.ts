@@ -34,4 +34,7 @@ export type DraftItem = {
   food_id?: string
   // Origin of the item so the backend can decide whether to auto-persist it.
   source?: 'barcode' | 'photo' | 'search' | 'voice' | 'plan' | 'manual'
+  // Where the nutrient values came from after server-side resolution. DB-sourced
+  // values are trustworthy; "estimate" means the LLM's own numbers were kept.
+  nutrient_source?: 'reference' | 'usda' | 'user' | 'off' | 'estimate'
 }

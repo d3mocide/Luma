@@ -24,6 +24,24 @@ const PORTION_MULTIPLIERS: { factor: number; label: string }[] = [
 
 const OZ_IN_G = 28.3495
 
+// Provenance pill: distinguish trustworthy DB-sourced nutrients from LLM
+// estimates so the user knows which rows to double-check before saving.
+function sourceBadge(item: DraftItem): { label: string; color: string; bg: string; border: string } | null {
+  switch (item.nutrient_source) {
+    case 'estimate':
+      return { label: 'Estimated', color: 'var(--sun-300)', bg: 'rgba(250,204,21,0.12)', border: 'rgba(250,204,21,0.3)' }
+    case 'reference':
+    case 'usda':
+      return { label: 'USDA', color: 'var(--sky-300)', bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.28)' }
+    case 'off':
+      return { label: 'Label', color: 'var(--fg-tertiary)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)' }
+    case 'user':
+      return { label: 'Your food', color: '#c084fc', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)' }
+    default:
+      return null
+  }
+}
+
 export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpdateName, emptyStateMessage, servings }: Props) {
   const showPerServing = (servings ?? 1) > 1
   if (draftItems.length === 0) {
@@ -63,8 +81,27 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
                     onFocus={(e) => { e.currentTarget.style.background = 'var(--glass-1)'; e.currentTarget.style.borderColor = 'var(--glass-edge)' }}
                     onBlur={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }}
                   />
-                  <div style={{ fontSize: 11, color: 'var(--fg-quiet)', paddingLeft: 1 }}>
-                    {Math.round(item.nutrients.calories)} kcal · {item.nutrients.protein_g.toFixed(1)}g protein
+                  <div style={{ fontSize: 11, color: 'var(--fg-quiet)', paddingLeft: 1, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span>{Math.round(item.nutrients.calories)} kcal · {item.nutrients.protein_g.toFixed(1)}g protein</span>
+                    {(() => {
+                      const badge = sourceBadge(item)
+                      if (!badge) return null
+                      return (
+                        <span
+                          title={item.nutrient_source === 'estimate'
+                            ? 'Estimated values — not matched to a database food. Double-check before saving.'
+                            : 'Nutrients from a verified food database record.'}
+                          style={{
+                            fontSize: 8, padding: '1px 6px', borderRadius: 20,
+                            background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`,
+                            fontWeight: 600, fontFamily: 'var(--font-mono)', textTransform: 'uppercase',
+                            letterSpacing: '0.04em', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {badge.label}
+                        </span>
+                      )
+                    })()}
                   </div>
                 </div>
                 <button

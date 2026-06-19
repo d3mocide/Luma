@@ -157,6 +157,9 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
           unit: item.unit,
           estimated_weight_g: item.estimated_weight_g ?? 100.0,
           nutrients: toNutrients(item.nutrients),
+          food_id: item.food_id,
+          nutrient_source: item.nutrient_source,
+          source: 'voice' as const,
         }))
         onAddItems(mapped)
         onSwitchToPlate()

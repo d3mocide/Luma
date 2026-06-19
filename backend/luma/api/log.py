@@ -11,7 +11,7 @@ from sqlalchemy import select
 from luma.agents import food_extractor
 from luma.db.models import Favorite, Food, MealEvent
 from luma.deps import CurrentUser, DbDep
-from luma.services import off_client, whisper_client
+from luma.services import food_resolver, off_client, whisper_client
 from luma.services.nutrition import aggregate_items
 
 router = APIRouter()
@@ -128,15 +128,17 @@ async def log_meal_barcode(
 @router.post("/meal/text")
 async def log_meal_text(
     req: TextLogRequest,
+    db: DbDep,
     current_user: CurrentUser,
 ) -> dict:
     if not req.text.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Text cannot be empty")
     extracted_items = await food_extractor.extract_foods_from_text(req.text)
+    resolved_items = await food_resolver.resolve_items(db, extracted_items)
     return {
         "raw_input": req.text,
-        "items": extracted_items,
-        "nutrition": aggregate_items(extracted_items),
+        "items": resolved_items,
+        "nutrition": aggregate_items(resolved_items),
         "confidence": 0.90,
     }
 
@@ -164,11 +166,12 @@ async def log_meal_voice(
         
     # 2. Extract foods and nutrients using the food extractor agent
     extracted_items = await food_extractor.extract_foods_from_text(transcription)
+    resolved_items = await food_resolver.resolve_items(db, extracted_items)
 
     return {
         "raw_input": transcription,
-        "items": extracted_items,
-        "nutrition": aggregate_items(extracted_items),
+        "items": resolved_items,
+        "nutrition": aggregate_items(resolved_items),
         "confidence": 0.90,
     }
 
@@ -308,6 +311,7 @@ async def delete_meal(
 
 @router.post("/meal/photo")
 async def log_meal_photo(
+    db: DbDep,
     current_user: CurrentUser,
     file: UploadFile = File(...),
 ) -> dict:
@@ -410,13 +414,11 @@ async def log_meal_photo(
         _logger.exception("Vision food extraction failed")
         extracted_items = []
 
-    from luma.agents.food_extractor import sanitize_extracted_items
-    from luma.services.nutrition import aggregate_items
-    extracted_items = sanitize_extracted_items(extracted_items)
+    resolved_items = await food_resolver.resolve_items(db, extracted_items)
     return {
         "raw_input": f"[photo: {file.filename}]",
-        "items": extracted_items,
-        "nutrition": aggregate_items(extracted_items),
+        "items": resolved_items,
+        "nutrition": aggregate_items(resolved_items),
         "confidence": 0.75,
     }
 
