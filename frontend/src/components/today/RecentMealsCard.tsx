@@ -218,103 +218,52 @@ export function RecentMealsCard({
                       marginTop: 12,
                       borderTop: '1px solid var(--glass-edge)',
                       paddingTop: 12,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 12,
                     }}>
-                      {meal.items.map((item, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 3,
-                          }}
-                        >
-                          {/* Ingredient Name & Brand */}
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)', lineHeight: 1.4 }}>
-                              {item.name}
-                            </span>
-                            {item.brand && (
-                              <span style={{ fontSize: 10, color: 'var(--fg-quiet)', whiteSpace: 'nowrap' }}>
-                                {item.brand}
-                              </span>
-                            )}
+                      <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }} className="thin-scroll">
+                        <div className="meal-items-table">
+                          <div className="meal-items-header">
+                            <div className="meal-items-header-cell">Item</div>
+                            <div className="meal-items-header-cell">Weight</div>
+                            <div className="meal-items-header-cell">Cal</div>
+                            <div className="meal-items-header-cell">Sat Fat</div>
+                            <div className="meal-items-header-cell">Sol Fib</div>
+                            <div className="meal-items-header-cell">Sodium</div>
+                            <div className="meal-items-header-cell">Protein</div>
                           </div>
-
-                          {/* Metrics Breakdown */}
-                          <div style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '4px 6px',
-                            fontFamily: 'var(--font-mono)',
-                            fontSize: 10,
-                            marginTop: 4,
-                          }}>
-                            {/* Weight */}
-                            <span style={{
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background: 'var(--glass-2)',
-                              color: 'var(--fg-secondary)',
-                              border: '1px solid var(--glass-edge)',
-                            }}>
-                              {item.estimated_weight_g || item.quantity}g
-                            </span>
-                            {/* Calories */}
-                            <span style={{
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background: 'rgba(56, 189, 248, 0.08)',
-                              color: 'var(--sky-300)',
-                              border: '1px solid rgba(56, 189, 248, 0.15)',
-                            }}>
-                              {Math.round(item.nutrients?.calories ?? 0)} kcal
-                            </span>
-                            {/* Sat Fat */}
-                            <span style={{
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background: 'rgba(239, 68, 68, 0.08)',
-                              color: 'var(--bad)',
-                              border: '1px solid rgba(239, 68, 68, 0.15)',
-                            }}>
-                              {((item.nutrients?.saturated_fat_g) ?? 0).toFixed(1)}g sat
-                            </span>
-                            {/* Soluble Fiber */}
-                            <span style={{
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background: 'rgba(52, 211, 153, 0.08)',
-                              color: 'var(--good)',
-                              border: '1px solid rgba(52, 211, 153, 0.15)',
-                            }}>
-                              {((item.nutrients?.soluble_fiber_g) ?? 0).toFixed(1)}g fiber
-                            </span>
-                            {/* Sodium */}
-                            <span style={{
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background: 'rgba(251, 146, 60, 0.08)',
-                              color: '#fb923c',
-                              border: '1px solid rgba(251, 146, 60, 0.15)',
-                            }}>
-                              {Math.round(item.nutrients?.sodium_mg ?? 0)}mg sod
-                            </span>
-                            {/* Protein */}
-                            <span style={{
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              background: 'rgba(167, 139, 250, 0.08)',
-                              color: '#a78bfa',
-                              border: '1px solid rgba(167, 139, 250, 0.15)',
-                            }}>
-                              {((item.nutrients?.protein_g) ?? 0).toFixed(1)}g prot
-                            </span>
-                          </div>
+                          {meal.items.map((item, idx) => (
+                            <div key={idx} className="meal-items-row">
+                              <div className="meal-item-name-cell">
+                                <span className="meal-item-name">{item.name}</span>
+                                {item.brand && <span className="meal-item-brand">{item.brand}</span>}
+                              </div>
+                              <div className="meal-items-cell-num weight-cell">
+                                {Math.round(item.estimated_weight_g || item.quantity)}
+                                <span className="sm-hidden">g</span>
+                              </div>
+                              <div className="meal-items-cell-num cal-cell">
+                                {Math.round(item.nutrients?.calories ?? 0)}
+                                <span className="sm-hidden"> kcal</span>
+                              </div>
+                              <div className="meal-items-cell-num sat-cell">
+                                {((item.nutrients?.saturated_fat_g) ?? 0).toFixed(1)}g
+                                <span className="sm-hidden"> sat</span>
+                              </div>
+                              <div className="meal-items-cell-num fib-cell">
+                                {((item.nutrients?.soluble_fiber_g) ?? 0).toFixed(1)}g
+                                <span className="sm-hidden"> fiber</span>
+                              </div>
+                              <div className="meal-items-cell-num sod-cell">
+                                {Math.round(item.nutrients?.sodium_mg ?? 0)}mg
+                                <span className="sm-hidden"> sod</span>
+                              </div>
+                              <div className="meal-items-cell-num prot-cell">
+                                {((item.nutrients?.protein_g) ?? 0).toFixed(1)}g
+                                <span className="sm-hidden"> prot</span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      </div>
                       {/* View full breakdown button */}
                       {meal.nutrition && (
                         <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 4 }}>
