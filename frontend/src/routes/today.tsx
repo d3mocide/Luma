@@ -166,15 +166,11 @@ export default function TodayRoute() {
 
   const sodiumBarColor = sodiumStatus === 'over'
     ? 'linear-gradient(90deg, var(--bad), #f87171)'
-    : sodiumStatus === 'good'
-      ? 'linear-gradient(90deg, var(--good), #34d399)'
-      : 'linear-gradient(90deg, #fdba74, #fb923c)'
+    : 'linear-gradient(90deg, #fdba74, #fb923c)'
   const sodiumBarGlow = sodiumStatus === 'over'
     ? '0 0 8px rgba(239,68,68,0.45)'
-    : sodiumStatus === 'good'
-      ? '0 0 8px rgba(52,211,153,0.45)'
-      : '0 0 8px rgba(251,146,60,0.4)'
-  const sodiumNumColor = sodiumStatus === 'over' ? 'var(--bad)' : sodiumStatus === 'good' ? 'var(--good)' : 'var(--fg-primary)'
+    : '0 0 8px rgba(251,146,60,0.4)'
+  const sodiumNumColor = sodiumStatus === 'over' ? 'var(--bad)' : '#fb923c'
   const weightUnit = measurementWeightUnit(measurementSystem)
   const slopeUnit = measurementSlopeUnit(measurementSystem)
   const latestWeight = convertWeight(data.weight.latest_kg, measurementSystem)

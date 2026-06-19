@@ -28,12 +28,18 @@ export function RecentMealsCard({
   onDelete,
   deletingId,
   onEdit,
+  title = "Recent meals",
+  subtitle = "Latest meal logs from today. Tap a meal to see full nutrient breakdown.",
+  emptyText = "No meals logged yet today.",
 }: {
   meals?: RecentMeal[]
   compact?: boolean
   onDelete?: (id: string) => void
   deletingId?: string | null
   onEdit?: (meal: RecentMeal) => void
+  title?: string
+  subtitle?: string
+  emptyText?: string
 }) {
   const safeMeals = Array.isArray(meals) ? meals : []
   const [breakdownMeal, setBreakdownMeal] = useState<RecentMeal | null>(null)
@@ -43,16 +49,16 @@ export function RecentMealsCard({
       <div className="glass" style={{ padding: compact ? 18 : 24, marginTop: compact ? 14 : 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div>
-            <div className="eyebrow">Recent meals</div>
+            <div className="eyebrow">{title}</div>
             <div style={{ fontSize: compact ? 12 : 13, color: 'var(--fg-tertiary)', marginTop: 4 }}>
-              Latest meal logs from today. Tap a meal to see full nutrient breakdown.
+              {subtitle}
             </div>
           </div>
         </div>
 
         {safeMeals.length === 0 ? (
           <p style={{ color: 'var(--fg-quiet)', fontSize: compact ? 12 : 13, margin: 0 }}>
-            No meals logged yet today.
+            {emptyText}
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -4187,4 +4187,20 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 }
 
-
+/* Responsive adjustments for BudgetStat on narrow viewports (e.g. iPhone 12) */
+@media (max-width: 395px) {
+  .budget-stat {
+    padding: 8px 6px !important;
+  }
+  .budget-stat-label {
+    font-size: 8.5px !important;
+    letter-spacing: 0.04em !important;
+  }
+  .budget-stat-num {
+    font-size: 16px !important;
+  }
+  .budget-stat-state {
+    font-size: 8px !important;
+    letter-spacing: 0.02em !important;
+  }
+}

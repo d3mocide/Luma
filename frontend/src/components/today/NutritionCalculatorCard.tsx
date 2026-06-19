@@ -104,16 +104,18 @@ function BudgetStat({
   const pendingColor = !isMinTarget && logged + add > target ? 'var(--bad)' : color
 
   return (
-    <div className="glass-inset" style={{ padding: compact ? '10px 11px' : '11px 12px', textAlign: 'left', display: 'grid', gap: compact ? 7 : 8, minWidth: 0, ...style }}>
-      <div style={{ fontSize: compact ? 10 : 11.5, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+    <div className="glass-inset budget-stat" style={{ padding: compact ? '10px 11px' : '11px 12px', textAlign: 'left', display: 'grid', gap: compact ? 7 : 8, minWidth: 0, ...style }}>
+      <div className="budget-stat-label" style={{ fontSize: compact ? 10 : 11.5, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {label}
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0 }}>
-        <span className="num" style={{ fontSize: compact ? 23 : 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-0.02em', color: valueColor }}>
-          {noTarget ? '—' : display}
-        </span>
-        {!noTarget && <span style={{ fontSize: compact ? 11 : 12, color: 'var(--fg-quiet)' }}>{unit}</span>}
-        <span style={{ marginLeft: 'auto', fontSize: compact ? 9.5 : 11, color: noTarget ? 'var(--fg-quiet)' : over ? 'var(--bad)' : met ? 'var(--good)' : 'var(--fg-quiet)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2px 8px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+          <span className="num budget-stat-num" style={{ fontSize: compact ? 20 : 22, fontWeight: 500, lineHeight: 1, letterSpacing: '-0.02em', color: valueColor }}>
+            {noTarget ? '—' : display}
+          </span>
+          {!noTarget && <span style={{ fontSize: compact ? 11 : 12, color: 'var(--fg-quiet)' }}>{unit}</span>}
+        </div>
+        <span className="budget-stat-state" style={{ fontSize: compact ? 9 : 10.5, color: noTarget ? 'var(--fg-quiet)' : over ? 'var(--bad)' : met ? 'var(--good)' : 'var(--fg-quiet)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', flexShrink: 0 }}>
           {state}
         </span>
       </div>
