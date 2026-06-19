@@ -8,7 +8,7 @@ import {
 } from '../../lib/portions'
 import { scaleNutrients, toNutrients } from '../../lib/nutrients'
 import { DraftItemList } from './DraftItemList'
-import type { DraftItem, Favorite } from './types'
+import { nutrientSourceForFood, type DraftItem, type Favorite } from './types'
 
 const FOOD_FORMATS = [
   Html5QrcodeSupportedFormats.EAN_13,
@@ -87,11 +87,14 @@ type Props = {
   emptyStateMessage?: string
   favorites?: Favorite[]
   onPickFavorite?: (items: DraftItem[], name: string) => void
+  // Replaces an existing draft item (used to swap an "Estimated" item for a
+  // database food). When provided, estimate items in the list show a Fix action.
+  onReplaceItem?: (index: number, item: DraftItem) => void
   // Forwarded to the item list so each ingredient shows its per-serving weight.
   servings?: number
 }
 
-export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdateWeight, onUpdateName, emptyStateMessage, favorites, onPickFavorite, servings }: Props) {
+export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdateWeight, onUpdateName, emptyStateMessage, favorites, onPickFavorite, onReplaceItem, servings }: Props) {
   const [query, setQuery]               = useState('')
   const [results, setResults]           = useState<FoodResult[]>([])
   const [isSearching, setIsSearching]   = useState(false)
@@ -101,6 +104,9 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   const [isScanning, setIsScanning]     = useState(false)
   const [barcodeError, setBarcodeError] = useState('')
   const [recentFoods, setRecentFoods]   = useState<FoodResult[]>([])
+  // Index of the draft item being replaced, or null for a normal add.
+  const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
   const qtyRef = useRef<HTMLInputElement>(null)
   // Cleared once the user adjusts qty/unit, so async enrichment doesn't clobber
   // a portion they've already chosen.
@@ -217,6 +223,17 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
     }
   }, [isScanning, scannerDomId])
 
+  function beginReplace(index: number) {
+    setReplaceIndex(index)
+    setPending(null)
+    setPendingQty('')
+    setPendingUnit('g')
+    setQuery('')
+    setResults([])
+    setIsScanning(false)
+    setTimeout(() => searchRef.current?.focus(), 60)
+  }
+
   function confirmAdd() {
     if (!pending) return
     const qty = Math.max(0, parseFloat(pendingQty) || 0)
@@ -224,7 +241,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
     const unitLabel = pendingUnit.startsWith('hm:')
       ? (pending.household_measures?.[Number(pendingUnit.slice(3))]?.label ?? 'serving')
       : pendingUnit
-    onAddItem({
+    const item: DraftItem = {
       name: pending.name,
       brand: pending.brand,
       quantity: qty,
@@ -233,8 +250,15 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
       base_weight_g: grams,
       nutrients: scaleNutrients(pending.nutrients_per_100g, grams),
       food_id: pending.id,
+      nutrient_source: nutrientSourceForFood(pending.source, pending.brand),
       source: 'search',
-    })
+    }
+    if (replaceIndex !== null && onReplaceItem) {
+      onReplaceItem(replaceIndex, item)
+      setReplaceIndex(null)
+    } else {
+      onAddItem(item)
+    }
     setPending(null)
     setPendingQty('')
     setPendingUnit('g')
@@ -271,6 +295,25 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+      {/* ── Replace-mode banner ── */}
+      {replaceIndex !== null && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+          padding: '8px 12px', borderRadius: 10,
+          background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)',
+        }}>
+          <span style={{ fontSize: 12, color: 'var(--sky-200)', minWidth: 0 }}>
+            Replacing <strong style={{ color: 'var(--fg-primary)' }}>{draftItems[replaceIndex]?.name ?? 'item'}</strong> — pick a database food
+          </span>
+          <button
+            onClick={() => setReplaceIndex(null)}
+            style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-quiet)', fontSize: 12, fontWeight: 600 }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* ── Search input or gram picker ── */}
       {pending ? (
@@ -380,6 +423,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
             }}>
               <Search size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-quiet)', pointerEvents: 'none' }} />
               <input
+                ref={searchRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -550,6 +594,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
         onRemoveItem={onRemoveItem}
         onUpdateWeight={onUpdateWeight}
         onUpdateName={onUpdateName}
+        onReplaceItem={onReplaceItem ? beginReplace : undefined}
         emptyStateMessage={emptyStateMessage ?? 'Search above to start building your meal.'}
         servings={servings}
       />

@@ -14,7 +14,7 @@ import {
   defaultQtyForUnit,
 } from '../../lib/portions'
 import { DraftItemList } from './DraftItemList'
-import type { DraftItem } from './types'
+import { nutrientSourceForFood, type DraftItem } from './types'
 
 const BARCODE_FORMATS = [
   Html5QrcodeSupportedFormats.EAN_13,
@@ -27,6 +27,7 @@ type FoodResult = {
   id: string
   name: string
   brand?: string
+  source?: string
   serving_size_g?: number
   nutrients_per_100g: Record<string, number>
   household_measures?: HouseholdMeasure[]
@@ -109,6 +110,7 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
               id: food.id as string,
               name: food.name as string,
               brand: food.brand as string | undefined,
+              source: food.source as string | undefined,
               serving_size_g: food.serving_size_g as number | undefined,
               nutrients_per_100g: food.nutrients_per_100g as Record<string, number>,
               household_measures: measures,
@@ -158,6 +160,7 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
       estimated_weight_g: grams,
       nutrients: scaleNutrients(pending.nutrients_per_100g, grams),
       food_id: pending.id,
+      nutrient_source: nutrientSourceForFood(pending.source, pending.brand),
       source: 'barcode',
     }])
 
@@ -281,6 +284,8 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
         unit: item.unit,
         estimated_weight_g: item.estimated_weight_g ?? 100.0,
         nutrients: toNutrients(item.nutrients),
+        food_id: item.food_id,
+        nutrient_source: item.nutrient_source,
         source: 'photo' as const,
       }))
       onAddItems(mapped)
