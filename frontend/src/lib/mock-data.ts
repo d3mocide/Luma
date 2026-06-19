@@ -22,7 +22,7 @@ export function createMockTodayData(): TodayData {
       calories: { logged: 1980, target: 2100, pct: 94 },
       sat_fat_g: { logged: 14, target: 18, pct: 78 },
       soluble_fiber_g: { logged: 11.8, target: 10, pct: 118 },
-      added_sugars_g: { logged: 8.5, target: 36, pct: 24 },
+      sodium_mg: { logged: 1840, target: 2300, pct: 80 },
       protein_g: { logged: 112, target: 140, pct: 80 },
     },
     biometrics_latest: {

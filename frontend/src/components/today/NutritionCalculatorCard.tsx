@@ -86,7 +86,7 @@ function BudgetStat({
   const pendingFrom = Math.min(usedNow, usedNext)
   const pendingTo = Math.max(usedNow, usedNext)
 
-  // Floors (protein, fiber) and ceilings (calories, sat fat, sugar) are opposite
+  // Floors (protein, fiber) and ceilings (calories, sat fat, sodium) are opposite
   // intents — a floor you fill up, a ceiling you spend down — so they read
   // differently even at rest. A negative ceiling is "over"; a non-positive floor
   // is "goal met".
@@ -271,19 +271,19 @@ export function NutritionCalculatorCard({
   const currentCalories  = selectedFood ? round1((n.calories         ?? 0) * factor) : 0
   const currentSatFat    = selectedFood ? round1((n.saturated_fat_g   ?? 0) * factor) : 0
   const currentSolFiber  = selectedFood ? round1((n.soluble_fiber_g   ?? 0) * factor) : 0
-  const currentSugars    = selectedFood ? round1((n.added_sugars_g     ?? 0) * factor) : 0
+  const currentSodium    = selectedFood ? round1((n.sodium_mg         ?? 0) * factor) : 0
   const currentProtein   = selectedFood ? round1((n.protein_g         ?? 0) * factor) : 0
 
   const mealCalories = mealItems.reduce((sum, item) => sum + (item.nutrition.calories ?? 0), 0)
   const mealSatFat = mealItems.reduce((sum, item) => sum + (item.nutrition.saturated_fat_g ?? 0), 0)
   const mealSolFiber = mealItems.reduce((sum, item) => sum + (item.nutrition.soluble_fiber_g ?? 0), 0)
-  const mealSugars = mealItems.reduce((sum, item) => sum + (item.nutrition.added_sugars_g ?? 0), 0)
+  const mealSodium = mealItems.reduce((sum, item) => sum + (item.nutrition.sodium_mg ?? 0), 0)
   const mealProtein = mealItems.reduce((sum, item) => sum + (item.nutrition.protein_g ?? 0), 0)
 
   const addCalories = round1(mealCalories + currentCalories)
   const addSatFat = round1(mealSatFat + currentSatFat)
   const addSolFiber = round1(mealSolFiber + currentSolFiber)
-  const addSugars = round1(mealSugars + currentSugars)
+  const addSodium = round1(mealSodium + currentSodium)
   const addProtein = round1(mealProtein + currentProtein)
 
   const calTarget  = adherence.calories.target ?? 0
@@ -297,9 +297,9 @@ export function NutritionCalculatorCard({
   const solTarget  = adherence.soluble_fiber_g.target ?? 0
   const solLogged  = adherence.soluble_fiber_g.logged ?? 0
 
-  const sugarsTarget  = adherence.added_sugars_g?.target ?? 0
-  const sugarsLogged  = adherence.added_sugars_g?.logged ?? 0
-  const sugarsProjected = round1(sugarsTarget - sugarsLogged - addSugars)
+  const sodiumTarget  = adherence.sodium_mg?.target ?? 0
+  const sodiumLogged  = adherence.sodium_mg?.logged ?? 0
+  const sodiumProjected = round1(sodiumTarget - sodiumLogged - addSodium)
 
   const proteinTarget  = adherence.protein_g?.target ?? 0
   const proteinLogged  = adherence.protein_g?.logged ?? 0
@@ -319,9 +319,9 @@ export function NutritionCalculatorCard({
   type FitSignal = 'fits' | 'tight' | 'over'
   let fitSignal: FitSignal | null = null
   if (hasItemsOrFood && calTarget > 0) {
-    if (calProjected < 0 || (satTarget > 0 && satProjected < 0) || (sugarsTarget > 0 && sugarsProjected < 0)) {
+    if (calProjected < 0 || (satTarget > 0 && satProjected < 0) || (sodiumTarget > 0 && sodiumProjected < 0)) {
       fitSignal = 'over'
-    } else if (calProjected < calTarget * 0.08 || (satTarget > 0 && satProjected < satTarget * 0.08) || (sugarsTarget > 0 && sugarsProjected < sugarsTarget * 0.08)) {
+    } else if (calProjected < calTarget * 0.08 || (satTarget > 0 && satProjected < satTarget * 0.08) || (sodiumTarget > 0 && sodiumProjected < sodiumTarget * 0.08)) {
       fitSignal = 'tight'
     } else {
       fitSignal = 'fits'
@@ -555,7 +555,7 @@ export function NutritionCalculatorCard({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: compact ? 8 : 10 }}>
           <BudgetStat label="Sat fat"   unit="g" target={satTarget} logged={satLogged} add={addSatFat} showProjected={hasItemsOrFood} compact={compact} color="var(--sun-400)" />
           <BudgetStat label="Sol fiber" unit="g" target={solTarget} logged={solLogged} add={addSolFiber} showProjected={hasItemsOrFood} compact={compact} color="var(--good)" isMinTarget />
-          <BudgetStat label="Added sugar" unit="g" target={sugarsTarget} logged={sugarsLogged} add={addSugars} showProjected={hasItemsOrFood} compact={compact} color="var(--aurora-pink)" />
+          <BudgetStat label="Sodium" unit="mg" target={sodiumTarget} logged={sodiumLogged} add={addSodium} showProjected={hasItemsOrFood} compact={compact} color="var(--aurora-mint)" />
         </div>
       </div>
 
@@ -1294,7 +1294,7 @@ export function NutritionCalculatorCard({
                   [addProtein, 'g protein'],
                   [addSatFat, 'g sat fat'],
                   [addSolFiber, 'g fiber'],
-                  [addSugars, 'g added sugar'],
+                  [addSodium, 'mg sodium'],
                 ] as const).map(([val, suffix]) => (
                   <span
                     key={suffix}

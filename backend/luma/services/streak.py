@@ -12,7 +12,7 @@ because overshooting calories is what breaks a cut — landing under it does not
 The wider under-tolerance (25%) avoids penalising intentional fasting days or
 aggressive-deficit eating; the separate ``check_calorie_deficit`` alert handles
 the safety concern when under-eating becomes a sustained pattern.
-Saturated fat and sugar are ceilings (at or below target); soluble fiber is a floor
+Saturated fat and sodium are ceilings (at or below target); soluble fiber is a floor
 (at or above target). A target the user has not set is excluded from the tally
 entirely rather than scored as a miss, so an unconfigured metric can never sink a
 streak.
@@ -21,7 +21,7 @@ from __future__ import annotations
 
 CAL_UNDER_TOL = 0.75   # intake down to 25% under target is still on-plan
 CAL_OVER_TOL = 1.10    # only 10% over target is tolerated
-CEILING_GRACE = 1.10   # sat fat and sugar: up to 10% over cap still counts
+CEILING_GRACE = 1.10   # sat fat and sodium: up to 10% over cap still counts
 FLOOR_TOLERANCE = 0.90 # soluble fiber: down to 10% under floor still counts
 ON_TRACK_MIN = 3       # hit at least this many targets — or all of them, if fewer are set
 
@@ -33,7 +33,7 @@ def score_day(
     """Grade one day's nutrient totals against the configured targets.
 
     ``totals`` and ``targets`` are keyed by ``"cal"``, ``"sat"``, ``"fib"``,
-    ``"sug"``. Only targets that are set (non-``None``) count toward the
+    ``"sod"``. Only targets that are set (non-``None``) count toward the
     denominator. Returns per-metric ``*_met`` flags plus ``targets_met`` (numerator),
     ``targets_possible`` (denominator) and the ``on_track`` verdict.
     """
@@ -51,9 +51,9 @@ def score_day(
     if fib_t is not None:
         checks["fib"] = totals.get("fib", 0.0) >= fib_t * FLOOR_TOLERANCE
 
-    sug_t = targets.get("sug")
-    if sug_t is not None:
-        checks["sug"] = totals.get("sug", 0.0) <= sug_t * CEILING_GRACE
+    sod_t = targets.get("sod")
+    if sod_t is not None:
+        checks["sod"] = totals.get("sod", 0.0) <= sod_t * CEILING_GRACE
 
     configured = len(checks)
     met = sum(checks.values())
@@ -63,7 +63,7 @@ def score_day(
         "cal_met": checks.get("cal", False),
         "sat_met": checks.get("sat", False),
         "fib_met": checks.get("fib", False),
-        "sug_met": checks.get("sug", False),
+        "sod_met": checks.get("sod", False),
         "targets_met": met,
         "targets_possible": configured,
         "on_track": on_track,

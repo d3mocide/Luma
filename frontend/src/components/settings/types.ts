@@ -13,7 +13,7 @@ export type GoalSettings = {
   daily_sat_fat_g_max: number | null
   daily_soluble_fiber_g: number | null
   daily_protein_g_min: number | null
-  daily_sugar_g_max: number | null
+  daily_sodium_mg_max: number | null
   dietary_pattern: string | null
 }
 
@@ -26,7 +26,7 @@ export type GoalFormState = {
   daily_sat_fat_g_max: string
   daily_soluble_fiber_g: string
   daily_protein_g_min: string
-  daily_sugar_g_max: string
+  daily_sodium_mg_max: string
   dietary_pattern: string
 }
 
@@ -39,7 +39,7 @@ export const emptyGoalForm: GoalFormState = {
   daily_sat_fat_g_max: '',
   daily_soluble_fiber_g: '',
   daily_protein_g_min: '',
-  daily_sugar_g_max: '',
+  daily_sodium_mg_max: '',
   dietary_pattern: 'cholesterol-lowering',
 }
 
@@ -48,7 +48,7 @@ export type GoalRecommendation = {
   daily_sat_fat_g_max: number
   daily_soluble_fiber_g: number
   daily_protein_g_min: number | null
-  daily_sugar_g_max: number | null
+  daily_sodium_mg_max: number | null
   basis: {
     tdee_kcal: number | null
     tdee_source?: string
@@ -155,7 +155,7 @@ export function toGoalFormState(goal?: Partial<GoalSettings>): GoalFormState {
     daily_sat_fat_g_max: goal?.daily_sat_fat_g_max?.toString() ?? '',
     daily_soluble_fiber_g: goal?.daily_soluble_fiber_g?.toString() ?? '',
     daily_protein_g_min: goal?.daily_protein_g_min?.toString() ?? '',
-    daily_sugar_g_max: goal?.daily_sugar_g_max?.toString() ?? '',
+    daily_sodium_mg_max: goal?.daily_sodium_mg_max?.toString() ?? '',
     dietary_pattern: goal?.dietary_pattern || 'cholesterol-lowering',
   }
 }

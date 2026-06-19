@@ -167,7 +167,7 @@ export interface TodayData {
     calories: { logged: number | null; target: number | null; pct: number | null }
     sat_fat_g: { logged: number | null; target: number | null; pct: number | null }
     soluble_fiber_g: { logged: number | null; target: number | null; pct: number | null }
-    added_sugars_g: { logged: number | null; target: number | null; pct: number | null }
+    sodium_mg: { logged: number | null; target: number | null; pct: number | null }
     protein_g: { logged: number | null; target: number | null; pct: number | null }
   }
   biometrics_latest: {
@@ -222,8 +222,8 @@ export interface StreakHistoryDay {
   sat_target: number | null
   fib_logged: number | null
   fib_target: number | null
-  sug_logged: number | null
-  sug_target: number | null
+  sod_logged: number | null
+  sod_target: number | null
   targets_met: number
   targets_possible: number
   on_track: boolean
