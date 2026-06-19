@@ -4307,6 +4307,9 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 @media (max-width: 640px) {
+  .meal-items-table {
+    min-width: 0 !important;
+  }
   .meal-items-header {
     display: none;
   }
