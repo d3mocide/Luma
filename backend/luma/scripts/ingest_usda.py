@@ -9,7 +9,7 @@ import logging
 import uuid
 from pathlib import Path
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from luma.db.models import Food
 from luma.db.session import AsyncSessionLocal
@@ -27,25 +27,39 @@ async def main() -> None:
 
     logger.info("Initializing USDA reference database seed...")
     async with AsyncSessionLocal() as session:
-        await session.execute(delete(Food).where(Food.source == "usda"))
-        await session.commit()
+        # Load existing foods by source_id to perform updates rather than delete & insert,
+        # which prevents foreign key violations on active meals/shopping list items.
+        result = await session.execute(select(Food).where(Food.source == "usda"))
+        existing_foods = {f.source_id: f for f in result.scalars().all()}
 
-        logger.info(f"Seeding {len(seed_foods)} high-fidelity core USDA items...")
+        logger.info(f"Seeding/Updating {len(seed_foods)} high-fidelity core USDA items...")
         for item in seed_foods:
+            source_id = f"usda_{item['name'].lower().replace(' ', '_')}"
             computed_flags = merge_flags(item.get("flags", []), item["nutrients"])
-            session.add(Food(
-                id=uuid.uuid4(),
-                source="usda",
-                source_id=f"usda_{item['name'].lower().replace(' ', '_')}",
-                name=item["name"],
-                brand=item["brand"],
-                serving_size_g=item["serving_size_g"],
-                nutrients_per_100g=item["nutrients"],
-                category=item.get("category"),
-                tags=item["tags"],
-                flags=computed_flags,
-                created_by=None,
-            ))
+            
+            if source_id in existing_foods:
+                db_food = existing_foods[source_id]
+                db_food.name = item["name"]
+                db_food.brand = item["brand"]
+                db_food.serving_size_g = item["serving_size_g"]
+                db_food.nutrients_per_100g = item["nutrients"]
+                db_food.category = item.get("category")
+                db_food.tags = item["tags"]
+                db_food.flags = computed_flags
+            else:
+                session.add(Food(
+                    id=uuid.uuid4(),
+                    source="usda",
+                    source_id=source_id,
+                    name=item["name"],
+                    brand=item["brand"],
+                    serving_size_g=item["serving_size_g"],
+                    nutrients_per_100g=item["nutrients"],
+                    category=item.get("category"),
+                    tags=item["tags"],
+                    flags=computed_flags,
+                    created_by=None,
+                ))
 
         await session.commit()
         logger.info("Seeding completed successfully!")
