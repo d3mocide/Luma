@@ -43,8 +43,8 @@ function totalSolFiber(items: FavoriteItem[]): number {
   return Math.round(val * 10) / 10
 }
 
-function totalSugar(items: FavoriteItem[]): number {
-  const val = items.reduce((sum, i) => sum + (i.nutrients.sugars_g ?? 0), 0)
+function totalAddedSugar(items: FavoriteItem[]): number {
+  const val = items.reduce((sum, i) => sum + (i.nutrients.added_sugars_g ?? 0), 0)
   return Math.round(val * 10) / 10
 }
 
@@ -176,9 +176,10 @@ export default function FavoritesRoute() {
             fiber_g: acc.fiber_g + (n.fiber_g || 0),
             sodium_mg: acc.sodium_mg + (n.sodium_mg || 0),
             sugars_g: acc.sugars_g + (n.sugars_g || 0),
+            added_sugars_g: acc.added_sugars_g + (n.added_sugars_g || 0),
           }
         },
-        { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0, sugars_g: 0 }
+        { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0, sugars_g: 0, added_sugars_g: 0 }
       )
       return api.post('/log/meal', {
         slot,
@@ -500,8 +501,8 @@ export default function FavoritesRoute() {
                           <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{totalSolFiber(fav.items)}g</span>
                         </div>
                         <div className="favorite-macro-col">
-                          <span className="favorite-macro-label">Sugar</span>
-                          <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{totalSugar(fav.items)}g</span>
+                          <span className="favorite-macro-label">Added Sugar</span>
+                          <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{totalAddedSugar(fav.items)}g</span>
                         </div>
                         <div className="favorite-macro-col">
                           <span className="favorite-macro-label">Protein</span>
@@ -607,11 +608,11 @@ export default function FavoritesRoute() {
                                 </span>
                               </>
                             )}
-                            {item.nutrients.sugars_g != null && item.nutrients.sugars_g > 0 && (
+                            {item.nutrients.added_sugars_g != null && item.nutrients.added_sugars_g > 0 && (
                               <>
                                 <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
                                 <span style={{ color: 'var(--aurora-pink)' }}>
-                                  {Math.round(item.nutrients.sugars_g * 10) / 10}g sugar
+                                  {Math.round(item.nutrients.added_sugars_g * 10) / 10}g added sugar
                                 </span>
                               </>
                             )}
@@ -679,8 +680,8 @@ export default function FavoritesRoute() {
                   <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{sumNutrients(items).soluble_fiber_g.toFixed(1)}g</span>
                 </div>
                 <div className="favorite-macro-col">
-                  <span className="favorite-macro-label">Sugar</span>
-                  <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{sumNutrients(items).sugars_g.toFixed(1)}g</span>
+                  <span className="favorite-macro-label">Added Sugar</span>
+                  <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{sumNutrients(items).added_sugars_g.toFixed(1)}g</span>
                 </div>
                 <div className="favorite-macro-col">
                   <span className="favorite-macro-label">Protein</span>
