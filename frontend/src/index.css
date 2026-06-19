@@ -4204,3 +4204,49 @@ input[type="search"]::-webkit-search-results-decoration {
     letter-spacing: 0.02em !important;
   }
 }
+
+/* Today Dashboard Grid Responsive Adjustments */
+.today-top-grid.two-cols {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+.today-top-grid.one-col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.today-insight-grid {
+  display: grid;
+  grid-template-columns: var(--desktop-cols);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.today-biometrics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 1200px) {
+  .today-top-grid.two-cols {
+    grid-template-columns: 1fr;
+  }
+  .today-insight-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .today-biometrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .today-biometrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+

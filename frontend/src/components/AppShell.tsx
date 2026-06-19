@@ -3,7 +3,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CircleDot, Utensils, Activity, Sparkles, Settings, Plus, Moon, Sun, Loader2, ChevronDown,
-  Lock, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight, Star, Users, HeartPulse,
+  Lock, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight, Star, Users, HeartPulse, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { api, TodayData, User } from '../lib/api'
 import { useUIStore } from '../stores'
@@ -104,14 +104,37 @@ export default function AppShell() {
 function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: boolean }) {
   const location = useLocation()
   const queryClient = useQueryClient()
-  const { theme, setTheme, openLogSheet } = useUIStore()
+  const { theme, setTheme, openLogSheet, sidebarCollapsed, toggleSidebarCollapsed, setSidebarCollapsed } = useUIStore()
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [profilePlacement, setProfilePlacement] = useState<'up' | 'down'>('up')
   const [profileMaxHeight, setProfileMaxHeight] = useState(240)
   const profileRef = useRef<HTMLDivElement | null>(null)
   const profileTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const prevWidthRef = useRef(window.innerWidth)
 
   const initials = getUserInitials(user.display_name)
+
+  useEffect(() => {
+    const handleResize = () => {
+      const currentWidth = window.innerWidth
+      const prevWidth = prevWidthRef.current
+
+      if (currentWidth < 1000 && prevWidth >= 1000) {
+        setSidebarCollapsed(true)
+      } else if (currentWidth >= 1000 && prevWidth < 1000) {
+        setSidebarCollapsed(false)
+      }
+
+      prevWidthRef.current = currentWidth
+    }
+
+    if (window.innerWidth < 1000) {
+      setSidebarCollapsed(true)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [setSidebarCollapsed])
 
   useEffect(() => {
     setIsProfileOpen(false)
@@ -173,54 +196,111 @@ function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: 
 
   return (
     <aside style={{
-      width: 240,
+      width: sidebarCollapsed ? 72 : 240,
       flexShrink: 0,
-      padding: '28px 18px 24px',
+      padding: sidebarCollapsed ? '28px 12px 24px' : '28px 18px 24px',
       borderRight: '1px solid rgba(255,255,255,0.05)',
       flexDirection: 'column',
       background: 'linear-gradient(180deg, rgba(255,255,255,0.02), transparent)',
       position: 'relative',
+      transition: 'width 200ms cubic-bezier(0.4, 0, 0.2, 1), padding 200ms cubic-bezier(0.4, 0, 0.2, 1)',
     }}
     className="hidden md:flex"
     >
-      <div style={{ padding: '0 8px 28px' }}>
-        <LumaWordmark size={32}/>
+      <div style={{
+        display: 'flex',
+        flexDirection: sidebarCollapsed ? 'column' : 'row',
+        alignItems: 'center',
+        justifyContent: sidebarCollapsed ? 'center' : 'space-between',
+        padding: sidebarCollapsed ? '0 0 28px' : '0 8px 28px',
+        gap: sidebarCollapsed ? 12 : 0,
+      }}>
+        {sidebarCollapsed ? <LumaLogo size={32}/> : <LumaWordmark size={32}/>}
+        <button
+          type="button"
+          onClick={toggleSidebarCollapsed}
+          className="btn-ghost"
+          style={{
+            padding: 4,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '50%',
+            color: 'var(--fg-quiet)',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'background 200ms',
+          }}
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {sidebarCollapsed ? <ChevronRight size={18} strokeWidth={1.5} /> : <ChevronLeft size={18} strokeWidth={1.5} />}
+        </button>
       </div>
 
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {DESKTOP_NAV_ITEMS.map((item) => (
-          <SideLink key={item.to} {...item} showLoading={isTodayLoading && item.to === '/today'} />
+          <SideLink key={item.to} {...item} showLoading={isTodayLoading && item.to === '/today'} collapsed={sidebarCollapsed} />
         ))}
       </nav>
 
-      <button
-        type="button"
-        onClick={openLogSheet}
-        className="btn btn-primary"
-        style={{
-          width: '100%',
-          marginTop: 14,
-          padding: '10px 12px',
-          gap: 6,
-          justifyContent: 'center',
-        }}
-        aria-label="Log meal"
-      >
-        <Plus size={15} strokeWidth={2} />
-        Log meal
-      </button>
+      {sidebarCollapsed ? (
+        <button
+          type="button"
+          onClick={openLogSheet}
+          className="btn btn-primary"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            marginTop: 14,
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            alignSelf: 'center',
+          }}
+          aria-label="Log meal"
+          title="Log meal"
+        >
+          <Plus size={18} strokeWidth={2} />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={openLogSheet}
+          className="btn btn-primary"
+          style={{
+            width: '100%',
+            marginTop: 14,
+            padding: '10px 12px',
+            gap: 6,
+            justifyContent: 'center',
+          }}
+          aria-label="Log meal"
+        >
+          <Plus size={15} strokeWidth={2} />
+          Log meal
+        </button>
+      )}
 
       <div style={{ flex: 1 }}/>
 
-      <div ref={profileRef} className="desktop-profile-menu">
+      <div ref={profileRef} className="desktop-profile-menu" style={sidebarCollapsed ? { display: 'flex', justifyContent: 'center' } : undefined}>
         <button
           type="button"
-          className="glass desktop-profile-trigger"
+          className={sidebarCollapsed ? "" : "glass desktop-profile-trigger"}
           ref={profileTriggerRef}
           onClick={() => setIsProfileOpen((open) => !open)}
           aria-label="Open account panel"
           aria-expanded={isProfileOpen}
+          style={sidebarCollapsed ? {
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            borderRadius: '50%',
+          } : undefined}
         >
           <span
             style={{
@@ -233,19 +313,25 @@ function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: 
           >
             {initials}
           </span>
-          <span style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
-            <span style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{user.display_name || 'Operator'}</span>
-          </span>
-          <Settings size={15} strokeWidth={1.5} color="currentColor" style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
+          {!sidebarCollapsed && (
+            <>
+              <span style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{user.display_name || 'Operator'}</span>
+              </span>
+              <Settings size={15} strokeWidth={1.5} color="currentColor" style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
+            </>
+          )}
         </button>
 
         {isProfileOpen && (
           <div
             className="desktop-profile-panel glass-bright"
-            style={profilePlacement === 'down'
-              ? { top: 'calc(100% + 10px)', bottom: 'auto', maxHeight: `${profileMaxHeight}px` }
-              : { bottom: 'calc(100% + 10px)', top: 'auto', maxHeight: `${profileMaxHeight}px` }
-            }
+            style={{
+              ...profilePlacement === 'down'
+                ? { top: 'calc(100% + 10px)', bottom: 'auto', maxHeight: `${profileMaxHeight}px` }
+                : { bottom: 'calc(100% + 10px)', top: 'auto', maxHeight: `${profileMaxHeight}px` },
+              ...(sidebarCollapsed ? { left: 0, right: 'auto', width: 220 } : {})
+            }}
           >
             <div className="eyebrow" style={{ marginBottom: 10 }}>Display</div>
             <div className={`theme-toggle ${theme === 'light' ? 'light-mode' : ''}`} style={{ width: '100%', marginBottom: 12 }}>
@@ -449,23 +535,30 @@ function SideLink({
   label,
   Icon,
   showLoading,
+  collapsed,
 }: {
   to: string
   label: string
   Icon: React.ElementType
   showLoading?: boolean
+  collapsed?: boolean
 }) {
   return (
     <NavLink
       to={to}
+      title={collapsed ? label : undefined}
       style={({ isActive }) => ({
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '10px 12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: collapsed ? 0 : 12,
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        padding: collapsed ? '10px 0' : '10px 12px',
         borderRadius: 12,
         color: isActive ? 'var(--fg-primary)' : 'var(--fg-tertiary)',
         background: isActive ? 'linear-gradient(90deg, rgba(56,189,248,0.18), rgba(56,189,248,0.04))' : 'transparent',
         border: isActive ? '1px solid rgba(56,189,248,0.2)' : '1px solid transparent',
-        fontSize: 14, fontWeight: isActive ? 500 : 400,
+        fontSize: 14,
+        fontWeight: isActive ? 500 : 400,
         cursor: 'pointer',
         position: 'relative',
         textDecoration: 'none',
@@ -474,10 +567,10 @@ function SideLink({
     >
       {({ isActive }) => (
         <>
-          {isActive && <span className="sidebar-active-indicator"/>}
-          <Icon size={17} strokeWidth={1.5}/>
-          <span>{label}</span>
-          {isActive && showLoading && (
+          {isActive && <span className="sidebar-active-indicator" style={collapsed ? { left: -12 } : undefined} />}
+          <Icon size={17} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+          {!collapsed && <span>{label}</span>}
+          {isActive && showLoading && !collapsed && (
             <span className="nav-loading-label" aria-label="Loading today data" title="Loading today data">
               <Loader2 size={10} strokeWidth={1.75} className="nav-loading-icon" />
             </span>

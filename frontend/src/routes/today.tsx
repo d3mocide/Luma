@@ -265,7 +265,7 @@ export default function TodayRoute() {
             const showStreak = !hiddenSections.has('streak')
             if (!showWeight && !showNutrition && !showStreak) return null
             return (
-              <div key="top" style={{ display: 'grid', gridTemplateColumns: showWeight && (showNutrition || showStreak) ? '1.4fr 1fr' : '1fr', gap: 20, alignItems: 'stretch' }}>
+              <div key="top" className={`today-top-grid ${showWeight && (showNutrition || showStreak) ? 'two-cols' : 'one-col'}`}>
                 {showWeight && (
                   <div className="glass" style={{ padding: 28, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <div style={{ position: 'absolute', top: -150, right: -180, width: 560, height: 460, background: 'radial-gradient(ellipse 60% 56% at 68% 34%, rgba(56,189,248,0.28), transparent 70%), radial-gradient(ellipse 56% 60% at 86% 78%, rgba(56,189,248,0.12), transparent 72%)', filter: 'blur(18px)', opacity: 0.92, pointerEvents: 'none' }}/>
@@ -371,7 +371,7 @@ export default function TodayRoute() {
             return (
               <div key="biometrics" className="glass" style={{ padding: 24 }}>
                 <div className="eyebrow" style={{ marginBottom: 16 }}>Biometrics · latest</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>{tiles}</div>
+                <div className="today-biometrics-grid">{tiles}</div>
               </div>
             )
           }
@@ -383,7 +383,7 @@ export default function TodayRoute() {
             if (!showInsight && !showPlan && !showWater) return null
             const cols = [showInsight && '1.15fr', showPlan && '1fr', showWater && '0.75fr'].filter(Boolean).join(' ')
             return (
-              <div key="insight_row" style={{ display: 'grid', gridTemplateColumns: cols, gap: 20, alignItems: 'stretch' }}>
+              <div key="insight_row" className="today-insight-grid" style={{ '--desktop-cols': cols } as React.CSSProperties}>
                 {showInsight && (data.active_insight ? (
                   <div className="glass" style={{ display: 'flex', flexDirection: 'column', padding: 24, position: 'relative', overflow: 'hidden', background: 'var(--insight-card-bg)' }}>
                     <div style={{ position: 'absolute', top: -80, right: -70, width: 300, height: 240, background: 'radial-gradient(ellipse 56% 52% at 76% 30%, rgba(251,191,36,0.30), transparent 68%), radial-gradient(ellipse 48% 52% at 90% 80%, rgba(251,191,36,0.10), transparent 72%)', filter: 'blur(14px)', opacity: 0.9, pointerEvents: 'none' }}/>
