@@ -16,7 +16,6 @@ import { MacroBar } from '../components/today/MacroBar'
 import { BioTile } from '../components/today/BioTile'
 import { PlanRow } from '../components/today/PlanRow'
 import { RecentMealsCard, RecentMeal } from '../components/today/RecentMealsCard'
-import { NutrientBreakdownSheet } from '../components/today/NutrientBreakdownSheet'
 import { StreakHistorySheet } from '../components/today/StreakHistorySheet'
 import { NutritionCalculatorCard } from '../components/today/NutritionCalculatorCard'
 import { WaterCard } from '../components/today/WaterCard'
@@ -36,7 +35,6 @@ export default function TodayRoute() {
   const navigate = useNavigate()
   const [loggingMealId, setLoggingMealId] = useState<string | null>(null)
   const [deletingMealId, setDeletingMealId] = useState<string | null>(null)
-  const [showDayBreakdown, setShowDayBreakdown] = useState(false)
   const [showStreakHistory, setShowStreakHistory] = useState(false)
   const [dismissedNudgeIds, setDismissedNudgeIds] = useState<string[]>(() => {
     try {
@@ -134,13 +132,6 @@ export default function TodayRoute() {
 
   const adherence = data.adherence_today
   const bio = data.biometrics_latest
-
-  const dayNutrition = (data.recent_meals ?? []).reduce<Record<string, number>>((acc, meal) => {
-    const n = (meal as Record<string, unknown>).nutrition as Record<string, number> | undefined
-    if (!n) return acc
-    for (const [k, v] of Object.entries(n)) acc[k] = (acc[k] ?? 0) + (v ?? 0)
-    return acc
-  }, {})
 
   const rings = [
     (adherence?.sat_fat_g?.pct ?? 0) / 100,
@@ -316,8 +307,8 @@ export default function TodayRoute() {
                     {showNutrition && (
                       <div
                         className="glass"
-                        onClick={Object.keys(dayNutrition).length > 0 ? () => setShowDayBreakdown(true) : undefined}
-                        style={{ padding: 24, display: 'flex', flexDirection: 'column', cursor: Object.keys(dayNutrition).length > 0 ? 'pointer' : 'default', userSelect: 'none', flex: 1 }}
+                        onClick={() => navigate('/nutrition')}
+                        style={{ padding: 24, display: 'flex', flexDirection: 'column', cursor: 'pointer', userSelect: 'none', flex: 1 }}
                       >
                         <div style={{ display: 'grid', gridTemplateColumns: adherence?.sodium_mg?.target != null ? '1fr 1fr' : '1fr', gap: 0 }}>
                           <div style={{ paddingRight: adherence?.sodium_mg?.target != null ? 20 : 0 }}>
@@ -485,8 +476,8 @@ export default function TodayRoute() {
             <div
               key="nutrition"
               className="glass"
-              onClick={Object.keys(dayNutrition).length > 0 ? () => setShowDayBreakdown(true) : undefined}
-              style={{ padding: 18, display: 'flex', flexDirection: 'column', marginBottom: 14, cursor: Object.keys(dayNutrition).length > 0 ? 'pointer' : 'default', userSelect: 'none' }}
+              onClick={() => navigate('/nutrition')}
+              style={{ padding: 18, display: 'flex', flexDirection: 'column', marginBottom: 14, cursor: 'pointer', userSelect: 'none' }}
             >
               <div style={{ display: 'grid', gridTemplateColumns: adherence?.sodium_mg?.target != null ? '1fr 1fr' : '1fr', gap: 0 }}>
                 <div style={{ paddingRight: adherence?.sodium_mg?.target != null ? 16 : 0 }}>
@@ -649,14 +640,6 @@ export default function TodayRoute() {
           </button>
         </div>
       </div>
-
-      {showDayBreakdown && Object.keys(dayNutrition).length > 0 && (
-        <NutrientBreakdownSheet
-          title="Today's Nutrition"
-          nutrition={dayNutrition}
-          onClose={() => setShowDayBreakdown(false)}
-        />
-      )}
 
       <StreakHistorySheet
         isOpen={showStreakHistory}
