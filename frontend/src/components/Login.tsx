@@ -70,9 +70,6 @@ export default function Login() {
         <LumaWordmark size={32}/>
 
         <div style={{ marginTop: 'auto', maxWidth: 540 }}>
-          <div className="eyebrow" style={{ marginBottom: 20, color: 'var(--sky-300)' }}>
-            Your light, daily
-          </div>
           <h1 style={{
             fontFamily: 'var(--font-sans)',
             fontWeight: 400,
