@@ -3775,34 +3775,28 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .responsive-grid-2col {
-  column-count: 2;
-  column-gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
   margin-top: 20px;
-  display: block;
+  align-items: start;
 }
 
 .responsive-grid-2col > * {
-  break-inside: avoid;
-  margin-bottom: 16px;
-  display: inline-block;
-  width: 100%;
   box-sizing: border-box;
-  vertical-align: top;
 }
 
 @media (min-width: 1200px) {
   .responsive-grid-2col {
-    column-count: 3;
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (max-width: 900px) {
   .responsive-grid-2col {
-    column-count: 1;
+    grid-template-columns: 1fr;
     margin-top: 16px;
-  }
-  .responsive-grid-2col > * {
-    margin-bottom: 14px;
+    gap: 14px;
   }
 }
 
