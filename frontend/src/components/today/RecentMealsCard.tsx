@@ -146,7 +146,7 @@ export function RecentMealsCard({
 
                   {/* Bottom row: Macro chips spanning the width */}
                   {meal.nutrition && (
-                    <div className="favorite-macro-grid" style={{ width: '100%', maxWidth: compact ? '100%' : '320px' }}>
+                    <div className="favorite-macro-grid" style={{ width: '100%', maxWidth: compact ? '100%' : '360px' }}>
                       <div className="favorite-macro-col">
                         <span className="favorite-macro-label">Cal</span>
                         <span className="num favorite-macro-val" style={{ color: 'var(--sky-400)' }}>{Math.round(meal.nutrition.calories ?? 0)}</span>
@@ -160,8 +160,8 @@ export function RecentMealsCard({
                         <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{(meal.nutrition.soluble_fiber_g ?? 0).toFixed(1)}g</span>
                       </div>
                       <div className="favorite-macro-col">
-                        <span className="favorite-macro-label">Added Sugar</span>
-                        <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{(meal.nutrition.added_sugars_g ?? 0).toFixed(1)}g</span>
+                        <span className="favorite-macro-label">Sodium</span>
+                        <span className="num favorite-macro-val" style={{ color: '#fb923c' }}>{Math.round(meal.nutrition.sodium_mg ?? 0)}mg</span>
                       </div>
                       <div className="favorite-macro-col">
                         <span className="favorite-macro-label">Protein</span>

@@ -3324,7 +3324,7 @@ input[type="search"]::-webkit-search-results-decoration {
 .favorite-macro-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
+  gap: 4px;
   width: 100%;
   margin-top: 4px;
 }
@@ -3350,6 +3350,7 @@ input[type="search"]::-webkit-search-results-decoration {
   letter-spacing: 0.05em;
   font-weight: 500;
   text-align: center;
+  white-space: nowrap;
 }
 
 .favorite-macro-val {

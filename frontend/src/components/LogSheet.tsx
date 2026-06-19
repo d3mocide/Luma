@@ -307,17 +307,18 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               </span>
             </button>
             {nutritionOpen && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
                 {[
                   { l: 'Calories', v: Math.round(totals.calories), c: 'var(--fg-primary)' },
                   { l: 'Sat Fat', v: `${totals.saturated_fat_g.toFixed(1)}g`, c: 'var(--bad)' },
                   { l: 'Sol Fiber', v: `${totals.soluble_fiber_g.toFixed(1)}g`, c: 'var(--good)' },
-                  { l: 'Added Sugar', v: `${totals.added_sugars_g.toFixed(1)}g`, c: 'var(--aurora-pink)' },
+                  { l: 'Add Sugar', v: `${totals.added_sugars_g.toFixed(1)}g`, c: 'var(--aurora-pink)' },
+                  { l: 'Sodium', v: `${Math.round(totals.sodium_mg)}mg`, c: '#fb923c' },
                   { l: 'Protein', v: `${totals.protein_g.toFixed(1)}g`, c: 'var(--aurora-violet)' },
                 ].map((n) => (
-                  <div key={n.l} className="glass-inset" style={{ padding: '8px 10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginBottom: 2 }}>{n.l}</div>
-                    <div className="num" style={{ fontSize: 14, fontWeight: 600, color: n.c }}>{n.v}</div>
+                  <div key={n.l} className="glass-inset" style={{ padding: '6px 4px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: 'var(--fg-quiet)', marginBottom: 2, whiteSpace: 'nowrap' }}>{n.l}</div>
+                    <div className="num" style={{ fontSize: 13, fontWeight: 600, color: n.c }}>{n.v}</div>
                   </div>
                 ))}
               </div>

@@ -146,19 +146,20 @@ export default function TodayRoute() {
     (adherence?.sat_fat_g?.pct ?? 0) / 100,
     // Fiber: cap at 1.0 — exceeding the fiber target is good, not an overage to flag
     Math.min((adherence?.soluble_fiber_g?.pct ?? 0) / 100, 1.0),
-    (adherence?.sodium_mg?.pct ?? 0) / 100,
+    // Protein: cap at 1.0 — exceeding protein target is fine, keeps ring visual clean
+    Math.min((adherence?.protein_g?.pct ?? 0) / 100, 1.0),
   ]
   const ringColors = [
     { from: '#fde68a', to: '#fbbf24', glow: 'rgba(251,191,36,0.5)' }, // Yellow (Sat fat)
     { from: '#86efac', to: '#34d399', glow: 'rgba(52,211,153,0.5)' }, // Green (Sol. Fiber)
-    { from: '#5eead4', to: '#2dd4bf', glow: 'rgba(94,234,212,0.5)' }, // Teal (Sodium)
+    { from: '#c084fc', to: '#a78bfa', glow: 'rgba(167,139,250,0.5)' }, // Purple (Protein)
   ]
 
   const calPct = adherence?.calories?.pct ?? 0
-  const proteinPct = adherence?.protein_g?.pct ?? 0
-  // Calories is a max target; protein is a min target
+  const sodiumPct = adherence?.sodium_mg?.pct ?? 0
+  // Calories is a max target; Sodium is a max target
   const calStatus: 'under' | 'good' | 'over' = calPct > 100 ? 'over' : calPct >= 90 ? 'good' : 'under'
-  const proteinStatus: 'under' | 'good' = proteinPct >= 90 ? 'good' : 'under'
+  const sodiumStatus: 'under' | 'good' | 'over' = sodiumPct > 100 ? 'over' : sodiumPct >= 90 ? 'good' : 'under'
 
   const calBarColor = calStatus === 'over'
     ? 'linear-gradient(90deg, var(--bad), #f87171)'
@@ -172,13 +173,17 @@ export default function TodayRoute() {
       : '0 0 8px rgba(56,189,248,0.4)'
   const calNumColor = calStatus === 'over' ? 'var(--bad)' : calStatus === 'good' ? 'var(--good)' : 'var(--fg-primary)'
 
-  const proteinBarColor = proteinStatus === 'good'
-    ? 'linear-gradient(90deg, var(--good), #34d399)'
-    : 'linear-gradient(90deg, var(--aurora-violet), #a78bfa)'
-  const proteinBarGlow = proteinStatus === 'good'
-    ? '0 0 8px rgba(52,211,153,0.45)'
-    : '0 0 8px rgba(139,92,246,0.4)'
-  const proteinNumColor = proteinStatus === 'good' ? 'var(--good)' : 'var(--fg-primary)'
+  const sodiumBarColor = sodiumStatus === 'over'
+    ? 'linear-gradient(90deg, var(--bad), #f87171)'
+    : sodiumStatus === 'good'
+      ? 'linear-gradient(90deg, var(--good), #34d399)'
+      : 'linear-gradient(90deg, #fdba74, #fb923c)'
+  const sodiumBarGlow = sodiumStatus === 'over'
+    ? '0 0 8px rgba(239,68,68,0.45)'
+    : sodiumStatus === 'good'
+      ? '0 0 8px rgba(52,211,153,0.45)'
+      : '0 0 8px rgba(251,146,60,0.4)'
+  const sodiumNumColor = sodiumStatus === 'over' ? 'var(--bad)' : sodiumStatus === 'good' ? 'var(--good)' : 'var(--fg-primary)'
   const weightUnit = measurementWeightUnit(measurementSystem)
   const slopeUnit = measurementSlopeUnit(measurementSystem)
   const latestWeight = convertWeight(data.weight.latest_kg, measurementSystem)
@@ -314,8 +319,8 @@ export default function TodayRoute() {
                         onClick={Object.keys(dayNutrition).length > 0 ? () => setShowDayBreakdown(true) : undefined}
                         style={{ padding: 24, display: 'flex', flexDirection: 'column', cursor: Object.keys(dayNutrition).length > 0 ? 'pointer' : 'default', userSelect: 'none', flex: 1 }}
                       >
-                        <div style={{ display: 'grid', gridTemplateColumns: adherence?.protein_g?.target != null ? '1fr 1fr' : '1fr', gap: 0 }}>
-                          <div style={{ paddingRight: adherence?.protein_g?.target != null ? 20 : 0 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: adherence?.sodium_mg?.target != null ? '1fr 1fr' : '1fr', gap: 0 }}>
+                          <div style={{ paddingRight: adherence?.sodium_mg?.target != null ? 20 : 0 }}>
                             <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Calories</span>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 3 }}>
                               <span className="num" style={{ fontSize: 30, fontWeight: 300, color: calNumColor, letterSpacing: '-0.03em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence?.calories?.logged, 0)}</span>
@@ -323,14 +328,14 @@ export default function TodayRoute() {
                             </div>
                             <MacroBar pct={calPct} color={calBarColor} glow={calBarGlow} />
                           </div>
-                          {adherence?.protein_g?.target != null && (
+                          {adherence?.sodium_mg?.target != null && (
                             <div style={{ paddingLeft: 20, borderLeft: '1px solid var(--glass-edge)' }}>
-                              <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Protein</span>
+                              <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sodium</span>
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 3 }}>
-                                <span className="num" style={{ fontSize: 22, fontWeight: 300, color: proteinNumColor, letterSpacing: '-0.02em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence.protein_g.logged, 0)}</span>
-                                <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence.protein_g.target, 0)} g</span>
+                                <span className="num" style={{ fontSize: 22, fontWeight: 300, color: sodiumNumColor, letterSpacing: '-0.02em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence.sodium_mg.logged, 0)}</span>
+                                <span style={{ fontSize: 13, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence.sodium_mg.target, 0)} mg</span>
                               </div>
-                              <MacroBar pct={proteinPct} color={proteinBarColor} glow={proteinBarGlow} />
+                              <MacroBar pct={sodiumPct} color={sodiumBarColor} glow={sodiumBarGlow} />
                             </div>
                           )}
                         </div>
@@ -344,7 +349,7 @@ export default function TodayRoute() {
                           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                             <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
                             <RingLegend color="var(--good)" label="Sol. Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
-                            <RingLegend color="var(--aurora-mint)" label="Sodium" value={`${fmt(adherence?.sodium_mg?.logged, 0, 'mg')} / ${fmt(adherence?.sodium_mg?.target, 0, 'mg')}`} pct={adherence?.sodium_mg?.pct ?? 0} invert/>
+                            <RingLegend color="var(--aurora-violet)" label="Protein" value={`${fmt(adherence?.protein_g?.logged, 0, 'g')} / ${fmt(adherence?.protein_g?.target, 0, 'g')}`} pct={adherence?.protein_g?.pct ?? 0}/>
                           </div>
                         </div>
                       </div>
@@ -483,8 +488,8 @@ export default function TodayRoute() {
               onClick={Object.keys(dayNutrition).length > 0 ? () => setShowDayBreakdown(true) : undefined}
               style={{ padding: 18, display: 'flex', flexDirection: 'column', marginBottom: 14, cursor: Object.keys(dayNutrition).length > 0 ? 'pointer' : 'default', userSelect: 'none' }}
             >
-              <div style={{ display: 'grid', gridTemplateColumns: adherence?.protein_g?.target != null ? '1fr 1fr' : '1fr', gap: 0 }}>
-                <div style={{ paddingRight: adherence?.protein_g?.target != null ? 16 : 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: adherence?.sodium_mg?.target != null ? '1fr 1fr' : '1fr', gap: 0 }}>
+                <div style={{ paddingRight: adherence?.sodium_mg?.target != null ? 16 : 0 }}>
                   <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Calories</span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 2 }}>
                     <span className="num" style={{ fontSize: 26, fontWeight: 300, color: calNumColor, letterSpacing: '-0.03em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence?.calories?.logged, 0)}</span>
@@ -492,14 +497,14 @@ export default function TodayRoute() {
                   </div>
                   <MacroBar pct={calPct} color={calBarColor} glow={calBarGlow} height={3} marginTop={7} />
                 </div>
-                {adherence?.protein_g?.target != null && (
+                {adherence?.sodium_mg?.target != null && (
                   <div style={{ paddingLeft: 16, borderLeft: '1px solid var(--glass-edge)' }}>
-                    <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Protein</span>
+                    <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--fg-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sodium</span>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 2 }}>
-                      <span className="num" style={{ fontSize: 20, fontWeight: 300, color: proteinNumColor, letterSpacing: '-0.02em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence.protein_g.logged, 0)}</span>
-                      <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence.protein_g.target, 0)} g</span>
+                      <span className="num" style={{ fontSize: 20, fontWeight: 300, color: sodiumNumColor, letterSpacing: '-0.02em', lineHeight: 1, transition: 'color 400ms' }}>{fmt(adherence.sodium_mg.logged, 0)}</span>
+                      <span style={{ fontSize: 12, color: 'var(--fg-tertiary)' }}>/ {fmt(adherence.sodium_mg.target, 0)} mg</span>
                     </div>
-                    <MacroBar pct={proteinPct} color={proteinBarColor} glow={proteinBarGlow} height={3} marginTop={7} />
+                    <MacroBar pct={sodiumPct} color={sodiumBarColor} glow={sodiumBarGlow} height={3} marginTop={7} />
                   </div>
                 )}
               </div>
@@ -513,7 +518,7 @@ export default function TodayRoute() {
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <RingLegend color="var(--sun-400)" label="Sat fat" value={`${fmt(adherence?.sat_fat_g?.logged, 1, 'g')} / ${fmt(adherence?.sat_fat_g?.target, 1, 'g')}`} pct={adherence?.sat_fat_g?.pct ?? 0} invert/>
                   <RingLegend color="var(--good)" label="Sol. Fiber" value={`${fmt(adherence?.soluble_fiber_g?.logged, 1, 'g')} / ${fmt(adherence?.soluble_fiber_g?.target, 1, 'g')}`} pct={adherence?.soluble_fiber_g?.pct ?? 0}/>
-                  <RingLegend color="var(--aurora-mint)" label="Sodium" value={`${fmt(adherence?.sodium_mg?.logged, 0, 'mg')} / ${fmt(adherence?.sodium_mg?.target, 0, 'mg')}`} pct={adherence?.sodium_mg?.pct ?? 0} invert/>
+                  <RingLegend color="var(--aurora-violet)" label="Protein" value={`${fmt(adherence?.protein_g?.logged, 0, 'g')} / ${fmt(adherence?.protein_g?.target, 0, 'g')}`} pct={adherence?.protein_g?.pct ?? 0}/>
                 </div>
               </div>
             </div>

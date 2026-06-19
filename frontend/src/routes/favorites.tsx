@@ -43,14 +43,14 @@ function totalSolFiber(items: FavoriteItem[]): number {
   return Math.round(val * 10) / 10
 }
 
-function totalAddedSugar(items: FavoriteItem[]): number {
-  const val = items.reduce((sum, i) => sum + (i.nutrients.added_sugars_g ?? 0), 0)
-  return Math.round(val * 10) / 10
-}
 
 function totalProtein(items: FavoriteItem[]): number {
   const val = items.reduce((sum, i) => sum + (i.nutrients.protein_g ?? 0), 0)
   return Math.round(val * 10) / 10
+}
+
+function totalSodium(items: FavoriteItem[]): number {
+  return Math.round(items.reduce((sum, i) => sum + (i.nutrients.sodium_mg ?? 0), 0))
 }
 
 export default function FavoritesRoute() {
@@ -501,8 +501,8 @@ export default function FavoritesRoute() {
                           <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{totalSolFiber(fav.items)}g</span>
                         </div>
                         <div className="favorite-macro-col">
-                          <span className="favorite-macro-label">Added Sugar</span>
-                          <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{totalAddedSugar(fav.items)}g</span>
+                          <span className="favorite-macro-label">Sodium</span>
+                          <span className="num favorite-macro-val" style={{ color: '#fb923c' }}>{totalSodium(fav.items)}mg</span>
                         </div>
                         <div className="favorite-macro-col">
                           <span className="favorite-macro-label">Protein</span>
@@ -680,8 +680,8 @@ export default function FavoritesRoute() {
                   <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{sumNutrients(items).soluble_fiber_g.toFixed(1)}g</span>
                 </div>
                 <div className="favorite-macro-col">
-                  <span className="favorite-macro-label">Added Sugar</span>
-                  <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{sumNutrients(items).added_sugars_g.toFixed(1)}g</span>
+                  <span className="favorite-macro-label">Sodium</span>
+                  <span className="num favorite-macro-val" style={{ color: '#fb923c' }}>{Math.round(sumNutrients(items).sodium_mg)}mg</span>
                 </div>
                 <div className="favorite-macro-col">
                   <span className="favorite-macro-label">Protein</span>

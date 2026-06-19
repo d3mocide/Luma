@@ -50,8 +50,8 @@ function FoodLibCard({ food, onClick }: { food: FoodResult; onClick?: () => void
   const protein = food.nutrients_per_100g?.protein_g ?? 0
   const fiber = food.nutrients_per_100g?.dietary_fiber_g ?? food.nutrients_per_100g?.soluble_fiber_g ?? 0
   const carbs = food.nutrients_per_100g?.carbohydrates_g ?? 0
-  const sugar = food.nutrients_per_100g?.sugars_g ?? 0
-  const fat = food.nutrients_per_100g?.fat_g ?? 0
+  const addedSugar = food.nutrients_per_100g?.added_sugars_g ?? 0
+  const sodium = food.nutrients_per_100g?.sodium_mg ?? 0
 
   const CardComponent = onClick ? 'button' : 'div'
   const satFatColor = satFat < 3 ? 'var(--good)' : satFat < 8 ? 'var(--warn)' : 'var(--bad)'
@@ -132,15 +132,15 @@ function FoodLibCard({ food, onClick }: { food: FoodResult; onClick?: () => void
           </span>
         </div>
         <div className="food-db-macro-col">
-          <span className="food-db-macro-label">Sugar</span>
+          <span className="food-db-macro-label">Add Sug</span>
           <span className="num food-db-macro-val" style={{ color: 'var(--aurora-pink)' }}>
-            {sugar.toFixed(1)}g
+            {addedSugar.toFixed(1)}g
           </span>
         </div>
         <div className="food-db-macro-col">
-          <span className="food-db-macro-label">Fat</span>
-          <span className="num food-db-macro-val food-db-macro-val--fat">
-            {fat.toFixed(1)}g
+          <span className="food-db-macro-label">Sodium</span>
+          <span className="num food-db-macro-val" style={{ color: '#fb923c' }}>
+            {Math.round(sodium)}mg
           </span>
         </div>
       </div>
