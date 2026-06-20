@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, ChevronDown, X, Search, ArrowUpDown } from 'lucide-react'
@@ -76,6 +76,8 @@ export default function FavoritesRoute() {
   const [selectedTag, setSelectedTag] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'frequency' | 'name_asc' | 'name_desc' | 'recent'>('frequency')
+  const [sortOpen, setSortOpen] = useState(false)
+  const sortRef = useRef<HTMLDivElement>(null)
   const [successModal, setSuccessModal] = useState<{ name: string; slot: string } | null>(null)
   const [expandedFavIds, setExpandedFavIds] = useState<Record<string, boolean>>({})
 
@@ -161,6 +163,17 @@ export default function FavoritesRoute() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    if (!sortOpen) return
+    const handler = (e: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+        setSortOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [sortOpen])
+
   function startEdit(fav: Favorite) {
     setEditingId(fav.id)
     setFavName(fav.name)
@@ -237,6 +250,15 @@ export default function FavoritesRoute() {
   const cols = Array.from({ length: numCols }, (_, colIdx) =>
     filteredFavorites.filter((_, idx) => idx % numCols === colIdx)
   )
+
+  const SORT_OPTIONS = [
+    { value: 'frequency', label: 'Most used' },
+    { value: 'name_asc', label: 'Name A–Z' },
+    { value: 'name_desc', label: 'Name Z–A' },
+    { value: 'recent', label: 'Recently added' },
+  ] as const
+
+  const currentSortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Sort'
 
   const addItem = (item: DraftItem) => setItems((prev) => [...prev, item])
   const removeItem = (index: number) => setItems((prev) => prev.filter((_, i) => i !== index))
@@ -352,41 +374,109 @@ export default function FavoritesRoute() {
                   </button>
                 )}
               </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '10px 12px',
-                  borderRadius: 12,
-                  background: 'var(--glass-1)',
-                  border: '1px solid var(--glass-edge)',
-                  flexShrink: 0,
-                }}
-              >
-                <ArrowUpDown size={14} strokeWidth={1.75} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              <div ref={sortRef} style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => setSortOpen((v) => !v)}
                   aria-label="Sort favorites"
+                  aria-expanded={sortOpen}
                   style={{
-                    background: 'transparent',
-                    border: 'none',
-                    outline: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '10px 12px',
+                    height: '100%',
+                    borderRadius: 12,
+                    background: sortOpen ? 'var(--glass-2)' : 'var(--glass-1)',
+                    border: `1px solid ${sortOpen ? 'rgba(56,189,248,0.3)' : 'var(--glass-edge)'}`,
+                    cursor: 'pointer',
                     color: 'var(--fg-primary)',
                     fontSize: 13,
                     fontFamily: 'var(--font-sans)',
-                    cursor: 'pointer',
-                    appearance: 'none',
-                    WebkitAppearance: 'none',
-                    paddingRight: 4,
+                    whiteSpace: 'nowrap',
+                    transition: 'background 0.15s, border-color 0.15s',
                   }}
                 >
-                  <option value="frequency">Most used</option>
-                  <option value="name_asc">Name A–Z</option>
-                  <option value="name_desc">Name Z–A</option>
-                  <option value="recent">Recently added</option>
-                </select>
+                  <ArrowUpDown size={14} strokeWidth={1.75} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
+                  {currentSortLabel}
+                  <ChevronDown
+                    size={12}
+                    strokeWidth={2}
+                    style={{
+                      color: 'var(--fg-quiet)',
+                      transform: sortOpen ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s ease',
+                    }}
+                  />
+                </button>
+
+                {sortOpen && (
+                  <div
+                    role="listbox"
+                    aria-label="Sort options"
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 6px)',
+                      right: 0,
+                      minWidth: 160,
+                      background: 'var(--glass-2)',
+                      border: '1px solid var(--glass-edge)',
+                      borderRadius: 12,
+                      backdropFilter: 'blur(16px)',
+                      WebkitBackdropFilter: 'blur(16px)',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                      zIndex: 50,
+                      padding: 4,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {SORT_OPTIONS.map((opt) => {
+                      const active = sortBy === opt.value
+                      return (
+                        <button
+                          key={opt.value}
+                          role="option"
+                          aria-selected={active}
+                          type="button"
+                          onClick={() => { setSortBy(opt.value); setSortOpen(false) }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            width: '100%',
+                            padding: '8px 12px',
+                            borderRadius: 8,
+                            border: 'none',
+                            background: active ? 'rgba(56,189,248,0.1)' : 'transparent',
+                            color: active ? 'var(--sky-300)' : 'var(--fg-secondary)',
+                            fontSize: 13,
+                            fontFamily: 'var(--font-sans)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'background 0.1s, color 0.1s',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!active) {
+                              (e.currentTarget as HTMLButtonElement).style.background = 'var(--glass-3)'
+                              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--fg-primary)'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!active) {
+                              (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+                              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--fg-secondary)'
+                            }
+                          }}
+                        >
+                          {opt.label}
+                          {active && (
+                            <Check size={12} strokeWidth={2.5} style={{ color: 'var(--sky-400)', flexShrink: 0 }} />
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
