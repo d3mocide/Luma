@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, ChevronDown, X, Search } from 'lucide-react'
+import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, ChevronDown, X, Search, ArrowUpDown } from 'lucide-react'
 import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { getCurrentSlot } from '../lib/format'
@@ -75,6 +75,7 @@ export default function FavoritesRoute() {
   const [newTagInput, setNewTagInput] = useState('')
   const [selectedTag, setSelectedTag] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<'frequency' | 'name_asc' | 'name_desc' | 'recent'>('frequency')
   const [successModal, setSuccessModal] = useState<{ name: string; slot: string } | null>(null)
   const [expandedFavIds, setExpandedFavIds] = useState<Record<string, boolean>>({})
 
@@ -86,8 +87,8 @@ export default function FavoritesRoute() {
   }
 
   const { data: favoritesData, isLoading } = useQuery<{ favorites: Favorite[] }>({
-    queryKey: ['favorites', 'frequency'],
-    queryFn: () => api.get('/favorites?sort=frequency'),
+    queryKey: ['favorites', sortBy],
+    queryFn: () => api.get(`/favorites?sort=${sortBy}`),
   })
   const favorites = favoritesData?.favorites ?? []
 
@@ -304,51 +305,89 @@ export default function FavoritesRoute() {
             </div>
           )}
 
-          {/* Search bar */}
+          {/* Search + Sort bar */}
           {favorites.length > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '10px 14px',
-                marginBottom: 20,
-                borderRadius: 12,
-                background: 'var(--glass-1)',
-                border: '1px solid var(--glass-edge)',
-              }}
-            >
-              <Search size={16} strokeWidth={1.75} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search favorites…"
-                aria-label="Search favorites"
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              <div
                 style={{
                   flex: 1,
-                  minWidth: 0,
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: 'var(--fg-primary)',
-                  fontSize: 14,
-                  fontFamily: 'var(--font-sans)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 14px',
+                  borderRadius: 12,
+                  background: 'var(--glass-1)',
+                  border: '1px solid var(--glass-edge)',
                 }}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Clear search"
+              >
+                <Search size={16} strokeWidth={1.75} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search favorites…"
+                  aria-label="Search favorites"
                   style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--fg-quiet)', padding: 0, display: 'flex', alignItems: 'center',
+                    flex: 1,
+                    minWidth: 0,
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: 'var(--fg-primary)',
+                    fontSize: 14,
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: 'var(--fg-quiet)', padding: 0, display: 'flex', alignItems: 'center',
+                    }}
+                  >
+                    <X size={15} strokeWidth={2} />
+                  </button>
+                )}
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '10px 12px',
+                  borderRadius: 12,
+                  background: 'var(--glass-1)',
+                  border: '1px solid var(--glass-edge)',
+                  flexShrink: 0,
+                }}
+              >
+                <ArrowUpDown size={14} strokeWidth={1.75} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  aria-label="Sort favorites"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: 'var(--fg-primary)',
+                    fontSize: 13,
+                    fontFamily: 'var(--font-sans)',
+                    cursor: 'pointer',
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
+                    paddingRight: 4,
                   }}
                 >
-                  <X size={15} strokeWidth={2} />
-                </button>
-              )}
+                  <option value="frequency">Most used</option>
+                  <option value="name_asc">Name A–Z</option>
+                  <option value="name_desc">Name Z–A</option>
+                  <option value="recent">Recently added</option>
+                </select>
+              </div>
             </div>
           )}
 
