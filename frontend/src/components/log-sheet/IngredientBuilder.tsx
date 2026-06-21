@@ -487,6 +487,17 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
         </div>
       )}
 
+      {/* ── Meal items (kept above Recent so the in-progress meal stays visible) ── */}
+      <DraftItemList
+        draftItems={draftItems}
+        onRemoveItem={onRemoveItem}
+        onUpdateWeight={onUpdateWeight}
+        onUpdateName={onUpdateName}
+        onReplaceItem={onReplaceItem ? beginReplace : undefined}
+        emptyStateMessage={emptyStateMessage ?? 'Search above to start building your meal.'}
+        servings={servings}
+      />
+
       {/* ── Recent foods (shown when search is empty, no pending selection) ── */}
       {!pending && !query.trim() && recentFoods.length > 0 && (
         <div>
@@ -589,17 +600,6 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
           ))}
         </div>
       )}
-
-      {/* ── Meal items ── */}
-      <DraftItemList
-        draftItems={draftItems}
-        onRemoveItem={onRemoveItem}
-        onUpdateWeight={onUpdateWeight}
-        onUpdateName={onUpdateName}
-        onReplaceItem={onReplaceItem ? beginReplace : undefined}
-        emptyStateMessage={emptyStateMessage ?? 'Search above to start building your meal.'}
-        servings={servings}
-      />
     </div>
   )
 }
