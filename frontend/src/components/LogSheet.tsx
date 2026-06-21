@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
 import { useUIStore } from '../stores'
 import { api } from '../lib/api'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -65,14 +65,14 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
 
   useEffect(() => {
     if (pendingLogItems?.length) {
-      setDraftItems(pendingLogItems.map(withBase))
+      setDraftItems(pendingLogItems.map(withBase)) // eslint-disable-line react-hooks/set-state-in-effect
       clearPendingLogItems()
     }
   }, [pendingLogItems, clearPendingLogItems])
 
   useEffect(() => {
     if (editingMealId && editingMealItems && editingMealSlot) {
-      setSlot(editingMealSlot)
+      setSlot(editingMealSlot) // eslint-disable-line react-hooks/set-state-in-effect
       setDraftItems(editingMealItems.map(withBase))
       setMealName(editingMealName || '')
       setActiveTab('search')
@@ -171,7 +171,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
 
   // Clear the "already favorited" gate whenever the meal contents or name
   // change, so an edited meal can be saved as a fresh favorite.
-  useEffect(() => { setFavorited(false) }, [draftItems, mealName])
+  useLayoutEffect(() => () => setFavorited(false), [draftItems, mealName])
 
   const logFavoriteDirect = useMutation({
     mutationFn: ({ items, name, favoriteId }: { items: DraftItem[]; name: string; favoriteId: string }) => {

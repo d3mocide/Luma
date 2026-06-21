@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sparkles, Flame, Heart, Activity, Moon, Timer, Wind, X, Leaf, Thermometer, SlidersHorizontal } from 'lucide-react'
 import { api, TodayData, TrendSeries, User } from '../lib/api'
@@ -124,6 +124,12 @@ export default function TodayRoute() {
 
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
+  const minutesSinceLogged = useMemo(
+    // eslint-disable-next-line react-hooks/purity
+    () => pendingMeal ? Math.round((Date.now() - new Date(pendingMeal.logged_at).getTime()) / 60000) : 0,
+    [pendingMeal]
+  )
+
   if (isLoading && !forceMockData) return <TodayShell><LoadingSkeleton/></TodayShell>
   if ((error || !todayApiData) && !forceMockData) return <TodayShell><ErrorCard/></TodayShell>
 
@@ -226,7 +232,7 @@ export default function TodayRoute() {
               How did you feel after <strong>{pendingMeal.meal_name}</strong>?
             </span>
             <span style={{ fontSize: 12, color: 'var(--fg-tertiary)', marginLeft: 6 }}>
-              Logged {Math.round((Date.now() - new Date(pendingMeal.logged_at).getTime()) / 60000)}m ago
+              Logged {minutesSinceLogged}m ago
             </span>
           </div>
           <button

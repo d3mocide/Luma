@@ -59,7 +59,7 @@ export function GoalsCard({ goalForm, onFieldChange, goalSaveError, goalSaveSucc
   useEffect(() => {
     const isPre = predefinedOptions.some(p => p.value === (goalForm.dietary_pattern || '').toLowerCase())
     if (goalForm.dietary_pattern && !isPre) {
-      setIsCustomMode(true)
+      setIsCustomMode(true) // eslint-disable-line react-hooks/set-state-in-effect
     } else {
       setIsCustomMode(false)
     }

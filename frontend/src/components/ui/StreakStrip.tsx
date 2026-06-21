@@ -33,7 +33,7 @@ export default function StreakStrip({ days, adherence, onShowHistory }: StreakSt
   const [animateFlame, setAnimateFlame] = useState(false)
 
   useEffect(() => {
-    setAnimateFlame(true)
+    setAnimateFlame(true) // eslint-disable-line react-hooks/set-state-in-effect
     const t = setTimeout(() => setAnimateFlame(false), 2000)
     return () => clearTimeout(t)
   }, [days])

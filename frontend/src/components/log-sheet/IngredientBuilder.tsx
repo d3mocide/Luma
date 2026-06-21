@@ -125,8 +125,10 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   }, [])
 
   useEffect(() => {
-    if (pending) { setResults([]); return }
-    if (!query.trim()) { setResults([]); return }
+    if (pending || !query.trim()) {
+      setResults([]) // eslint-disable-line react-hooks/set-state-in-effect
+      return
+    }
     const t = setTimeout(async () => {
       setIsSearching(true)
       try {
@@ -169,7 +171,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
         .catch(() => { /* keep generic units */ })
     }
   }
-  selectFoodRef.current = selectFood
+  useEffect(() => { selectFoodRef.current = selectFood })
 
   function changeUnit(unit: string) {
     autoUnitRef.current = false

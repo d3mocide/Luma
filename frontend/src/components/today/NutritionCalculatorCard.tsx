@@ -363,7 +363,7 @@ export function NutritionCalculatorCard({
         .catch(() => { /* keep generic */ })
     }
   }
-  handleSelectRef.current = handleSelect
+  useEffect(() => { handleSelectRef.current = handleSelect })
 
   const handleClear = () => {
     setSelectedFood(null)

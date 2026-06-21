@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useLayoutEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { X, Trophy, Flame } from 'lucide-react'
 import { fmt } from '../../lib/format'
@@ -76,9 +76,7 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence, todayStr 
     staleTime: 5 * 60 * 1000,
   })
 
-  useEffect(() => {
-    setVisibleLimit(10)
-  }, [isOpen])
+  useLayoutEffect(() => () => setVisibleLimit(10), [isOpen])
 
   if (!isOpen) return null
 

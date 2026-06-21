@@ -76,16 +76,13 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
   const mimeTypeRef = useRef<string>('audio/mp4')
 
   useEffect(() => {
-    if (isRecording) {
-      timerRef.current = window.setInterval(() => {
-        setRecordingTime((t) => t + 1)
-      }, 1000)
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current)
-      setRecordingTime(0)
-    }
+    if (!isRecording) return
+    timerRef.current = window.setInterval(() => {
+      setRecordingTime((t) => t + 1)
+    }, 1000)
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
+      setRecordingTime(0)
     }
   }, [isRecording])
 

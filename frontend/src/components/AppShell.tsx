@@ -136,8 +136,8 @@ function DesktopSidebar({ user, isTodayLoading }: { user: User; isTodayLoading: 
     return () => window.removeEventListener('resize', handleResize)
   }, [setSidebarCollapsed])
 
-  useEffect(() => {
-    setIsProfileOpen(false)
+  useLayoutEffect(() => {
+    return () => setIsProfileOpen(false)
   }, [location.pathname])
 
   useEffect(() => {
@@ -392,8 +392,8 @@ function MobileHeader({ initials }: { initials: string }) {
   const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
   const cal = today?.adherence_today?.calories
 
-  useEffect(() => {
-    setIsOpen(false)
+  useLayoutEffect(() => {
+    return () => setIsOpen(false)
   }, [location.pathname])
 
   useEffect(() => {

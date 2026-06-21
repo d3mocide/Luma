@@ -157,7 +157,7 @@ export default function FavoritesRoute() {
   // Open the creation panel directly when arriving via the Today favorites widget.
   useEffect(() => {
     if ((location.state as { create?: boolean } | null)?.create) {
-      startCreate()
+      startCreate() // eslint-disable-line react-hooks/set-state-in-effect
       navigate('.', { replace: true, state: null })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

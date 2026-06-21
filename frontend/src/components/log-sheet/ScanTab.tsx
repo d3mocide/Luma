@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useId } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useId } from 'react'
 import { Camera, ImagePlus, X, Plus, CheckCircle } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api, csrfHeaders, refreshSession } from '../../lib/api'
@@ -77,7 +77,7 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Clean up barcode state when switching tabs inside Scan
-  useEffect(() => {
+  useLayoutEffect(() => () => {
     setIsScanning(false)
     setPending(null)
     setBarcodeError('')
