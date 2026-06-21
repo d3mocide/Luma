@@ -1005,7 +1005,7 @@ export default function SettingsRoute() {
     if (measurementSystem === 'imperial' && goalSettings?.target_weight_kg != null) {
       base.target_weight_kg = (goalSettings.target_weight_kg * KG_TO_LB).toFixed(1)
     }
-    setGoalForm(base)
+    setGoalForm(base) // eslint-disable-line react-hooks/set-state-in-effect
   }, [goalSettings, measurementSystem])
 
   const handleLogout = async () => {

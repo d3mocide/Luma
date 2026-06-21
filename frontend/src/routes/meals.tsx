@@ -14,6 +14,15 @@ import PlanRoute from './plan'
 import RecipesRoute from './recipes'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
+
 const BARCODE_FORMATS = [
   Html5QrcodeSupportedFormats.EAN_13,
   Html5QrcodeSupportedFormats.EAN_8,
@@ -759,15 +768,6 @@ function JournalTab({ openWithPrefill }: { openWithPrefill?: PendingMeal | null 
     setDrawerOpen(true)
   }
 
-  function timeAgo(iso: string) {
-    const diff = Date.now() - new Date(iso).getTime()
-    const m = Math.floor(diff / 60000)
-    if (m < 60) return `${m}m ago`
-    const h = Math.floor(m / 60)
-    if (h < 24) return `${h}h ago`
-    return `${Math.floor(h / 24)}d ago`
-  }
-
   return (
     <div>
       {/* Correlation cards */}
@@ -922,7 +922,7 @@ function UnifiedNutritionPanel({
   const [mobileMode, setMobileMode] = useState<'serving' | 'total'>(servings > 1 ? 'serving' : 'total')
 
   useEffect(() => {
-    setMobileMode(servings > 1 ? 'serving' : 'total')
+    setMobileMode(servings > 1 ? 'serving' : 'total') // eslint-disable-line react-hooks/set-state-in-effect
   }, [servings])
 
   const is3Col = servings > 1

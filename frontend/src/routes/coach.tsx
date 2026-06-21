@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { Sparkles, Send, Plus, MessageSquare, CalendarDays, Flame, Salad, Scale } from 'lucide-react'
@@ -592,7 +592,7 @@ function InsightsTab({ onAsk }: { onAsk: (seed: string) => void }) {
     queryFn: () => api.get('/insights?limit=50'),
   })
 
-  const insights = data?.insights ?? []
+  const insights = useMemo(() => data?.insights ?? [], [data?.insights])
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   useEffect(() => {
