@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, X, Search, Camera, Trash2, Heart, Check, Edit2, Star, AlertTriangle, Ban } from 'lucide-react'
+import { Plus, X, Search, Camera, Trash2, Heart, Check, Edit2, Star, AlertTriangle, Ban, ChevronDown } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api, TodayData } from '../../lib/api'
 import { getCurrentSlot } from '../../lib/format'
@@ -829,13 +829,14 @@ export function NutritionCalculatorCard({
                     <button
                       type="button"
                       onClick={() => setIsFavOpen(!isFavOpen)}
+                      aria-expanded={isFavOpen}
                       style={{
                         width: '100%',
-                        borderRadius: 10,
-                        padding: compact ? '0 12px' : '0 12px',
+                        borderRadius: 12,
+                        padding: '10px 12px',
                         fontSize: 13,
-                        border: '1px solid var(--glass-edge)',
-                        background: 'var(--glass-1)',
+                        border: `1px solid ${isFavOpen ? 'rgba(56,189,248,0.3)' : 'var(--glass-edge)'}`,
+                        background: isFavOpen ? 'var(--glass-2)' : 'var(--glass-1)',
                         color: 'var(--fg-secondary)',
                         cursor: 'pointer',
                         fontFamily: 'var(--font-sans)',
@@ -843,39 +844,49 @@ export function NutritionCalculatorCard({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        height: compact ? 38 : 40,
-                        minHeight: compact ? 38 : 40,
-                        boxSizing: 'border-box',
+                        gap: 6,
                         outline: 'none',
+                        transition: 'background 0.15s, border-color 0.15s',
                       }}
                     >
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         Select a favorite...
                       </span>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.7 }}>
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
+                      <ChevronDown
+                        size={12}
+                        strokeWidth={2}
+                        style={{
+                          color: 'var(--fg-quiet)',
+                          flexShrink: 0,
+                          transform: isFavOpen ? 'rotate(180deg)' : 'none',
+                          transition: 'transform 0.2s ease',
+                        }}
+                      />
                     </button>
 
                     {isFavOpen && (
                       <div
-                        className="glass-bright"
+                        role="listbox"
+                        aria-label="Favorites"
                         style={{
                           position: 'absolute',
-                          top: '100%',
+                          top: 'calc(100% + 6px)',
                           left: 0,
                           right: 0,
                           zIndex: 20,
-                          marginTop: 4,
-                          overflow: 'hidden',
                           maxHeight: 200,
                           overflowY: 'auto',
-                          borderRadius: 10,
+                          borderRadius: 12,
                           border: '1px solid var(--glass-edge)',
+                          background: 'var(--glass-2)',
+                          backdropFilter: 'blur(16px)',
+                          WebkitBackdropFilter: 'blur(16px)',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                          padding: 4,
                         }}
                       >
                         {favorites.length === 0 ? (
-                          <div style={{ padding: '9px 12px', fontSize: 13, color: 'var(--fg-quiet)' }}>
+                          <div style={{ padding: '8px 12px', fontSize: 13, color: 'var(--fg-quiet)' }}>
                             No favorites saved yet.
                           </div>
                         ) : (
@@ -884,6 +895,8 @@ export function NutritionCalculatorCard({
                             return (
                               <button
                                 key={fav.id}
+                                role="option"
+                                aria-selected={false}
                                 type="button"
                                 onClick={() => {
                                   handleSelectFavorite(fav.id)
@@ -892,23 +905,30 @@ export function NutritionCalculatorCard({
                                 style={{
                                   width: '100%',
                                   textAlign: 'left',
-                                  background: 'none',
+                                  background: 'transparent',
                                   border: 'none',
-                                  borderBottom: '1px solid var(--glass-edge)',
-                                  padding: '9px 12px',
+                                  borderRadius: 8,
+                                  padding: '8px 12px',
                                   cursor: 'pointer',
                                   fontSize: 13,
-                                  color: 'var(--fg-primary)',
-                                  display: 'block',
+                                  color: 'var(--fg-secondary)',
+                                  display: 'flex',
+                                  alignItems: 'baseline',
+                                  gap: 4,
                                   fontFamily: 'var(--font-sans)',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
+                                  transition: 'background 0.1s, color 0.1s',
                                 }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--glass-1)')}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = 'var(--glass-3)'
+                                  e.currentTarget.style.color = 'var(--fg-primary)'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = 'transparent'
+                                  e.currentTarget.style.color = 'var(--fg-secondary)'
+                                }}
                               >
-                                {fav.name} <span style={{ fontSize: 11, color: 'var(--fg-quiet)', marginLeft: 4 }}>({calories} kcal)</span>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fav.name}</span>
+                                <span style={{ fontSize: 11, color: 'var(--fg-quiet)', flexShrink: 0 }}>({calories} kcal)</span>
                               </button>
                             )
                           })

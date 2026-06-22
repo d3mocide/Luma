@@ -12,18 +12,7 @@ Frontend brand reference: `refrence/BRAND-GUIDE.md` is the canonical visual and 
 
 ## Phase Gate
 
-Same as CLAUDE.md. Phase 0 must be complete before any agent touches Phase 1+ code.
-
-**Phase 0 exit criteria (all must pass):**
-1. `docker compose up -d` succeeds for all services
-2. `alembic upgrade head` applies all migrations cleanly
-3. `POST /api/v1/auth/login` returns a JWT cookie for seeded admin user
-4. `GET /api/v1/auth/me` returns user info with valid cookie
-5. `GET /api/v1/today` returns valid JSON (mocked OK)
-6. `GET /api/v1/trends/weight_kg?range=7d` returns valid JSON (real or empty series)
-7. `POST /api/v1/ingest/hae` with valid HMAC-SHA256 header returns 200
-8. Frontend builds with `pnpm build` without errors
-9. All five routes render without runtime errors
+All four phases (0–3) are complete. The project is in maintenance and enhancement mode. No phase restrictions apply — fix bugs, improve UX, respond to user requests.
 
 ## Repository Layout
 
@@ -51,7 +40,6 @@ For frontend/UI changes, explicitly cite the relevant sections from `refrence/BR
 
 - One logical change per commit
 - Commit messages: imperative mood, present tense, ≤72 chars subject
-- Always include the phase in the commit subject: `[phase-0] add HAE ingest endpoint`
 - Never commit `.env` or any file containing real secrets
 - Run `alembic check` (if migrations exist) before committing backend changes
 - Maintain a `/CHANGELOG.md` file at the root of the project, logging all feature completions, enhancements, bug fixes, and infrastructure stabilizations before signing off on any phase or significant task.
@@ -67,26 +55,6 @@ These must be sequential:
 - Schema migration must precede any API that uses the new tables
 - `seed_admin` script must run after migration
 - Frontend API client must be updated when backend routes change
-
-### Stub vs Implement
-
-For Phase 0, these files must be **stubbed** (return `{"detail": "not implemented"}` or similar):
-- All of `/api/v1/log/*`
-- All of `/api/v1/plan/*`
-- All of `/api/v1/coach/*`
-- `/api/v1/foods/*`
-- `/api/v1/recipes/*`
-- All agent files in `agents/`
-- All alert engine files in `alerts/`
-
-These files must be **fully implemented** for Phase 0:
-- Auth routes (`/api/v1/auth/*`)
-- HAE ingest (`/api/v1/ingest/hae`)
-- Today (mocked response, not DB-backed)
-- Trends (`/api/v1/trends/{metric}` — real DB query)
-- All DB models and the initial migration
-- Frontend shell with five wired routes and mock card data
-- `scripts/seed_admin.py`
 
 ### Error Handling
 
