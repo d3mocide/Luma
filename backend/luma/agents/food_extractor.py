@@ -60,6 +60,31 @@ class FoodExtractorResponse(BaseModel):
     items: list[FoodItemSchema] = Field(description="List of extracted food items")
 
 
+def sanitize_extracted_items(items: list[Any]) -> list[Any]:
+    """Enforce physical constraints on LLM-estimated nutrients.
+
+    Saturated fat is a subset of total fat, but models routinely emit a
+    saturated value equal to (or above) total fat — e.g. almond milk logged
+    with its whole fat amount as saturated, when the fat is almost entirely
+    unsaturated. Clamp the fat sub-components so an impossible split can never
+    persist. This is a safety net; the prompt does the real estimation work.
+    """
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        nutrients = item.get("nutrients")
+        if not isinstance(nutrients, dict):
+            continue
+        fat = nutrients.get("fat_g")
+        if not isinstance(fat, (int, float)):
+            continue
+        for sub_key in ("saturated_fat_g", "monounsaturated_fat_g", "polyunsaturated_fat_g", "trans_fat_g"):
+            sub = nutrients.get(sub_key)
+            if isinstance(sub, (int, float)) and sub > fat:
+                nutrients[sub_key] = float(fat)
+    return items
+
+
 async def extract_foods_from_text(text: str) -> list[dict[str, Any]]:
     """Parse text and extract a structured JSON list of food items and their nutrition metrics."""
     if not text.strip():
@@ -105,7 +130,7 @@ async def extract_foods_from_text(text: str) -> list[dict[str, Any]]:
 
         items = _parse_items(content)
         if items is not None:
-            return items
+            return sanitize_extracted_items(items)
 
         # One correction retry — send the bad response back and ask the model to fix it
         logger.warning("Food extractor returned invalid JSON; attempting correction retry")
@@ -129,7 +154,7 @@ async def extract_foods_from_text(text: str) -> list[dict[str, Any]]:
                 retry_content = re.sub(r"\n```$", "", retry_content).strip()
             items = _parse_items(retry_content)
             if items is not None:
-                return items
+                return sanitize_extracted_items(items)
         except Exception:
             logger.exception("Food extractor correction retry failed")
 

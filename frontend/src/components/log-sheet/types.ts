@@ -34,4 +34,19 @@ export type DraftItem = {
   food_id?: string
   // Origin of the item so the backend can decide whether to auto-persist it.
   source?: 'barcode' | 'photo' | 'search' | 'voice' | 'plan' | 'manual'
+  // Where the nutrient values came from after server-side resolution. DB-sourced
+  // values are trustworthy; "estimate" means the LLM's own numbers were kept.
+  nutrient_source?: 'reference' | 'usda' | 'user' | 'off' | 'estimate'
+}
+
+export type NutrientSource = NonNullable<DraftItem['nutrient_source']>
+
+// Map a picked food's origin to the provenance tag carried on a draft item, so
+// a food chosen from the DB (search/barcode/replace) shows the right badge.
+export function nutrientSourceForFood(source?: string, brand?: string): NutrientSource | undefined {
+  if (brand === 'USDA Reference') return 'reference'
+  if (source === 'usda') return 'usda'
+  if (source === 'off') return 'off'
+  if (source === 'user') return 'user'
+  return undefined
 }

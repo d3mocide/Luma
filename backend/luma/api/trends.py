@@ -97,7 +97,7 @@ async def get_trend(
     result = await db.execute(
         text("""
             SELECT
-                CAST(day::date AS text) AS date,
+                CAST((day AT TIME ZONE :tz)::date AS text) AS date,
                 avg_value,
                 min_value,
                 max_value,
@@ -110,16 +110,20 @@ async def get_trend(
               AND day      >= now() - (:days * INTERVAL '1 day')
             ORDER BY day
         """),
-        {"user_id": str(user.id), "metric": metric, "days": days},
+        {"user_id": str(user.id), "metric": metric, "days": days, "tz": settings.server_timezone},
     )
     rows: list[Any] = list(result.fetchall())
 
-    # Supplement with a live query when the continuous aggregate hasn't
-    # materialized today's bucket yet (aggregate refresh lags by up to 1 hour).
+    # The continuous aggregate's most recent bucket lags by up to 1 hour and is
+    # only ever a partial total for the current day. Always recompute today from
+    # the raw biometrics so the right-most ("today") point and the headline value
+    # reflect the user's live local-day total, not a stale/partial bucket.
     today_str = str(datetime.now(ZoneInfo(settings.server_timezone)).date())
-    if not rows or rows[-1].date != today_str:
-        live = await _live_today_row(db, str(user.id), metric)
-        if live:
+    live = await _live_today_row(db, str(user.id), metric)
+    if live:
+        if rows and rows[-1].date == today_str:
+            rows[-1] = live
+        else:
             rows.append(live)
 
     return {

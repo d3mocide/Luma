@@ -12,7 +12,7 @@ interface AdherenceToday {
   calories?: DayAdherence | null
   sat_fat_g?: DayAdherence | null
   soluble_fiber_g?: DayAdherence | null
-  sugars_g?: DayAdherence | null
+  sodium_mg?: DayAdherence | null
 }
 
 interface StreakStripProps {
@@ -33,7 +33,7 @@ export default function StreakStrip({ days, adherence, onShowHistory }: StreakSt
   const [animateFlame, setAnimateFlame] = useState(false)
 
   useEffect(() => {
-    setAnimateFlame(true)
+    setAnimateFlame(true) // eslint-disable-line react-hooks/set-state-in-effect
     const t = setTimeout(() => setAnimateFlame(false), 2000)
     return () => clearTimeout(t)
   }, [days])
@@ -55,13 +55,13 @@ export default function StreakStrip({ days, adherence, onShowHistory }: StreakSt
           cal: adherence.calories?.logged,
           sat: adherence.sat_fat_g?.logged,
           fib: adherence.soluble_fiber_g?.logged,
-          sug: adherence.sugars_g?.logged,
+          sod: adherence.sodium_mg?.logged,
         },
         {
           cal: adherence.calories?.target,
           sat: adherence.sat_fat_g?.target,
           fib: adherence.soluble_fiber_g?.target,
-          sug: adherence.sugars_g?.target,
+          sod: adherence.sodium_mg?.target,
         },
       ).onTrack
     : false

@@ -152,21 +152,28 @@ async def _execute_tool(name: str, args: dict, user_id: str, db, unit_system: st
         return json.dumps(data)
 
     if name == "query_nutrition_rollup":
+        # Day boundaries follow SERVER_TIMEZONE so rollups match what the user
+        # sees on /today and in the streak breakdown, not the UTC clock.
         rows = await db.execute(
             text("""
                 SELECT
-                    DATE(ts AT TIME ZONE 'UTC') AS day,
+                    DATE(ts AT TIME ZONE :tz) AS day,
                     SUM(CAST(nutrition->>'calories' AS float)) AS calories,
                     SUM(CAST(nutrition->>'saturated_fat_g' AS float)) AS sat_fat_g,
                     SUM(CAST(nutrition->>'soluble_fiber_g' AS float)) AS fiber_g,
                     SUM(CAST(nutrition->>'protein_g' AS float)) AS protein_g
                 FROM meal_events
                 WHERE user_id = :uid
-                  AND CAST(ts AS date) BETWEEN :start AND :end
-                GROUP BY DATE(ts AT TIME ZONE 'UTC')
+                  AND DATE(ts AT TIME ZONE :tz) BETWEEN :start AND :end
+                GROUP BY DATE(ts AT TIME ZONE :tz)
                 ORDER BY day
             """),
-            {"uid": user_id, "start": parse_date(args["start_date"]), "end": parse_date(args["end_date"])},
+            {
+                "uid": user_id,
+                "tz": settings.server_timezone,
+                "start": parse_date(args["start_date"]),
+                "end": parse_date(args["end_date"]),
+            },
         )
         data = [
             {"day": str(r.day), "calories": r.calories, "sat_fat_g": r.sat_fat_g,
