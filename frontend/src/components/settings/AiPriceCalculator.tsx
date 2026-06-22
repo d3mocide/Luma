@@ -174,9 +174,9 @@ export function AiPriceCalculator() {
       if (successes > 0) {
         const avgPrompt = Math.round(llmMetrics.totals.prompt_tokens / successes)
         const avgCompletion = Math.round(llmMetrics.totals.completion_tokens / successes)
-        
+
         if (avgPrompt >= 100 && avgPrompt <= 10000) {
-          setInputTokens(Math.round(avgPrompt / 100) * 100)
+          setInputTokens(Math.round(avgPrompt / 100) * 100) // eslint-disable-line react-hooks/set-state-in-effect
         }
         if (avgCompletion >= 50 && avgCompletion <= 4000) {
           setOutputTokens(Math.round(avgCompletion / 50) * 50)
@@ -189,7 +189,7 @@ export function AiPriceCalculator() {
   // Default to first loaded model when active list is parsed
   useEffect(() => {
     if (activeModels.length > 0 && !selectedModelKey) {
-      setSelectedModelKey(activeModels[0].originalKey)
+      setSelectedModelKey(activeModels[0].originalKey) // eslint-disable-line react-hooks/set-state-in-effect
     }
   }, [activeModels, selectedModelKey])
 

@@ -4,6 +4,8 @@ updates:
     directory: /backend
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
     open-pull-requests-limit: 5
     labels:
       - dependencies
@@ -29,6 +31,8 @@ updates:
     directory: /frontend
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
     open-pull-requests-limit: 5
     labels:
       - dependencies
@@ -54,6 +58,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
     labels:
       - dependencies
       - github-actions

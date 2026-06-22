@@ -494,11 +494,10 @@ function ModalField({ label, value, onChange, placeholder }: { label: string; va
 function MedicationsTab() {
   const qc = useQueryClient()
   const [modal, setModal] = useState<'add' | Medication | null>(null)
-  const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
   const { data: meds = [], isLoading } = useQuery<Medication[]>({
-    queryKey: ['health', 'medications', clientTz],
-    queryFn: () => api.get(`/health/medications?tz=${encodeURIComponent(clientTz)}`),
+    queryKey: ['health', 'medications'],
+    queryFn: () => api.get('/health/medications'),
   })
 
   const createMut = useMutation({
@@ -520,9 +519,9 @@ function MedicationsTab() {
   const toggleLogMut = useMutation({
     mutationFn: ({ id, taken }: { id: string; taken: boolean }) => {
       if (taken) {
-        return api.post(`/health/medications/${id}/log?tz=${encodeURIComponent(clientTz)}`)
+        return api.post(`/health/medications/${id}/log`)
       } else {
-        return api.delete(`/health/medications/${id}/log?tz=${encodeURIComponent(clientTz)}`)
+        return api.delete(`/health/medications/${id}/log`)
       }
     },
     onSuccess: () => {
@@ -674,11 +673,10 @@ function MedicationsTab() {
 function SupplementsTab() {
   const qc = useQueryClient()
   const [modal, setModal] = useState<'add' | Supplement | null>(null)
-  const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
   const { data: supps = [], isLoading } = useQuery<Supplement[]>({
-    queryKey: ['health', 'supplements', clientTz],
-    queryFn: () => api.get(`/health/supplements?tz=${encodeURIComponent(clientTz)}`),
+    queryKey: ['health', 'supplements'],
+    queryFn: () => api.get('/health/supplements'),
   })
 
   const createMut = useMutation({
@@ -700,9 +698,9 @@ function SupplementsTab() {
   const toggleLogMut = useMutation({
     mutationFn: ({ id, taken }: { id: string; taken: boolean }) => {
       if (taken) {
-        return api.post(`/health/supplements/${id}/log?tz=${encodeURIComponent(clientTz)}`)
+        return api.post(`/health/supplements/${id}/log`)
       } else {
-        return api.delete(`/health/supplements/${id}/log?tz=${encodeURIComponent(clientTz)}`)
+        return api.delete(`/health/supplements/${id}/log`)
       }
     },
     onSuccess: () => {
@@ -882,17 +880,16 @@ function SupplementsTab() {
 // ---------------------------------------------------------------------------
 
 function InteractionsTab() {
-  const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
   const { data, isLoading, error } = useQuery<InteractionsResponse>({
-    queryKey: ['health', 'interactions', clientTz],
-    queryFn: () => api.get(`/health/interactions?tz=${encodeURIComponent(clientTz)}`),
+    queryKey: ['health', 'interactions'],
+    queryFn: () => api.get('/health/interactions'),
     refetchOnWindowFocus: true,
   })
 
   const { data: meds = [] } = useQuery<Medication[]>({
-    queryKey: ['health', 'medications', clientTz],
-    queryFn: () => api.get(`/health/medications?tz=${encodeURIComponent(clientTz)}`),
+    queryKey: ['health', 'medications'],
+    queryFn: () => api.get('/health/medications'),
   })
 
   const activeMeds = meds.filter((m) => m.is_active)
