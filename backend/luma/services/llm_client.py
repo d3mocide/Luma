@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from time import perf_counter
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import litellm
 
@@ -227,13 +228,15 @@ async def _call_target(target: dict[str, Any], *, model_alias: str, attempt: str
 
 
 def _inject_current_datetime(kwargs: dict[str, Any]) -> dict[str, Any]:
-    """Prepend current UTC datetime to the system message so every model call is temporally grounded."""
+    """Prepend the current datetime in the configured SERVER_TIMEZONE to the system
+    message so every model call is grounded in the same clock users see — not UTC."""
     messages: list[dict[str, Any]] | None = kwargs.get("messages")
     if not messages:
         return kwargs
 
-    now = datetime.now(UTC)
-    date_line = f"Current date/time (UTC): {now.strftime('%A, %Y-%m-%d %H:%M')} UTC\n\n"
+    tz = ZoneInfo(settings.server_timezone)
+    now = datetime.now(tz)
+    date_line = f"Current date/time: {now.strftime('%A, %Y-%m-%d %H:%M %Z')}\n\n"
 
     kwargs = {**kwargs}
     messages = list(messages)

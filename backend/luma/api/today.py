@@ -3,7 +3,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import select, text
 
 from luma.config import settings
@@ -20,10 +20,10 @@ async def get_today(
     db: DbDep,
     tz: str = Query(default=None, alias="tz"),
 ) -> dict[str, Any]:
-    try:
-        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
-    except Exception:
-        resolved_tz = ZoneInfo(settings.server_timezone)
+    # SERVER_TIMEZONE is the single source of truth for calendar-day boundaries
+    # (streaks, "today" totals). The client tz hint is intentionally ignored so
+    # the day never drifts with the device clock — see SERVER_TIMEZONE in .env.
+    resolved_tz = ZoneInfo(settings.server_timezone)
     today_dt = datetime.now(resolved_tz).date()
 
     # 1. Fetch user's goals
@@ -35,7 +35,7 @@ async def get_today(
     target_cal = goal.daily_calorie_target if goal else None
     target_sat = float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else None
     target_sol = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else None
-    target_sugar = float(goal.daily_sugar_g_max) if goal and goal.daily_sugar_g_max else None
+    target_sodium = float(goal.daily_sodium_mg_max) if goal and goal.daily_sodium_mg_max else None
     target_protein = float(goal.daily_protein_g_min) if goal and goal.daily_protein_g_min else None
 
     # All boundaries are computed in the configured local timezone then converted
@@ -59,14 +59,17 @@ async def get_today(
     logged_cal = 0.0
     logged_sat = 0.0
     logged_sol = 0.0
-    logged_sugar = 0.0
+    logged_sodium = 0.0
     logged_protein = 0.0
     for e in today_events:
         nutr = e.nutrition or {}
         logged_cal += float(nutr.get("calories") or 0.0)
         logged_sat += float(nutr.get("saturated_fat_g") or 0.0)
         logged_sol += float(nutr.get("soluble_fiber_g") or 0.0)
-        logged_sugar += float(nutr.get("sugars_g") or 0.0)
+        # Sodium is the budgeted ceiling on the ring/budget/streak — the most
+        # actionable heart-health lever, and one that (unlike added sugar) almost
+        # always has a meaningful daily budget to manage.
+        logged_sodium += float(nutr.get("sodium_mg") or 0.0)
         logged_protein += float(nutr.get("protein_g") or 0.0)
 
     # Add supplement nutrient contributions to daily totals — only for active
@@ -92,13 +95,13 @@ async def get_today(
     logged_cal += supplement_nutrients.get("calories", 0.0)
     logged_sat += supplement_nutrients.get("saturated_fat_g", 0.0)
     logged_sol += supplement_nutrients.get("soluble_fiber_g", 0.0)
-    logged_sugar += supplement_nutrients.get("sugars_g", 0.0)
+    logged_sodium += supplement_nutrients.get("sodium_mg", 0.0)
     logged_protein += supplement_nutrients.get("protein_g", 0.0)
-        
+
     cal_pct = round((logged_cal / target_cal) * 100, 1) if target_cal else None
     sat_pct = round((logged_sat / target_sat) * 100, 1) if target_sat else None
     sol_pct = round((logged_sol / target_sol) * 100, 1) if target_sol else None
-    sugar_pct = round((logged_sugar / target_sugar) * 100, 1) if target_sugar else None
+    sodium_pct = round((logged_sodium / target_sodium) * 100, 1) if target_sodium else None
     protein_pct = round((logged_protein / target_protein) * 100, 1) if target_protein else None
     
     # 3. Fetch today's meal plan slots
@@ -199,11 +202,42 @@ async def get_today(
         "cal": float(target_cal) if target_cal else None,
         "sat": target_sat,
         "fib": target_sol,
-        "sug": target_sugar,
+        "sod": target_sodium,
     }
     streak_start_utc = datetime.combine(
         today_dt - timedelta(days=365), time.min, tzinfo=resolved_tz
     ).astimezone(UTC)
+
+    # Credit supplements to the day they were actually logged, bucketed in the
+    # configured timezone — mirrors /today/streak-history. Adding today's
+    # supplements to every historical day (the old bug) flipped earlier days
+    # off-track, so the headline streak read 0 while the breakdown showed
+    # on-track days.
+    streak_supp_rows = await db.execute(
+        select(SupplementLog.ts, Supplement.nutrients_per_dose)
+        .join(Supplement, SupplementLog.supplement_id == Supplement.id)
+        .where(
+            Supplement.user_id == user.id,
+            Supplement.is_active.is_(True),
+            SupplementLog.ts >= streak_start_utc,
+            SupplementLog.ts < today_end,
+        )
+    )
+    streak_supp_by_day: dict[date, dict[str, float]] = {}
+    for log_ts, nutrients in streak_supp_rows:
+        day = log_ts.astimezone(resolved_tz).date()
+        bucket = streak_supp_by_day.setdefault(day, {"cal": 0.0, "sat": 0.0, "fib": 0.0, "sod": 0.0})
+        for key, val in (nutrients or {}).items():
+            v = float(val or 0.0)
+            if key == "calories":
+                bucket["cal"] += v
+            elif key == "saturated_fat_g":
+                bucket["sat"] += v
+            elif key == "soluble_fiber_g":
+                bucket["fib"] += v
+            elif key == "sodium_mg":
+                bucket["sod"] += v
+
     streak_rows = await db.execute(
         text("""
             SELECT
@@ -211,7 +245,7 @@ async def get_today(
                 COALESCE(SUM(CAST(NULLIF(nutrition->>'calories', '') AS numeric)), 0)         AS cal,
                 COALESCE(SUM(CAST(NULLIF(nutrition->>'saturated_fat_g', '') AS numeric)), 0)  AS sat,
                 COALESCE(SUM(CAST(NULLIF(nutrition->>'soluble_fiber_g', '') AS numeric)), 0)  AS sol,
-                COALESCE(SUM(CAST(NULLIF(nutrition->>'sugars_g', '') AS numeric)), 0)         AS sug
+                COALESCE(SUM(CAST(NULLIF(nutrition->>'sodium_mg', '') AS numeric)), 0)        AS sod
             FROM meal_events
             WHERE user_id = :user_id
               AND ts >= :start_utc
@@ -223,14 +257,26 @@ async def get_today(
     )
     on_track_days: set[date] = set()
     for row in streak_rows:
+        supp = streak_supp_by_day.get(row.day, {"cal": 0.0, "sat": 0.0, "fib": 0.0, "sod": 0.0})
         totals = {
-            "cal": float(row.cal) + supplement_nutrients.get("calories", 0.0),
-            "sat": float(row.sat) + supplement_nutrients.get("saturated_fat_g", 0.0),
-            "fib": float(row.sol) + supplement_nutrients.get("soluble_fiber_g", 0.0),
-            "sug": float(row.sug) + supplement_nutrients.get("sugars_g", 0.0),
+            "cal": float(row.cal) + supp["cal"],
+            "sat": float(row.sat) + supp["sat"],
+            "fib": float(row.sol) + supp["fib"],
+            "sod": float(row.sod) + supp["sod"],
         }
         if score_day(totals, streak_targets)["on_track"]:
             on_track_days.add(row.day)
+
+    # Days where the user logged only supplements (no meals) still count toward
+    # the streak, consistent with the per-day breakdown.
+    for day, supp in streak_supp_by_day.items():
+        if day in on_track_days:
+            continue
+        if score_day(
+            {"cal": supp["cal"], "sat": supp["sat"], "fib": supp["fib"], "sod": supp["sod"]},
+            streak_targets,
+        )["on_track"]:
+            on_track_days.add(day)
 
     # Start from today; if today is not on-track yet (day still in progress) fall
     # back to yesterday so an unfinished day doesn't read as a broken streak.
@@ -257,7 +303,7 @@ async def get_today(
             "calories":         {"logged": logged_cal,     "target": target_cal,     "pct": cal_pct},
             "sat_fat_g":        {"logged": logged_sat,     "target": target_sat,     "pct": sat_pct},
             "soluble_fiber_g":  {"logged": logged_sol,     "target": target_sol,     "pct": sol_pct},
-            "sugars_g":         {"logged": logged_sugar,   "target": target_sugar,   "pct": sugar_pct},
+            "sodium_mg":        {"logged": logged_sodium,  "target": target_sodium,  "pct": sodium_pct},
             "protein_g":        {"logged": logged_protein, "target": target_protein, "pct": protein_pct},
         },
         "biometrics_latest": {
@@ -299,10 +345,9 @@ async def get_streak_history(
     db: DbDep,
     tz: str = Query(default=None, alias="tz"),
 ) -> list[dict[str, Any]]:
-    try:
-        resolved_tz = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
-    except Exception:
-        resolved_tz = ZoneInfo(settings.server_timezone)
+    # SERVER_TIMEZONE is authoritative; the client tz hint is ignored so the
+    # per-day breakdown lines up with the headline streak in /today.
+    resolved_tz = ZoneInfo(settings.server_timezone)
 
     today_dt = datetime.now(resolved_tz).date()
     start_dt = today_dt - timedelta(days=29)
@@ -315,7 +360,7 @@ async def get_streak_history(
     target_cal = float(goal.daily_calorie_target) if goal and goal.daily_calorie_target else None
     target_sat = float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else None
     target_sol = float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else None
-    target_sug = float(goal.daily_sugar_g_max) if goal and goal.daily_sugar_g_max else None
+    target_sod = float(goal.daily_sodium_mg_max) if goal and goal.daily_sodium_mg_max else None
 
     start_utc = datetime.combine(start_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
     end_utc   = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
@@ -336,7 +381,7 @@ async def get_streak_history(
     supp_by_day: dict[date, dict[str, float]] = {}
     for log_ts, nutrients in supp_log_rows:
         day = log_ts.astimezone(resolved_tz).date()
-        bucket = supp_by_day.setdefault(day, {"cal": 0.0, "sat": 0.0, "sol": 0.0, "sug": 0.0})
+        bucket = supp_by_day.setdefault(day, {"cal": 0.0, "sat": 0.0, "sol": 0.0, "sod": 0.0})
         for key, val in (nutrients or {}).items():
             v = float(val or 0.0)
             if key == "calories":
@@ -345,8 +390,8 @@ async def get_streak_history(
                 bucket["sat"] += v
             elif key == "soluble_fiber_g":
                 bucket["sol"] += v
-            elif key == "sugars_g":
-                bucket["sug"] += v
+            elif key == "sodium_mg":
+                bucket["sod"] += v
 
     meal_rows = await db.execute(
         text("""
@@ -355,7 +400,7 @@ async def get_streak_history(
                 COALESCE(SUM(CAST(NULLIF(nutrition->>'calories', '') AS numeric)), 0)        AS cal,
                 COALESCE(SUM(CAST(NULLIF(nutrition->>'saturated_fat_g', '') AS numeric)), 0)  AS sat,
                 COALESCE(SUM(CAST(NULLIF(nutrition->>'soluble_fiber_g', '') AS numeric)), 0)  AS sol,
-                COALESCE(SUM(CAST(NULLIF(nutrition->>'sugars_g', '') AS numeric)), 0)         AS sug
+                COALESCE(SUM(CAST(NULLIF(nutrition->>'sodium_mg', '') AS numeric)), 0)        AS sod
             FROM meal_events
             WHERE user_id = :user_id
               AND ts >= :start_utc
@@ -368,12 +413,12 @@ async def get_streak_history(
 
     daily_map: dict = {}
     for row in meal_rows:
-        supp = supp_by_day.get(row.day, {"cal": 0.0, "sat": 0.0, "sol": 0.0, "sug": 0.0})
+        supp = supp_by_day.get(row.day, {"cal": 0.0, "sat": 0.0, "sol": 0.0, "sod": 0.0})
         daily_map[row.day] = {
             "cal": float(row.cal) + supp["cal"],
             "sat": float(row.sat) + supp["sat"],
             "sol": float(row.sol) + supp["sol"],
-            "sug": float(row.sug) + supp["sug"],
+            "sod": float(row.sod) + supp["sod"],
         }
 
     # Days where the user logged only supplements (no meals) still count.
@@ -383,11 +428,11 @@ async def get_streak_history(
                 "cal": supp["cal"],
                 "sat": supp["sat"],
                 "sol": supp["sol"],
-                "sug": supp["sug"],
+                "sod": supp["sod"],
             }
 
     hist_targets: dict[str, float | None] = {
-        "cal": target_cal, "sat": target_sat, "fib": target_sol, "sug": target_sug,
+        "cal": target_cal, "sat": target_sat, "fib": target_sol, "sod": target_sod,
     }
     configured = sum(1 for v in hist_targets.values() if v is not None)
 
@@ -402,7 +447,7 @@ async def get_streak_history(
                 "cal_logged": None, "cal_target": target_cal,
                 "sat_logged": None, "sat_target": target_sat,
                 "fib_logged": None, "fib_target": target_sol,
-                "sug_logged": None, "sug_target": target_sug,
+                "sod_logged": None, "sod_target": target_sod,
                 "targets_met": 0,
                 "targets_possible": configured,
                 "on_track": False,
@@ -411,7 +456,7 @@ async def get_streak_history(
             continue
 
         score = score_day(
-            {"cal": day_data["cal"], "sat": day_data["sat"], "fib": day_data["sol"], "sug": day_data["sug"]},
+            {"cal": day_data["cal"], "sat": day_data["sat"], "fib": day_data["sol"], "sod": day_data["sod"]},
             hist_targets,
         )
 
@@ -420,7 +465,7 @@ async def get_streak_history(
             "cal_logged": day_data["cal"], "cal_target": target_cal,
             "sat_logged": day_data["sat"], "sat_target": target_sat,
             "fib_logged": day_data["sol"], "fib_target": target_sol,
-            "sug_logged": day_data["sug"], "sug_target": target_sug,
+            "sod_logged": day_data["sod"], "sod_target": target_sod,
             "targets_met": score["targets_met"],
             "targets_possible": score["targets_possible"],
             "on_track": score["on_track"],
@@ -428,6 +473,161 @@ async def get_streak_history(
         })
 
     return result
+
+
+def _serialize_meal_event(event) -> dict[str, Any]:
+    """Shape a MealEvent for the client meal list — mirrors the inline builder in
+    get_today's recent_meals so the Nutrition Day page renders day history with
+    the same headline/macro fields the Today screen uses."""
+    items = event.items if isinstance(event.items, list) else []
+    first_item = items[0].get("name") if items and isinstance(items[0], dict) else None
+    nutrition = event.nutrition if isinstance(event.nutrition, dict) else {}
+    raw = event.raw_input or ""
+    if event.source in ("favorite", "favorites") and raw:
+        headline = raw
+    elif event.source == "plan" and raw.startswith("Planned: "):
+        headline = raw[len("Planned: "):]
+    else:
+        headline = first_item or "Logged meal"
+    return {
+        "id": str(event.id),
+        "ts": event.ts.isoformat(),
+        "slot": event.slot,
+        "source": event.source,
+        "item_count": len(items),
+        "calories": float(nutrition.get("calories") or 0.0),
+        "headline": headline,
+        "nutrition": nutrition,
+        "items": items,
+        "raw_input": event.raw_input,
+    }
+
+
+@router.get("/today/nutrition-history")
+async def get_nutrition_history(
+    user: CurrentUser,
+    db: DbDep,
+    days: int = Query(default=90, ge=1, le=365),
+) -> dict[str, Any]:
+    """Per-day summed nutrition over a trailing window, for the Nutrition Day page.
+
+    Unlike /today/streak-history (four ring metrics only), this sums EVERY
+    nutrient key — macros and micros — so the page can render the protein ring,
+    the full nutrient breakdown, and per-nutrient trends for any past day.
+    """
+    resolved_tz = ZoneInfo(settings.server_timezone)
+    today_dt = datetime.now(resolved_tz).date()
+    start_dt = today_dt - timedelta(days=days - 1)
+
+    from luma.db.models import Goal, MealEvent, Supplement, SupplementLog
+
+    res_goal = await db.execute(select(Goal).where(Goal.user_id == user.id))
+    goal = res_goal.scalar_one_or_none()
+
+    targets = {
+        "calories":        float(goal.daily_calorie_target) if goal and goal.daily_calorie_target else None,
+        "saturated_fat_g": float(goal.daily_sat_fat_g_max) if goal and goal.daily_sat_fat_g_max else None,
+        "soluble_fiber_g": float(goal.daily_soluble_fiber_g) if goal and goal.daily_soluble_fiber_g else None,
+        "sodium_mg":       float(goal.daily_sodium_mg_max) if goal and goal.daily_sodium_mg_max else None,
+        "protein_g":       float(goal.daily_protein_g_min) if goal and goal.daily_protein_g_min else None,
+    }
+
+    start_utc = datetime.combine(start_dt, time.min, tzinfo=resolved_tz).astimezone(UTC)
+    end_utc = datetime.combine(today_dt + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
+
+    # Sum every nutrient key per calendar day in Python rather than SQL: nutrition
+    # is a free-form JSON map and we want all of it (micros included), not just the
+    # four streak columns the SQL aggregate in streak-history extracts.
+    event_rows = await db.execute(
+        select(MealEvent.ts, MealEvent.nutrition).where(
+            MealEvent.user_id == user.id,
+            MealEvent.ts >= start_utc,
+            MealEvent.ts < end_utc,
+            MealEvent.nutrition.isnot(None),
+        )
+    )
+    daily: dict[date, dict[str, float]] = {}
+    for ts, nutrition in event_rows:
+        if not isinstance(nutrition, dict):
+            continue
+        day = ts.astimezone(resolved_tz).date()
+        bucket = daily.setdefault(day, {})
+        for key, val in nutrition.items():
+            try:
+                bucket[key] = bucket.get(key, 0.0) + float(val or 0.0)
+            except (TypeError, ValueError):
+                continue
+
+    # Logged supplements are credited to the day they were taken — same gate as
+    # the Today totals so the two views agree.
+    supp_rows = await db.execute(
+        select(SupplementLog.ts, Supplement.nutrients_per_dose)
+        .join(Supplement, SupplementLog.supplement_id == Supplement.id)
+        .where(
+            Supplement.user_id == user.id,
+            Supplement.is_active.is_(True),
+            SupplementLog.ts >= start_utc,
+            SupplementLog.ts < end_utc,
+        )
+    )
+    for ts, nutrients in supp_rows:
+        day = ts.astimezone(resolved_tz).date()
+        bucket = daily.setdefault(day, {})
+        for key, val in (nutrients or {}).items():
+            try:
+                bucket[key] = bucket.get(key, 0.0) + float(val or 0.0)
+            except (TypeError, ValueError):
+                continue
+
+    out_days: list[dict[str, Any]] = []
+    for i in range(days):
+        d = start_dt + timedelta(days=i)
+        day_bucket = daily.get(d)
+        out_days.append({
+            "date": d.isoformat(),
+            "nutrition": day_bucket or {},
+            "logged_anything": day_bucket is not None,
+        })
+
+    return {"targets": targets, "days": out_days}
+
+
+@router.get("/today/day/{day}")
+async def get_day_detail(
+    day: str,
+    user: CurrentUser,
+    db: DbDep,
+) -> dict[str, Any]:
+    """All meals logged on a given calendar day (server timezone), newest first.
+
+    Powers the Summary tab's meal list on the Nutrition Day page. Unlike
+    /today's recent_meals (capped at six), this returns the full day so history
+    days show every meal."""
+    resolved_tz = ZoneInfo(settings.server_timezone)
+    try:
+        target_day = date.fromisoformat(day)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid date") from exc
+
+    from luma.db.models import MealEvent
+
+    day_start = datetime.combine(target_day, time.min, tzinfo=resolved_tz).astimezone(UTC)
+    day_end = datetime.combine(target_day + timedelta(days=1), time.min, tzinfo=resolved_tz).astimezone(UTC)
+
+    rows = await db.execute(
+        select(MealEvent)
+        .where(
+            MealEvent.user_id == user.id,
+            MealEvent.ts >= day_start,
+            MealEvent.ts < day_end,
+        )
+        .order_by(MealEvent.ts.desc())
+    )
+    events = rows.scalars().all()
+    return {
+        "date": target_day.isoformat(),
+        "meals": [_serialize_meal_event(e) for e in events],
+    }
 
 
 async def _get_active_insight(db, user_id: str) -> dict | None:

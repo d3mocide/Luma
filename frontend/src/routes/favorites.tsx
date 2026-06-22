@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, ChevronDown, X, Search } from 'lucide-react'
+import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, ChevronDown, X, Search, ArrowUpDown } from 'lucide-react'
 import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { getCurrentSlot } from '../lib/format'
@@ -43,14 +43,24 @@ function totalSolFiber(items: FavoriteItem[]): number {
   return Math.round(val * 10) / 10
 }
 
-function totalSugar(items: FavoriteItem[]): number {
-  const val = items.reduce((sum, i) => sum + (i.nutrients.sugars_g ?? 0), 0)
-  return Math.round(val * 10) / 10
-}
 
 function totalProtein(items: FavoriteItem[]): number {
   const val = items.reduce((sum, i) => sum + (i.nutrients.protein_g ?? 0), 0)
   return Math.round(val * 10) / 10
+}
+
+function totalSodium(items: FavoriteItem[]): number {
+  return Math.round(items.reduce((sum, i) => sum + (i.nutrients.sodium_mg ?? 0), 0))
+}
+
+function useWindowWidth() {
+  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  return width
 }
 
 export default function FavoritesRoute() {
@@ -65,6 +75,9 @@ export default function FavoritesRoute() {
   const [newTagInput, setNewTagInput] = useState('')
   const [selectedTag, setSelectedTag] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<'frequency' | 'name_asc' | 'name_desc' | 'recent'>('frequency')
+  const [sortOpen, setSortOpen] = useState(false)
+  const sortRef = useRef<HTMLDivElement>(null)
   const [successModal, setSuccessModal] = useState<{ name: string; slot: string } | null>(null)
   const [expandedFavIds, setExpandedFavIds] = useState<Record<string, boolean>>({})
 
@@ -76,8 +89,8 @@ export default function FavoritesRoute() {
   }
 
   const { data: favoritesData, isLoading } = useQuery<{ favorites: Favorite[] }>({
-    queryKey: ['favorites', 'frequency'],
-    queryFn: () => api.get('/favorites?sort=frequency'),
+    queryKey: ['favorites', sortBy],
+    queryFn: () => api.get(`/favorites?sort=${sortBy}`),
   })
   const favorites = favoritesData?.favorites ?? []
 
@@ -144,11 +157,22 @@ export default function FavoritesRoute() {
   // Open the creation panel directly when arriving via the Today favorites widget.
   useEffect(() => {
     if ((location.state as { create?: boolean } | null)?.create) {
-      startCreate()
+      startCreate() // eslint-disable-line react-hooks/set-state-in-effect
       navigate('.', { replace: true, state: null })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!sortOpen) return
+    const handler = (e: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+        setSortOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [sortOpen])
 
   function startEdit(fav: Favorite) {
     setEditingId(fav.id)
@@ -176,9 +200,10 @@ export default function FavoritesRoute() {
             fiber_g: acc.fiber_g + (n.fiber_g || 0),
             sodium_mg: acc.sodium_mg + (n.sodium_mg || 0),
             sugars_g: acc.sugars_g + (n.sugars_g || 0),
+            added_sugars_g: acc.added_sugars_g + (n.added_sugars_g || 0),
           }
         },
-        { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0, sugars_g: 0 }
+        { calories: 0, saturated_fat_g: 0, soluble_fiber_g: 0, protein_g: 0, carbohydrates_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0, sugars_g: 0, added_sugars_g: 0 }
       )
       return api.post('/log/meal', {
         slot,
@@ -219,6 +244,21 @@ export default function FavoritesRoute() {
     if (fav.name.toLowerCase().includes(query)) return true
     return fav.items.some((item) => item.food_name.toLowerCase().includes(query))
   })
+
+  const width = useWindowWidth()
+  const numCols = width >= 1100 ? 2 : 1
+  const cols = Array.from({ length: numCols }, (_, colIdx) =>
+    filteredFavorites.filter((_, idx) => idx % numCols === colIdx)
+  )
+
+  const SORT_OPTIONS = [
+    { value: 'frequency', label: 'Most used' },
+    { value: 'name_asc', label: 'Name A–Z' },
+    { value: 'name_desc', label: 'Name Z–A' },
+    { value: 'recent', label: 'Recently added' },
+  ] as const
+
+  const currentSortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Sort'
 
   const addItem = (item: DraftItem) => setItems((prev) => [...prev, item])
   const removeItem = (index: number) => setItems((prev) => prev.filter((_, i) => i !== index))
@@ -287,51 +327,157 @@ export default function FavoritesRoute() {
             </div>
           )}
 
-          {/* Search bar */}
+          {/* Search + Sort bar */}
           {favorites.length > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '10px 14px',
-                marginBottom: 20,
-                borderRadius: 12,
-                background: 'var(--glass-1)',
-                border: '1px solid var(--glass-edge)',
-              }}
-            >
-              <Search size={16} strokeWidth={1.75} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search favorites…"
-                aria-label="Search favorites"
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              <div
                 style={{
                   flex: 1,
-                  minWidth: 0,
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: 'var(--fg-primary)',
-                  fontSize: 14,
-                  fontFamily: 'var(--font-sans)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 14px',
+                  borderRadius: 12,
+                  background: 'var(--glass-1)',
+                  border: '1px solid var(--glass-edge)',
                 }}
-              />
-              {searchQuery && (
+              >
+                <Search size={16} strokeWidth={1.75} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search favorites…"
+                  aria-label="Search favorites"
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: 'var(--fg-primary)',
+                    fontSize: 14,
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: 'var(--fg-quiet)', padding: 0, display: 'flex', alignItems: 'center',
+                    }}
+                  >
+                    <X size={15} strokeWidth={2} />
+                  </button>
+                )}
+              </div>
+              <div ref={sortRef} style={{ position: 'relative', flexShrink: 0 }}>
                 <button
                   type="button"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Clear search"
+                  onClick={() => setSortOpen((v) => !v)}
+                  aria-label="Sort favorites"
+                  aria-expanded={sortOpen}
                   style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--fg-quiet)', padding: 0, display: 'flex', alignItems: 'center',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '10px 12px',
+                    height: '100%',
+                    borderRadius: 12,
+                    background: sortOpen ? 'var(--glass-2)' : 'var(--glass-1)',
+                    border: `1px solid ${sortOpen ? 'rgba(56,189,248,0.3)' : 'var(--glass-edge)'}`,
+                    cursor: 'pointer',
+                    color: 'var(--fg-primary)',
+                    fontSize: 13,
+                    fontFamily: 'var(--font-sans)',
+                    whiteSpace: 'nowrap',
+                    transition: 'background 0.15s, border-color 0.15s',
                   }}
                 >
-                  <X size={15} strokeWidth={2} />
+                  <ArrowUpDown size={14} strokeWidth={1.75} style={{ color: 'var(--fg-quiet)', flexShrink: 0 }} />
+                  {currentSortLabel}
+                  <ChevronDown
+                    size={12}
+                    strokeWidth={2}
+                    style={{
+                      color: 'var(--fg-quiet)',
+                      transform: sortOpen ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s ease',
+                    }}
+                  />
                 </button>
-              )}
+
+                {sortOpen && (
+                  <div
+                    role="listbox"
+                    aria-label="Sort options"
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 6px)',
+                      right: 0,
+                      minWidth: 160,
+                      background: 'var(--glass-2)',
+                      border: '1px solid var(--glass-edge)',
+                      borderRadius: 12,
+                      backdropFilter: 'blur(16px)',
+                      WebkitBackdropFilter: 'blur(16px)',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                      zIndex: 50,
+                      padding: 4,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {SORT_OPTIONS.map((opt) => {
+                      const active = sortBy === opt.value
+                      return (
+                        <button
+                          key={opt.value}
+                          role="option"
+                          aria-selected={active}
+                          type="button"
+                          onClick={() => { setSortBy(opt.value); setSortOpen(false) }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            width: '100%',
+                            padding: '8px 12px',
+                            borderRadius: 8,
+                            border: 'none',
+                            background: active ? 'rgba(56,189,248,0.1)' : 'transparent',
+                            color: active ? 'var(--sky-300)' : 'var(--fg-secondary)',
+                            fontSize: 13,
+                            fontFamily: 'var(--font-sans)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'background 0.1s, color 0.1s',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!active) {
+                              (e.currentTarget as HTMLButtonElement).style.background = 'var(--glass-3)'
+                              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--fg-primary)'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!active) {
+                              (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+                              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--fg-secondary)'
+                            }
+                          }}
+                        >
+                          {opt.label}
+                          {active && (
+                            <Check size={12} strokeWidth={2.5} style={{ color: 'var(--sky-400)', flexShrink: 0 }} />
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -391,235 +537,220 @@ export default function FavoritesRoute() {
               </button>
             </div>
           ) : (
-            <div className="responsive-grid-2col" style={{ marginTop: 0 }}>
-              {filteredFavorites.map((fav) => (
-                <div
-                  key={fav.id}
-                  className="glass"
-                  style={{ padding: '16px 18px', borderRadius: 14 }}
-                >
-                  {/* Click-to-expand Title header */}
-                  <div
-                    onClick={() => toggleExpand(fav.id)}
-                    style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}
-                    onMouseEnter={(e) => {
-                      const titleEl = e.currentTarget.querySelector('.fav-title-text') as HTMLElement
-                      if (titleEl) titleEl.style.color = 'var(--sky-300)'
-                    }}
-                    onMouseLeave={(e) => {
-                      const titleEl = e.currentTarget.querySelector('.fav-title-text') as HTMLElement
-                      if (titleEl) titleEl.style.color = 'var(--fg-primary)'
-                    }}
-                  >
-                    <span className="fav-title-text" style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-primary)', transition: 'color 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {fav.name}
-                      <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--fg-quiet)', marginLeft: 8 }}>
-                        ({fav.items.length} {fav.items.length === 1 ? 'item' : 'items'})
-                      </span>
-                    </span>
-                    
-                    {/* Tags list next to chevron */}
-                    {fav.tags && fav.tags.length > 0 && (
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 'auto', marginRight: 12, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
-                        {fav.tags.slice(0, 2).map((tag) => (
-                          <span
-                            key={tag}
-                            style={{
-                              fontSize: 10,
-                              padding: '2px 8px',
-                              borderRadius: 6,
-                              background: 'var(--glass-2)',
-                              border: '1px solid var(--glass-edge)',
-                              color: 'var(--fg-secondary)',
-                              fontFamily: 'var(--font-sans)',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                        {fav.tags.length > 2 && (
-                          <span
-                            style={{
-                              fontSize: 9,
-                              fontWeight: 600,
-                              padding: '2px 6px',
-                              borderRadius: 4,
-                              background: 'var(--glass-3)',
-                              border: '1px solid var(--glass-edge)',
-                              color: 'var(--fg-quiet)',
-                              fontFamily: 'var(--font-mono)',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            +{fav.tags.length - 2}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <ChevronDown
-                      size={14}
-                      style={{
-                        transform: expandedFavIds[fav.id] ? 'rotate(180deg)' : 'none',
-                        transition: 'transform 0.2s ease',
-                        color: 'var(--fg-quiet)',
-                        flexShrink: 0,
-                      }}
-                    />
-                  </div>
-
-                  <div className="favorite-card-row">
-                    {/* Click-to-expand Info header */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${numCols}, 1fr)`,
+              gap: 16,
+              marginTop: 20,
+              alignItems: 'start'
+            }}>
+              {cols.map((colItems, colIdx) => (
+                <div key={colIdx} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {colItems.map((fav) => (
                     <div
-                      className="favorite-card-info"
-                      onClick={() => toggleExpand(fav.id)}
-                      style={{ cursor: 'pointer', flex: 1, minWidth: 0 }}
-                      onMouseEnter={(e) => {
-                        const card = e.currentTarget.closest('.glass') as HTMLElement
-                        const titleEl = card?.querySelector('.fav-title-text') as HTMLElement
-                        if (titleEl) titleEl.style.color = 'var(--sky-300)'
-                      }}
-                      onMouseLeave={(e) => {
-                        const card = e.currentTarget.closest('.glass') as HTMLElement
-                        const titleEl = card?.querySelector('.fav-title-text') as HTMLElement
-                        if (titleEl) titleEl.style.color = 'var(--fg-primary)'
-                      }}
+                      key={fav.id}
+                      className="glass"
+                      style={{ padding: '16px 18px', borderRadius: 14 }}
                     >
-                      <div className="favorite-macro-grid">
-                        <div className="favorite-macro-col">
-                          <span className="favorite-macro-label">Cal</span>
-                          <span className="num favorite-macro-val" style={{ color: 'var(--sky-400)' }}>{totalKcal(fav.items)}</span>
-                        </div>
-                        <div className="favorite-macro-col">
-                          <span className="favorite-macro-label">Sat Fat</span>
-                          <span className="num favorite-macro-val" style={{ color: 'var(--bad)' }}>{totalSatFat(fav.items)}g</span>
-                        </div>
-                        <div className="favorite-macro-col">
-                          <span className="favorite-macro-label">Sol Fib</span>
-                          <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{totalSolFiber(fav.items)}g</span>
-                        </div>
-                        <div className="favorite-macro-col">
-                          <span className="favorite-macro-label">Sugar</span>
-                          <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{totalSugar(fav.items)}g</span>
-                        </div>
-                        <div className="favorite-macro-col">
-                          <span className="favorite-macro-label">Protein</span>
-                          <span className="num favorite-macro-val" style={{ color: '#a78bfa' }}>{totalProtein(fav.items)}g</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="favorite-card-actions">
-                      <button
-                        onClick={() => logFavoriteDirect.mutate(fav)}
-                        disabled={logFavoriteDirect.isPending}
-                        className="favorite-action-btn favorite-action-btn--primary"
-                        style={{ opacity: logFavoriteDirect.isPending ? 0.7 : 1 }}
+                      {/* Click-to-expand Title header */}
+                      <div
+                        onClick={() => toggleExpand(fav.id)}
+                        style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}
+                        onMouseEnter={(e) => {
+                          const titleEl = e.currentTarget.querySelector('.fav-title-text') as HTMLElement
+                          if (titleEl) titleEl.style.color = 'var(--sky-300)'
+                        }}
+                        onMouseLeave={(e) => {
+                          const titleEl = e.currentTarget.querySelector('.fav-title-text') as HTMLElement
+                          if (titleEl) titleEl.style.color = 'var(--fg-primary)'
+                        }}
                       >
-                        <Heart size={12} strokeWidth={2} />
-                        <span>{logFavoriteDirect.isPending && logFavoriteDirect.variables?.id === fav.id ? 'Logging…' : 'Log this'}</span>
-                      </button>
-                      <ShareWithFamilyButton resourceType="favorite" resourceId={fav.id} />
-                      <button
-                        onClick={() => startEdit(fav)}
-                        className="favorite-action-btn"
-                      >
-                        <Pencil size={12} strokeWidth={1.75} />
-                        <span className="btn-label">Edit</span>
-                      </button>
-                      <button
-                        onClick={() => deleteMutation.mutate(fav.id)}
-                        disabled={deleteMutation.isPending}
-                        className="favorite-action-btn favorite-action-btn--danger"
-                        style={{ opacity: deleteMutation.isPending ? 0.5 : 1 }}
-                        aria-label={`Delete ${fav.name}`}
-                      >
-                        <Trash2 size={12} strokeWidth={1.75} />
-                        <span className="btn-label">Delete</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Expanded ingredients drawer list */}
-                  {expandedFavIds[fav.id] && (
-                    <div style={{
-                      marginTop: 12,
-                      borderTop: '1px solid var(--glass-edge)',
-                      paddingTop: 12,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 12,
-                    }}>
-                      {fav.items.map((item, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 3,
-                          }}
-                        >
-                          {/* Ingredient Name & Brand */}
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)', lineHeight: 1.4 }}>
-                              {item.food_name}
-                            </span>
-                            {item.brand && (
-                              <span style={{ fontSize: 10, color: 'var(--fg-quiet)', whiteSpace: 'nowrap' }}>
-                                {item.brand}
+                        <span className="fav-title-text" style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-primary)', transition: 'color 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {fav.name}
+                          <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--fg-quiet)', marginLeft: 8 }}>
+                            ({fav.items.length} {fav.items.length === 1 ? 'item' : 'items'})
+                          </span>
+                        </span>
+                        
+                        {/* Tags list next to chevron */}
+                        {fav.tags && fav.tags.length > 0 && (
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 'auto', marginRight: 12, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                            {fav.tags.slice(0, 2).map((tag) => (
+                              <span
+                                key={tag}
+                                style={{
+                                  fontSize: 10,
+                                  padding: '2px 8px',
+                                  borderRadius: 6,
+                                  background: 'var(--glass-2)',
+                                  border: '1px solid var(--glass-edge)',
+                                  color: 'var(--fg-secondary)',
+                                  fontFamily: 'var(--font-sans)',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            {fav.tags.length > 2 && (
+                              <span
+                                style={{
+                                  fontSize: 9,
+                                  fontWeight: 600,
+                                  padding: '2px 6px',
+                                  borderRadius: 4,
+                                  background: 'var(--glass-3)',
+                                  border: '1px solid var(--glass-edge)',
+                                  color: 'var(--fg-quiet)',
+                                  fontFamily: 'var(--font-mono)',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                +{fav.tags.length - 2}
                               </span>
                             )}
                           </div>
+                        )}
 
-                          {/* Metrics Breakdown */}
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            fontFamily: 'var(--font-mono)',
-                            fontSize: 11,
-                            color: 'var(--fg-secondary)',
-                            flexWrap: 'wrap',
-                          }}>
-                            <span style={{ color: 'var(--sky-300)' }}>{item.quantity_g}g</span>
-                            <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
-                            {item.nutrients.calories != null && (
-                              <>
-                                <span style={{ color: 'var(--fg-quiet)' }}>
-                                  {Math.round(item.nutrients.calories)} kcal
-                                </span>
-                              </>
-                            )}
-                            {item.nutrients.saturated_fat_g != null && item.nutrients.saturated_fat_g > 0 && (
-                              <>
-                                <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
-                                <span style={{ color: 'var(--bad)' }}>
-                                  {Math.round(item.nutrients.saturated_fat_g * 10) / 10}g sat
-                                </span>
-                              </>
-                            )}
-                            {item.nutrients.soluble_fiber_g != null && item.nutrients.soluble_fiber_g > 0 && (
-                              <>
-                                <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
-                                <span style={{ color: 'var(--good)' }}>
-                                  {Math.round(item.nutrients.soluble_fiber_g * 10) / 10}g fiber
-                                </span>
-                              </>
-                            )}
-                            {item.nutrients.sugars_g != null && item.nutrients.sugars_g > 0 && (
-                              <>
-                                <span style={{ color: 'var(--fg-faint)', userSelect: 'none' }}>·</span>
-                                <span style={{ color: 'var(--aurora-pink)' }}>
-                                  {Math.round(item.nutrients.sugars_g * 10) / 10}g sugar
-                                </span>
-                              </>
-                            )}
+                        <ChevronDown
+                          size={14}
+                          style={{
+                            transform: expandedFavIds[fav.id] ? 'rotate(180deg)' : 'none',
+                            transition: 'transform 0.2s ease',
+                            color: 'var(--fg-quiet)',
+                            flexShrink: 0,
+                          }}
+                        />
+                      </div>
+
+                      <div className="favorite-card-row">
+                        {/* Click-to-expand Info header */}
+                        <div
+                          className="favorite-card-info"
+                          onClick={() => toggleExpand(fav.id)}
+                          style={{ cursor: 'pointer', flex: 1, minWidth: 0 }}
+                          onMouseEnter={(e) => {
+                            const card = e.currentTarget.closest('.glass') as HTMLElement
+                            const titleEl = card?.querySelector('.fav-title-text') as HTMLElement
+                            if (titleEl) titleEl.style.color = 'var(--sky-300)'
+                          }}
+                          onMouseLeave={(e) => {
+                            const card = e.currentTarget.closest('.glass') as HTMLElement
+                            const titleEl = card?.querySelector('.fav-title-text') as HTMLElement
+                            if (titleEl) titleEl.style.color = 'var(--fg-primary)'
+                          }}
+                        >
+                          <div className="favorite-macro-grid">
+                            <div className="favorite-macro-col">
+                              <span className="favorite-macro-label">Cal</span>
+                              <span className="num favorite-macro-val" style={{ color: 'var(--sky-400)' }}>{totalKcal(fav.items)}</span>
+                            </div>
+                            <div className="favorite-macro-col">
+                              <span className="favorite-macro-label">Sat Fat</span>
+                              <span className="num favorite-macro-val" style={{ color: 'var(--bad)' }}>{totalSatFat(fav.items)}g</span>
+                            </div>
+                            <div className="favorite-macro-col">
+                              <span className="favorite-macro-label">Sol Fib</span>
+                              <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{totalSolFiber(fav.items)}g</span>
+                            </div>
+                            <div className="favorite-macro-col">
+                              <span className="favorite-macro-label">Sodium</span>
+                              <span className="num favorite-macro-val" style={{ color: '#fb923c' }}>{totalSodium(fav.items)}mg</span>
+                            </div>
+                            <div className="favorite-macro-col">
+                              <span className="favorite-macro-label">Protein</span>
+                              <span className="num favorite-macro-val" style={{ color: '#a78bfa' }}>{totalProtein(fav.items)}g</span>
+                            </div>
                           </div>
                         </div>
-                      ))}
+
+                        <div className="favorite-card-actions">
+                          <button
+                            onClick={() => logFavoriteDirect.mutate(fav)}
+                            disabled={logFavoriteDirect.isPending}
+                            className="favorite-action-btn favorite-action-btn--primary"
+                            style={{ opacity: logFavoriteDirect.isPending ? 0.7 : 1 }}
+                          >
+                            <Heart size={12} strokeWidth={2} />
+                            <span>{logFavoriteDirect.isPending && logFavoriteDirect.variables?.id === fav.id ? 'Logging…' : 'Log this'}</span>
+                          </button>
+                          <ShareWithFamilyButton resourceType="favorite" resourceId={fav.id} />
+                          <button
+                            onClick={() => startEdit(fav)}
+                            className="favorite-action-btn"
+                          >
+                            <Pencil size={12} strokeWidth={1.75} />
+                            <span className="btn-label">Edit</span>
+                          </button>
+                          <button
+                            onClick={() => deleteMutation.mutate(fav.id)}
+                            disabled={deleteMutation.isPending}
+                            className="favorite-action-btn favorite-action-btn--danger"
+                            style={{ opacity: deleteMutation.isPending ? 0.5 : 1 }}
+                            aria-label={`Delete ${fav.name}`}
+                          >
+                            <Trash2 size={12} strokeWidth={1.75} />
+                            <span className="btn-label">Delete</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Expanded ingredients drawer list */}
+                      {expandedFavIds[fav.id] && (
+                        <div style={{
+                          marginTop: 12,
+                          borderTop: '1px solid var(--glass-edge)',
+                          paddingTop: 12,
+                        }}>
+                          <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }} className="thin-scroll">
+                            <div className="meal-items-table">
+                              <div className="meal-items-header">
+                                <div className="meal-items-header-cell">Item</div>
+                                <div className="meal-items-header-cell">Weight</div>
+                                <div className="meal-items-header-cell">Cal</div>
+                                <div className="meal-items-header-cell">Sat Fat</div>
+                                <div className="meal-items-header-cell">Sol Fib</div>
+                                <div className="meal-items-header-cell">Sodium</div>
+                                <div className="meal-items-header-cell">Protein</div>
+                              </div>
+                              {fav.items.map((item, idx) => (
+                                <div key={idx} className="meal-items-row">
+                                  <div className="meal-item-name-cell">
+                                    <span className="meal-item-name">{item.food_name}</span>
+                                    {item.brand && <span className="meal-item-brand">{item.brand}</span>}
+                                  </div>
+                                  <div className="meal-items-cell-num weight-cell">
+                                    {Math.round(item.quantity_g)}
+                                    <span className="sm-hidden">g</span>
+                                  </div>
+                                  <div className="meal-items-cell-num cal-cell">
+                                    {Math.round(item.nutrients?.calories ?? 0)}
+                                    <span className="sm-hidden"> kcal</span>
+                                  </div>
+                                  <div className="meal-items-cell-num sat-cell">
+                                    {((item.nutrients?.saturated_fat_g) ?? 0).toFixed(1)}g
+                                    <span className="sm-hidden"> sat</span>
+                                  </div>
+                                  <div className="meal-items-cell-num fib-cell">
+                                    {((item.nutrients?.soluble_fiber_g) ?? 0).toFixed(1)}g
+                                    <span className="sm-hidden"> fiber</span>
+                                  </div>
+                                  <div className="meal-items-cell-num sod-cell">
+                                    {Math.round(item.nutrients?.sodium_mg ?? 0)}mg
+                                    <span className="sm-hidden"> sod</span>
+                                  </div>
+                                  <div className="meal-items-cell-num prot-cell">
+                                    {((item.nutrients?.protein_g) ?? 0).toFixed(1)}g
+                                    <span className="sm-hidden"> prot</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
               ))}
             </div>
@@ -679,8 +810,8 @@ export default function FavoritesRoute() {
                   <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{sumNutrients(items).soluble_fiber_g.toFixed(1)}g</span>
                 </div>
                 <div className="favorite-macro-col">
-                  <span className="favorite-macro-label">Sugar</span>
-                  <span className="num favorite-macro-val" style={{ color: 'var(--aurora-pink)' }}>{sumNutrients(items).sugars_g.toFixed(1)}g</span>
+                  <span className="favorite-macro-label">Sodium</span>
+                  <span className="num favorite-macro-val" style={{ color: '#fb923c' }}>{Math.round(sumNutrients(items).sodium_mg)}mg</span>
                 </div>
                 <div className="favorite-macro-col">
                   <span className="favorite-macro-label">Protein</span>

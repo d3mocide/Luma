@@ -11,7 +11,7 @@ from sqlalchemy import select
 from luma.agents import food_extractor
 from luma.db.models import Favorite, Food, MealEvent
 from luma.deps import CurrentUser, DbDep
-from luma.services import off_client, whisper_client
+from luma.services import food_resolver, off_client, whisper_client
 from luma.services.nutrition import aggregate_items
 
 router = APIRouter()
@@ -128,15 +128,17 @@ async def log_meal_barcode(
 @router.post("/meal/text")
 async def log_meal_text(
     req: TextLogRequest,
+    db: DbDep,
     current_user: CurrentUser,
 ) -> dict:
     if not req.text.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Text cannot be empty")
     extracted_items = await food_extractor.extract_foods_from_text(req.text)
+    resolved_items = await food_resolver.resolve_items(db, extracted_items)
     return {
         "raw_input": req.text,
-        "items": extracted_items,
-        "nutrition": aggregate_items(extracted_items),
+        "items": resolved_items,
+        "nutrition": aggregate_items(resolved_items),
         "confidence": 0.90,
     }
 
@@ -164,11 +166,12 @@ async def log_meal_voice(
         
     # 2. Extract foods and nutrients using the food extractor agent
     extracted_items = await food_extractor.extract_foods_from_text(transcription)
+    resolved_items = await food_resolver.resolve_items(db, extracted_items)
 
     return {
         "raw_input": transcription,
-        "items": extracted_items,
-        "nutrition": aggregate_items(extracted_items),
+        "items": resolved_items,
+        "nutrition": aggregate_items(resolved_items),
         "confidence": 0.90,
     }
 
@@ -308,6 +311,7 @@ async def delete_meal(
 
 @router.post("/meal/photo")
 async def log_meal_photo(
+    db: DbDep,
     current_user: CurrentUser,
     file: UploadFile = File(...),
 ) -> dict:
@@ -347,7 +351,11 @@ async def log_meal_photo(
                         '[{"name":"...","quantity":1.0,"unit":"serving","estimated_weight_g":200.0,'
                         '"nutrients":{"calories":300,"saturated_fat_g":2.0,"soluble_fiber_g":1.0,'
                         '"protein_g":10.0,"carbohydrates_g":40.0,"fat_g":8.0,"fiber_g":3.0,"sodium_mg":400}}]. '
-                        "Fill in all nutrient values — do not leave them as 0. No markdown, no preamble."
+                        "Fill in all nutrient values — do not leave them as 0. "
+                        "saturated_fat_g is a subset of fat_g and must be ≤ fat_g; estimate it from the "
+                        "food's real fatty-acid profile (plant milks, nuts, seeds, and olive/avocado oils "
+                        "are mostly unsaturated, so their saturated_fat_g is small). Do not copy total fat "
+                        "into saturated fat. No markdown, no preamble."
                     ),
                 },
             ],
@@ -406,11 +414,11 @@ async def log_meal_photo(
         _logger.exception("Vision food extraction failed")
         extracted_items = []
 
-    from luma.services.nutrition import aggregate_items
+    resolved_items = await food_resolver.resolve_items(db, extracted_items)
     return {
         "raw_input": f"[photo: {file.filename}]",
-        "items": extracted_items,
-        "nutrition": aggregate_items(extracted_items),
+        "items": resolved_items,
+        "nutrition": aggregate_items(resolved_items),
         "confidence": 0.75,
     }
 

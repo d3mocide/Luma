@@ -195,7 +195,7 @@ export function JournalDrawer({ prefill, onClose }: Props) {
     enabled: !prefill,
     staleTime: 60_000,
   })
-  const recentMeals: RecentMeal[] = prefill
+  const recentMeals = useMemo((): RecentMeal[] => prefill
     ? [
         {
           id: prefill.meal_event_id,
@@ -208,6 +208,7 @@ export function JournalDrawer({ prefill, onClose }: Props) {
         }
       ]
     : (todayData?.recent_meals ?? [])
+  , [prefill, todayData?.recent_meals])
 
   const { data: journalData } = useQuery<{ entries: Array<{ meal_event_id: string | null }> }>({
     queryKey: ['journal'],
@@ -232,7 +233,7 @@ export function JournalDrawer({ prefill, onClose }: Props) {
   useEffect(() => {
     if (!prefill && !mealEventId && availableMeals.length > 0) {
       const first = availableMeals[0]
-      setMealName(first.headline)
+      setMealName(first.headline) // eslint-disable-line react-hooks/set-state-in-effect
       setMealEventId(first.id)
       setLoggedAt(first.ts)
     }

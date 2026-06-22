@@ -1005,7 +1005,7 @@ export default function SettingsRoute() {
     if (measurementSystem === 'imperial' && goalSettings?.target_weight_kg != null) {
       base.target_weight_kg = (goalSettings.target_weight_kg * KG_TO_LB).toFixed(1)
     }
-    setGoalForm(base)
+    setGoalForm(base) // eslint-disable-line react-hooks/set-state-in-effect
   }, [goalSettings, measurementSystem])
 
   const handleLogout = async () => {
@@ -1038,7 +1038,7 @@ export default function SettingsRoute() {
       daily_sat_fat_g_max: String(rec.daily_sat_fat_g_max),
       daily_soluble_fiber_g: String(rec.daily_soluble_fiber_g),
       ...(rec.daily_protein_g_min != null ? { daily_protein_g_min: String(rec.daily_protein_g_min) } : {}),
-      ...(rec.daily_sugar_g_max != null ? { daily_sugar_g_max: String(rec.daily_sugar_g_max) } : {}),
+      ...(rec.daily_sodium_mg_max != null ? { daily_sodium_mg_max: String(rec.daily_sodium_mg_max) } : {}),
     }))
     goalMutation.mutate({
       target_weight_kg: convertWeightToKg(parseOptionalNumber(goalForm.target_weight_kg), measurementSystem),
@@ -1049,7 +1049,7 @@ export default function SettingsRoute() {
       daily_sat_fat_g_max: rec.daily_sat_fat_g_max,
       daily_soluble_fiber_g: rec.daily_soluble_fiber_g,
       daily_protein_g_min: rec.daily_protein_g_min ?? null,
-      daily_sugar_g_max: rec.daily_sugar_g_max ?? 36.0,
+      daily_sodium_mg_max: rec.daily_sodium_mg_max ?? 2300.0,
       dietary_pattern: goalForm.dietary_pattern.trim() || null,
     })
   }
@@ -1066,7 +1066,7 @@ export default function SettingsRoute() {
       daily_sat_fat_g_max: parseOptionalNumber(goalForm.daily_sat_fat_g_max),
       daily_soluble_fiber_g: parseOptionalNumber(goalForm.daily_soluble_fiber_g),
       daily_protein_g_min: parseOptionalNumber(goalForm.daily_protein_g_min),
-      daily_sugar_g_max: parseOptionalNumber(goalForm.daily_sugar_g_max),
+      daily_sodium_mg_max: parseOptionalNumber(goalForm.daily_sodium_mg_max),
       dietary_pattern: goalForm.dietary_pattern.trim() || null,
     })
   }

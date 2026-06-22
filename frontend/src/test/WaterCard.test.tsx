@@ -17,7 +17,6 @@ function wrap(client: QueryClient) {
   )
 }
 
-const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
 const base: WaterToday = {
   total_ml: 750,
@@ -41,7 +40,7 @@ describe('WaterCard', () => {
     vi.setSystemTime(new Date(2026, 0, 1, 6, 0, 0))
     try {
       const client = makeClient()
-      client.setQueryData(['water', tz], base)
+      client.setQueryData(['water'], base)
 
       render(<WaterCard />, { wrapper: wrap(client) })
 
@@ -55,7 +54,7 @@ describe('WaterCard', () => {
 
   it('logs a glass when the vessel is tapped', async () => {
     const client = makeClient()
-    client.setQueryData(['water', tz], base)
+    client.setQueryData(['water'], base)
     const post = vi
       .spyOn(api, 'post')
       .mockResolvedValue({ ...base, total_ml: 1000, entries: 4 })
@@ -76,7 +75,7 @@ describe('WaterCard', () => {
 
   it('undoes the last glass', async () => {
     const client = makeClient()
-    client.setQueryData(['water', tz], base)
+    client.setQueryData(['water'], base)
     const del = vi
       .spyOn(api, 'delete')
       .mockResolvedValue({ ...base, total_ml: 500, entries: 2 })
@@ -94,7 +93,7 @@ describe('WaterCard', () => {
 
   it('disables undo when nothing is logged yet', () => {
     const client = makeClient()
-    client.setQueryData(['water', tz], { ...base, total_ml: 0, entries: 0 })
+    client.setQueryData(['water'], { ...base, total_ml: 0, entries: 0 })
 
     render(<WaterCard />, { wrapper: wrap(client) })
 
@@ -103,7 +102,7 @@ describe('WaterCard', () => {
 
   it('shows the buddy picker and saves a new buddy', async () => {
     const client = makeClient()
-    client.setQueryData(['water', tz], base)
+    client.setQueryData(['water'], base)
     const put = vi.spyOn(api, 'put').mockResolvedValue({ buddy: 'cat', goal_ml: 2000 })
 
     render(<WaterCard />, { wrapper: wrap(client) })
@@ -119,13 +118,13 @@ describe('WaterCard', () => {
     await waitFor(() => {
       expect(put).toHaveBeenCalledWith('/water/settings', { buddy: 'cat' })
     })
-    const data = client.getQueryData<WaterToday>(['water', tz])
+    const data = client.getQueryData<WaterToday>(['water'])
     expect(data?.buddy).toBe('cat')
   })
 
   it('marks the goal as met', () => {
     const client = makeClient()
-    client.setQueryData(['water', tz], { ...base, total_ml: 2250, entries: 9, goal_met: true })
+    client.setQueryData(['water'], { ...base, total_ml: 2250, entries: 9, goal_met: true })
 
     render(<WaterCard />, { wrapper: wrap(client) })
 

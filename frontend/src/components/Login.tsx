@@ -70,9 +70,6 @@ export default function Login() {
         <LumaWordmark size={32}/>
 
         <div style={{ marginTop: 'auto', maxWidth: 540 }}>
-          <div className="eyebrow" style={{ marginBottom: 20, color: 'var(--sky-300)' }}>
-            Your light, daily
-          </div>
           <h1 style={{
             fontFamily: 'var(--font-sans)',
             fontWeight: 400,
@@ -101,22 +98,30 @@ export default function Login() {
             fontSize: 17, lineHeight: 1.6,
             marginTop: 28, maxWidth: 460,
           }}>
-            A calm, self-hosted health companion. Your data stays on your hardware —
-            insight, not surveillance.
+            A calm, self-hosted health companion. Your data stays on your hardware —{' '}
+            <span style={{ color: 'var(--sky-300)', fontWeight: 500 }}>insight, not surveillance.</span>
           </p>
 
           <div style={{
             marginTop: 56,
-            display: 'flex', gap: 28,
-            paddingTop: 28,
-            borderTop: '1px solid rgba(255,255,255,0.06)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 16,
           }}>
             {[
               { Icon: ShieldCheck, l: 'Self-hosted', s: 'on your hardware' },
               { Icon: Heart, l: 'LDL-aware', s: 'tuned for cardio health' },
               { Icon: Sparkles, l: 'AI-powered', s: 'gentle, not preachy' },
             ].map((f, i) => (
-              <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div key={i} className="glass" style={{
+                display: 'flex',
+                gap: 12,
+                alignItems: 'center',
+                padding: '12px 14px',
+                borderRadius: 16,
+                border: '1px solid var(--glass-edge)',
+                background: 'var(--glass-1)',
+              }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: 10,
                   background: 'rgba(56,189,248,0.12)',
@@ -126,9 +131,9 @@ export default function Login() {
                 }}>
                   <f.Icon size={15}/>
                 </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)' }}>{f.l}</div>
-                  <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{f.s}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.l}</div>
+                  <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.s}</div>
                 </div>
               </div>
             ))}
@@ -258,19 +263,6 @@ export default function Login() {
               )}
             </button>
           </form>
-
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0 18px',
-          }}>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }}/>
-            <span style={{ fontSize: 11, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>or</span>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }}/>
-          </div>
-
-          <button className="btn" style={{ width: '100%', padding: '12px', justifyContent: 'center' }}>
-            <Sparkles size={16} color="var(--sky-300)"/>
-            Continue with passkey
-          </button>
 
           <p style={{
             textAlign: 'center', fontSize: 11.5,

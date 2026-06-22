@@ -292,13 +292,15 @@ async def _build_context(user_id: str, db: AsyncSession) -> dict:
     if sr and sr.slope is not None:
         ctx["weight_trend_kg_per_week"] = round(sr.slope, 3)
 
-    # Logging consistency
+    # Logging consistency — distinct calendar days in SERVER_TIMEZONE so the
+    # count matches the user's local days rather than UTC days.
+    from luma.config import settings
     streak_row = await db.execute(
         text("""
-            SELECT COUNT(DISTINCT DATE(ts AT TIME ZONE 'UTC')) AS days
+            SELECT COUNT(DISTINCT DATE(ts AT TIME ZONE :tz)) AS days
             FROM meal_events WHERE user_id = :uid AND ts >= now() - INTERVAL '30 days'
         """),
-        {"uid": user_id},
+        {"uid": user_id, "tz": settings.server_timezone},
     )
     sr2 = streak_row.fetchone()
     if sr2:

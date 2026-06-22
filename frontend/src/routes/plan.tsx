@@ -181,7 +181,7 @@ export default function PlanRoute() {
       (s) => s.slot_date === pendingSlotKey.date && s.slot === pendingSlotKey.slotType
     )
     if (slot) {
-      setSelectedSlot(slot)
+      setSelectedSlot(slot) // eslint-disable-line react-hooks/set-state-in-effect
       setPendingSlotKey(null)
     }
   }, [plan, pendingSlotKey])
@@ -197,10 +197,10 @@ export default function PlanRoute() {
       return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
     })
   }, [selectedWeek])
-  const todayStr = (() => {
+  const todayStr = useMemo(() => {
     const n = new Date()
     return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
-  })()
+  }, [])
 
   const weeklyAvg = useMemo(() => {
     if (!plan?.day_totals) return null
@@ -219,7 +219,7 @@ export default function PlanRoute() {
       saturated_fat_g: sum.saturated_fat_g / days.length,
       soluble_fiber_g: sum.soluble_fiber_g / days.length,
     }
-  }, [plan?.day_totals])
+  }, [plan])
 
   function handleGenerate(week: string, text: string) {
     generateMutation.mutate({ week, text })
