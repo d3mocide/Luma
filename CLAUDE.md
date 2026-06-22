@@ -18,7 +18,7 @@ Brand/UI reference: `refrence/BRAND-GUIDE.md` is the canonical source for visual
 | 2 — Intelligence | **COMPLETE** | All backend agents, alert engine, coach SSE, photo logging, insights wired |
 | 3 — Polish | **COMPLETE** | ML anomaly detection, stall nudges, weekly recap, full polish pass done |
 
-**Do not skip ahead.** If asked to implement Phase 2+ features while Phase 1 is incomplete, refuse and explain.
+**All phases complete.** The project is in maintenance and enhancement mode — fix bugs, improve UX, and respond to user requests. No phase restrictions apply.
 
 ## Stack Conventions
 
@@ -76,13 +76,10 @@ Follow §12 of the design doc exactly. Do not create files outside the tree defi
 - Hypertable creation and continuous aggregates go in the initial migration (`0001_initial.py`)
 - Run `alembic upgrade head` in CI before any API tests
 
-## Testing (Phase 0 minimum)
+## Testing
 
-- At minimum: `pytest` can import all modules without error
-- Auth round-trip test: register → login → `/auth/me` returns correct user
-- Ingest smoke test: POST to `/ingest/hae` with valid HMAC returns 200
-- Do not ship Phase 1 without coverage on logging paths
 - Backend type checking: `mypy luma --ignore-missing-imports` must pass clean
+- Backend tests: `pytest` must pass — all modules must import cleanly, auth round-trip and ingest smoke tests must pass
 - Frontend unit tests: `pnpm test` (vitest) must pass; test files live in `src/test/`
 
 ## Secret Handling
@@ -108,15 +105,17 @@ Follow §12 of the design doc exactly. Do not create files outside the tree defi
 - All LLM calls must have timeout + retry with exponential backoff
 - Log model alias + input/output token counts for cost tracking (not content)
 
-## Pre-Commit Checks (REQUIRED)
+## Pre-Commit Checks
 
-Before every `git commit` that touches frontend files, run:
+Run the full frontend suite before opening a PR, or after any multi-file frontend change (new component, new route, state refactor):
 
 ```bash
 cd frontend && pnpm type-check && pnpm lint && pnpm test
 ```
 
-Fix all errors before committing. Do not use `--no-verify` to bypass hooks. Do not commit code that fails type-check, lint, or tests.
+For trivial single-file edits (a style value, a copy string, an icon swap), `pnpm type-check` alone is sufficient — skip lint and test.
+
+Fix all errors before committing. Do not use `--no-verify` to bypass hooks.
 
 ## Food Search Ranking — Invariants
 
@@ -129,7 +128,6 @@ Fix all errors before committing. Do not use `--no-verify` to bypass hooks. Do n
 
 ## What Claude Code Should NOT Do
 
-- Do not add features beyond the current phase
 - Do not refactor working code as a side effect of a bug fix
 - Do not add comments that explain what the code does — only add comments for non-obvious WHY
 - Do not create README files or documentation files unless explicitly asked
