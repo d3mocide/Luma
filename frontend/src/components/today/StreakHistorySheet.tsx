@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useLayoutEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { X, Trophy, Flame } from 'lucide-react'
 import { fmt } from '../../lib/format'
@@ -17,7 +17,7 @@ interface AdherenceToday {
   calories?: DayAdherence | null
   sat_fat_g?: DayAdherence | null
   soluble_fiber_g?: DayAdherence | null
-  sugars_g?: DayAdherence | null
+  sodium_mg?: DayAdherence | null
 }
 
 interface StreakHistorySheetProps {
@@ -25,6 +25,9 @@ interface StreakHistorySheetProps {
   onClose: () => void
   days: number
   adherence?: AdherenceToday | null
+  // Server's current date (YYYY-MM-DD, in SERVER_TIMEZONE) from /today, so the
+  // "Today" row lines up with the server clock rather than the device clock.
+  todayStr?: string
 }
 
 interface MacroCell {
@@ -44,7 +47,7 @@ interface HistoryDay {
   cal: MacroCell
   sat: MacroCell
   fib: MacroCell
-  sug: MacroCell
+  sod: MacroCell
 }
 
 // Badge palette per metric when its target is met; missed/untracked fall back to
@@ -61,22 +64,19 @@ function badgeTitle(label: string, cell: MacroCell, unit: string, digits: number
   return `${label}: ${fmt(cell.logged, digits)}${unit} / ${fmt(cell.target, digits)}${unit}`
 }
 
-export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakHistorySheetProps) {
+export function StreakHistorySheet({ isOpen, onClose, days, adherence, todayStr }: StreakHistorySheetProps) {
   const [visibleLimit, setVisibleLimit] = useState(10)
-  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-  // YYYY-MM-DD in local timezone for "isToday" comparison
-  const todayStr = new Date().toLocaleDateString('en-CA')
+  // Prefer the server's date; fall back to the device date only if it's missing.
+  const resolvedTodayStr = todayStr ?? new Date().toLocaleDateString('en-CA')
 
   const { data: historyData, isLoading } = useQuery<StreakHistoryDay[]>({
-    queryKey: ['streak-history', browserTz],
-    queryFn: () => api.get<StreakHistoryDay[]>(`/today/streak-history?tz=${encodeURIComponent(browserTz)}`),
+    queryKey: ['streak-history'],
+    queryFn: () => api.get<StreakHistoryDay[]>('/today/streak-history'),
     enabled: isOpen,
     staleTime: 5 * 60 * 1000,
   })
 
-  useEffect(() => {
-    setVisibleLimit(10)
-  }, [isOpen])
+  useLayoutEffect(() => () => setVisibleLimit(10), [isOpen])
 
   if (!isOpen) return null
 
@@ -88,7 +88,7 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
   if (historyData) {
     const sorted = [...historyData].reverse() // API returns oldest→newest; we want newest first
     for (const apiDay of sorted) {
-      const isToday = apiDay.date === todayStr
+      const isToday = apiDay.date === resolvedTodayStr
       // Use noon local time to avoid DST-boundary display issues
       const d = new Date(`${apiDay.date}T12:00:00`)
 
@@ -100,18 +100,18 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
             cal: adherence.calories?.logged,
             sat: adherence.sat_fat_g?.logged,
             fib: adherence.soluble_fiber_g?.logged,
-            sug: adherence.sugars_g?.logged,
+            sod: adherence.sodium_mg?.logged,
           }
-        : { cal: apiDay.cal_logged, sat: apiDay.sat_logged, fib: apiDay.fib_logged, sug: apiDay.sug_logged }
+        : { cal: apiDay.cal_logged, sat: apiDay.sat_logged, fib: apiDay.fib_logged, sod: apiDay.sod_logged }
 
       const targets = isToday && adherence
         ? {
             cal: adherence.calories?.target ?? apiDay.cal_target,
             sat: adherence.sat_fat_g?.target ?? apiDay.sat_target,
             fib: adherence.soluble_fiber_g?.target ?? apiDay.fib_target,
-            sug: adherence.sugars_g?.target ?? apiDay.sug_target,
+            sod: adherence.sodium_mg?.target ?? apiDay.sod_target,
           }
-        : { cal: apiDay.cal_target, sat: apiDay.sat_target, fib: apiDay.fib_target, sug: apiDay.sug_target }
+        : { cal: apiDay.cal_target, sat: apiDay.sat_target, fib: apiDay.fib_target, sod: apiDay.sod_target }
 
       const score = scoreDay(logged, targets)
 
@@ -126,7 +126,7 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
         cal: { logged: logged.cal ?? 0, target: targets.cal ?? null, state: score.cal },
         sat: { logged: logged.sat ?? 0, target: targets.sat ?? null, state: score.sat },
         fib: { logged: logged.fib ?? 0, target: targets.fib ?? null, state: score.fib },
-        sug: { logged: logged.sug ?? 0, target: targets.sug ?? null, state: score.sug },
+        sod: { logged: logged.sod ?? 0, target: targets.sod ?? null, state: score.sod },
       })
     }
   }
@@ -287,7 +287,7 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
                       FAT
                     </span>
                     <span
-                      title={badgeTitle('Fiber', day.fib, 'g', 1)}
+                      title={badgeTitle('Sol. Fiber', day.fib, 'g', 1)}
                       style={{
                         fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 6,
                         ...badgeStyle(day.fib.state, { bg: 'rgba(52,211,153,0.1)', fg: 'var(--good)', border: 'rgba(52,211,153,0.18)' }),
@@ -296,13 +296,13 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
                       FIB
                     </span>
                     <span
-                      title={badgeTitle('Sugar', day.sug, 'g', 1)}
+                      title={badgeTitle('Sodium', day.sod, 'mg', 0)}
                       style={{
                         fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 6,
-                        ...badgeStyle(day.sug.state, { bg: 'rgba(244,114,182,0.1)', fg: 'var(--aurora-pink)', border: 'rgba(244,114,182,0.18)' }),
+                        ...badgeStyle(day.sod.state, { bg: 'rgba(94,234,212,0.1)', fg: 'var(--aurora-mint)', border: 'rgba(94,234,212,0.18)' }),
                       }}
                     >
-                      SUG
+                      SOD
                     </span>
                   </div>
                 </div>
@@ -366,8 +366,8 @@ export function StreakHistorySheet({ isOpen, onClose, days, adherence }: StreakH
                 <span style={{ color: 'var(--good)' }}>≥ 90% of target</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 2 }}>
-                <span><strong>Sugar:</strong> Metabolic limit</span>
-                <span style={{ color: 'var(--aurora-pink)' }}>≤ 110% of target</span>
+                <span><strong>Sodium:</strong> Blood-pressure cap</span>
+                <span style={{ color: 'var(--aurora-mint)' }}>≤ 110% of target</span>
               </div>
             </div>
           </div>

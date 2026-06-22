@@ -9,6 +9,7 @@ Nutrient IDs used (FDC canonical):
   1004 Total lipid (fat)
   1005 Carbohydrate
   2000 Total sugars
+  1235 Added sugars  (Branded foods mostly; absent on whole foods → treated as 0)
   1079 Fiber, total dietary
   1258 Fatty acids, total saturated
   1292 Fatty acids, total monounsaturated
@@ -61,6 +62,7 @@ _NUTRIENT_MAP: dict[int, str] = {
     1004: "fat_g",
     1005: "carbohydrates_g",
     2000: "sugars_g",
+    1235: "added_sugars_g",
     1079: "fiber_g",
     1258: "saturated_fat_g",
     1292: "monounsaturated_fat_g",

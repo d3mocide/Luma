@@ -30,7 +30,7 @@ endif
 COMPOSE := docker compose $(COMPOSE_WHISPER_PROFILE)
 CORE_SERVICES := api postgres redis $(WHISPER_SERVICE) worker
 
-.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed seed-reference seed-mock seed-build seed-merge clear-hae-data ai-smoke ai-smoke-full gen-vapid clean nuke
+.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed seed-reference seed-mock seed-build seed-merge seed-micros seed-micros-apply clear-hae-data ai-smoke ai-smoke-full gen-vapid clean nuke
 
 help:
 	@echo "Luma quick commands"
@@ -54,6 +54,10 @@ help:
 	@echo "                       BATCH=<proteins|grains|dairy|produce|legumes> SOURCE=<fdc.json>"
 	@echo "  make seed-merge  - merge reviewed staged batch into seed JSON then re-seed DB"
 	@echo "                       FILE=<staged/batch.json>"
+	@echo "  make seed-micros - backfill vitamins/minerals into reference foods via USDA API"
+	@echo "                       (writes staged enriched JSON + review report; needs USDA_API_KEY)"
+	@echo "                       optional: MICRO_ARGS=\"--limit 5 --force\""
+	@echo "  make seed-micros-apply - overwrite seed JSON with the reviewed enriched data, re-seed DB"
 	@echo "  make seed-mock - seed high-fidelity mock data (weight, ldl, meals) for any user UUID"
 	@echo "  make clear-hae-data - delete all HAE biometric rows for a given user UUID"
 	@echo "  make ai-smoke    - run API E2E smoke tests (skips LLM + plan generation)"
@@ -137,6 +141,36 @@ seed-merge:
 		exit 1; \
 	fi
 	python3 -m luma.scripts.build_seed merge "$(FILE)"
+	$(COMPOSE) exec api python -m luma.scripts.ingest_usda
+
+# Backfill vitamins/minerals into the curated reference foods from the live USDA
+# FDC API. Reads USDA_API_KEY from the environment / .env. Writes a staged
+# enriched seed + a review report WITHOUT touching the live seed — review the
+# fuzzy matches, then run seed-micros-apply.
+# Example: make seed-micros MICRO_ARGS="--limit 5"
+MICRO_ENRICHED := backend/luma/scripts/staged/usda_seed_micros.json
+MICRO_REVIEW := backend/luma/scripts/staged/micros_review.md
+MICRO_ARGS ?=
+seed-micros:
+	@if [ -z "$(USDA_API_KEY)" ]; then \
+		echo "ERROR: USDA_API_KEY is not set. Add it to .env or export it, then retry."; \
+		exit 1; \
+	fi
+	python3 -m luma.scripts.backfill_micros \
+		--output "$(MICRO_ENRICHED)" \
+		--review "$(MICRO_REVIEW)" \
+		$(MICRO_ARGS)
+	@echo ""
+	@echo "Review $(MICRO_REVIEW), then run:"
+	@echo "  make seed-micros-apply"
+
+# Promote the reviewed enriched dataset to the live seed and re-seed the DB.
+seed-micros-apply:
+	@if [ ! -f "$(MICRO_ENRICHED)" ]; then \
+		echo "ERROR: $(MICRO_ENRICHED) not found. Run 'make seed-micros' first."; \
+		exit 1; \
+	fi
+	cp "$(MICRO_ENRICHED)" backend/luma/scripts/usda_seed_foods.json
 	$(COMPOSE) exec api python -m luma.scripts.ingest_usda
 
 seed-mock:

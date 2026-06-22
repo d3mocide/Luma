@@ -26,6 +26,7 @@ _BASE: dict[str, dict] = {
     "fiber_g":               {"rda": 28,    "unit": "g",    "direction": "min"},
     "soluble_fiber_g":       {"rda": 7,     "unit": "g",    "direction": "min"},
     "sugars_g":              {"rda": 50,    "unit": "g",    "direction": "max"},
+    "added_sugars_g":        {"rda": 36,    "unit": "g",    "direction": "max"},
     "sodium_mg":             {"rda": 2300,  "unit": "mg",   "direction": "max"},
     "potassium_mg":          {"rda": 3000,  "unit": "mg",   "direction": "min"},
     # Vitamins
@@ -114,6 +115,7 @@ def compute_dri(
         dri["iron_mg"]["rda"] = 8
         dri["potassium_mg"]["rda"] = 3400
         dri["fiber_g"]["rda"] = 38 if (age or 0) <= 50 else 30
+        dri["added_sugars_g"]["rda"] = 36  # AHA: <=36 g/day added sugar (men)
     elif sex == "female":
         dri["vitamin_a_mcg"]["rda"] = 700
         dri["vitamin_c_mg"]["rda"] = 75
@@ -127,6 +129,7 @@ def compute_dri(
         dri["iron_mg"]["rda"] = 18 if (age or 0) < 51 else 8
         dri["potassium_mg"]["rda"] = 2600
         dri["fiber_g"]["rda"] = 25 if (age or 0) <= 50 else 21
+        dri["added_sugars_g"]["rda"] = 25  # AHA: <=25 g/day added sugar (women)
 
     # ── Age-specific adjustments (after sex adjustments) ─────────────────
     if age:

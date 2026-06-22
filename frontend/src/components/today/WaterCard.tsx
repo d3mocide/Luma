@@ -9,36 +9,37 @@ import { useMeasurementSystem, measurementVolumeUnit, convertVolume } from '../.
 
 export function WaterCard({ compact }: { compact?: boolean }) {
   const queryClient = useQueryClient()
-  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone
   const [showPicker, setShowPicker] = useState(false)
   const [hopKey, setHopKey] = useState(0)
 
+  // The water day rolls over on the server clock (SERVER_TIMEZONE); the backend
+  // no longer honors a client tz hint, so none is sent.
   const { data } = useQuery<WaterToday>({
-    queryKey: ['water', browserTz],
-    queryFn: () => api.get(`/water/today?tz=${encodeURIComponent(browserTz)}`),
+    queryKey: ['water'],
+    queryFn: () => api.get('/water/today'),
   })
 
   const logMutation = useMutation({
     mutationFn: (amountMl?: number) =>
-      api.post<WaterToday>(`/water/log?tz=${encodeURIComponent(browserTz)}`, {
+      api.post<WaterToday>('/water/log', {
         amount_ml: amountMl ?? data?.glass_ml ?? 250,
       }),
     onSuccess: (fresh) => {
-      queryClient.setQueryData(['water', browserTz], fresh)
+      queryClient.setQueryData(['water'], fresh)
       setHopKey((k) => k + 1)
     },
   })
 
   const undoMutation = useMutation({
-    mutationFn: () => api.delete<WaterToday>(`/water/last?tz=${encodeURIComponent(browserTz)}`),
-    onSuccess: (fresh) => queryClient.setQueryData(['water', browserTz], fresh),
+    mutationFn: () => api.delete<WaterToday>('/water/last'),
+    onSuccess: (fresh) => queryClient.setQueryData(['water'], fresh),
   })
 
   const buddyMutation = useMutation({
     mutationFn: (buddy: BuddyId) =>
       api.put<{ buddy: string; goal_ml: number }>('/water/settings', { buddy }),
     onSuccess: (res) => {
-      queryClient.setQueryData<WaterToday>(['water', browserTz], (old) =>
+      queryClient.setQueryData<WaterToday>(['water'], (old) =>
         old ? { ...old, buddy: res.buddy } : old,
       )
       setShowPicker(false)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
 import { useUIStore } from '../stores'
 import { api } from '../lib/api'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -65,14 +65,14 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
 
   useEffect(() => {
     if (pendingLogItems?.length) {
-      setDraftItems(pendingLogItems.map(withBase))
+      setDraftItems(pendingLogItems.map(withBase)) // eslint-disable-line react-hooks/set-state-in-effect
       clearPendingLogItems()
     }
   }, [pendingLogItems, clearPendingLogItems])
 
   useEffect(() => {
     if (editingMealId && editingMealItems && editingMealSlot) {
-      setSlot(editingMealSlot)
+      setSlot(editingMealSlot) // eslint-disable-line react-hooks/set-state-in-effect
       setDraftItems(editingMealItems.map(withBase))
       setMealName(editingMealName || '')
       setActiveTab('search')
@@ -100,6 +100,15 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
       item.estimated_weight_g = newWeight
       item.nutrients = scaleByRatio(item.nutrients, ratio)
       updated[index] = item
+      return updated
+    })
+  }
+
+  // Swap an estimated item for a database food picked from search.
+  const replaceItem = (index: number, item: DraftItem) => {
+    setDraftItems((prev) => {
+      const updated = [...prev]
+      updated[index] = withBase(item)
       return updated
     })
   }
@@ -162,7 +171,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
 
   // Clear the "already favorited" gate whenever the meal contents or name
   // change, so an edited meal can be saved as a fresh favorite.
-  useEffect(() => { setFavorited(false) }, [draftItems, mealName])
+  useLayoutEffect(() => () => setFavorited(false), [draftItems, mealName])
 
   const logFavoriteDirect = useMutation({
     mutationFn: ({ items, name, favoriteId }: { items: DraftItem[]; name: string; favoriteId: string }) => {
@@ -267,6 +276,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
                 addItems(items)
                 if (name) setMealName((prev) => (prev.trim() ? prev : name))
               }}
+              onReplaceItem={replaceItem}
             />
           )}
           {activeTab === 'scan' && (
@@ -297,17 +307,18 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               </span>
             </button>
             {nutritionOpen && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
                 {[
                   { l: 'Calories', v: Math.round(totals.calories), c: 'var(--fg-primary)' },
                   { l: 'Sat Fat', v: `${totals.saturated_fat_g.toFixed(1)}g`, c: 'var(--bad)' },
                   { l: 'Sol Fiber', v: `${totals.soluble_fiber_g.toFixed(1)}g`, c: 'var(--good)' },
-                  { l: 'Sugar', v: `${totals.sugars_g.toFixed(1)}g`, c: 'var(--aurora-pink)' },
+                  { l: 'Add Sugar', v: `${totals.added_sugars_g.toFixed(1)}g`, c: 'var(--aurora-pink)' },
+                  { l: 'Sodium', v: `${Math.round(totals.sodium_mg)}mg`, c: '#fb923c' },
                   { l: 'Protein', v: `${totals.protein_g.toFixed(1)}g`, c: 'var(--aurora-violet)' },
                 ].map((n) => (
-                  <div key={n.l} className="glass-inset" style={{ padding: '8px 10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginBottom: 2 }}>{n.l}</div>
-                    <div className="num" style={{ fontSize: 14, fontWeight: 600, color: n.c }}>{n.v}</div>
+                  <div key={n.l} className="glass-inset" style={{ padding: '6px 4px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: 'var(--fg-quiet)', marginBottom: 2, whiteSpace: 'nowrap' }}>{n.l}</div>
+                    <div className="num" style={{ fontSize: 13, fontWeight: 600, color: n.c }}>{n.v}</div>
                   </div>
                 ))}
               </div>

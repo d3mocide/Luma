@@ -76,16 +76,13 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
   const mimeTypeRef = useRef<string>('audio/mp4')
 
   useEffect(() => {
-    if (isRecording) {
-      timerRef.current = window.setInterval(() => {
-        setRecordingTime((t) => t + 1)
-      }, 1000)
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current)
-      setRecordingTime(0)
-    }
+    if (!isRecording) return
+    timerRef.current = window.setInterval(() => {
+      setRecordingTime((t) => t + 1)
+    }, 1000)
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
+      setRecordingTime(0)
     }
   }, [isRecording])
 
@@ -157,6 +154,9 @@ export function VoiceTab({ onAddItems, onSwitchToPlate }: Props) {
           unit: item.unit,
           estimated_weight_g: item.estimated_weight_g ?? 100.0,
           nutrients: toNutrients(item.nutrients),
+          food_id: item.food_id,
+          nutrient_source: item.nutrient_source,
+          source: 'voice' as const,
         }))
         onAddItems(mapped)
         onSwitchToPlate()

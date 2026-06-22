@@ -167,7 +167,7 @@ export interface TodayData {
     calories: { logged: number | null; target: number | null; pct: number | null }
     sat_fat_g: { logged: number | null; target: number | null; pct: number | null }
     soluble_fiber_g: { logged: number | null; target: number | null; pct: number | null }
-    sugars_g: { logged: number | null; target: number | null; pct: number | null }
+    sodium_mg: { logged: number | null; target: number | null; pct: number | null }
     protein_g: { logged: number | null; target: number | null; pct: number | null }
   }
   biometrics_latest: {
@@ -222,12 +222,31 @@ export interface StreakHistoryDay {
   sat_target: number | null
   fib_logged: number | null
   fib_target: number | null
-  sug_logged: number | null
-  sug_target: number | null
+  sod_logged: number | null
+  sod_target: number | null
   targets_met: number
   targets_possible: number
   on_track: boolean
   logged_anything: boolean
+}
+
+export interface NutritionTargets {
+  calories: number | null
+  saturated_fat_g: number | null
+  soluble_fiber_g: number | null
+  sodium_mg: number | null
+  protein_g: number | null
+}
+
+export interface NutritionHistoryDay {
+  date: string
+  nutrition: Record<string, number>
+  logged_anything: boolean
+}
+
+export interface NutritionHistory {
+  targets: NutritionTargets
+  days: NutritionHistoryDay[]
 }
 
 export interface WaterToday {

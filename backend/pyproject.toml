@@ -8,17 +8,17 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     # Web framework
-    "fastapi==0.136.3",
+    "fastapi==0.138.0",
     "uvicorn[standard]==0.48.0",
 
     # Database
-    "sqlalchemy==2.0.50",
+    "sqlalchemy==2.0.51",
     "asyncpg==0.31.0",
     "alembic==1.18.4",
 
     # Validation
     "pydantic==2.13.4",
-    "pydantic-settings==2.14.1",
+    "pydantic-settings==2.14.2",
     "email-validator==2.3.0",
 
     # Auth
@@ -31,12 +31,13 @@ dependencies = [
     # Task queue
     "arq==0.28.0",
     "redis==5.3.1",
+    "msgpack>=1.2.1",
 
     # Utilities
     "python-multipart==0.0.31",
     "python-dateutil==2.9.0.post0",
     "orjson==3.11.9",
-    "litellm==1.88.1",
+    "litellm==1.89.3",
     "tzdata==2025.2",
     "pywebpush==2.3.0",
 
@@ -44,12 +45,12 @@ dependencies = [
     "scikit-learn==1.6.1",
 
     # Email — async SMTP for family invitation emails
-    "aiosmtplib==5.1.1",
+    "aiosmtplib==5.1.2",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "pytest-asyncio>=0.23.0",
     "pytest-httpx==0.36.2",
     "httpx==0.28.1",

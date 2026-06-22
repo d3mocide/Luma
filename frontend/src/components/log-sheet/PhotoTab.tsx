@@ -117,6 +117,8 @@ function compressImage(file: File, maxW = 1024, maxH = 1024, quality = 0.8): Pro
         unit: item.unit,
         estimated_weight_g: item.estimated_weight_g ?? 100.0,
         nutrients: toNutrients(item.nutrients),
+        food_id: item.food_id,
+        nutrient_source: item.nutrient_source,
         source: 'photo' as const,
       }))
       onAddItems(mapped)

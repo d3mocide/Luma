@@ -21,9 +21,12 @@ _AUTO_FLAG_RULES: list[tuple[str, str, float, str]] = [
 # Compound AND flags — every condition in the list must be satisfied.
 # Format: (flag_name, [(nutrient_key, threshold, operator), ...])
 #
-# inflammatory: high sat fat + high sugar + low fiber is the classic Western
-#   pro-inflammatory pattern. All three must be true so olive oil (high sat fat,
-#   no sugar) and nuts (high fat, high fiber) are not mislabelled.
+# inflammatory: high sat fat + high ADDED sugar + low fiber is the classic
+#   Western pro-inflammatory pattern. Keyed on added (not total) sugar so whole
+#   fruit — high intrinsic sugar, but zero added — is never mislabelled; the
+#   driver of the inflammatory pattern is refined/added sugar. All three must be
+#   true so olive oil (high sat fat, no sugar) and nuts (high fat, high fiber)
+#   are not mislabelled either.
 #
 # processed: very high sodium combined with essentially no fiber is a reliable
 #   proxy for heavily processed products. The 1000 mg bar avoids flagging
@@ -33,9 +36,9 @@ _COMPOUND_FLAG_RULES: list[tuple[str, list[tuple[str, float, str]]]] = [
     (
         "inflammatory",
         [
-            ("saturated_fat_g", 5.0,    "gt"),
-            ("sugars_g",        10.0,   "gt"),
-            ("fiber_g",         2.0,    "lt"),
+            ("saturated_fat_g",  5.0,    "gt"),
+            ("added_sugars_g",   10.0,   "gt"),
+            ("fiber_g",          2.0,    "lt"),
         ],
     ),
     (
