@@ -9,6 +9,9 @@ interface UIStore {
   closeLogSheet: () => void
   setTheme: (theme: 'dark' | 'light') => void
   toggleTheme: () => void
+  sidebarCollapsed: boolean
+  setSidebarCollapsed: (collapsed: boolean) => void
+  toggleSidebarCollapsed: () => void
   pendingLogItems: DraftItem[] | null
   logWithItems: (items: DraftItem[]) => void
   clearPendingLogItems: () => void
@@ -25,6 +28,9 @@ export const useUIStore = create<UIStore>()(
     (set, get) => ({
       logSheetOpen: false,
       theme: 'dark',
+      sidebarCollapsed: false,
+      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
+      toggleSidebarCollapsed: () => set({ sidebarCollapsed: !get().sidebarCollapsed }),
       openLogSheet: () => set({ logSheetOpen: true }),
       closeLogSheet: () => set({ logSheetOpen: false }),
       setTheme: (theme) => set({ theme }),
@@ -52,7 +58,7 @@ export const useUIStore = create<UIStore>()(
     }),
     {
       name: 'luma-ui',
-      partialize: (s) => ({ theme: s.theme }),
+      partialize: (s) => ({ theme: s.theme, sidebarCollapsed: s.sidebarCollapsed }),
     },
   ),
 )

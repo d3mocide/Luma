@@ -34,10 +34,9 @@ class WaterSettingsIn(BaseModel):
 
 
 def _day_bounds(tz: str | None) -> tuple[datetime, datetime]:
-    try:
-        resolved = ZoneInfo(tz) if tz else ZoneInfo(settings.server_timezone)
-    except Exception:
-        resolved = ZoneInfo(settings.server_timezone)
+    # SERVER_TIMEZONE is authoritative; the client tz hint is ignored so the
+    # water day rolls over on the server clock, not the device clock.
+    resolved = ZoneInfo(settings.server_timezone)
     today = datetime.now(resolved).date()
     start = datetime.combine(today, time.min, tzinfo=resolved).astimezone(UTC)
     end = datetime.combine(today + timedelta(days=1), time.min, tzinfo=resolved).astimezone(UTC)

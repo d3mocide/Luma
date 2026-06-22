@@ -9,6 +9,7 @@ type Props = {
   onUpdateName: (index: number, name: string) => void
   favorites?: Favorite[]
   onPickFavorite?: (items: DraftItem[], name: string) => void
+  onReplaceItem?: (index: number, item: DraftItem) => void
 }
 
 export function SearchTab({
@@ -19,6 +20,7 @@ export function SearchTab({
   onUpdateName,
   favorites,
   onPickFavorite,
+  onReplaceItem,
 }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -30,6 +32,7 @@ export function SearchTab({
         onUpdateName={onUpdateName}
         favorites={favorites}
         onPickFavorite={onPickFavorite}
+        onReplaceItem={onReplaceItem}
       />
     </div>
   )

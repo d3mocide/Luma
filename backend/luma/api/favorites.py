@@ -86,6 +86,8 @@ async def _fetch_favorite(favorite_id: str, user_id: str, db: Any) -> dict[str, 
 _SORT_ORDERS = {
     "recent": "created_at DESC",
     "frequency": "log_count DESC, created_at DESC",
+    "name_asc": "name ASC",
+    "name_desc": "name DESC",
 }
 
 

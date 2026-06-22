@@ -126,11 +126,14 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
 export function NotificationsCard() {
   const queryClient = useQueryClient()
   const [subscribed, setSubscribed] = useState(false)
-  const [permissionState, setPermissionState] = useState<NotificationPermission>('default')
-  const [vapidKey, setVapidKey] = useState<string | null>(null)
+  const [permissionState, setPermissionState] = useState<NotificationPermission>(
+    () => ('Notification' in window ? Notification.permission : 'default')
+  )
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [localTz, setLocalTz] = useState<string | null>(null)
-  const [swState, setSwState] = useState<SwState>('checking')
+  const [swState, setSwState] = useState<SwState>(
+    () => (!('serviceWorker' in navigator) ? 'failed' : 'checking')
+  )
   const [swStuck, setSwStuck] = useState(false)
   const [pending, setPending] = useState(false)
 
@@ -144,21 +147,13 @@ export function NotificationsCard() {
     queryFn: () => api.get('/notifications/vapid-public-key'),
   })
 
-  useEffect(() => {
-    if (vapidData?.public_key) setVapidKey(vapidData.public_key)
-  }, [vapidData])
+  const vapidKey = vapidData?.public_key ?? null
 
   // Track SW readiness by polling getRegistration() rather than awaiting
   // navigator.serviceWorker.ready (which hangs on iOS standalone PWAs). Polling
   // stops as soon as a worker is active.
   useEffect(() => {
-    if ('Notification' in window) {
-      setPermissionState(Notification.permission)
-    }
-    if (!('serviceWorker' in navigator)) {
-      setSwState('failed')
-      return
-    }
+    if (!('serviceWorker' in navigator)) return
 
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -205,11 +200,11 @@ export function NotificationsCard() {
   }, [])
 
   // Surface a "close and reopen" hint if the SW never activates within 25 s.
+  // setSwStuck(true) is inside a setTimeout callback so it does not trigger cascading renders.
+  // setSwStuck(false) is not needed: swStuck is only shown when swPreparing is true, which is
+  // already false when swState === 'ready'.
   useEffect(() => {
-    if (swState === 'ready') {
-      setSwStuck(false)
-      return
-    }
+    if (swState === 'ready') return
     const t = setTimeout(() => setSwStuck(true), 25_000)
     return () => clearTimeout(t)
   }, [swState])

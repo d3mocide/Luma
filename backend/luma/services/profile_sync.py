@@ -45,14 +45,14 @@ async def sync_user_profile(user_id: str, db: AsyncSession) -> dict[str, str | N
                 SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY daily_total) AS median_daily,
                        COUNT(*) AS day_count
                 FROM (
-                    SELECT date_trunc('day', ts AT TIME ZONE 'UTC') AS day, SUM(value) AS daily_total
+                    SELECT date_trunc('day', ts AT TIME ZONE :tz) AS day, SUM(value) AS daily_total
                     FROM biometrics
                     WHERE user_id = :uid AND metric = 'steps'
                       AND ts >= :start AND ts < :end
                     GROUP BY day
                 ) s
             """),
-            {"uid": str(user_id), "start": start_ts, "end": end_ts},
+            {"uid": str(user_id), "tz": settings.server_timezone, "start": start_ts, "end": end_ts},
         )
     ).first()
     steps_avg = float(steps_row.median_daily) if steps_row and steps_row.median_daily is not None else 0.0

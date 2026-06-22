@@ -13,6 +13,7 @@ ZERO_NUTRIENTS: dict[str, float] = {
     "cholesterol_mg": 0.0,
     "carbohydrates_g": 0.0,
     "sugars_g": 0.0,
+    "added_sugars_g": 0.0,
     "fiber_g": 0.0,
     "soluble_fiber_g": 0.0,
     "sodium_mg": 0.0,
@@ -37,6 +38,12 @@ ZERO_NUTRIENTS: dict[str, float] = {
     "folate_mcg": 0.0,
     "vitamin_b12_mcg": 0.0,
 }
+
+
+def scale_nutrients(per_100g: dict, grams: float) -> dict[str, float]:
+    """Scale a per-100g nutrient profile to a portion weight in grams."""
+    factor = grams / 100.0
+    return {k: float(v) * factor for k, v in per_100g.items() if isinstance(v, (int, float))}
 
 
 def aggregate_items(items: list[dict]) -> dict[str, float]:
