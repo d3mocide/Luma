@@ -223,13 +223,13 @@ export function WaterCard({ compact }: { compact?: boolean }) {
           {/* Quick presets */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center', height: compact ? 190 : 220, flex: 1, maxWidth: compact ? 100 : 120 }}>
             <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--fg-quiet)', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'center', marginBottom: 2 }}>Quick Log</span>
-            {(measurementSystem === 'imperial' ? [8, 16, 24] : [250, 500, 750]).map((val) => {
-              const mlToLog = measurementSystem === 'imperial' ? Math.round(val / 0.0338140227) : val;
-              const displayLabel = measurementSystem === 'imperial' ? `+${val}oz` : `+${val}ml`;
+            {(data?.presets || (measurementSystem === 'imperial' ? [237, 473, 710] : [250, 500, 750])).map((mlVal) => {
+              const displayVal = measurementSystem === 'imperial' ? Math.round(convertVolume(mlVal, 'imperial') || 0) : mlVal;
+              const displayLabel = measurementSystem === 'imperial' ? `+${displayVal}oz` : `+${displayVal}ml`;
               return (
                 <button
-                  key={val}
-                  onClick={() => !logMutation.isPending && logMutation.mutate(mlToLog)}
+                  key={mlVal}
+                  onClick={() => !logMutation.isPending && logMutation.mutate(mlVal)}
                   className="btn"
                   style={{
                     display: 'flex',

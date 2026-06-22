@@ -256,12 +256,14 @@ export interface WaterToday {
   glass_ml: number
   goal_met: boolean
   buddy: string
+  presets?: number[]
 }
 
 export interface WaterSettings {
   buddy: string
   goal_ml: number
   glass_ml: number
+  water_presets?: number[]
 }
 
 export interface TrendSeries {

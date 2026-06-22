@@ -63,6 +63,7 @@ class User(Base):
     water_goal_ml: Mapped[int] = mapped_column(Integer, nullable=False, default=2000, server_default='2000')
     water_glass_ml: Mapped[int] = mapped_column(Integer, nullable=False, default=250, server_default='250')
     water_buddy: Mapped[str] = mapped_column(Text, nullable=False, default='frog', server_default="'frog'")
+    water_presets: Mapped[list[int]] = mapped_column(ARRAY(Integer), nullable=False, default=lambda: [250, 500, 750], server_default="'{250, 500, 750}'")
 
     goals = relationship("Goal", back_populates="user", uselist=False, cascade="all, delete-orphan")
     preferences = relationship("Preference", back_populates="user", cascade="all, delete-orphan")

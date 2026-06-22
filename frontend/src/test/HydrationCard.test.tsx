@@ -31,8 +31,8 @@ describe('HydrationCard', () => {
     render(<HydrationCard />, { wrapper: wrap(client) })
 
     expect(screen.getByText(/That's 8 glasses a day/)).toBeInTheDocument()
-    expect(screen.getByLabelText('Daily water goal')).toHaveValue('2000')
-    expect(screen.getByLabelText('Glass size')).toHaveValue('250')
+    expect(screen.getByLabelText('Daily water goal')).toHaveTextContent('2 L')
+    expect(screen.getByLabelText('Glass size')).toHaveTextContent('250 ml')
   })
 
   it('saves a new daily goal', async () => {
@@ -41,7 +41,8 @@ describe('HydrationCard', () => {
     const put = vi.spyOn(api, 'put').mockResolvedValue({ ...base, goal_ml: 3000 })
 
     render(<HydrationCard />, { wrapper: wrap(client) })
-    fireEvent.change(screen.getByLabelText('Daily water goal'), { target: { value: '3000' } })
+    fireEvent.click(screen.getByLabelText('Daily water goal'))
+    fireEvent.click(screen.getByRole('option', { name: /3 L/ }))
 
     await waitFor(() => {
       expect(put).toHaveBeenCalledWith('/water/settings', { goal_ml: 3000 })
@@ -54,7 +55,8 @@ describe('HydrationCard', () => {
     const put = vi.spyOn(api, 'put').mockResolvedValue({ ...base, glass_ml: 500 })
 
     render(<HydrationCard />, { wrapper: wrap(client) })
-    fireEvent.change(screen.getByLabelText('Glass size'), { target: { value: '500' } })
+    fireEvent.click(screen.getByLabelText('Glass size'))
+    fireEvent.click(screen.getByRole('option', { name: /500 ml/ }))
 
     await waitFor(() => {
       expect(put).toHaveBeenCalledWith('/water/settings', { glass_ml: 500 })
@@ -71,6 +73,23 @@ describe('HydrationCard', () => {
 
     await waitFor(() => {
       expect(put).toHaveBeenCalledWith('/water/settings', { buddy: 'axolotl' })
+    })
+  })
+
+  it('saves custom quick presets', async () => {
+    const client = makeClient()
+    const settingsWithPresets: WaterSettings = { ...base, water_presets: [250, 500, 750] }
+    client.setQueryData(['water', 'settings'], settingsWithPresets)
+    const put = vi.spyOn(api, 'put').mockResolvedValue({ ...settingsWithPresets, water_presets: [300, 500, 750] })
+
+    render(<HydrationCard />, { wrapper: wrap(client) })
+    
+    const preset1 = screen.getByLabelText('Quick Preset 1')
+    fireEvent.change(preset1, { target: { value: '300' } })
+    fireEvent.blur(preset1)
+
+    await waitFor(() => {
+      expect(put).toHaveBeenCalledWith('/water/settings', { water_presets: [300, 500, 750] })
     })
   })
 })

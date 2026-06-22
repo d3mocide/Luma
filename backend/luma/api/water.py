@@ -31,6 +31,7 @@ class WaterSettingsIn(BaseModel):
     buddy: str | None = None
     goal_ml: int | None = None
     glass_ml: int | None = None
+    water_presets: list[int] | None = None
 
 
 def _day_bounds(tz: str | None) -> tuple[datetime, datetime]:
@@ -58,6 +59,7 @@ async def _summary(db: AsyncSession, user: User, start: datetime, end: datetime)
     goal = int(user.water_goal_ml or 2000)
     glass = int(user.water_glass_ml or GLASS_ML)
     buddy = user.water_buddy if user.water_buddy in BUDDIES else "frog"
+    presets = user.water_presets if user.water_presets else [250, 500, 750]
     return {
         "total_ml": total,
         "entries": int(row.entries or 0),
@@ -65,6 +67,7 @@ async def _summary(db: AsyncSession, user: User, start: datetime, end: datetime)
         "glass_ml": glass,
         "goal_met": total >= goal,
         "buddy": buddy,
+        "presets": presets,
     }
 
 
@@ -120,6 +123,7 @@ async def get_settings(user: CurrentUser) -> dict[str, Any]:
         "buddy": buddy,
         "goal_ml": int(user.water_goal_ml or 2000),
         "glass_ml": int(user.water_glass_ml or GLASS_ML),
+        "water_presets": user.water_presets if user.water_presets else [250, 500, 750],
     }
 
 
@@ -135,15 +139,24 @@ async def update_settings(body: WaterSettingsIn, user: CurrentUser, db: DbDep) -
         raise HTTPException(
             status_code=422, detail=f"glass_ml must be between {MIN_GLASS_ML} and {MAX_GLASS_ML}"
         )
+    if body.water_presets is not None:
+        if len(body.water_presets) != 3:
+            raise HTTPException(status_code=422, detail="water_presets must contain exactly 3 elements")
+        for val in body.water_presets:
+            if not 50 <= val <= 2000:
+                raise HTTPException(status_code=422, detail="Each preset must be between 50 and 2000 ml")
+
     buddy = body.buddy if body.buddy is not None else user.water_buddy
     goal = body.goal_ml if body.goal_ml is not None else int(user.water_goal_ml)
     glass = body.glass_ml if body.glass_ml is not None else int(user.water_glass_ml)
+    presets = body.water_presets if body.water_presets is not None else user.water_presets
+
     await db.execute(
         text(
             "UPDATE users SET water_buddy = :buddy, water_goal_ml = :goal,"
-            " water_glass_ml = :glass WHERE id = :uid"
+            " water_glass_ml = :glass, water_presets = :presets WHERE id = :uid"
         ),
-        {"buddy": buddy, "goal": goal, "glass": glass, "uid": str(user.id)},
+        {"buddy": buddy, "goal": goal, "glass": glass, "presets": presets, "uid": str(user.id)},
     )
     await db.commit()
-    return {"buddy": buddy, "goal_ml": goal, "glass_ml": glass}
+    return {"buddy": buddy, "goal_ml": goal, "glass_ml": glass, "water_presets": presets}

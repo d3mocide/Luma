@@ -50,6 +50,8 @@ let waterGoalMl = 2000
 let waterGlassMl = 250
 let waterBuddy = 'frog'
 
+let waterPresets: number[] = [250, 500, 750]
+
 function waterSummary() {
   const total = waterLogs.reduce((sum, ml) => sum + ml, 0)
   return {
@@ -59,6 +61,7 @@ function waterSummary() {
     glass_ml: waterGlassMl,
     goal_met: total >= waterGoalMl,
     buddy: waterBuddy,
+    presets: waterPresets,
   }
 }
 
@@ -601,7 +604,7 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
 
   if (method === 'GET' && pathname === '/water/settings') {
     requireAuth()
-    return { buddy: waterBuddy, goal_ml: waterGoalMl, glass_ml: waterGlassMl }
+    return { buddy: waterBuddy, goal_ml: waterGoalMl, glass_ml: waterGlassMl, water_presets: waterPresets }
   }
 
   if (method === 'DELETE' && pathname === '/water/last') {
@@ -627,7 +630,16 @@ export async function handleMockApiRequest(path: string, init?: RequestInit): Pr
       if (body.glass_ml < 50 || body.glass_ml > 1000) throw new MockApiError(422, 'glass_ml out of range')
       waterGlassMl = body.glass_ml
     }
-    return { buddy: waterBuddy, goal_ml: waterGoalMl, glass_ml: waterGlassMl }
+    if (Array.isArray(body?.water_presets)) {
+      if (body.water_presets.length !== 3) throw new MockApiError(422, 'water_presets must contain exactly 3 elements')
+      for (const val of body.water_presets) {
+        if (typeof val !== 'number' || val < 50 || val > 2000) {
+          throw new MockApiError(422, 'presets must be between 50 and 2000')
+        }
+      }
+      waterPresets = body.water_presets
+    }
+    return { buddy: waterBuddy, goal_ml: waterGoalMl, glass_ml: waterGlassMl, water_presets: waterPresets }
   }
 
   if (method === 'GET' && pathname === '/preferences') {
