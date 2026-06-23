@@ -419,7 +419,7 @@ export default function FavoritesRoute() {
                       top: 'calc(100% + 6px)',
                       right: 0,
                       minWidth: 160,
-                      background: 'var(--glass-2)',
+                      background: 'var(--glass-popover)',
                       border: '1px solid var(--glass-edge)',
                       borderRadius: 12,
                       backdropFilter: 'blur(16px)',
