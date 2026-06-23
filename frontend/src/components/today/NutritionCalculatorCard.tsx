@@ -709,6 +709,7 @@ export function NutritionCalculatorCard({
                           overflowY: 'auto',
                           borderRadius: 10,
                           border: '1px solid var(--glass-edge)',
+                          background: 'var(--glass-popover)',
                         }}
                       >
                         {favMatches.map((fav) => {
@@ -818,6 +819,7 @@ export function NutritionCalculatorCard({
                           color: 'var(--fg-quiet)',
                           borderRadius: 10,
                           border: '1px solid var(--glass-edge)',
+                          background: 'var(--glass-popover)',
                         }}
                       >
                         No results found.
@@ -878,7 +880,7 @@ export function NutritionCalculatorCard({
                           overflowY: 'auto',
                           borderRadius: 12,
                           border: '1px solid var(--glass-edge)',
-                          background: 'var(--glass-2)',
+                          background: 'var(--glass-popover)',
                           backdropFilter: 'blur(16px)',
                           WebkitBackdropFilter: 'blur(16px)',
                           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',

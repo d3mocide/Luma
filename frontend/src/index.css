@@ -108,6 +108,9 @@ layer(base);
     --glass-3: rgba(255, 255, 255, 0.09);
     --glass-edge: rgba(255, 255, 255, 0.12);
     --glass-edge-strong: rgba(255, 255, 255, 0.18);
+    /* Floating menus/popovers: opaque enough to mask content scrolling behind,
+       still frosted under backdrop-filter (bg-2 tint over near-solid base) */
+    --glass-popover: rgba(16, 24, 44, 0.94);
 
     /* Motion — chart/ring entry (BRAND-GUIDE §12) */
     --ease-ring: cubic-bezier(0.2, 0.7, 0.2, 1);
@@ -199,6 +202,7 @@ layer(base);
     --glass-3: rgba(255, 255, 255, 0.88);
     --glass-edge: rgba(15, 23, 42, 0.08);
     --glass-edge-strong: rgba(15, 23, 42, 0.14);
+    --glass-popover: rgba(255, 255, 255, 0.96);
 
     --fg-primary: #0c1426;
     --fg-secondary: rgba(12, 20, 38, 0.78);
