@@ -14,7 +14,7 @@ as work lands on `claude/bold-brahmagupta-0jolwe`.
 
 | # | Item | Type | Status |
 |---|------|------|--------|
-| 1 | Delete dead `PhotoTab.tsx` | Dead code | ⬜ |
+| 1 | Delete dead `PhotoTab.tsx` | Dead code | ✅ |
 | 2 | De-dupe `gramsForUnit` → `lib/portions.ts` | Drift bug | ⬜ |
 | 3 | Split `api/goals.py` grab-bag router | Monolith | ⬜ |
 | 4 | Decompose `routes/health.tsx` + `routes/meals.tsx` | Monolith | ⬜ |
