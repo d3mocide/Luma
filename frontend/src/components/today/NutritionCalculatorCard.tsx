@@ -6,7 +6,7 @@ import { api, TodayData } from '../../lib/api'
 import { getCurrentSlot } from '../../lib/format'
 import {
   type PortionUnit, type HouseholdMeasure, PORTION_UNITS, PORTION_UNIT_LABELS, PRESETS_BY_UNIT,
-  unitToGrams, densityForFood, defaultQtyForUnit,
+  gramsForFoodUnit, defaultQtyForUnit,
 } from '../../lib/portions'
 import type { Favorite } from '../log-sheet/types'
 
@@ -21,17 +21,6 @@ const FOOD_FORMATS = [
 
 function round1(value: number) {
   return Math.round(value * 10) / 10
-}
-
-function gramsForUnit(food: FoodResult, unit: string, qty: number): number {
-  if (unit.startsWith('hm:')) {
-    const m = food.household_measures?.[Number(unit.slice(3))]
-    return m ? qty * m.grams : qty
-  }
-  return unitToGrams(qty, unit as PortionUnit, {
-    density: densityForFood(food.name),
-    servingSizeG: food.serving_size_g || undefined,
-  })
 }
 
 type FoodResult = {
@@ -267,7 +256,7 @@ export function NutritionCalculatorCard({
     : [25, 50, 75, 100, 150]
 
   const qtyNum = parseFloat(servingQty) || 0
-  const grams = selectedFood ? Math.max(1, Math.round(gramsForUnit(selectedFood, servingUnit, qtyNum))) : 150
+  const grams = selectedFood ? Math.max(1, Math.round(gramsForFoodUnit(selectedFood, servingUnit, qtyNum))) : 150
   const factor = grams / 100
   const n = selectedFood?.nutrients_per_100g ?? {}
 

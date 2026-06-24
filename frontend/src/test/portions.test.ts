@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { densityForFood, unitToGrams, defaultQtyForUnit } from '../lib/portions'
+import { densityForFood, unitToGrams, defaultQtyForUnit, gramsForFoodUnit } from '../lib/portions'
 
 describe('densityForFood', () => {
   it('returns 0.92 for olive oil', () => {
@@ -50,6 +50,32 @@ describe('unitToGrams', () => {
 
   it('converts 2 servings using servingSizeG', () => {
     expect(unitToGrams(2, 'serving', { servingSizeG: 50 })).toBe(100)
+  })
+})
+
+describe('gramsForFoodUnit', () => {
+  const oil = { name: 'olive oil', serving_size_g: 14 }
+
+  it('applies the food density hint for volume units', () => {
+    // 1 tbsp = 14.79 ml * 0.92 g/ml ≈ 13.6 g
+    expect(gramsForFoodUnit(oil, 'tbsp', 1)).toBeCloseTo(13.6, 1)
+  })
+
+  it('resolves an hm:<index> household measure to grams', () => {
+    const food = { name: 'milk', household_measures: [{ label: '1 cup', grams: 240 }] }
+    expect(gramsForFoodUnit(food, 'hm:0', 2)).toBe(480)
+  })
+
+  it('falls back to quantity when the hm index is missing', () => {
+    expect(gramsForFoodUnit({ name: 'milk' }, 'hm:5', 3)).toBe(3)
+  })
+
+  it('treats null serving_size_g as unset (defaults to 100g per serving)', () => {
+    expect(gramsForFoodUnit({ name: 'soup', serving_size_g: null }, 'serving', 1)).toBe(100)
+  })
+
+  it('uses serving_size_g when present', () => {
+    expect(gramsForFoodUnit({ name: 'soup', serving_size_g: 85 }, 'serving', 2)).toBe(170)
   })
 })
 

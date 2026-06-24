@@ -4,7 +4,7 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api } from '../../lib/api'
 import {
   type PortionUnit, type HouseholdMeasure, PORTION_UNITS, PORTION_UNIT_LABELS, PRESETS_BY_UNIT,
-  unitToGrams, densityForFood, defaultQtyForUnit,
+  gramsForFoodUnit, defaultQtyForUnit,
 } from '../../lib/portions'
 import { scaleNutrients, toNutrients } from '../../lib/nutrients'
 import { DraftItemList } from './DraftItemList'
@@ -26,18 +26,6 @@ type FoodResult = {
   nutrients_per_100g: Record<string, number>
   household_measures?: HouseholdMeasure[]
   flags?: string[]
-}
-
-// A household measure is identified in the unit picker as "hm:<index>".
-function gramsForUnit(food: FoodResult, unit: string, qty: number): number {
-  if (unit.startsWith('hm:')) {
-    const m = food.household_measures?.[Number(unit.slice(3))]
-    return m ? qty * m.grams : qty
-  }
-  return unitToGrams(qty, unit as PortionUnit, {
-    density: densityForFood(food.name),
-    servingSizeG: food.serving_size_g,
-  })
 }
 
 const FLAG_BADGE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
@@ -239,7 +227,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   function confirmAdd() {
     if (!pending) return
     const qty = Math.max(0, parseFloat(pendingQty) || 0)
-    const grams = Math.max(1, Math.round(gramsForUnit(pending, pendingUnit, qty)))
+    const grams = Math.max(1, Math.round(gramsForFoodUnit(pending, pendingUnit, qty)))
     const unitLabel = pendingUnit.startsWith('hm:')
       ? (pending.household_measures?.[Number(pendingUnit.slice(3))]?.label ?? 'serving')
       : pendingUnit
@@ -290,7 +278,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
 
   const pendingMeasures = pending?.household_measures ?? []
   const pendingQtyNum = parseFloat(pendingQty) || 0
-  const pendingG = pending ? gramsForUnit(pending, pendingUnit, pendingQtyNum) : 0
+  const pendingG = pending ? gramsForFoodUnit(pending, pendingUnit, pendingQtyNum) : 0
   const pendingKcal = pending ? Math.round((pending.nutrients_per_100g.calories || 0) * (pendingG / 100)) : 0
   const pendingProtein = pending ? ((pending.nutrients_per_100g.protein_g || 0) * (pendingG / 100)).toFixed(1) : '0'
   const pendingPresets = pendingUnit.startsWith('hm:') ? [0.5, 1, 2, 3] : PRESETS_BY_UNIT[pendingUnit as PortionUnit]

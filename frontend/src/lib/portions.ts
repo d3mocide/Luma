@@ -66,6 +66,29 @@ export function unitToGrams(quantity: number, unit: PortionUnit, opts: ConvertOp
   return quantity * ml * (opts.density ?? 1.0)
 }
 
+// Minimal shape needed to resolve a food + unit + quantity into grams: the
+// name drives the density hint, serving_size_g backs the "serving" unit, and
+// household_measures back the "hm:<index>" pseudo-units.
+export type FoodForPortion = {
+  name: string
+  serving_size_g?: number | null
+  household_measures?: HouseholdMeasure[]
+}
+
+// Resolve a (food, unit, quantity) tuple to grams. Handles the "hm:<index>"
+// household-measure pseudo-unit (e.g. "1 cup" = 240 g) and otherwise defers to
+// unitToGrams with the food's density hint and serving size.
+export function gramsForFoodUnit(food: FoodForPortion, unit: string, qty: number): number {
+  if (unit.startsWith('hm:')) {
+    const m = food.household_measures?.[Number(unit.slice(3))]
+    return m ? qty * m.grams : qty
+  }
+  return unitToGrams(qty, unit as PortionUnit, {
+    density: densityForFood(food.name),
+    servingSizeG: food.serving_size_g ?? undefined,
+  })
+}
+
 // Quick-pick presets per unit, sized to typical real-world portions.
 export const PRESETS_BY_UNIT: Record<PortionUnit, number[]> = {
   g: [50, 100, 150, 200],
