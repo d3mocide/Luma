@@ -17,7 +17,7 @@ as work lands on `claude/bold-brahmagupta-0jolwe`.
 | 1 | Delete dead `PhotoTab.tsx` | Dead code | ✅ |
 | 2 | De-dupe `gramsForUnit` → `lib/portions.ts` | Drift bug | ✅ |
 | 3 | Split `api/goals.py` grab-bag router | Monolith | ✅ |
-| 4 | Decompose `routes/health.tsx` + `routes/meals.tsx` | Monolith | ⬜ |
+| 4 | Decompose `routes/health.tsx` + `routes/meals.tsx` | Monolith | ✅ |
 | 5 | Extract `get_today` 325-line handler | Monolith | ⬜ |
 | 6 | Shared `ui/Field` primitive | Duplication | ⬜ |
 
