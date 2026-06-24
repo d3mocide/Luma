@@ -9,6 +9,12 @@ from sqlalchemy import select, text
 from luma.config import settings
 from luma.deps import CurrentUser, DbDep
 from luma.services.streak import score_day
+from luma.services.today_metrics import (
+    build_recent_meals,
+    compute_daily_totals,
+    compute_streak,
+    fetch_biometrics_latest,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -27,7 +33,7 @@ async def get_today(
     today_dt = datetime.now(resolved_tz).date()
 
     # 1. Fetch user's goals
-    from luma.db.models import Goal, MealEvent, MealPlan, MealPlanSlot, Supplement, SupplementLog
+    from luma.db.models import Goal, MealEvent, MealPlan, MealPlanSlot
     stmt_goal = select(Goal).where(Goal.user_id == user.id)
     res_goal = await db.execute(stmt_goal)
     goal = res_goal.scalar_one_or_none()
@@ -55,48 +61,15 @@ async def get_today(
     )
     res_today_events = await db.execute(stmt_today_events)
     today_events = res_today_events.scalars().all()
-    
-    logged_cal = 0.0
-    logged_sat = 0.0
-    logged_sol = 0.0
-    logged_sodium = 0.0
-    logged_protein = 0.0
-    for e in today_events:
-        nutr = e.nutrition or {}
-        logged_cal += float(nutr.get("calories") or 0.0)
-        logged_sat += float(nutr.get("saturated_fat_g") or 0.0)
-        logged_sol += float(nutr.get("soluble_fiber_g") or 0.0)
-        # Sodium is the budgeted ceiling on the ring/budget/streak — the most
-        # actionable heart-health lever, and one that (unlike added sugar) almost
-        # always has a meaningful daily budget to manage.
-        logged_sodium += float(nutr.get("sodium_mg") or 0.0)
-        logged_protein += float(nutr.get("protein_g") or 0.0)
 
-    # Add supplement nutrient contributions to daily totals — only for active
-    # supplements the user actually logged as taken today. Without this gate,
-    # supplements would inflate totals every day regardless of intake.
-    supp_rows = await db.execute(
-        select(Supplement)
-        .join(SupplementLog, SupplementLog.supplement_id == Supplement.id)
-        .where(
-            Supplement.user_id == user.id,
-            Supplement.is_active.is_(True),
-            SupplementLog.ts >= today_start,
-            SupplementLog.ts < today_end,
-        )
-        .distinct()
+    logged, supplement_nutrients = await compute_daily_totals(
+        db, str(user.id), list(today_events), today_start, today_end
     )
-    active_supps = supp_rows.scalars().all()
-    supplement_nutrients: dict[str, float] = {}
-    for s in active_supps:
-        for key, val in (s.nutrients_per_dose or {}).items():
-            supplement_nutrients[key] = supplement_nutrients.get(key, 0.0) + float(val or 0.0)
-
-    logged_cal += supplement_nutrients.get("calories", 0.0)
-    logged_sat += supplement_nutrients.get("saturated_fat_g", 0.0)
-    logged_sol += supplement_nutrients.get("soluble_fiber_g", 0.0)
-    logged_sodium += supplement_nutrients.get("sodium_mg", 0.0)
-    logged_protein += supplement_nutrients.get("protein_g", 0.0)
+    logged_cal = logged["cal"]
+    logged_sat = logged["sat"]
+    logged_sol = logged["sol"]
+    logged_sodium = logged["sodium"]
+    logged_protein = logged["protein"]
 
     cal_pct = round((logged_cal / target_cal) * 100, 1) if target_cal else None
     sat_pct = round((logged_sat / target_sat) * 100, 1) if target_sat else None
@@ -120,172 +93,25 @@ async def get_today(
 
     logged_plan_slot_ids = {str(e.plan_slot_id) for e in today_events if e.plan_slot_id}
 
-    recent_meals = []
-    for event in today_events[:6]:
-        items = event.items if isinstance(event.items, list) else []
-        first_item = items[0].get("name") if items and isinstance(items[0], dict) else None
-        nutrition = event.nutrition if isinstance(event.nutrition, dict) else {}
-        raw = event.raw_input or ""
-        if event.source in ("favorite", "favorites") and raw:
-            headline = raw
-        elif event.source == "plan" and raw.startswith("Planned: "):
-            headline = raw[len("Planned: "):]
-        else:
-            headline = first_item or "Logged meal"
-        recent_meals.append(
-            {
-                "id": str(event.id),
-                "ts": event.ts.isoformat(),
-                "slot": event.slot,
-                "source": event.source,
-                "item_count": len(items),
-                "calories": float(nutrition.get("calories") or 0.0),
-                "headline": headline,
-                "nutrition": nutrition,
-                "items": items,
-                "raw_input": event.raw_input,
-            }
-        )
+    recent_meals = build_recent_meals(list(today_events))
 
-    # Cumulative activity metrics must be summed for today rather than
-    # latest-wins, because HAE sends many small interval readings throughout
-    # the day (e.g. 1 step per recent sample) and the newest row is never
-    # the day's running total.
-    _CUMULATIVE = (
-        "steps", "active_kcal", "exercise_min",
-        "stand_min", "stand_hours", "flights_climbed", "distance_mi",
-    )
-
-    # Fetch latest point-in-time biometrics (HRV, RHR, sleep, weight, …)
-    biometric_rows = await db.execute(
-        text("""
-            SELECT DISTINCT ON (metric)
-                metric, value, ts
-            FROM biometrics
-            WHERE user_id = :user_id
-              AND metric != ALL(:cumulative)
-            ORDER BY metric, ts DESC
-        """),
-        {"user_id": str(user.id), "cumulative": list(_CUMULATIVE)},
-    )
-    latest: dict[str, float] = {}
-    for row in biometric_rows:
-        latest[row.metric] = row.value
-
-    # Fetch today's cumulative activity metrics (sum all readings for today)
-    cumulative_rows = await db.execute(
-        text("""
-            SELECT metric, SUM(value) AS value
-            FROM biometrics
-            WHERE user_id = :user_id
-              AND metric = ANY(:cumulative)
-              AND ts >= :today_start
-              AND ts < :today_end
-            GROUP BY metric
-        """),
-        {
-            "user_id": str(user.id),
-            "cumulative": list(_CUMULATIVE),
-            "today_start": today_start,
-            "today_end": today_end,
-        },
-    )
-    for row in cumulative_rows:
-        latest[row.metric] = row.value
+    # Latest point-in-time biometrics (HRV, RHR, sleep, weight, …) plus today's
+    # summed cumulative activity (steps, active kcal, …).
+    latest = await fetch_biometrics_latest(db, str(user.id), today_start, today_end)
 
     # Streak: consecutive days the user stayed "on track" (hit their daily
     # targets). This headline number and /today/streak-history both grade each
     # day through score_day() so they can never disagree — the old logic counted
     # any day with a meal logged, which contradicted the per-day breakdown.
-    tz_key = resolved_tz.key if hasattr(resolved_tz, "key") else settings.server_timezone
     streak_targets: dict[str, float | None] = {
         "cal": float(target_cal) if target_cal else None,
         "sat": target_sat,
         "fib": target_sol,
         "sod": target_sodium,
     }
-    streak_start_utc = datetime.combine(
-        today_dt - timedelta(days=365), time.min, tzinfo=resolved_tz
-    ).astimezone(UTC)
-
-    # Credit supplements to the day they were actually logged, bucketed in the
-    # configured timezone — mirrors /today/streak-history. Adding today's
-    # supplements to every historical day (the old bug) flipped earlier days
-    # off-track, so the headline streak read 0 while the breakdown showed
-    # on-track days.
-    streak_supp_rows = await db.execute(
-        select(SupplementLog.ts, Supplement.nutrients_per_dose)
-        .join(Supplement, SupplementLog.supplement_id == Supplement.id)
-        .where(
-            Supplement.user_id == user.id,
-            Supplement.is_active.is_(True),
-            SupplementLog.ts >= streak_start_utc,
-            SupplementLog.ts < today_end,
-        )
+    streak_days = await compute_streak(
+        db, str(user.id), today_dt, resolved_tz, streak_targets, today_end
     )
-    streak_supp_by_day: dict[date, dict[str, float]] = {}
-    for log_ts, nutrients in streak_supp_rows:
-        day = log_ts.astimezone(resolved_tz).date()
-        bucket = streak_supp_by_day.setdefault(day, {"cal": 0.0, "sat": 0.0, "fib": 0.0, "sod": 0.0})
-        for key, val in (nutrients or {}).items():
-            v = float(val or 0.0)
-            if key == "calories":
-                bucket["cal"] += v
-            elif key == "saturated_fat_g":
-                bucket["sat"] += v
-            elif key == "soluble_fiber_g":
-                bucket["fib"] += v
-            elif key == "sodium_mg":
-                bucket["sod"] += v
-
-    streak_rows = await db.execute(
-        text("""
-            SELECT
-                DATE(ts AT TIME ZONE :tz) AS day,
-                COALESCE(SUM(CAST(NULLIF(nutrition->>'calories', '') AS numeric)), 0)         AS cal,
-                COALESCE(SUM(CAST(NULLIF(nutrition->>'saturated_fat_g', '') AS numeric)), 0)  AS sat,
-                COALESCE(SUM(CAST(NULLIF(nutrition->>'soluble_fiber_g', '') AS numeric)), 0)  AS sol,
-                COALESCE(SUM(CAST(NULLIF(nutrition->>'sodium_mg', '') AS numeric)), 0)        AS sod
-            FROM meal_events
-            WHERE user_id = :user_id
-              AND ts >= :start_utc
-              AND ts < :today_end
-              AND nutrition IS NOT NULL
-            GROUP BY day
-        """),
-        {"user_id": str(user.id), "tz": tz_key, "start_utc": streak_start_utc, "today_end": today_end},
-    )
-    on_track_days: set[date] = set()
-    for row in streak_rows:
-        supp = streak_supp_by_day.get(row.day, {"cal": 0.0, "sat": 0.0, "fib": 0.0, "sod": 0.0})
-        totals = {
-            "cal": float(row.cal) + supp["cal"],
-            "sat": float(row.sat) + supp["sat"],
-            "fib": float(row.sol) + supp["fib"],
-            "sod": float(row.sod) + supp["sod"],
-        }
-        if score_day(totals, streak_targets)["on_track"]:
-            on_track_days.add(row.day)
-
-    # Days where the user logged only supplements (no meals) still count toward
-    # the streak, consistent with the per-day breakdown.
-    for day, supp in streak_supp_by_day.items():
-        if day in on_track_days:
-            continue
-        if score_day(
-            {"cal": supp["cal"], "sat": supp["sat"], "fib": supp["fib"], "sod": supp["sod"]},
-            streak_targets,
-        )["on_track"]:
-            on_track_days.add(day)
-
-    # Start from today; if today is not on-track yet (day still in progress) fall
-    # back to yesterday so an unfinished day doesn't read as a broken streak.
-    _start = today_dt if today_dt in on_track_days else today_dt - timedelta(days=1)
-    streak_days = 0
-    _check = _start
-    while _check in on_track_days:
-        streak_days += 1
-        _check -= timedelta(days=1)
 
     # Fetch 7-day and 28-day weight slopes (simple linear regression on daily averages)
     weight_7d = await _weight_slope(db, str(user.id), 7)
