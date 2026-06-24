@@ -19,7 +19,7 @@ as work lands on `claude/bold-brahmagupta-0jolwe`.
 | 3 | Split `api/goals.py` grab-bag router | Monolith | ✅ |
 | 4 | Decompose `routes/health.tsx` + `routes/meals.tsx` | Monolith | ✅ |
 | 5 | Extract `get_today` 325-line handler | Monolith | ✅ |
-| 6 | Shared `ui/Field` primitive | Duplication | ⬜ |
+| 6 | Shared `ui/Field` primitive | Duplication | ⏭️ Skipped (by design) |
 
 ---
 
@@ -60,9 +60,24 @@ hae-import).
 **Why:** Hard to test/read; assembles macros, micros, streak, bio, plan in one body.
 **Action:** Extract assembly into service functions under `luma/services/`.
 
-## 6. Shared `ui/Field` primitive
+## 6. Shared `ui/Field` primitive — Skipped (by design)
 
-**Where:** Ad-hoc `Field`/`ModalField`/`SliderField` in `Login.tsx:290`,
-`settings/HydrationCard.tsx:43`, `settings/GoalsCard.tsx:25`, `health.tsx:471,1169`.
-**Why:** ~5 near-identical form-field components.
-**Action:** Consolidate into a shared `components/ui/Field`. Low priority.
+**Where:** `Login.tsx:290`, `settings/HydrationCard.tsx:43`, `settings/GoalsCard.tsx:25`,
+`components/health/shared.tsx` (`ModalField`), `components/health/SimulationsTab.tsx` (`SliderField`).
+
+**Decision:** Not consolidated. On inspection these are *not* near-identical — they are
+distinct components that merely share the `.eyebrow` label-header idiom (which is already a
+shared CSS class):
+
+- `Login.Field` — controlled text input with a leading icon
+- `GoalsCard.Field` — grid-aware label/unit wrapper around arbitrary `children`
+- `HydrationCard.Field` — label/hint wrapper with dropdown + open-state styling
+- `health/ModalField` — plain controlled text input
+- `SimulationsTab/SliderField` — range slider
+
+A single primitive would need a union of all their props (`icon? unit? hint? dropdown?
+isOpen? fullWidth? children? value? onChange? type?`), producing a kitchen-sink that reads
+worse than the small, local components and invents a pattern the codebase doesn't use.
+Per CLAUDE.md ("do not refactor working code as a side effect"; "do not invent new
+patterns"), the correct outcome is to leave these as-is. The only genuinely shared piece —
+the label header — is already centralized as the `.eyebrow` class.
