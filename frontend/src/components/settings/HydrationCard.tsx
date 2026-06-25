@@ -161,8 +161,16 @@ export function HydrationCard() {
 
   const [localPresets, setLocalPresets] = useState<string[]>(['', '', ''])
 
+  // Re-sync the editable preset inputs from server state whenever the stored
+  // presets or the unit system change. Done during render (not in an effect)
+  // per React's "adjust state when a prop changes" guidance — this avoids the
+  // extra commit/flash an effect causes, and the set-state-in-effect lint.
   const serializedPresets = data?.water_presets ? data.water_presets.join(',') : ''
-  useEffect(() => {
+  const presetsKey = `${serializedPresets}|${isImperial}`
+  // Seed with null (never a real key) so the first render with data still syncs.
+  const [syncedPresetsKey, setSyncedPresetsKey] = useState<string | null>(null)
+  if (presetsKey !== syncedPresetsKey) {
+    setSyncedPresetsKey(presetsKey)
     if (data?.water_presets) {
       setLocalPresets(
         data.water_presets.map((ml) => {
@@ -171,7 +179,7 @@ export function HydrationCard() {
         })
       )
     }
-  }, [serializedPresets, isImperial])
+  }
 
   const handleBlur = (index: number, val: string) => {
     const num = parseInt(val, 10)
