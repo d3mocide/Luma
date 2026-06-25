@@ -25,6 +25,7 @@ from luma.api import (
     recipes,
     today,
     trends,
+    user_settings,
     water,
 )
 from luma.config import settings
@@ -144,6 +145,7 @@ app.include_router(foods.router, prefix=f"{API_PREFIX}/foods", tags=["foods"])
 app.include_router(recipes.router, prefix=f"{API_PREFIX}/recipes", tags=["recipes"])
 app.include_router(favorites.router, prefix=f"{API_PREFIX}/favorites", tags=["favorites"])
 app.include_router(goals.router, prefix=API_PREFIX, tags=["goals"])
+app.include_router(user_settings.router, prefix=API_PREFIX, tags=["settings"])
 app.include_router(insights.router, prefix=f"{API_PREFIX}/insights", tags=["insights"])
 app.include_router(hae_diagnostic.router, prefix=API_PREFIX, tags=["hae-diagnostic"])
 app.include_router(admin.router, prefix=f"{API_PREFIX}/admin", tags=["admin"])
