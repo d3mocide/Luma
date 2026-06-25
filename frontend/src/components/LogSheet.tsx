@@ -113,6 +113,42 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
     })
   }
 
+  // Apply edited nutrition (and serving) from the inline Nutrition Facts editor.
+  const updateItemNutrition = (
+    index: number,
+    patch: { nutrients: DraftItem['nutrients']; estimated_weight_g: number },
+  ) => {
+    setDraftItems((prev) => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], ...patch }
+      return updated
+    })
+  }
+
+  // Persist an edited scan/photo item as a user-owned food so the corrected
+  // values are searchable later. Back-calculates per-100g from the portion.
+  const saveItemToLibrary = async (index: number) => {
+    const item = draftItems[index]
+    if (!item) return
+    const weight = item.estimated_weight_g || 100
+    try {
+      const saved = await api.post<{ id: string }>('/foods', {
+        name: item.name,
+        brand: item.brand ?? null,
+        serving_size_g: weight,
+        nutrients_per_100g: scaleByRatio(item.nutrients, 100 / weight),
+      })
+      setDraftItems((prev) => {
+        const updated = [...prev]
+        if (updated[index]) updated[index] = { ...updated[index], food_id: saved.id, nutrient_source: 'user' }
+        return updated
+      })
+      queryClient.invalidateQueries({ queryKey: ['foods'] })
+    } catch {
+      // Best-effort: the item keeps its edited values even if persistence fails.
+    }
+  }
+
   const totals = sumNutrients(draftItems)
 
   // Gate against re-adding: treat the meal as favorited if it was just saved
@@ -286,6 +322,8 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
               onRemoveItem={removeItem}
               onUpdateWeight={updateItemWeight}
               onUpdateName={updateItemName}
+              onUpdateNutrition={updateItemNutrition}
+              onSaveToLibrary={saveItemToLibrary}
             />
           )}
         </div>
