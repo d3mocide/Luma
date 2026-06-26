@@ -89,3 +89,76 @@ describe('DraftItemList provenance + replace', () => {
     expect(screen.queryByText('Fix')).not.toBeInTheDocument()
   })
 })
+
+describe('DraftItemList nutrition editor', () => {
+  it('shows the edit affordance only when onUpdateNutrition is wired', () => {
+    const { rerender } = render(
+      <DraftItemList
+        draftItems={[makeItem()]}
+        onRemoveItem={noop} onUpdateWeight={noop} onUpdateName={noop}
+      />,
+    )
+    expect(screen.queryByLabelText('Edit nutrition for Almond milk')).not.toBeInTheDocument()
+
+    rerender(
+      <DraftItemList
+        draftItems={[makeItem()]}
+        onRemoveItem={noop} onUpdateWeight={noop} onUpdateName={noop}
+        onUpdateNutrition={vi.fn()}
+      />,
+    )
+    expect(screen.getByLabelText('Edit nutrition for Almond milk')).toBeInTheDocument()
+  })
+
+  it('expands the editor and persists via Done when save is on', () => {
+    const onSave = vi.fn()
+    render(
+      <DraftItemList
+        draftItems={[makeItem()]}
+        onRemoveItem={noop} onUpdateWeight={noop} onUpdateName={noop}
+        onUpdateNutrition={vi.fn()} onSaveToLibrary={onSave}
+      />,
+    )
+    // Editor is collapsed until the affordance is tapped.
+    expect(screen.queryByText('Save to my foods')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('Edit nutrition for Almond milk'))
+    expect(screen.getByText('Save to my foods')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('Done'))
+    expect(onSave).toHaveBeenCalledWith(0)
+  })
+
+  it('does not persist when save-to-library is toggled off', () => {
+    const onSave = vi.fn()
+    render(
+      <DraftItemList
+        draftItems={[makeItem()]}
+        onRemoveItem={noop} onUpdateWeight={noop} onUpdateName={noop}
+        onUpdateNutrition={vi.fn()} onSaveToLibrary={onSave}
+      />,
+    )
+    fireEvent.click(screen.getByLabelText('Edit nutrition for Almond milk'))
+    fireEvent.click(screen.getByText('Save to my foods')) // toggle off
+    fireEvent.click(screen.getByText('Done'))
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('emits edited nutrients back as the per-serving value changes', () => {
+    const onUpdate = vi.fn()
+    // 240g item at 40 kcal total → 16.67 kcal/100g.
+    render(
+      <DraftItemList
+        draftItems={[makeItem({ estimated_weight_g: 240, nutrients: toNutrients({ calories: 40 }) })]}
+        onRemoveItem={noop} onUpdateWeight={noop} onUpdateName={noop}
+        onUpdateNutrition={onUpdate}
+      />,
+    )
+    fireEvent.click(screen.getByLabelText('Edit nutrition for Almond milk'))
+    // Editor seeds serving=240g, per-serving calories=40. Bump to 80.
+    fireEvent.change(screen.getByLabelText('Calories'), { target: { value: '80' } })
+    const last = onUpdate.mock.calls.at(-1)!
+    expect(last[0]).toBe(0)
+    expect(Math.round(last[1].nutrients.calories)).toBe(80)
+    expect(last[1].estimated_weight_g).toBe(240)
+  })
+})

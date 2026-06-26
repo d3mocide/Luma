@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useLayoutEffect, useId } from 'react'
-import { Camera, ImagePlus, X, Plus, CheckCircle } from 'lucide-react'
+import { Camera, ImagePlus, X, Plus, CheckCircle, SlidersHorizontal, ChevronDown } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api, csrfHeaders, refreshSession } from '../../lib/api'
 import { toNutrients, scaleNutrients } from '../../lib/nutrients'
+import { NutritionFactsEditor } from './NutritionFactsEditor'
 import {
   type PortionUnit,
   type HouseholdMeasure,
@@ -40,9 +41,11 @@ type Props = {
   onRemoveItem: (index: number) => void
   onUpdateWeight: (index: number, newWeight: number) => void
   onUpdateName: (index: number, name: string) => void
+  onUpdateNutrition?: (index: number, patch: { nutrients: DraftItem['nutrients']; estimated_weight_g: number }) => void
+  onSaveToLibrary?: (index: number) => void
 }
 
-export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, onUpdateName }: Props) {
+export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, onUpdateName, onUpdateNutrition, onSaveToLibrary }: Props) {
   const [scanMode, setScanMode] = useState<'barcode' | 'photo'>('barcode')
 
   // --- Barcode State ---
@@ -52,7 +55,17 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
   const [pending, setPending]           = useState<FoodResult | null>(null)
   const [pendingQty, setPendingQty]     = useState('')
   const [pendingUnit, setPendingUnit]   = useState<string>('g')
-  
+
+  // Editable nutrition state for the confirm gate. `editPer100g` mirrors the
+  // looked-up food until the user opens the editor; `edited` gates persistence.
+  const [editorOpen, setEditorOpen]     = useState(false)
+  const [editPer100g, setEditPer100g]   = useState<Record<string, number>>({})
+  const [editServingG, setEditServingG] = useState(100)
+  const [edited, setEdited]             = useState(false)
+  const [saveToLibrary, setSaveToLibrary] = useState(true)
+  const [confirmBusy, setConfirmBusy]   = useState(false)
+
+
   const qtyRef = useRef<HTMLInputElement>(null)
   const uid = useId()
   const scannerDomId = `scan-tab-barcode-scanner-${uid.replace(/:/g, '')}`
@@ -70,7 +83,15 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
     setPending(null)
     setBarcodeError('')
     setBarcodeLoading(false)
+    resetEditor()
   }, [scanMode])
+
+  function resetEditor() {
+    setEditorOpen(false)
+    setEdited(false)
+    setSaveToLibrary(true)
+    setConfirmBusy(false)
+  }
 
   // --- Barcode HTML5Qrcode logic ---
   useEffect(() => {
@@ -106,6 +127,10 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
             const hasMeasures = (measures?.length ?? 0) > 0
             setPendingUnit(hasMeasures ? 'hm:0' : 'g')
             setPendingQty(String(hasMeasures ? 1 : Math.round((food.serving_size_g as number) || 100)))
+            // Seed the editable nutrition state from the looked-up food.
+            setEditPer100g({ ...(food.nutrients_per_100g as Record<string, number>) })
+            setEditServingG(Math.round((food.serving_size_g as number) || 100))
+            resetEditor()
             setTimeout(() => qtyRef.current?.select(), 60)
           } catch {
             setBarcodeError('Product not found')
@@ -132,13 +157,36 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
   }, [scanMode, isScanning, scannerDomId])
 
   // --- Barcode portion confirm ---
-  function confirmBarcodeAdd() {
-    if (!pending) return
+  async function confirmBarcodeAdd() {
+    if (!pending || confirmBusy) return
     const qty = Math.max(0, parseFloat(pendingQty) || 0)
     const grams = Math.max(1, Math.round(gramsForFoodUnit(pending, pendingUnit, qty)))
     const unitLabel = pendingUnit.startsWith('hm:')
       ? (pending.household_measures?.[Number(pendingUnit.slice(3))]?.label ?? 'serving')
       : pendingUnit
+
+    let foodId: string | undefined = pending.id
+    let nutrientSource = nutrientSourceForFood(pending.source, pending.brand)
+
+    // If the user corrected the nutrition and opted to keep it, persist a
+    // user-owned food so the edited values are searchable and re-addable.
+    if (edited && saveToLibrary) {
+      setConfirmBusy(true)
+      try {
+        const saved = await api.post<{ id: string }>('/foods', {
+          name: pending.name,
+          brand: pending.brand ?? null,
+          serving_size_g: editServingG,
+          nutrients_per_100g: editPer100g,
+        })
+        foodId = saved.id
+        nutrientSource = 'user'
+      } catch {
+        // Persisting is best-effort — still add the item with its edited values.
+      } finally {
+        setConfirmBusy(false)
+      }
+    }
 
     onAddItems([{
       name: pending.name,
@@ -146,15 +194,16 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
       quantity: qty,
       unit: unitLabel,
       estimated_weight_g: grams,
-      nutrients: scaleNutrients(pending.nutrients_per_100g, grams),
-      food_id: pending.id,
-      nutrient_source: nutrientSourceForFood(pending.source, pending.brand),
+      nutrients: scaleNutrients(editPer100g, grams),
+      food_id: foodId,
+      nutrient_source: nutrientSource,
       source: 'barcode',
     }])
 
     setPending(null)
     setPendingQty('')
     setPendingUnit('g')
+    resetEditor()
     // Don't auto-restart: let user tap "Start scanning" to avoid re-prompting camera permissions
   }
 
@@ -167,8 +216,8 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
   const pendingMeasures = pending?.household_measures ?? []
   const pendingQtyNum = parseFloat(pendingQty) || 0
   const pendingG = pending ? gramsForFoodUnit(pending, pendingUnit, pendingQtyNum) : 0
-  const pendingKcal = pending ? Math.round((pending.nutrients_per_100g.calories || 0) * (pendingG / 100)) : 0
-  const pendingProtein = pending ? ((pending.nutrients_per_100g.protein_g || 0) * (pendingG / 100)).toFixed(1) : '0'
+  const pendingKcal = pending ? Math.round((editPer100g.calories || 0) * (pendingG / 100)) : 0
+  const pendingProtein = pending ? ((editPer100g.protein_g || 0) * (pendingG / 100)).toFixed(1) : '0'
   const pendingPresets = pendingUnit.startsWith('hm:') ? [0.5, 1, 2, 3] : PRESETS_BY_UNIT[pendingUnit as PortionUnit]
 
   // --- Photo methods ---
@@ -333,7 +382,7 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
                   <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>{pending.brand || 'Open Food Facts'}</div>
                 </div>
                 <button
-                  onClick={() => { setPending(null); setPendingQty(''); setPendingUnit('g') }}
+                  onClick={() => { setPending(null); setPendingQty(''); setPendingUnit('g'); resetEditor() }}
                   style={{ color: 'var(--fg-quiet)', background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}
                   aria-label="Cancel"
                 >
@@ -410,14 +459,50 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
                 </div>
               )}
 
+              {/* Opt-in confirmation gate: review/correct the macros and add the
+                  vitamins/minerals from the label, then keep it in My Foods. */}
+              <button
+                type="button"
+                onClick={() => setEditorOpen((o) => !o)}
+                aria-expanded={editorOpen}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+                  padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
+                  background: editorOpen ? 'var(--glass-2)' : 'var(--glass-1)',
+                  border: '1px solid var(--glass-edge)', color: 'var(--fg-secondary)',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 500 }}>
+                  <SlidersHorizontal size={13} />
+                  Review / Edit nutrition
+                  {edited && <span style={{ fontSize: 8, padding: '1px 6px', borderRadius: 20, background: 'rgba(167,139,250,0.12)', color: '#c084fc', border: '1px solid rgba(167,139,250,0.25)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Edited</span>}
+                </span>
+                <ChevronDown size={14} style={{ color: 'var(--fg-quiet)', transform: editorOpen ? 'rotate(180deg)' : 'none', transition: 'transform 160ms ease-out' }} />
+              </button>
+
+              {editorOpen && (
+                <NutritionFactsEditor
+                  instanceKey={pending.id}
+                  servingSizeG={editServingG}
+                  per100g={editPer100g}
+                  onChange={({ servingSizeG, per100g }) => {
+                    setEditServingG(servingSizeG)
+                    setEditPer100g(per100g)
+                    setEdited(true)
+                  }}
+                  saveToLibrary={saveToLibrary}
+                  onSaveToLibraryChange={setSaveToLibrary}
+                />
+              )}
+
               <button
                 className="btn btn-primary"
                 onClick={confirmBarcodeAdd}
-                disabled={!pendingQty || pendingG <= 0}
+                disabled={!pendingQty || pendingG <= 0 || confirmBusy}
                 style={{ padding: '9px', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               >
                 <Plus size={14} />
-                Add to meal
+                {confirmBusy ? 'Saving…' : 'Add to meal'}
               </button>
             </div>
           ) : (
@@ -576,6 +661,8 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
             onRemoveItem={onRemoveItem}
             onUpdateWeight={onUpdateWeight}
             onUpdateName={onUpdateName}
+            onUpdateNutrition={onUpdateNutrition}
+            onSaveToLibrary={onSaveToLibrary}
           />
         </div>
       )}

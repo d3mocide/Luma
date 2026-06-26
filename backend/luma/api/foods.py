@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -279,17 +280,32 @@ async def create_food(
     db: DbDep,
     current_user: CurrentUser,
 ) -> Food:
-    new_food = Food(
-        id=uuid.uuid4(),
-        source="user",
-        name=food_in.name,
-        brand=food_in.brand,
-        serving_size_g=food_in.serving_size_g,
-        nutrients_per_100g=food_in.nutrients_per_100g,
-        tags=food_in.tags or [],
-        created_by=current_user.id,
+    # Upsert on (created_by, name) so re-saving an edited scan/photo food updates
+    # the user's existing record instead of piling up duplicates. Matches the
+    # dedup in log._maybe_persist_photo_food. Only the caller's own user foods are
+    # ever touched — shared off/usda cache rows (created_by=None) are never mutated.
+    name = food_in.name.strip()
+    existing = await db.execute(
+        select(Food).where(Food.created_by == current_user.id, Food.name == name)
     )
-    db.add(new_food)
+    food = existing.scalar_one_or_none()
+    if food is not None:
+        food.brand = food_in.brand
+        food.serving_size_g = Decimal(str(food_in.serving_size_g))
+        food.nutrients_per_100g = food_in.nutrients_per_100g
+        food.tags = food_in.tags or []
+    else:
+        food = Food(
+            id=uuid.uuid4(),
+            source="user",
+            name=name,
+            brand=food_in.brand,
+            serving_size_g=food_in.serving_size_g,
+            nutrients_per_100g=food_in.nutrients_per_100g,
+            tags=food_in.tags or [],
+            created_by=current_user.id,
+        )
+        db.add(food)
     await db.commit()
-    await db.refresh(new_food)
-    return new_food
+    await db.refresh(food)
+    return food

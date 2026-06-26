@@ -1,5 +1,8 @@
-import { Replace, Utensils, X } from 'lucide-react'
+import { useState } from 'react'
+import { Replace, Utensils, X, SlidersHorizontal, Check } from 'lucide-react'
 import type { DraftItem } from './types'
+import { scaleNutrients, scaleByRatio } from '../../lib/nutrients'
+import { NutritionFactsEditor } from './NutritionFactsEditor'
 
 type Props = {
   draftItems: DraftItem[]
@@ -9,11 +12,23 @@ type Props = {
   // When provided, "Estimated" items show a Replace action that swaps in a
   // database food. Omitted where no food search is available to drive it.
   onReplaceItem?: (index: number) => void
+  // When provided, each item gains an "Edit nutrition" affordance that expands
+  // an inline editable Nutrition Facts panel (scan/photo confirmation gate).
+  onUpdateNutrition?: (index: number, patch: { nutrients: ReturnType<typeof scaleNutrients>; estimated_weight_g: number }) => void
+  // When provided, the editor's "Save to my foods" persists the edited item.
+  onSaveToLibrary?: (index: number) => void
   // When provided, an empty list renders this prompt instead of nothing.
   emptyStateMessage?: string
   // When set above 1, each item shows how much to weigh out per serving so a
   // batch can be portioned into even components.
   servings?: number
+}
+
+// Back-calculate an item's per-100g profile from its absolute portion nutrients,
+// so the editor can present per-serving values and persistence can store density.
+function itemPer100g(item: DraftItem): Record<string, number> {
+  const w = item.estimated_weight_g || 100
+  return scaleByRatio(item.nutrients, 100 / w)
 }
 
 // Relative portion presets, anchored to each item's original estimate so the
@@ -45,8 +60,20 @@ function sourceBadge(item: DraftItem): { label: string; color: string; bg: strin
   }
 }
 
-export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpdateName, onReplaceItem, emptyStateMessage, servings }: Props) {
+export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpdateName, onReplaceItem, onUpdateNutrition, onSaveToLibrary, emptyStateMessage, servings }: Props) {
   const showPerServing = (servings ?? 1) > 1
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editSave, setEditSave] = useState(true)
+
+  const openEditor = (idx: number) => {
+    setEditSave(true)
+    setEditingIndex((cur) => (cur === idx ? null : idx))
+  }
+
+  const finishEditor = (idx: number) => {
+    if (editSave) onSaveToLibrary?.(idx)
+    setEditingIndex(null)
+  }
   if (draftItems.length === 0) {
     if (!emptyStateMessage) return null
     return (
@@ -123,6 +150,20 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
                       <Replace size={11} /> Fix
                     </button>
                   )}
+                  {onUpdateNutrition && (
+                    <button
+                      onClick={() => openEditor(idx)}
+                      title="Edit nutrition facts"
+                      aria-label={`Edit nutrition for ${item.name}`}
+                      aria-expanded={editingIndex === idx}
+                      style={{
+                        color: editingIndex === idx ? 'var(--sky-300)' : 'var(--fg-quiet)',
+                        background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                      }}
+                    >
+                      <SlidersHorizontal size={13} />
+                    </button>
+                  )}
                   <button
                     onClick={() => onRemoveItem(idx)}
                     style={{ color: 'var(--fg-quiet)', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
@@ -180,6 +221,31 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
                     <span className="num">{Math.round(perServingG)}</span> g
                     <span style={{ color: 'var(--fg-tertiary)', fontWeight: 400 }}> · {(perServingG / OZ_IN_G).toFixed(1)} oz</span>
                   </span>
+                </div>
+              )}
+
+              {onUpdateNutrition && editingIndex === idx && (
+                <div style={{ paddingTop: 12, marginTop: 4, borderTop: '1px solid var(--glass-edge)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <NutritionFactsEditor
+                    instanceKey={idx}
+                    servingSizeG={item.estimated_weight_g}
+                    per100g={itemPer100g(item)}
+                    onChange={({ servingSizeG, per100g }) =>
+                      onUpdateNutrition(idx, {
+                        nutrients: scaleNutrients(per100g, servingSizeG),
+                        estimated_weight_g: servingSizeG,
+                      })
+                    }
+                    saveToLibrary={editSave}
+                    onSaveToLibraryChange={setEditSave}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => finishEditor(idx)}
+                    style={{ padding: '9px', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <Check size={14} /> Done
+                  </button>
                 </div>
               )}
             </div>
