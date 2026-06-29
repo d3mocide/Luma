@@ -14,7 +14,7 @@ dependencies = [
     # Database
     "sqlalchemy==2.0.51",
     "asyncpg==0.31.0",
-    "alembic==1.18.4",
+    "alembic==1.18.5",
 
     # Validation
     "pydantic==2.13.4",
