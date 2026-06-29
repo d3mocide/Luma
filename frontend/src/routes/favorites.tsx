@@ -349,6 +349,7 @@ export default function FavoritesRoute() {
               <div
                 style={{
                   flex: 1,
+                  minWidth: 0,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
@@ -555,7 +556,7 @@ export default function FavoritesRoute() {
           ) : (
             <div style={{
               display: 'grid',
-              gridTemplateColumns: `repeat(${numCols}, 1fr)`,
+              gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))`,
               gap: 16,
               marginTop: 20,
               alignItems: 'start'
