@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, ChevronDown, X, Search, ArrowUpDown } from 'lucide-react'
+import { Heart, Plus, ArrowLeft, Trash2, Pencil, Copy, Check, ChevronDown, X, Search, ArrowUpDown } from 'lucide-react'
 import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { getCurrentSlot } from '../lib/format'
@@ -177,6 +177,18 @@ export default function FavoritesRoute() {
   function startEdit(fav: Favorite) {
     setEditingId(fav.id)
     setFavName(fav.name)
+    setItems(fav.items.map(mapFavoriteItemToDraft))
+    setFavTags(fav.tags ?? [])
+    setNewTagInput('')
+    setView('building')
+  }
+
+  // Seed the builder from an existing favorite as a brand-new favorite (editingId stays
+  // null so Save creates a fresh row). Lets the user copy a bulk favorite, then scale
+  // weights down to a single portion before saving.
+  function startDuplicate(fav: Favorite) {
+    setEditingId(null)
+    setFavName(`${fav.name} (copy)`)
     setItems(fav.items.map(mapFavoriteItemToDraft))
     setFavTags(fav.tags ?? [])
     setNewTagInput('')
@@ -681,6 +693,14 @@ export default function FavoritesRoute() {
                           >
                             <Pencil size={12} strokeWidth={1.75} />
                             <span className="btn-label">Edit</span>
+                          </button>
+                          <button
+                            onClick={() => startDuplicate(fav)}
+                            className="favorite-action-btn"
+                            aria-label={`Duplicate ${fav.name}`}
+                          >
+                            <Copy size={12} strokeWidth={1.75} />
+                            <span className="btn-label">Copy</span>
                           </button>
                           <button
                             onClick={() => deleteMutation.mutate(fav.id)}
