@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useId } from 'react'
-import { Search, Plus, X, Camera, Star } from 'lucide-react'
+import { Search, Plus, X, Camera, Star, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api } from '../../lib/api'
 import {
@@ -92,6 +92,8 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
   const [isScanning, setIsScanning]     = useState(false)
   const [barcodeError, setBarcodeError] = useState('')
   const [recentFoods, setRecentFoods]   = useState<FoodResult[]>([])
+  const [recentPage, setRecentPage]     = useState(0)
+  const RECENT_PAGE_SIZE = 5
   // Index of the draft item being replaced, or null for a normal add.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -487,44 +489,73 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
       />
 
       {/* ── Recent foods (shown when search is empty, no pending selection) ── */}
-      {!pending && !query.trim() && recentFoods.length > 0 && (
-        <div>
-          <div className="eyebrow" style={{ fontSize: 10, marginBottom: 8 }}>Recent</div>
-          <div className="glass-inset" style={{ borderRadius: 12, overflow: 'hidden' }}>
-            {recentFoods.map((food, idx) => {
-              const servingG = food.serving_size_g ?? 100
-              const kcal = Math.round((food.nutrients_per_100g.calories ?? 0) * servingG / 100)
-              const isLast = idx === recentFoods.length - 1
-              const sourceLabel = food.source === 'off' ? 'Barcode scan'
-                : food.source === 'usda' ? 'USDA'
-                : 'Your food'
-              return (
-                <button
-                  key={food.id}
-                  onClick={() => selectFood(food)}
-                  style={{
-                    width: '100%', padding: '10px 12px', background: 'none', border: 'none',
-                    borderBottom: isLast ? 'none' : '1px solid var(--glass-edge)',
-                    textAlign: 'left', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                    transition: 'background 150ms',
-                  }}
-                >
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {food.name}
+      {!pending && !query.trim() && recentFoods.length > 0 && (() => {
+        const recentTotalPages = Math.max(1, Math.ceil(recentFoods.length / RECENT_PAGE_SIZE))
+        const pagedRecent = recentFoods.slice(recentPage * RECENT_PAGE_SIZE, recentPage * RECENT_PAGE_SIZE + RECENT_PAGE_SIZE)
+        return (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div className="eyebrow" style={{ fontSize: 10 }}>Recent</div>
+              {recentTotalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button
+                    type="button"
+                    disabled={recentPage === 0}
+                    onClick={() => setRecentPage((p) => p - 1)}
+                    style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: recentPage === 0 ? 'default' : 'pointer', color: recentPage === 0 ? 'var(--fg-faint)' : 'var(--fg-quiet)', lineHeight: 0 }}
+                  >
+                    <ChevronLeft size={13} strokeWidth={1.8} />
+                  </button>
+                  <span style={{ fontSize: 10, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>
+                    {recentPage + 1}/{recentTotalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={recentPage >= recentTotalPages - 1}
+                    onClick={() => setRecentPage((p) => p + 1)}
+                    style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: recentPage >= recentTotalPages - 1 ? 'default' : 'pointer', color: recentPage >= recentTotalPages - 1 ? 'var(--fg-faint)' : 'var(--fg-quiet)', lineHeight: 0 }}
+                  >
+                    <ChevronRight size={13} strokeWidth={1.8} />
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="glass-inset" style={{ borderRadius: 12, overflow: 'hidden' }}>
+              {pagedRecent.map((food, idx) => {
+                const servingG = food.serving_size_g ?? 100
+                const kcal = Math.round((food.nutrients_per_100g.calories ?? 0) * servingG / 100)
+                const isLast = idx === pagedRecent.length - 1
+                const sourceLabel = food.source === 'off' ? 'Barcode scan'
+                  : food.source === 'usda' ? 'USDA'
+                  : 'Your food'
+                return (
+                  <button
+                    key={food.id}
+                    onClick={() => selectFood(food)}
+                    style={{
+                      width: '100%', padding: '10px 12px', background: 'none', border: 'none',
+                      borderBottom: isLast ? 'none' : '1px solid var(--glass-edge)',
+                      textAlign: 'left', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                      transition: 'background 150ms',
+                    }}
+                  >
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {food.name}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
+                        {food.brand ? `${food.brand} · ` : ''}{sourceLabel} · <span className="num">{kcal}</span> kcal / serving
+                      </div>
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
-                      {food.brand ? `${food.brand} · ` : ''}{sourceLabel} · <span className="num">{kcal}</span> kcal / serving
-                    </div>
-                  </div>
-                  <Plus size={14} style={{ color: 'var(--sky-400)', flexShrink: 0 }} />
-                </button>
-              )
-            })}
+                    <Plus size={14} style={{ color: 'var(--sky-400)', flexShrink: 0 }} />
+                  </button>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ── Matching favorites (surfaced above food results) ── */}
       {matchingFavorites.length > 0 && (

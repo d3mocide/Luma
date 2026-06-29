@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import { Zap } from 'lucide-react'
+import { Zap, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toNutrients } from '../../lib/nutrients'
 import type { DraftItem, Favorite } from './types'
 
@@ -30,7 +31,10 @@ const SLOT_LABELS: Record<string, string> = {
   snack: 'Snack',
 }
 
+const FAV_PAGE_SIZE = 5
+
 export function QuickTab({ currentSlot, onAddItems, favorites, onLogFavoriteDirect, isLoggingFavorite }: Props) {
+  const [favPage, setFavPage] = useState(0)
   const { data, isLoading } = useQuery<{ suggestions: FrequentMeal[] }>({
     queryKey: ['meals', 'frequent'],
     queryFn: () => api.get('/log/meals/frequent'),
@@ -160,56 +164,87 @@ export function QuickTab({ currentSlot, onAddItems, favorites, onLogFavoriteDire
 
       {favorites !== undefined && (
         <div style={{ borderTop: '1px solid var(--glass-edge)', paddingTop: 18 }}>
-          <span className="eyebrow" style={{ display: 'block', marginBottom: 12, color: 'var(--fg-quiet)' }}>
-            My favorites
-          </span>
-          {favorites.length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--fg-quiet)', margin: 0 }}>
-              Save a meal as a favorite from the footer to see it here.
-            </p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {favorites.map((fav) => {
-                const kcal = Math.round(fav.items.reduce((sum, i) => sum + (i.nutrients.calories ?? 0), 0))
-                const favDraftItems: DraftItem[] = fav.items.map((i) => ({
-                  name: i.food_name,
-                  brand: i.brand ?? undefined,
-                  quantity: i.quantity_g,
-                  unit: 'g',
-                  estimated_weight_g: i.quantity_g,
-                  nutrients: toNutrients(i.nutrients),
-                }))
-                return (
-                  <button
-                    key={fav.id}
-                    onClick={() => onLogFavoriteDirect?.(favDraftItems, fav.name, fav.id)}
-                    disabled={isLoggingFavorite}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      borderRadius: 10,
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid var(--glass-edge)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 12,
-                      textAlign: 'left',
-                      cursor: isLoggingFavorite ? 'default' : 'pointer',
-                      opacity: isLoggingFavorite ? 0.5 : 1,
-                      transition: 'all 150ms',
-                    }}
-                  >
-                    <span style={{ color: 'var(--fg-secondary)', fontSize: 13, fontWeight: 500 }}>{fav.name}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--fg-quiet)', fontSize: 11, flexShrink: 0, fontFamily: 'var(--font-mono)' }}>
-                      <Zap size={10} />
-                      {isLoggingFavorite ? 'Logging…' : `${kcal} kcal`}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
+          {(() => {
+            const favTotalPages = Math.max(1, Math.ceil(favorites.length / FAV_PAGE_SIZE))
+            const pagedFavs = favorites.slice(favPage * FAV_PAGE_SIZE, favPage * FAV_PAGE_SIZE + FAV_PAGE_SIZE)
+            return (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <span className="eyebrow" style={{ color: 'var(--fg-quiet)' }}>My favorites</span>
+                  {favTotalPages > 1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button
+                        type="button"
+                        disabled={favPage === 0}
+                        onClick={() => setFavPage((p) => p - 1)}
+                        style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: favPage === 0 ? 'default' : 'pointer', color: favPage === 0 ? 'var(--fg-faint)' : 'var(--fg-quiet)', lineHeight: 0 }}
+                      >
+                        <ChevronLeft size={13} strokeWidth={1.8} />
+                      </button>
+                      <span style={{ fontSize: 10, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>
+                        {favPage + 1}/{favTotalPages}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={favPage >= favTotalPages - 1}
+                        onClick={() => setFavPage((p) => p + 1)}
+                        style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: favPage >= favTotalPages - 1 ? 'default' : 'pointer', color: favPage >= favTotalPages - 1 ? 'var(--fg-faint)' : 'var(--fg-quiet)', lineHeight: 0 }}
+                      >
+                        <ChevronRight size={13} strokeWidth={1.8} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {favorites.length === 0 ? (
+                  <p style={{ fontSize: 12, color: 'var(--fg-quiet)', margin: 0 }}>
+                    Save a meal as a favorite from the footer to see it here.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {pagedFavs.map((fav) => {
+                      const kcal = Math.round(fav.items.reduce((sum, i) => sum + (i.nutrients.calories ?? 0), 0))
+                      const favDraftItems: DraftItem[] = fav.items.map((i) => ({
+                        name: i.food_name,
+                        brand: i.brand ?? undefined,
+                        quantity: i.quantity_g,
+                        unit: 'g',
+                        estimated_weight_g: i.quantity_g,
+                        nutrients: toNutrients(i.nutrients),
+                      }))
+                      return (
+                        <button
+                          key={fav.id}
+                          onClick={() => onLogFavoriteDirect?.(favDraftItems, fav.name, fav.id)}
+                          disabled={isLoggingFavorite}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            borderRadius: 10,
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid var(--glass-edge)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 12,
+                            textAlign: 'left',
+                            cursor: isLoggingFavorite ? 'default' : 'pointer',
+                            opacity: isLoggingFavorite ? 0.5 : 1,
+                            transition: 'all 150ms',
+                          }}
+                        >
+                          <span style={{ color: 'var(--fg-secondary)', fontSize: 13, fontWeight: 500 }}>{fav.name}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--fg-quiet)', fontSize: 11, flexShrink: 0, fontFamily: 'var(--font-mono)' }}>
+                            <Zap size={10} />
+                            {isLoggingFavorite ? 'Logging…' : `${kcal} kcal`}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </>
+            )
+          })()}
         </div>
       )}
     </div>
