@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2, ChevronDown, Pencil } from 'lucide-react'
+import { Trash2, ChevronDown, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
 import { NutrientBreakdownSheet } from './NutrientBreakdownSheet'
 import type { DraftItem } from '../log-sheet/types'
 
@@ -41,9 +41,14 @@ export function RecentMealsCard({
   subtitle?: string
   emptyText?: string
 }) {
+  const PAGE_SIZE = 5
   const safeMeals = Array.isArray(meals) ? meals : []
   const [breakdownMeal, setBreakdownMeal] = useState<RecentMeal | null>(null)
   const [expandedMealIds, setExpandedMealIds] = useState<Record<string, boolean>>({})
+  const [page, setPage] = useState(0)
+
+  const totalPages = Math.max(1, Math.ceil(safeMeals.length / PAGE_SIZE))
+  const pagedMeals = safeMeals.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
 
   const toggleExpand = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -70,8 +75,9 @@ export function RecentMealsCard({
             {emptyText}
           </p>
         ) : (
+          <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {safeMeals.map((meal) => {
+            {pagedMeals.map((meal) => {
               const isDeleting = deletingId === meal.id
               const hasItems = meal.items && meal.items.length > 0
               const isExpanded = !!expandedMealIds[meal.id]
@@ -297,6 +303,56 @@ export function RecentMealsCard({
               )
             })}
           </div>
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+              <button
+                type="button"
+                className="btn"
+                disabled={page === 0}
+                onClick={() => setPage((p) => p - 1)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  border: '1px solid var(--glass-edge)',
+                  background: 'transparent',
+                  color: page === 0 ? 'var(--fg-faint)' : 'var(--fg-secondary)',
+                  cursor: page === 0 ? 'default' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 12,
+                }}
+              >
+                <ChevronLeft size={14} strokeWidth={1.8} />
+                Prev
+              </button>
+              <span style={{ fontSize: 11, color: 'var(--fg-quiet)', fontFamily: 'var(--font-mono)' }}>
+                {page + 1} / {totalPages}
+              </span>
+              <button
+                type="button"
+                className="btn"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => p + 1)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  border: '1px solid var(--glass-edge)',
+                  background: 'transparent',
+                  color: page >= totalPages - 1 ? 'var(--fg-faint)' : 'var(--fg-secondary)',
+                  cursor: page >= totalPages - 1 ? 'default' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 12,
+                }}
+              >
+                Next
+                <ChevronRight size={14} strokeWidth={1.8} />
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
 
