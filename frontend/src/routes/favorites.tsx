@@ -53,6 +53,10 @@ function totalSodium(items: FavoriteItem[]): number {
   return Math.round(items.reduce((sum, i) => sum + (i.nutrients.sodium_mg ?? 0), 0))
 }
 
+function totalWeight(items: FavoriteItem[]): number {
+  return Math.round(items.reduce((sum, i) => sum + (i.quantity_g ?? 0), 0))
+}
+
 function useWindowWidth() {
   const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
   useEffect(() => {
@@ -580,7 +584,8 @@ export default function FavoritesRoute() {
                         <span className="fav-title-text" style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-primary)', transition: 'color 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {fav.name}
                           <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--fg-quiet)', marginLeft: 8 }}>
-                            ({fav.items.length} {fav.items.length === 1 ? 'item' : 'items'})
+                            ({fav.items.length} {fav.items.length === 1 ? 'item' : 'items'}
+                            {fav.items.length > 0 && ` · ${totalWeight(fav.items)}g`})
                           </span>
                         </span>
                         
@@ -815,7 +820,9 @@ export default function FavoritesRoute() {
           {/* Cumulative Nutrition Grid */}
           {items.length > 0 && (
             <div style={{ marginBottom: 22 }}>
-              <div className="eyebrow" style={{ marginBottom: 8, fontSize: 10 }}>Cumulative nutrition</div>
+              <div className="eyebrow" style={{ marginBottom: 8, fontSize: 10 }}>
+                Cumulative nutrition · {Math.round(items.reduce((sum, i) => sum + (i.estimated_weight_g ?? 0), 0))}g total
+              </div>
               <div className="favorite-macro-grid">
                 <div className="favorite-macro-col">
                   <span className="favorite-macro-label">Cal</span>
