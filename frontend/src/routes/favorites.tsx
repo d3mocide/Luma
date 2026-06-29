@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, Plus, ArrowLeft, Trash2, Pencil, Check, ChevronDown, X, Search, ArrowUpDown } from 'lucide-react'
+import { Heart, Plus, ArrowLeft, Trash2, Pencil, Copy, Check, ChevronDown, X, Search, ArrowUpDown } from 'lucide-react'
 import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { getCurrentSlot } from '../lib/format'
@@ -51,6 +51,10 @@ function totalProtein(items: FavoriteItem[]): number {
 
 function totalSodium(items: FavoriteItem[]): number {
   return Math.round(items.reduce((sum, i) => sum + (i.nutrients.sodium_mg ?? 0), 0))
+}
+
+function totalWeight(items: FavoriteItem[]): number {
+  return Math.round(items.reduce((sum, i) => sum + (i.quantity_g ?? 0), 0))
 }
 
 function useWindowWidth() {
@@ -177,6 +181,18 @@ export default function FavoritesRoute() {
   function startEdit(fav: Favorite) {
     setEditingId(fav.id)
     setFavName(fav.name)
+    setItems(fav.items.map(mapFavoriteItemToDraft))
+    setFavTags(fav.tags ?? [])
+    setNewTagInput('')
+    setView('building')
+  }
+
+  // Seed the builder from an existing favorite as a brand-new favorite (editingId stays
+  // null so Save creates a fresh row). Lets the user copy a bulk favorite, then scale
+  // weights down to a single portion before saving.
+  function startDuplicate(fav: Favorite) {
+    setEditingId(null)
+    setFavName(`${fav.name} (copy)`)
     setItems(fav.items.map(mapFavoriteItemToDraft))
     setFavTags(fav.tags ?? [])
     setNewTagInput('')
@@ -333,6 +349,7 @@ export default function FavoritesRoute() {
               <div
                 style={{
                   flex: 1,
+                  minWidth: 0,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
@@ -539,7 +556,7 @@ export default function FavoritesRoute() {
           ) : (
             <div style={{
               display: 'grid',
-              gridTemplateColumns: `repeat(${numCols}, 1fr)`,
+              gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))`,
               gap: 16,
               marginTop: 20,
               alignItems: 'start'
@@ -568,7 +585,8 @@ export default function FavoritesRoute() {
                         <span className="fav-title-text" style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg-primary)', transition: 'color 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {fav.name}
                           <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--fg-quiet)', marginLeft: 8 }}>
-                            ({fav.items.length} {fav.items.length === 1 ? 'item' : 'items'})
+                            ({fav.items.length} {fav.items.length === 1 ? 'item' : 'items'}
+                            {fav.items.length > 0 && ` · ${totalWeight(fav.items)}g`})
                           </span>
                         </span>
                         
@@ -683,6 +701,14 @@ export default function FavoritesRoute() {
                             <span className="btn-label">Edit</span>
                           </button>
                           <button
+                            onClick={() => startDuplicate(fav)}
+                            className="favorite-action-btn"
+                            aria-label={`Duplicate ${fav.name}`}
+                          >
+                            <Copy size={12} strokeWidth={1.75} />
+                            <span className="btn-label">Copy</span>
+                          </button>
+                          <button
                             onClick={() => deleteMutation.mutate(fav.id)}
                             disabled={deleteMutation.isPending}
                             className="favorite-action-btn favorite-action-btn--danger"
@@ -795,7 +821,9 @@ export default function FavoritesRoute() {
           {/* Cumulative Nutrition Grid */}
           {items.length > 0 && (
             <div style={{ marginBottom: 22 }}>
-              <div className="eyebrow" style={{ marginBottom: 8, fontSize: 10 }}>Cumulative nutrition</div>
+              <div className="eyebrow" style={{ marginBottom: 8, fontSize: 10 }}>
+                Cumulative nutrition · {Math.round(items.reduce((sum, i) => sum + (i.estimated_weight_g ?? 0), 0))}g total
+              </div>
               <div className="favorite-macro-grid">
                 <div className="favorite-macro-col">
                   <span className="favorite-macro-label">Cal</span>
