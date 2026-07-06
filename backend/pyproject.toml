@@ -37,7 +37,7 @@ dependencies = [
     "python-multipart==0.0.31",
     "python-dateutil==2.9.0.post0",
     "orjson==3.11.9",
-    "litellm==1.90.0",
+    "litellm==1.91.0",
     "tzdata==2025.2",
     "pywebpush==2.3.0",
 
