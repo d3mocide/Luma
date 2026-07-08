@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Heart, Plus, ArrowLeft, Trash2, Pencil, Copy, Check, ChevronDown, X, Search, ArrowUpDown } from 'lucide-react'
+import { Heart, Plus, ArrowLeft, Trash2, Pencil, Copy, Check, ChevronDown, X, Search, ArrowUpDown, Scale } from 'lucide-react'
 import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { getCurrentSlot } from '../lib/format'
@@ -741,12 +741,21 @@ export default function FavoritesRoute() {
 
                         <div className="favorite-card-actions">
                           <button
-                            onClick={() => openPortionPicker(fav.id)}
+                            onClick={() => logFavoriteDirect.mutate({ fav, factor: 1 })}
+                            disabled={logFavoriteDirect.isPending}
                             className="favorite-action-btn favorite-action-btn--primary"
-                            aria-expanded={portionFavId === fav.id}
+                            style={{ opacity: logFavoriteDirect.isPending ? 0.6 : 1 }}
                           >
                             <Heart size={12} strokeWidth={2} />
                             <span>Log this</span>
+                          </button>
+                          <button
+                            onClick={() => openPortionPicker(fav.id)}
+                            className="favorite-action-btn favorite-action-btn--portion"
+                            aria-expanded={portionFavId === fav.id}
+                          >
+                            <Scale size={12} strokeWidth={2} />
+                            <span>Log portion</span>
                           </button>
                           <ShareWithFamilyButton resourceType="favorite" resourceId={fav.id} />
                           <button
