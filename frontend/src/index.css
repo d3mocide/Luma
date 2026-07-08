@@ -3220,6 +3220,23 @@ input[type="search"]::-webkit-search-results-decoration {
   color: #061229;
 }
 
+.favorite-action-btn--portion {
+  background: var(--glass-2);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: var(--sky-300);
+  font-weight: 500;
+  gap: 5px;
+  flex: 1;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.favorite-action-btn--portion:hover {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  color: var(--sky-200);
+}
+
 .favorite-action-btn--danger {
   background: rgba(251,113,133,0.08);
   border: 1px solid rgba(251,113,133,0.22);
