@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Heart, Plus, ArrowLeft, Trash2, Pencil, Copy, Check, ChevronDown, X, Search, ArrowUpDown } from 'lucide-react'
@@ -8,6 +9,38 @@ import { getCurrentSlot } from '../lib/format'
 import type { DraftItem, Favorite, FavoriteItem } from '../components/log-sheet/types'
 import { toNutrients, scaleByRatio, sumNutrients } from '../lib/nutrients'
 import { ShareWithFamilyButton } from '../components/ShareWithFamilyButton'
+
+// Portion multipliers applied at log time so a saved favorite can be logged as
+// a fraction (half a meal, a snack) without editing each ingredient — nutrition
+// scales linearly with weight, so one factor scales the whole thing.
+const PORTION_PRESETS: { label: string; value: number }[] = [
+  { label: '¼', value: 0.25 },
+  { label: '½', value: 0.5 },
+  { label: '¾', value: 0.75 },
+  { label: '1', value: 1 },
+  { label: '1½', value: 1.5 },
+  { label: '2', value: 2 },
+]
+
+function portionLabel(factor: number): string {
+  const preset = PORTION_PRESETS.find((p) => p.value === factor)
+  return preset ? `${preset.label}×` : `${Number(factor.toFixed(2))}×`
+}
+
+function portionChipStyle(active: boolean): CSSProperties {
+  return {
+    minWidth: 40,
+    padding: '6px 12px',
+    borderRadius: 'var(--radius-pill)',
+    border: active ? '1px solid rgba(56, 189, 248, 0.6)' : '1px solid var(--glass-edge)',
+    background: active ? 'linear-gradient(180deg, var(--sky-400), var(--sky-500))' : 'var(--glass-2)',
+    color: active ? '#061229' : 'var(--fg-secondary)',
+    fontSize: 13,
+    fontWeight: active ? 600 : 400,
+    cursor: 'pointer',
+    fontFamily: 'var(--font-sans)',
+  }
+}
 
 function mapFavoriteItemToDraft(i: FavoriteItem): DraftItem {
   return {
@@ -84,6 +117,20 @@ export default function FavoritesRoute() {
   const sortRef = useRef<HTMLDivElement>(null)
   const [successModal, setSuccessModal] = useState<{ name: string; slot: string } | null>(null)
   const [expandedFavIds, setExpandedFavIds] = useState<Record<string, boolean>>({})
+  // Which favorite's portion picker is open, and the multiplier selected in it.
+  const [portionFavId, setPortionFavId] = useState<string | null>(null)
+  const [portionFactor, setPortionFactor] = useState(1)
+  const [customPortion, setCustomPortion] = useState('')
+
+  const openPortionPicker = (favId: string) => {
+    if (portionFavId === favId) {
+      setPortionFavId(null)
+      return
+    }
+    setPortionFavId(favId)
+    setPortionFactor(1)
+    setCustomPortion('')
+  }
 
   const toggleExpand = (id: string) => {
     setExpandedFavIds((prev) => ({
@@ -200,9 +247,17 @@ export default function FavoritesRoute() {
   }
 
   const logFavoriteDirect = useMutation({
-    mutationFn: (fav: Favorite) => {
+    mutationFn: ({ fav, factor }: { fav: Favorite; factor: number }) => {
       const slot = getCurrentSlot()
-      const draftItems = fav.items.map(mapFavoriteItemToDraft)
+      // Scale each item's weight and full nutrient profile by the chosen factor.
+      // The favorite itself is untouched — only this logged copy is scaled.
+      const draftItems = fav.items.map(mapFavoriteItemToDraft).map((d) => ({
+        ...d,
+        quantity: d.quantity * factor,
+        estimated_weight_g: d.estimated_weight_g * factor,
+        nutrients: scaleByRatio(d.nutrients, factor),
+      }))
+      const displayName = factor === 1 ? fav.name : `${portionLabel(factor)} ${fav.name}`
       const nutrition = draftItems.reduce(
         (acc, cur) => {
           const n = cur.nutrients
@@ -227,13 +282,15 @@ export default function FavoritesRoute() {
         favorite_id: fav.id,
         items: draftItems,
         nutrition,
-        raw_input: fav.name,
+        raw_input: displayName,
       })
     },
-    onSuccess: (_, fav) => {
+    onSuccess: (_, { fav, factor }) => {
       queryClient.invalidateQueries({ queryKey: ['today'] })
       queryClient.invalidateQueries({ queryKey: ['meals'] })
-      setSuccessModal({ name: fav.name, slot: getCurrentSlot() })
+      setPortionFavId(null)
+      const displayName = factor === 1 ? fav.name : `${portionLabel(factor)} ${fav.name}`
+      setSuccessModal({ name: displayName, slot: getCurrentSlot() })
     },
     onError: () => {
       alert('Failed to log favorite. Try again!')
@@ -684,13 +741,12 @@ export default function FavoritesRoute() {
 
                         <div className="favorite-card-actions">
                           <button
-                            onClick={() => logFavoriteDirect.mutate(fav)}
-                            disabled={logFavoriteDirect.isPending}
+                            onClick={() => openPortionPicker(fav.id)}
                             className="favorite-action-btn favorite-action-btn--primary"
-                            style={{ opacity: logFavoriteDirect.isPending ? 0.7 : 1 }}
+                            aria-expanded={portionFavId === fav.id}
                           >
                             <Heart size={12} strokeWidth={2} />
-                            <span>{logFavoriteDirect.isPending && logFavoriteDirect.variables?.id === fav.id ? 'Logging…' : 'Log this'}</span>
+                            <span>Log this</span>
                           </button>
                           <ShareWithFamilyButton resourceType="favorite" resourceId={fav.id} />
                           <button
@@ -720,6 +776,106 @@ export default function FavoritesRoute() {
                           </button>
                         </div>
                       </div>
+
+                      {/* Portion picker — log a fraction of the favorite */}
+                      {portionFavId === fav.id && (() => {
+                        const base = sumNutrients(fav.items.map((i) => ({ nutrients: i.nutrients })))
+                        const totals = scaleByRatio(base, portionFactor)
+                        const scaledWeight = Math.round(totalWeight(fav.items) * portionFactor)
+                        const valid = portionFactor > 0
+                        return (
+                          <div style={{
+                            marginTop: 12,
+                            borderTop: '1px solid var(--glass-edge)',
+                            paddingTop: 12,
+                          }}>
+                            <div className="eyebrow" style={{ marginBottom: 8, fontSize: 10 }}>
+                              Portion · {scaledWeight}g
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+                              {PORTION_PRESETS.map((p) => {
+                                const active = portionFactor === p.value && customPortion === ''
+                                return (
+                                  <button
+                                    key={p.value}
+                                    type="button"
+                                    onClick={() => { setPortionFactor(p.value); setCustomPortion('') }}
+                                    style={portionChipStyle(active)}
+                                  >
+                                    {p.label}
+                                  </button>
+                                )
+                              })}
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.05"
+                                inputMode="decimal"
+                                value={customPortion}
+                                onChange={(e) => {
+                                  setCustomPortion(e.target.value)
+                                  const v = parseFloat(e.target.value)
+                                  if (Number.isFinite(v) && v > 0) setPortionFactor(v)
+                                }}
+                                placeholder="Custom ×"
+                                aria-label="Custom portion multiplier"
+                                style={{
+                                  width: 96,
+                                  padding: '6px 10px',
+                                  borderRadius: 'var(--radius-pill)',
+                                  border: customPortion !== '' ? '1px solid rgba(56, 189, 248, 0.6)' : '1px solid var(--glass-edge)',
+                                  background: 'rgba(0,0,0,0.25)',
+                                  color: 'var(--fg-primary)',
+                                  fontSize: 13,
+                                  fontFamily: 'var(--font-sans)',
+                                  outline: 'none',
+                                }}
+                              />
+                            </div>
+
+                            <div className="favorite-macro-grid">
+                              <div className="favorite-macro-col">
+                                <span className="favorite-macro-label">Cal</span>
+                                <span className="num favorite-macro-val" style={{ color: 'var(--sky-400)' }}>{Math.round(totals.calories)}</span>
+                              </div>
+                              <div className="favorite-macro-col">
+                                <span className="favorite-macro-label">Sat Fat</span>
+                                <span className="num favorite-macro-val" style={{ color: 'var(--bad)' }}>{totals.saturated_fat_g.toFixed(1)}g</span>
+                              </div>
+                              <div className="favorite-macro-col">
+                                <span className="favorite-macro-label">Sol Fib</span>
+                                <span className="num favorite-macro-val" style={{ color: 'var(--good)' }}>{totals.soluble_fiber_g.toFixed(1)}g</span>
+                              </div>
+                              <div className="favorite-macro-col">
+                                <span className="favorite-macro-label">Sodium</span>
+                                <span className="num favorite-macro-val" style={{ color: '#fb923c' }}>{Math.round(totals.sodium_mg)}mg</span>
+                              </div>
+                              <div className="favorite-macro-col">
+                                <span className="favorite-macro-label">Protein</span>
+                                <span className="num favorite-macro-val" style={{ color: '#a78bfa' }}>{totals.protein_g.toFixed(1)}g</span>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                              <button
+                                onClick={() => logFavoriteDirect.mutate({ fav, factor: portionFactor })}
+                                disabled={logFavoriteDirect.isPending || !valid}
+                                className="btn btn-primary"
+                                style={{ flex: 1, justifyContent: 'center', opacity: (logFavoriteDirect.isPending || !valid) ? 0.6 : 1 }}
+                              >
+                                {logFavoriteDirect.isPending ? 'Logging…' : `Log ${portionLabel(portionFactor)}`}
+                              </button>
+                              <button
+                                onClick={() => setPortionFavId(null)}
+                                className="btn btn-ghost"
+                                style={{ justifyContent: 'center' }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })()}
 
                       {/* Expanded ingredients drawer list */}
                       {expandedFavIds[fav.id] && (
