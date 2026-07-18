@@ -429,6 +429,7 @@ export default function NutritionRoute() {
                 title="Meals logged"
                 subtitle={isToday ? "Latest meal logs from today. Tap a meal to see full nutrient breakdown." : "Meal logs from this day. Tap a meal to see full nutrient breakdown."}
                 emptyText={isToday ? "No meals logged yet today." : "No meals logged on this day."}
+                showTimeSinceLast={isToday}
               />
             </>
           ) : (
