@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Trash2, ChevronDown, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
 import { NutrientBreakdownSheet } from './NutrientBreakdownSheet'
 import type { DraftItem } from '../log-sheet/types'
+import { fmtElapsed } from '../../lib/format'
 
 export type RecentMeal = {
   id: string
@@ -31,6 +32,7 @@ export function RecentMealsCard({
   title = "Recent meals",
   subtitle = "Latest meal logs from today. Tap a meal to see constituent items.",
   emptyText = "No meals logged yet today.",
+  showTimeSinceLast = false,
 }: {
   meals?: RecentMeal[]
   compact?: boolean
@@ -40,12 +42,27 @@ export function RecentMealsCard({
   title?: string
   subtitle?: string
   emptyText?: string
+  showTimeSinceLast?: boolean
 }) {
   const PAGE_SIZE = 5
   const safeMeals = Array.isArray(meals) ? meals : []
   const [breakdownMeal, setBreakdownMeal] = useState<RecentMeal | null>(null)
   const [expandedMealIds, setExpandedMealIds] = useState<Record<string, boolean>>({})
   const [page, setPage] = useState(0)
+  const [now, setNow] = useState(() => Date.now())
+
+  // Most recent meal is first — recent_meals is served newest-first.
+  const lastMeal = safeMeals[0] ?? null
+
+  useEffect(() => {
+    if (!showTimeSinceLast || !lastMeal) return
+    const id = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [showTimeSinceLast, lastMeal])
+
+  const minutesSinceLastMeal = lastMeal
+    ? Math.max(0, Math.round((now - new Date(lastMeal.ts).getTime()) / 60_000))
+    : null
 
   const totalPages = Math.max(1, Math.ceil(safeMeals.length / PAGE_SIZE))
   const pagedMeals = safeMeals.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
@@ -61,13 +78,23 @@ export function RecentMealsCard({
   return (
     <>
       <div className="glass" style={{ padding: compact ? 18 : 24, marginTop: compact ? 14 : 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 12 }}>
           <div>
             <div className="eyebrow">{title}</div>
             <div style={{ fontSize: compact ? 12 : 13, color: 'var(--fg-tertiary)', marginTop: 4 }}>
               {subtitle}
             </div>
           </div>
+          {showTimeSinceLast && lastMeal && minutesSinceLastMeal != null && (
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <div className="num" style={{ fontSize: compact ? 18 : 20, fontWeight: 300, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--fg-primary)' }}>
+                {fmtElapsed(minutesSinceLastMeal)}
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--fg-quiet)', marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
+                since last meal
+              </div>
+            </div>
+          )}
         </div>
 
         {safeMeals.length === 0 ? (
@@ -126,14 +153,14 @@ export function RecentMealsCard({
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                       <div style={{ textAlign: 'right' }}>
+                        <div className="num" style={{ fontSize: compact ? 13 : 14, fontWeight: 500, color: 'var(--fg-secondary)' }}>
+                          {formatMealTime(meal.ts)}
+                        </div>
                         {!meal.nutrition && (
-                          <div className="num" style={{ fontSize: 13, color: 'var(--fg-secondary)' }}>
+                          <div style={{ fontSize: 11, color: 'var(--fg-quiet)', marginTop: 2 }}>
                             {Math.round(meal.calories)} kcal
                           </div>
                         )}
-                        <div style={{ fontSize: 11, color: 'var(--fg-quiet)' }}>
-                          {formatMealTime(meal.ts)}
-                        </div>
                       </div>
                       {hasItems && (
                         <ChevronDown

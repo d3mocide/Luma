@@ -449,7 +449,7 @@ export default function TodayRoute() {
 
           if (group === 'meals') {
             if (hiddenSections.has('meals')) return null
-            return <RecentMealsCard key="meals" meals={data.recent_meals ?? []} compact={false} onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} onEdit={handleEditMeal}/>
+            return <RecentMealsCard key="meals" meals={data.recent_meals ?? []} compact={false} onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} onEdit={handleEditMeal} showTimeSinceLast/>
           }
 
           return null
@@ -624,7 +624,7 @@ export default function TodayRoute() {
 
           if (sectionId === 'meals') return (
             <div key="meals" style={{ marginBottom: 14 }}>
-              <RecentMealsCard meals={data.recent_meals ?? []} compact onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} onEdit={handleEditMeal}/>
+              <RecentMealsCard meals={data.recent_meals ?? []} compact onDelete={(id) => deleteMealMutation.mutate(id)} deletingId={deletingMealId} onEdit={handleEditMeal} showTimeSinceLast/>
             </div>
           )
 
