@@ -21,6 +21,12 @@ jobs:
         with:
           fail-on-severity: high
           deny-licenses: GPL-3.0, AGPL-3.0, GPL-2.0
+          # GHSA-qwww-vcr4-c8h2: react-router CSRF bypass, exploitable only via the
+          # unstable RSC (Server Components) APIs. Luma is a client-only SPA that
+          # never enables those APIs, so this is a false positive. The fix ships in
+          # react-router 8.3.0, which requires React >=19.2.7 (Luma is on React 18) -
+          # revisit this suppression when that upgrade happens.
+          allow-ghsas: GHSA-qwww-vcr4-c8h2
 
   frontend:
     name: Frontend — type-check, lint, test & build
