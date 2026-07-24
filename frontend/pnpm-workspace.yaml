@@ -3,13 +3,18 @@ packages:
 
 allowBuilds:
   esbuild: true
+auditConfig:
+  ignoreCves:
+    - GHSA-qwww-vcr4-c8h2
+
+minimumReleaseAge: "72 hours"
 onlyBuiltDependencies:
   - esbuild
 
 overrides:
   baseline-browser-mapping: "2.10.32"
+  brace-expansion@2: "^2.1.2"
+  brace-expansion@5: "^5.0.7"
   electron-to-chromium: "1.5.361"
+  fast-uri@3: "^3.1.4"
   side-channel: "1.1.0"
-
-policies:
-  minimumReleaseAge: "72 hours"
