@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import UTC
 from typing import Any
 
@@ -10,6 +11,7 @@ from sqlalchemy import text
 
 from luma.deps import CurrentUser, DbDep
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -84,10 +86,11 @@ async def trigger_insights(
     start_time = datetime.now(UTC) - timedelta(seconds=2)
     try:
         await _process_user(str(user.id), bypass_dedup=bypass_dedup)
-    except Exception as exc:
+    except Exception:
+        logger.exception("Alert engine execution failed for user %s", user.id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Alert engine execution failed: {str(exc)}",
+            detail="Alert engine execution failed",
         )
         
     # Fetch alerts created during this execution
