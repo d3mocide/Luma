@@ -39,7 +39,7 @@ dependencies = [
     "orjson==3.11.9",
     "litellm==1.94.1",
     "tzdata==2026.3",
-    "pywebpush==2.3.0",
+    "pywebpush==2.4.0",
 
     # ML — anomaly detection
     "scikit-learn==1.6.1",
