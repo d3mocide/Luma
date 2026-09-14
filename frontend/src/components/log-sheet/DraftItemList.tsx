@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Replace, Utensils, X, SlidersHorizontal, Check } from 'lucide-react'
 import type { DraftItem } from './types'
 import { scaleNutrients, scaleByRatio } from '../../lib/nutrients'
+import { formatQuantity, isGramUnit } from '../../lib/portions'
 import { NutritionFactsEditor } from './NutritionFactsEditor'
 
 type Props = {
@@ -64,6 +65,10 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
   const showPerServing = (servings ?? 1) > 1
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editSave, setEditSave] = useState(true)
+  // Portion input text while it has focus. The committed value is always grams;
+  // holding the raw string lets a partial entry ("0.", "1.2") survive the
+  // round-trip through grams and back without snapping to a rounded quantity.
+  const [portionDraft, setPortionDraft] = useState<{ index: number; text: string } | null>(null)
 
   const openEditor = (idx: number) => {
     setEditSave(true)
@@ -92,6 +97,13 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
           const base = item.base_weight_g ?? item.estimated_weight_g
           const current = Math.round(item.estimated_weight_g)
           const perServingG = showPerServing ? item.estimated_weight_g / (servings as number) : 0
+          // Show the portion in the unit it was built with when one survived
+          // (a favorite saved as cups), otherwise fall back to plain grams.
+          const perUnit = !isGramUnit(item.unit) && item.unit_grams && item.unit_grams > 0
+            ? item.unit_grams
+            : null
+          const unitLabel = perUnit ? item.unit : 'g'
+          const displayQty = perUnit ? formatQuantity(item.estimated_weight_g / perUnit) : current
           return (
             <div key={idx} className="builder-ingredient-card">
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -174,13 +186,24 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
                 </div>
               </div>
 
-              {/* Portion: editable grams + relative multiplier chips */}
+              {/* Portion: editable amount in the unit it was built with (falling
+                  back to grams) + relative multiplier chips */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
                   <input
                     type="number"
-                    value={current}
-                    onChange={(e) => onUpdateWeight(idx, Math.max(1, parseInt(e.target.value) || 0))}
+                    step={perUnit ? 'any' : 1}
+                    inputMode="decimal"
+                    value={portionDraft?.index === idx ? portionDraft.text : displayQty}
+                    aria-label={`Portion in ${unitLabel}`}
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      setPortionDraft({ index: idx, text: raw })
+                      const parsed = parseFloat(raw)
+                      if (!Number.isFinite(parsed)) return
+                      onUpdateWeight(idx, Math.max(1, Math.round(parsed * (perUnit ?? 1))))
+                    }}
+                    onBlur={() => setPortionDraft(null)}
                     className="field-input"
                     style={{
                       width: 62, textAlign: 'center', borderRadius: 8, padding: '5px 4px',
@@ -188,7 +211,15 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
                       fontFamily: 'var(--font-mono)', color: 'var(--sky-400)',
                     }}
                   />
-                  <span style={{ fontSize: 12, color: 'var(--fg-tertiary)', fontWeight: 500 }}>g</span>
+                  <span style={{
+                    fontSize: 12, color: 'var(--fg-tertiary)', fontWeight: 500,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {unitLabel}
+                    {perUnit && (
+                      <span style={{ color: 'var(--fg-quiet)', fontWeight: 400 }}> · {current}g</span>
+                    )}
+                  </span>
                 </div>
                 <div className="multiplier-btn-group" style={{ flex: 1 }}>
                   {PORTION_MULTIPLIERS.map(({ factor, label }) => {
@@ -197,7 +228,7 @@ export function DraftItemList({ draftItems, onRemoveItem, onUpdateWeight, onUpda
                     return (
                       <button
                         key={factor}
-                        onClick={() => onUpdateWeight(idx, target)}
+                        onClick={() => { setPortionDraft(null); onUpdateWeight(idx, target) }}
                         title={`${target}g`}
                         className={`multiplier-btn ${active ? 'multiplier-btn--active' : ''}`}
                         style={{ flex: 1 }}

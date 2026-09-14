@@ -346,6 +346,12 @@ class FavoriteItem(Base):
     food_name: Mapped[str] = mapped_column(Text, nullable=False)
     brand: Mapped[str | None] = mapped_column(Text)
     quantity_g: Mapped[float] = mapped_column(Float, nullable=False)
+    # The measure the user actually picked when building the item ("2" + "cup").
+    # quantity_g stays the resolved weight everything else computes from; these
+    # two only carry the portion forward so editing shows the original unit.
+    # Null on favorites saved before portions were recorded.
+    quantity: Mapped[float | None] = mapped_column(Float)
+    unit: Mapped[str | None] = mapped_column(Text)
     nutrients: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
     favorite = relationship("Favorite", back_populates="items")

@@ -4,11 +4,11 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { api } from '../../lib/api'
 import {
   type PortionUnit, type HouseholdMeasure, PORTION_UNITS, PORTION_UNIT_LABELS, PRESETS_BY_UNIT,
-  gramsForFoodUnit, defaultQtyForUnit,
+  gramsForFoodUnit, defaultQtyForUnit, draftPortion,
 } from '../../lib/portions'
-import { scaleNutrients, toNutrients } from '../../lib/nutrients'
+import { scaleNutrients } from '../../lib/nutrients'
 import { DraftItemList } from './DraftItemList'
-import { nutrientSourceForFood, type DraftItem, type Favorite } from './types'
+import { draftFromFavoriteItem, nutrientSourceForFood, type DraftItem, type Favorite } from './types'
 
 const FOOD_FORMATS = [
   Html5QrcodeSupportedFormats.EAN_13,
@@ -230,14 +230,10 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
     if (!pending) return
     const qty = Math.max(0, parseFloat(pendingQty) || 0)
     const grams = Math.max(1, Math.round(gramsForFoodUnit(pending, pendingUnit, qty)))
-    const unitLabel = pendingUnit.startsWith('hm:')
-      ? (pending.household_measures?.[Number(pendingUnit.slice(3))]?.label ?? 'serving')
-      : pendingUnit
     const item: DraftItem = {
       name: pending.name,
       brand: pending.brand,
-      quantity: qty,
-      unit: unitLabel,
+      ...draftPortion(pending, pendingUnit, qty),
       estimated_weight_g: grams,
       base_weight_g: grams,
       nutrients: scaleNutrients(pending.nutrients_per_100g, grams),
@@ -264,15 +260,7 @@ export function IngredientBuilder({ draftItems, onAddItem, onRemoveItem, onUpdat
     : []
 
   function pickFavorite(fav: Favorite) {
-    const items: DraftItem[] = fav.items.map((i) => ({
-      name: i.food_name,
-      brand: i.brand ?? undefined,
-      quantity: i.quantity_g,
-      unit: 'g',
-      estimated_weight_g: i.quantity_g,
-      base_weight_g: i.quantity_g,
-      nutrients: toNutrients(i.nutrients),
-    }))
+    const items: DraftItem[] = fav.items.map(draftFromFavoriteItem)
     onPickFavorite?.(items, fav.name)
     setQuery('')
     setResults([])

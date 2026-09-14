@@ -69,6 +69,8 @@ interface FavoriteItem {
   food_name: string
   brand: string | null
   quantity_g: number
+  quantity: number | null
+  unit: string | null
   nutrients: Record<string, number>
 }
 

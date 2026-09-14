@@ -7,6 +7,7 @@ import { VoiceTab } from './log-sheet/VoiceTab'
 import { SearchTab } from './log-sheet/SearchTab'
 import { ScanTab } from './log-sheet/ScanTab'
 import { QuickTab } from './log-sheet/QuickTab'
+import { favoriteItemFromDraft } from './log-sheet/types'
 import type { DraftItem, Favorite } from './log-sheet/types'
 import { scaleByRatio, sumNutrients } from '../lib/nutrients'
 import { getCurrentSlot } from '../lib/format'
@@ -192,12 +193,7 @@ export default function LogSheet({ mode = 'sheet', onClose }: LogSheetProps) {
   const favMutation = useMutation({
     mutationFn: (name: string) => api.post('/favorites', {
       name: name.trim() || 'My favorite',
-      items: draftItems.map((item) => ({
-        food_name: item.name,
-        brand: item.brand ?? null,
-        quantity_g: item.estimated_weight_g,
-        nutrients: item.nutrients,
-      })),
+      items: draftItems.map(favoriteItemFromDraft),
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['favorites'] })

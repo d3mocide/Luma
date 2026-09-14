@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { Zap, ChevronLeft, ChevronRight } from 'lucide-react'
-import { toNutrients } from '../../lib/nutrients'
+import { draftFromFavoriteItem } from './types'
 import type { DraftItem, Favorite } from './types'
 
 type FrequentMeal = {
@@ -203,14 +203,7 @@ export function QuickTab({ currentSlot, onAddItems, favorites, onLogFavoriteDire
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {pagedFavs.map((fav) => {
                       const kcal = Math.round(fav.items.reduce((sum, i) => sum + (i.nutrients.calories ?? 0), 0))
-                      const favDraftItems: DraftItem[] = fav.items.map((i) => ({
-                        name: i.food_name,
-                        brand: i.brand ?? undefined,
-                        quantity: i.quantity_g,
-                        unit: 'g',
-                        estimated_weight_g: i.quantity_g,
-                        nutrients: toNutrients(i.nutrients),
-                      }))
+                      const favDraftItems: DraftItem[] = fav.items.map(draftFromFavoriteItem)
                       return (
                         <button
                           key={fav.id}
