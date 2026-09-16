@@ -106,6 +106,22 @@ jobs:
           JWT_SECRET: "test-secret-do-not-use-in-production"
           HAE_SHARED_SECRET: "test-hae-shared-secret-32-bytes-min"
 
+      # The install step above is `--require-hashes` from the lock followed by
+      # `--no-deps -e .`, so pyproject's own pins are never enforced - a bump that
+      # edits pyproject without regenerating the locks silently does nothing, and
+      # CI keeps testing the old versions. Without --upgrade, pip-compile keeps
+      # whatever the lock already pins, so this re-run is a no-op until pyproject
+      # and the locks disagree. Runs last so a drift failure never masks the
+      # lint/type/test results.
+      - name: Check lockfiles match pyproject
+        run: |
+          pip-compile --allow-unsafe --generate-hashes \
+            --output-file=requirements.lock pyproject.toml
+          pip-compile --allow-unsafe --extra=dev --generate-hashes \
+            --output-file=requirements-dev.lock pyproject.toml
+          git diff --exit-code -- requirements.lock requirements-dev.lock \
+            || { echo "::error::Lockfiles are out of sync with pyproject.toml. Run the two pip-compile commands above in backend/ and commit the result."; exit 1; }
+
   migrations:
     name: Migrations — apply & check
     runs-on: ubuntu-latest
