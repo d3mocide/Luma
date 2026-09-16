@@ -9,12 +9,12 @@ requires-python = ">=3.12"
 dependencies = [
     # Web framework
     "fastapi==0.141.1",
-    "uvicorn[standard]==0.52.0",
+    "uvicorn[standard]==0.52.3",
 
     # Database
-    "sqlalchemy==2.0.51",
+    "sqlalchemy==2.0.52",
     "asyncpg==0.31.0",
-    "alembic==1.18.5",
+    "alembic==1.19.1",
 
     # Validation
     "pydantic==2.13.4",
@@ -37,7 +37,7 @@ dependencies = [
     "python-multipart==0.0.31",
     "python-dateutil==2.9.0.post0",
     "orjson==3.11.9",
-    "litellm==1.94.1",
+    "litellm==1.96.2",
     "tzdata==2026.3",
     "pywebpush==2.3.0",
 
@@ -58,7 +58,9 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.10.0",
     "pip-audit>=2.7.0",
-    "pip-tools>=7.0.0",
+    # >=7.6.1: earlier releases import stdlib_pkgs from pip._internal, which
+    # pip 26.2 removed - pip-compile crashes on import under the pinned pip.
+    "pip-tools>=7.6.1",
 ]
 
 [tool.hatch.build.targets.wheel]
