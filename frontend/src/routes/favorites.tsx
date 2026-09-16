@@ -6,8 +6,10 @@ import { Heart, Plus, ArrowLeft, Trash2, Pencil, Copy, Check, ChevronDown, X, Se
 import { api } from '../lib/api'
 import { IngredientBuilder } from '../components/log-sheet/IngredientBuilder'
 import { getCurrentSlot } from '../lib/format'
+import { draftFromFavoriteItem, favoriteItemFromDraft } from '../components/log-sheet/types'
 import type { DraftItem, Favorite, FavoriteItem } from '../components/log-sheet/types'
-import { toNutrients, scaleByRatio, sumNutrients } from '../lib/nutrients'
+import { scaleByRatio, sumNutrients } from '../lib/nutrients'
+import { measureLabel } from '../lib/portions'
 import { ShareWithFamilyButton } from '../components/ShareWithFamilyButton'
 
 // Portion multipliers applied at log time so a saved favorite can be logged as
@@ -39,26 +41,6 @@ function portionChipStyle(active: boolean): CSSProperties {
     fontWeight: active ? 600 : 400,
     cursor: 'pointer',
     fontFamily: 'var(--font-sans)',
-  }
-}
-
-function mapFavoriteItemToDraft(i: FavoriteItem): DraftItem {
-  return {
-    name: i.food_name,
-    brand: i.brand ?? undefined,
-    quantity: i.quantity_g,
-    unit: 'g',
-    estimated_weight_g: i.quantity_g,
-    nutrients: toNutrients(i.nutrients),
-  }
-}
-
-function mapDraftItemToApi(item: DraftItem) {
-  return {
-    food_name: item.name,
-    brand: item.brand ?? null,
-    quantity_g: item.estimated_weight_g,
-    nutrients: item.nutrients,
   }
 }
 
@@ -159,7 +141,7 @@ export default function FavoritesRoute() {
     mutationFn: () =>
       api.post('/favorites', {
         name: favName.trim() || 'My favorite',
-        items: items.map(mapDraftItemToApi),
+        items: items.map(favoriteItemFromDraft),
         tags: favTags,
       }),
     onSuccess: () => {
@@ -176,7 +158,7 @@ export default function FavoritesRoute() {
     mutationFn: () =>
       api.patch(`/favorites/${editingId}`, {
         name: favName.trim() || 'My favorite',
-        items: items.map(mapDraftItemToApi),
+        items: items.map(favoriteItemFromDraft),
         tags: favTags,
       }),
     onSuccess: () => {
@@ -228,7 +210,7 @@ export default function FavoritesRoute() {
   function startEdit(fav: Favorite) {
     setEditingId(fav.id)
     setFavName(fav.name)
-    setItems(fav.items.map(mapFavoriteItemToDraft))
+    setItems(fav.items.map(draftFromFavoriteItem))
     setFavTags(fav.tags ?? [])
     setNewTagInput('')
     setView('building')
@@ -240,7 +222,7 @@ export default function FavoritesRoute() {
   function startDuplicate(fav: Favorite) {
     setEditingId(null)
     setFavName(`${fav.name} (copy)`)
-    setItems(fav.items.map(mapFavoriteItemToDraft))
+    setItems(fav.items.map(draftFromFavoriteItem))
     setFavTags(fav.tags ?? [])
     setNewTagInput('')
     setView('building')
@@ -251,7 +233,7 @@ export default function FavoritesRoute() {
       const slot = getCurrentSlot()
       // Scale each item's weight and full nutrient profile by the chosen factor.
       // The favorite itself is untouched — only this logged copy is scaled.
-      const draftItems = fav.items.map(mapFavoriteItemToDraft).map((d) => ({
+      const draftItems = fav.items.map(draftFromFavoriteItem).map((d) => ({
         ...d,
         quantity: d.quantity * factor,
         estimated_weight_g: d.estimated_weight_g * factor,
@@ -904,11 +886,14 @@ export default function FavoritesRoute() {
                                 <div className="meal-items-header-cell">Sodium</div>
                                 <div className="meal-items-header-cell">Protein</div>
                               </div>
-                              {fav.items.map((item, idx) => (
+                              {fav.items.map((item, idx) => {
+                                const measure = measureLabel(item.quantity, item.unit)
+                                return (
                                 <div key={idx} className="meal-items-row">
                                   <div className="meal-item-name-cell">
                                     <span className="meal-item-name">{item.food_name}</span>
                                     {item.brand && <span className="meal-item-brand">{item.brand}</span>}
+                                    {measure && <span className="meal-item-portion">{measure}</span>}
                                   </div>
                                   <div className="meal-items-cell-num weight-cell">
                                     {Math.round(item.quantity_g)}
@@ -935,7 +920,8 @@ export default function FavoritesRoute() {
                                     <span className="sm-hidden"> prot</span>
                                   </div>
                                 </div>
-                              ))}
+                                )
+                              })}
                             </div>
                           </div>
                         </div>

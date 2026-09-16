@@ -18,6 +18,11 @@ class FavoriteItemIn(BaseModel):
     food_name: str
     brand: str | None = None
     quantity_g: float
+    # The measure the item was built with — 2 "cup", 4 "oz". quantity_g stays the
+    # resolved weight; these ride along so editing the favorite can show the unit
+    # the user picked. Omitted by clients that only ever work in grams.
+    quantity: float | None = None
+    unit: str | None = None
     nutrients: dict = {}
 
 
@@ -40,6 +45,8 @@ def _item_row_to_dict(r: Any) -> dict[str, Any]:
         "food_name": r.food_name,
         "brand": r.brand,
         "quantity_g": r.quantity_g,
+        "quantity": r.quantity,
+        "unit": r.unit,
         "nutrients": r.nutrients if r.nutrients is not None else {},
     }
 
@@ -58,6 +65,8 @@ async def _fetch_favorite(favorite_id: str, user_id: str, db: Any) -> dict[str, 
                 fi.food_name,
                 fi.brand,
                 fi.quantity_g,
+                fi.quantity,
+                fi.unit,
                 fi.nutrients
             FROM favorites f
             LEFT JOIN favorite_items fi ON fi.favorite_id = f.id
@@ -139,6 +148,8 @@ async def list_favorites(
                 fi.food_name,
                 fi.brand,
                 fi.quantity_g,
+                fi.quantity,
+                fi.unit,
                 fi.nutrients
             FROM paged p
             LEFT JOIN favorite_items fi ON fi.favorite_id = p.id
@@ -194,8 +205,8 @@ async def create_favorite(
         item_id = str(uuid.uuid4())
         await db.execute(
             text("""
-                INSERT INTO favorite_items (id, favorite_id, sort_order, food_name, brand, quantity_g, nutrients)
-                VALUES (:id, :fav_id, :sort_order, :food_name, :brand, :quantity_g, CAST(:nutrients AS jsonb))
+                INSERT INTO favorite_items (id, favorite_id, sort_order, food_name, brand, quantity_g, quantity, unit, nutrients)
+                VALUES (:id, :fav_id, :sort_order, :food_name, :brand, :quantity_g, :quantity, :unit, CAST(:nutrients AS jsonb))
             """),
             {
                 "id": item_id,
@@ -204,6 +215,8 @@ async def create_favorite(
                 "food_name": item.food_name,
                 "brand": item.brand,
                 "quantity_g": item.quantity_g,
+                "quantity": item.quantity,
+                "unit": item.unit,
                 "nutrients": json.dumps(item.nutrients),
             },
         )
@@ -256,8 +269,8 @@ async def update_favorite(
             item_id = str(uuid.uuid4())
             await db.execute(
                 text("""
-                    INSERT INTO favorite_items (id, favorite_id, sort_order, food_name, brand, quantity_g, nutrients)
-                    VALUES (:id, :fav_id, :sort_order, :food_name, :brand, :quantity_g, CAST(:nutrients AS jsonb))
+                    INSERT INTO favorite_items (id, favorite_id, sort_order, food_name, brand, quantity_g, quantity, unit, nutrients)
+                    VALUES (:id, :fav_id, :sort_order, :food_name, :brand, :quantity_g, :quantity, :unit, CAST(:nutrients AS jsonb))
                 """),
                 {
                     "id": item_id,
@@ -266,6 +279,8 @@ async def update_favorite(
                     "food_name": item.food_name,
                     "brand": item.brand,
                     "quantity_g": item.quantity_g,
+                    "quantity": item.quantity,
+                    "unit": item.unit,
                     "nutrients": json.dumps(item.nutrients),
                 },
             )

@@ -162,3 +162,81 @@ describe('DraftItemList nutrition editor', () => {
     expect(last[1].estimated_weight_g).toBe(240)
   })
 })
+
+describe('DraftItemList portion unit', () => {
+  it('shows the portion in grams when no unit was carried', () => {
+    render(
+      <DraftItemList
+        draftItems={[makeItem({ unit: 'g', estimated_weight_g: 150 })]}
+        onRemoveItem={noop} onUpdateWeight={noop} onUpdateName={noop}
+      />,
+    )
+    expect(screen.getByLabelText('Portion in g')).toHaveValue(150)
+  })
+
+  it('shows the portion in the unit it was built with', () => {
+    render(
+      <DraftItemList
+        draftItems={[makeItem({ quantity: 2, unit: 'cup', unit_grams: 240, estimated_weight_g: 480 })]}
+        onRemoveItem={noop} onUpdateWeight={noop} onUpdateName={noop}
+      />,
+    )
+    expect(screen.getByLabelText('Portion in cup')).toHaveValue(2)
+    // Grams stay visible alongside so the weight is never hidden.
+    expect(screen.getByText(/480g/)).toBeInTheDocument()
+  })
+
+  it('commits an edited quantity back as grams', () => {
+    const onUpdateWeight = vi.fn()
+    render(
+      <DraftItemList
+        draftItems={[makeItem({ quantity: 2, unit: 'cup', unit_grams: 240, estimated_weight_g: 480 })]}
+        onRemoveItem={noop} onUpdateWeight={onUpdateWeight} onUpdateName={noop}
+      />,
+    )
+    fireEvent.change(screen.getByLabelText('Portion in cup'), { target: { value: '1.5' } })
+    expect(onUpdateWeight).toHaveBeenCalledWith(0, 360)
+  })
+
+  it('leaves a cleared field empty instead of snapping the quantity back', () => {
+    const onUpdateWeight = vi.fn()
+    render(
+      <DraftItemList
+        draftItems={[makeItem({ quantity: 1, unit: 'cup', unit_grams: 240, estimated_weight_g: 240 })]}
+        onRemoveItem={noop} onUpdateWeight={onUpdateWeight} onUpdateName={noop}
+      />,
+    )
+    const input = screen.getByLabelText('Portion in cup') as HTMLInputElement
+    // Mid-edit the field is empty. Without the draft-string state React would
+    // re-render the derived quantity over it, and the old code committed 1g.
+    fireEvent.change(input, { target: { value: '' } })
+    expect(input.value).toBe('')
+    expect(onUpdateWeight).not.toHaveBeenCalled()
+
+    fireEvent.change(input, { target: { value: '3' } })
+    expect(onUpdateWeight).toHaveBeenCalledWith(0, 720)
+  })
+
+  it('restores the derived quantity when the field loses focus', () => {
+    render(
+      <DraftItemList
+        draftItems={[makeItem({ quantity: 1, unit: 'cup', unit_grams: 240, estimated_weight_g: 240 })]}
+        onRemoveItem={noop} onUpdateWeight={noop} onUpdateName={noop}
+      />,
+    )
+    const input = screen.getByLabelText('Portion in cup') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '' } })
+    fireEvent.blur(input)
+    expect(input).toHaveValue(1)
+  })
+
+  it('falls back to grams when the unit has no gram anchor', () => {
+    render(
+      <DraftItemList
+        draftItems={[makeItem({ quantity: 1, unit: 'plate', unit_grams: undefined, estimated_weight_g: 320 })]}
+        onRemoveItem={noop} onUpdateWeight={noop} onUpdateName={noop}
+      />,
+    )
+    expect(screen.getByLabelText('Portion in g')).toHaveValue(320)
+  })
+})

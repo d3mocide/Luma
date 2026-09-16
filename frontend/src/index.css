@@ -4307,6 +4307,20 @@ input[type="search"]::-webkit-search-results-decoration {
   white-space: nowrap;
 }
 
+/* The measure an item was built with ("2 cup") next to its name, where the
+   numeric Weight column only has room for grams. */
+.meal-item-portion {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--fg-tertiary);
+  background: var(--glass-1);
+  border: 1px solid var(--glass-edge);
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .meal-items-cell-num {
   font-family: var(--font-mono);
   text-align: right;

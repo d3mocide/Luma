@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { RotateCcw, Heart, Check } from 'lucide-react'
 import { api } from '../../lib/api'
 import { IngredientBuilder } from '../log-sheet/IngredientBuilder'
+import { favoriteItemFromDraft } from '../log-sheet/types'
 import type { DraftItem, Favorite } from '../log-sheet/types'
 import { scaleByRatio, sumNutrients as sumNutrientList } from '../../lib/nutrients'
 
@@ -325,12 +326,7 @@ export function CalculatorTab() {
     mutationFn: () =>
       api.post('/favorites', {
         name: mealName.trim() || 'Calculator meal',
-        items: items.map((item) => ({
-          food_name: item.name,
-          brand: item.brand ?? null,
-          quantity_g: item.estimated_weight_g,
-          nutrients: item.nutrients,
-        })),
+        items: items.map(favoriteItemFromDraft),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['favorites'] })

@@ -12,6 +12,7 @@ import {
   PRESETS_BY_UNIT,
   gramsForFoodUnit,
   defaultQtyForUnit,
+  draftPortion,
 } from '../../lib/portions'
 import { DraftItemList } from './DraftItemList'
 import { nutrientSourceForFood, type DraftItem } from './types'
@@ -161,9 +162,6 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
     if (!pending || confirmBusy) return
     const qty = Math.max(0, parseFloat(pendingQty) || 0)
     const grams = Math.max(1, Math.round(gramsForFoodUnit(pending, pendingUnit, qty)))
-    const unitLabel = pendingUnit.startsWith('hm:')
-      ? (pending.household_measures?.[Number(pendingUnit.slice(3))]?.label ?? 'serving')
-      : pendingUnit
 
     let foodId: string | undefined = pending.id
     let nutrientSource = nutrientSourceForFood(pending.source, pending.brand)
@@ -191,8 +189,7 @@ export function ScanTab({ onAddItems, draftItems, onRemoveItem, onUpdateWeight, 
     onAddItems([{
       name: pending.name,
       brand: pending.brand,
-      quantity: qty,
-      unit: unitLabel,
+      ...draftPortion(pending, pendingUnit, qty),
       estimated_weight_g: grams,
       nutrients: scaleNutrients(editPer100g, grams),
       food_id: foodId,

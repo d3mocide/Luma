@@ -556,14 +556,15 @@ async def copy_shared_resource(
             await db.execute(
                 text("""
                     INSERT INTO favorite_items
-                        (id, favorite_id, sort_order, food_name, brand, quantity_g, nutrients)
+                        (id, favorite_id, sort_order, food_name, brand, quantity_g, quantity, unit, nutrients)
                     VALUES
-                        (:id, :fid, :order, :name, :brand, :qty, CAST(:nutrients AS jsonb))
+                        (:id, :fid, :order, :name, :brand, :qty, :quantity, :unit, CAST(:nutrients AS jsonb))
                 """),
                 {
                     "id": str(uuid.uuid4()), "fid": new_id,
                     "order": item.sort_order, "name": item.food_name,
                     "brand": item.brand, "qty": item.quantity_g,
+                    "quantity": item.quantity, "unit": item.unit,
                     "nutrients": json.dumps(item.nutrients or {}),
                 },
             )
