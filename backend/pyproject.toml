@@ -12,18 +12,18 @@ dependencies = [
     "uvicorn[standard]==0.52.3",
 
     # Database
-    "sqlalchemy==2.0.52",
+    "sqlalchemy==2.0.54",
     "asyncpg==0.31.0",
-    "alembic==1.19.1",
+    "alembic==1.20.0",
 
     # Validation
     "pydantic==2.13.4",
-    "pydantic-settings==2.14.2",
+    "pydantic-settings==2.15.0",
     "email-validator==2.3.0",
 
     # Auth
     "argon2-cffi==25.1.0",
-    "pyjwt==2.13.0",
+    "pyjwt==2.15.1",
 
     # HTTP client
     "httpx==0.28.1",
@@ -31,14 +31,14 @@ dependencies = [
     # Task queue
     "arq==0.28.0",
     "redis==5.3.1",
-    "msgpack>=1.2.1",
+    "msgpack>=1.2.3",
 
     # Utilities
     "python-multipart==0.0.31",
     "python-dateutil==2.9.0.post0",
     "orjson==3.11.9",
-    "litellm==1.96.2",
-    "tzdata==2026.3",
+    "litellm==1.101.3",
+    "tzdata==2026.4",
     "pywebpush==2.5.0",
 
     # ML — anomaly detection
