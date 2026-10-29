@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "pnpm": "^11.3.0"
+    "pnpm": "^11.11.0"
   },
   "devDependencies": {
     "husky": "^9.1.7"
