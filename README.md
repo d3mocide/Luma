@@ -150,7 +150,7 @@ See **[docs/SETUP.md](docs/SETUP.md)** for the full environment variable referen
 make prod
 ```
 
-This builds all images and starts every service. Check that all health checks pass:
+This pulls the published images from GHCR and starts every service (`make prod-build` builds them locally instead). Check that all health checks pass:
 
 ```bash
 make ps
@@ -226,7 +226,8 @@ See **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** for migrations, testing, loca
 | Command | Description |
 |---|---|
 | `make setup` | Initialise `.env` from example and generate dev TLS certificates |
-| `make prod` | Build images and start the full production-style stack |
+| `make prod` | Pull published images from GHCR and start the full production stack (`LUMA_IMAGE_TAG=sha-<commit>` to pin or roll back) |
+| `make prod-build` | Build images locally instead of pulling, then start the production stack |
 | `make dev` | Start the dev stack with Vite hot reload on `:5173` |
 | `make stop` | Stop all running containers |
 | `make down` | Stop and remove containers and networks |

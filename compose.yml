@@ -1,5 +1,6 @@
 services:
   frontend:
+    image: ${LUMA_IMAGE_REGISTRY:-ghcr.io/d3mocide}/luma-frontend:${LUMA_IMAGE_TAG:-main}
     build:
       context: .
       dockerfile: frontend/Dockerfile
@@ -38,6 +39,7 @@ services:
     profiles: ["dev"]
 
   api:
+    image: ${LUMA_IMAGE_REGISTRY:-ghcr.io/d3mocide}/luma-api:${LUMA_IMAGE_TAG:-main}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -111,6 +113,7 @@ services:
     restart: unless-stopped
 
   worker:
+    image: ${LUMA_IMAGE_REGISTRY:-ghcr.io/d3mocide}/luma-api:${LUMA_IMAGE_TAG:-main}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -151,6 +154,7 @@ services:
     restart: unless-stopped
 
   whisper:
+    image: ${LUMA_IMAGE_REGISTRY:-ghcr.io/d3mocide}/luma-whisper:${LUMA_IMAGE_TAG:-main}
     build:
       context: ./whisper
       dockerfile: Dockerfile
