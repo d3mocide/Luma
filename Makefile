@@ -30,13 +30,15 @@ endif
 COMPOSE := docker compose $(COMPOSE_WHISPER_PROFILE)
 CORE_SERVICES := api postgres redis $(WHISPER_SERVICE) worker
 
-.PHONY: help setup prod dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed seed-reference seed-mock seed-build seed-merge seed-micros seed-micros-apply clear-hae-data ai-smoke ai-smoke-full gen-vapid clean nuke
+.PHONY: help setup prod prod-build dev down stop restart rebuild pull ps logs logs-api logs-frontend logs-web migrate seed seed-reference seed-mock seed-build seed-merge seed-micros seed-micros-apply clear-hae-data ai-smoke ai-smoke-full gen-vapid clean nuke
 
 help:
 	@echo "Luma quick commands"
 	@echo ""
 	@echo "  make setup    - initialize .env and local certs"
-	@echo "  make prod     - start production-style stack (nginx frontend + api)"
+	@echo "  make prod     - pull published images from GHCR and start production stack"
+	@echo "                       pin a build or roll back: LUMA_IMAGE_TAG=sha-<commit> make prod"
+	@echo "  make prod-build - build images locally instead of pulling, then start production stack"
 	@echo "  make dev      - start dev stack with Vite hot reload"
 	@echo "  make stop     - stop running containers"
 	@echo "  make down     - stop and remove containers/networks"
@@ -70,6 +72,10 @@ setup:
 	./setup_dev.sh
 
 prod:
+	$(COMPOSE) pull frontend $(CORE_SERVICES)
+	$(COMPOSE) up -d frontend $(CORE_SERVICES)
+
+prod-build:
 	$(COMPOSE) up -d --build frontend $(CORE_SERVICES)
 
 dev:
