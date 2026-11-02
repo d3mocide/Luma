@@ -35,7 +35,7 @@ dependencies = [
 
     # Utilities
     "python-multipart==0.0.31",
-    "python-dateutil==2.9.0.post0",
+    "python-dateutil==3.0.0",
     "orjson==3.11.9",
     "litellm==1.101.3",
     "tzdata==2026.4",
